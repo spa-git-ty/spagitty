@@ -14,6 +14,11 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep development window sizing and alignment intact when component stylesheet
+  requests arrive before their JavaScript.
+
 ### Documentation
 
 - Correct the repository's amendments reference to the current shared book,
