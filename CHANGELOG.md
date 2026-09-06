@@ -14,6 +14,8 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-06
+
 ### Fixed
 
 - Keep development window sizing and alignment intact when component stylesheet
