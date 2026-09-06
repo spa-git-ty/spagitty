@@ -14,6 +14,22 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- The Linux AppImage carries zsync update information, and every release
+  attaches the matching `.AppImage.zsync`. An AppImage manager — `AppImageUpdate`
+  or AppShelf — can now see that a newer Spagitty exists and replace an
+  installed build in place. Spagitty still never replaces its own binary.
+
+### Fixed
+
+- A released Spagitty knows which release it is, so the update check can
+  actually report a newer one. The tag was baked in only by the draft lane, so
+  every published release and every alpha called itself a development build and
+  said it was up to date whatever had been released since.
+- The update check reads the project's own repository path, rather than a
+  differently capitalised spelling of it that GitHub happened to tolerate.
+
 ## [0.5.1] - 2026-09-06
 
 ### Fixed

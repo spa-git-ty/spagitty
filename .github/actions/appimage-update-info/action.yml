@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Tell the AppImage where its own successors live.
+#
+# An AppImage is one file with no package manager behind it, so nothing on the
+# machine knows it can be replaced. The format's answer is a string in the
+# runtime's `.upd_info` ELF section naming a zsync source: `AppImageUpdate` and
+# the desktop integration tools read it, fetch the `.zsync` beside the release
+# asset, and patch the installed file in place — transferring the blocks that
+# changed rather than the whole bundle again.
+#
+# FEAT-054 already tells a running Spagitty that a newer release exists. This is
+# the other half of that sentence: the download it points at can now be applied
+# without pulling ninety megabytes of unchanged webkit.
+#
+# **This is still not a self-updater.** Nothing in Spagitty replaces its own
+# binary; FEAT-054 declined that deliberately, and it is not being reversed
+# here. What is added is the metadata a tool the *user* chose to run needs.
+#
+# Tauri has no configuration for any of this. Its AppImage bundler shells out to
+# `linuxdeploy` with the `appimage` output plugin, and that plugin forwards
+# `$UPDATE_INFORMATION` to `appimagetool -u`, which both embeds the string and
+# writes the `.zsync` file next to the bundle. The environment is the whole
+# interface, which is why it is set here once instead of in the three build
+# lanes separately — the drift between three copies of a release detail is what
+# killed v0.2.0, and `release-assets` carries that account.
+name: AppImage update information
+description: Export $UPDATE_INFORMATION so the Linux bundle can be updated in place
+
+outputs:
+  information:
+    description: The string embedded in the AppImage's `.upd_info` section.
+    value: ${{ steps.compose.outputs.information }}
+
+runs:
+  using: composite
+  steps:
+    - id: compose
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Hard-coded, for the reason `crates/spagitty-core/src/update.rs` gives
+        # for hard-coding its endpoint: an update source that can be pointed
+        # elsewhere is a way to hand somebody a different program. Reading
+        # `github.repository` would aim a fork's build at the fork, which is
+        # the wrong answer for a string that authorises a binary replacement.
+        #
+        # `latest` resolves through GitHub's `/releases/latest`, which skips
+        # drafts and pre-releases — the same endpoint the in-app check already
+        # reads, so the two cannot disagree about what "newer" means. An alpha
+        # therefore updates onto the newest stable build and never sideways
+        # onto another alpha.
+        #
+        # The last field is a glob over the release's asset names, and `amd64`
+        # is not a mistake for `x86_64`: Tauri names the bundle
+        # `Spagitty_<version>_amd64.AppImage`, and a glob has to match the file
+        # that is actually attached rather than the convention other projects
+        # happen to use. `tools/appimage-update.test.ts` holds the two together,
+        # and `release-assets` checks the built file before it is released.
+        information='gh-releases-zsync|spa-git-ty|spagitty|latest|*_amd64.AppImage.zsync'
+
+        echo "UPDATE_INFORMATION=$information" >> "$GITHUB_ENV"
+        echo "information=$information" >> "$GITHUB_OUTPUT"
+        echo "::notice::AppImage update information: $information"

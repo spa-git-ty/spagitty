@@ -11,7 +11,8 @@
 #
 # Two artefacts, which is the whole point:
 #
-#   Linux    a self-contained AppImage. Tauri's AppImage bundles webkit2gtk and
+#   Linux    a self-contained AppImage, and the `.zsync` that lets an installed
+#            copy be patched in place. Tauri's AppImage bundles webkit2gtk and
 #            its dependencies, so it runs on a machine that has never installed
 #            them. Built on the oldest runner we support so the glibc it links
 #            against is old enough for the distributions people actually run —
@@ -174,6 +175,11 @@ jobs:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
 
+      # Sets `$UPDATE_INFORMATION`, which the AppImage bundler forwards to
+      # `appimagetool -u`. Linux only — see the action.
+      - uses: ./.github/actions/appimage-update-info
+        if: runner.os == 'Linux'
+
       # The bundler runs `appimagetool`, which wants FUSE. GitHub's runners do
       # not have it, and this variable is how AppImage tooling is told to
       # unpack itself instead of mounting.
@@ -193,6 +199,8 @@ jobs:
       # This lane always collected only the installers, which is why it never
       # hit the clash that killed v0.2.0. That collection now lives in a shared
       # action so gates.yml and prerelease.yml cannot drift away from it again.
+      # It brings the `.AppImage.zsync` with the AppImage and refuses one that
+      # came out without its update information.
       #
       # The suffix is what stops the two Mac runners colliding: a .dmg is named
       # from the product name and version, which is identical on both.
@@ -246,6 +254,8 @@ jobs:
             --notes "Built from \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA}\`.
 
           - **Linux** — the \`.AppImage\` is self-contained. \`chmod +x\` it and run it.
+            The \`.AppImage.zsync\` beside it is not a download: it is what
+            \`AppImageUpdate\` reads to patch an installed copy in place.
           - **Windows** — \`*-setup.exe\` installs; \`spagitty-windows-x86_64.exe\` is the bare binary.
           - **macOS** — \`*-macos-arm64.dmg\` for Apple silicon, \`*-macos-x86_64.dmg\` for Intel.
 

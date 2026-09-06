@@ -27,9 +27,52 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Before the build, not after it, for the reason draft-release.yml works its
+  # tag out first: the binary is stamped with the tag it is being cut as, and
+  # that stamp is the only thing that tells a running Spagitty which release it
+  # is. Checking the number here also stops a reused alpha before three
+  # platforms are built rather than after.
+  #
+  # The `dev`-only guard lives here now. Every other job needs this one, so a
+  # skip carries through rather than being repeated three times.
+  tag:
+    name: work out the tag
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.compose.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - id: compose
+        run: |
+          base=$(bun -e "console.log(require('./package.json').version)")
+
+          # The manifest carries its own pre-release suffix from 0.4.0-alpha
+          # onwards, and the alpha *number* is appended here. Strip the suffix
+          # or the two compose into `v0.4.0-alpha-alpha.3`.
+          base=${base%%-*}
+
+          echo "tag=v$base-alpha.${{ inputs.alpha }}" >> "$GITHUB_OUTPUT"
+
+      # Amendment 14: a tag that exists is a release that happened, and moving
+      # one is forbidden.
+      - name: Refuse to move an existing tag
+        run: |
+          if git rev-parse "${{ steps.compose.outputs.tag }}" >/dev/null 2>&1; then
+            echo "::error::${{ steps.compose.outputs.tag }} already exists; pick the next alpha number"
+            exit 1
+          fi
+
   build:
     name: build ${{ matrix.os }}
-    if: github.ref == 'refs/heads/dev'
+    needs: tag
     strategy:
       fail-fast: false
       matrix:
@@ -47,10 +90,21 @@ jobs:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
 
+      # Sets `$UPDATE_INFORMATION`, so the AppImage an alpha ships can be
+      # updated in place like any other. Linux only — see the action.
+      - uses: ./.github/actions/appimage-update-info
+        if: matrix.os == 'ubuntu-latest'
+
       - run: bun run tauri build
+        env:
+          # What the update check compares itself against. Without it an alpha
+          # reports itself as a development build and can never say a newer
+          # release exists — which is what every alpha did until TASK-037.
+          SPAGITTY_RELEASE: ${{ needs.tag.outputs.tag }}
 
       # Only the downloads, never the whole bundle tree. Attaching the tree is
       # what killed the v0.2.0 release; the action carries the account of it.
+      # It also refuses an AppImage that came out without its update information.
       - uses: ./.github/actions/release-assets
 
       - uses: actions/upload-artifact@v4
@@ -61,7 +115,7 @@ jobs:
 
   publish:
     name: publish the alpha
-    needs: build
+    needs: [tag, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,24 +132,9 @@ jobs:
         with:
           bun-version: 1.4.0
 
-      - name: Compose the pre-release version
-        id: version
-        run: |
-          base=$(bun -e "console.log(require('./package.json').version)")
-
-          # The manifest carries its own pre-release suffix from 0.4.0-alpha
-          # onwards, and the alpha *number* is appended here. Strip the suffix
-          # or the two compose into `v0.4.0-alpha-alpha.3`.
-          base=${base%%-*}
-
-          echo "tag=v$base-alpha.${{ inputs.alpha }}" >> "$GITHUB_OUTPUT"
-
-      - name: Refuse to move an existing tag
-        run: |
-          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "::error::${{ steps.version.outputs.tag }} already exists; pick the next alpha number"
-            exit 1
-          fi
+      # The tag was worked out and checked in its own job before anything was
+      # built, because the build is stamped with it. Nothing here recomputes it:
+      # a second copy of that arithmetic is a second thing to get wrong.
 
       # An alpha's notes are the changelog's Unreleased section — that is what
       # an alpha is a preview of (Amendment 20). Empty Unreleased, no alpha.
@@ -133,10 +172,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.version.outputs.tag }}" -m "Spagitty ${{ steps.version.outputs.tag }}"
-          git push origin "${{ steps.version.outputs.tag }}"
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "Spagitty ${{ steps.version.outputs.tag }}" \
+          git tag -a "${{ needs.tag.outputs.tag }}" -m "Spagitty ${{ needs.tag.outputs.tag }}"
+          git push origin "${{ needs.tag.outputs.tag }}"
+          gh release create "${{ needs.tag.outputs.tag }}" \
+            --title "Spagitty ${{ needs.tag.outputs.tag }}" \
             --prerelease \
             --notes-file notes.md \
             ${{ steps.assets.outputs.files }}

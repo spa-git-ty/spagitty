@@ -209,6 +209,7 @@ of its own.
 | [TASK-032](items/TASK-032-release-baseline.md) | Restore the release baseline and record the reliability plan | — | Open |
 | [TASK-033](items/TASK-033-coverage-platforms.md) | Restore coverage and platform tests | All | Open |
 | [TASK-036](items/TASK-036-sync-amendments.md) | Use the current shared amendments book | — | Open |
+| [TASK-037](items/TASK-037-updates-that-actually-arrive.md) | Updates that actually arrive | 1K | Done |
 
 ## Skipped identifiers
 

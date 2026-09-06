@@ -20,8 +20,11 @@
 # lane never hit this. The correct version now lives here, once, so the three
 # lanes cannot drift apart again — that drift is the whole reason two of them
 # were broken and one was not.
+#
+# It also collects the AppImage's `.zsync`, and refuses to hand over an AppImage
+# that cannot be updated — see the check at the foot of the script.
 name: Collect the release assets
-description: Copy the installers and executables out of the build tree into ./out
+description: Copy the installers, executables and AppImage zsync file out of the build tree into ./out
 
 inputs:
   suffix:
@@ -45,8 +48,12 @@ runs:
         # across versions, so this searches rather than guessing. `-prune` on
         # node_modules keeps it from walking a tree that cannot contain a
         # bundle and is the largest thing in the checkout.
+        # The `.zsync` is a download in its own right: it is the file an
+        # updater fetches first, and an AppImage whose zsync was never attached
+        # advertises an update source that answers 404.
         find . -path ./node_modules -prune -o \
                \( -name '*.AppImage' \
+               -o -name '*.AppImage.zsync' \
                -o -name '*.deb' \
                -o -name '*.rpm' \
                -o -name '*-setup.exe' \
@@ -69,6 +76,12 @@ runs:
           for file in out/*; do
             [ -e "$file" ] || continue
             case "$file" in
+              # The `.zsync` names the AppImage it patches, and the update
+              # information globs for both by name, so renaming either half of
+              # the pair breaks in-place updates. Nothing needs it anyway: the
+              # suffix exists for the two macOS runners, and neither builds an
+              # AppImage.
+              *.AppImage|*.AppImage.zsync) continue ;;
               *"-${SUFFIX}."*) continue ;;
             esac
             base=${file%.*}
@@ -81,6 +94,51 @@ runs:
           echo "::error::the build produced nothing that can be released"
           exit 1
         fi
+
+        # An AppImage built without update information is not a broken build.
+        # It starts, it works, and every gate stays green — it is simply
+        # unupdatable for ever, and the first person to find that out is a user
+        # on a version nobody can move them off. So it is checked here, beside
+        # the other release-asset failures that used to surface only after a
+        # tag had been pushed.
+        appimage=$(find out -maxdepth 1 -name '*.AppImage' -print -quit)
+        if [ -n "$appimage" ]; then
+          # The string sits in an ELF section of the AppImage's runtime, and the
+          # runtime is the head of the file, so readelf reads it straight out of
+          # the bundle without unpacking anything.
+          information=$(readelf -p .upd_info "$appimage" | sed -n 's/^ *\[ *0\] *//p' || true)
+
+          case "$information" in
+            'gh-releases-zsync|'*) ;;
+            *)
+              echo "::error::$appimage has no gh-releases-zsync update information in .upd_info (found: '$information'). Did the build lane run ./.github/actions/appimage-update-info?"
+              exit 1
+              ;;
+          esac
+
+          if [ ! -f "$appimage.zsync" ]; then
+            echo "::error::$appimage.zsync is missing. appimagetool writes it beside the bundle whenever -u is given, so its absence means the AppImage and its update source disagree."
+            exit 1
+          fi
+
+          # The last field is the glob an updater matches against the release's
+          # asset names. A glob that matches nothing fails silently, on somebody
+          # else's machine, long after the release it belongs to — so the built
+          # filename is matched against it here. AppImageUpdate prefixes the
+          # pattern with `*` before matching, and so does this.
+          glob=${information##*|}
+          # Deliberately unquoted: it is a pattern being matched, not a string.
+          case "$(basename "$appimage.zsync")" in
+            *$glob) ;;
+            *)
+              echo "::error::the update information globs for '$glob', which does not match $(basename "$appimage.zsync"). An updater would find no asset to fetch."
+              exit 1
+              ;;
+          esac
+
+          echo "$appimage is updatable: $information"
+        fi
+
         ls -l out
       env:
         SUFFIX: ${{ inputs.suffix }}
