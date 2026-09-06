@@ -53,6 +53,51 @@ on a double-click and Windows SmartScreen warns. The draft lane's release notes
 carry the one step a Mac user needs; adding real signing is a change to gate 5
 and the draft lane together, not to one of them.
 
+## The Linux build can be updated in place
+
+An AppImage is one file with no package manager behind it, so nothing on the
+machine knows it can be replaced. FEAT-054 makes a running Spagitty *say* there
+is a newer release; this is what makes acting on that cheap rather than a
+ninety-megabyte re-download.
+
+`.github/actions/appimage-update-info` exports one string into the build
+environment, and all three build lanes use it on their Linux runner:
+
+```
+gh-releases-zsync|spa-git-ty|spagitty|latest|*_amd64.AppImage.zsync
+```
+
+Tauri has no configuration for this. Its AppImage bundler shells out to
+`linuxdeploy`, whose `appimage` output plugin forwards `$UPDATE_INFORMATION` to
+`appimagetool -u` — which embeds the string in the AppImage runtime's
+`.upd_info` ELF section and writes a `.zsync` control file beside it.
+`release-assets` collects both, so every release carries the `.AppImage` and the
+`.AppImage.zsync`. `AppImageUpdate` run against an installed build then
+transfers the blocks that changed and nothing else.
+
+Three details are load-bearing, and each has a check behind it:
+
+- **`amd64`, not the `x86_64` other projects use.** Tauri names the bundle
+  `Spagitty_<version>_amd64.AppImage`, and the last field of the string is a
+  glob over the release's asset names. `tools/appimage-update.test.ts` matches
+  that glob against the name composed from `src-tauri/tauri.conf.json`, so
+  renaming the product fails a test rather than the updater.
+- **The pair is never renamed.** The `.zsync` names the AppImage it patches and
+  resolves it relative to its own download URL, so the two filenames have to
+  reach the release exactly as `appimagetool` wrote them. `release-assets` skips
+  both when it disambiguates names with an architecture suffix.
+- **`latest` is the newest non-pre-release**, through GitHub's
+  `/releases/latest` — the same endpoint the in-app check reads. An alpha
+  therefore updates onto the newest stable build rather than sideways onto
+  another alpha, and the two ways of hearing about a new version cannot
+  disagree about what one is.
+
+`release-assets` refuses an AppImage whose `.upd_info` is empty, whose `.zsync`
+is missing, or whose glob does not match the file it just collected. That check
+exists because an unupdatable AppImage starts, works, and passes every other
+gate: nothing else in the pipeline would ever notice, and the first person to
+find out would be a user stranded on a version nobody can move them off.
+
 ## What runs where
 
 - **`main`** — gates 1 to 4 on every push. Gates 5 and 6 run only when the

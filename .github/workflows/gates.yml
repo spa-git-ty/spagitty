@@ -291,10 +291,40 @@ jobs:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
 
+      # Sets `$UPDATE_INFORMATION`, which is the only interface Tauri's AppImage
+      # bundler has for making the bundle updatable in place. Linux only: it is
+      # a linuxdeploy variable and means nothing to the other two runners.
+      - uses: ./.github/actions/appimage-update-info
+        if: matrix.os == 'ubuntu-latest'
+
+      # The tag gate 6 is about to publish this build under, worked out from
+      # the manifest exactly as gate 6 works it out. Gate 5 running first is
+      # not a problem: both read the same manifest, so neither has to tell the
+      # other.
+      #
+      # `shell: bash` because this matrix includes Windows, where the default
+      # is pwsh and `$GITHUB_OUTPUT` is not a variable it has.
+      - name: The tag this build will be published under
+        id: release
+        shell: bash
+        run: echo "tag=v$(bun -e "console.log(require('./package.json').version)")" >> "$GITHUB_OUTPUT"
+
       - run: bun run tauri build
+        env:
+          # What the update check compares itself against, and the whole reason
+          # it can answer at all: `Cargo.toml` says one version across every
+          # release in a series, so a version number cannot identify a build.
+          # Absent from anything compiled locally, which is how a development
+          # build knows it has no release to be behind.
+          #
+          # Gate 5 did not set this until TASK-037, so every release published
+          # from `main` reported itself as a development build and could never
+          # say a newer one existed. The feature was shipped and inert.
+          SPAGITTY_RELEASE: ${{ steps.release.outputs.tag }}
 
       # Only the downloads, never the whole bundle tree — see the action for
-      # what uploading the tree did to the v0.2.0 release.
+      # what uploading the tree did to the v0.2.0 release. It also refuses an
+      # AppImage that came out without its update information.
       - uses: ./.github/actions/release-assets
 
       - uses: actions/upload-artifact@v4

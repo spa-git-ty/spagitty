@@ -23,6 +23,14 @@
 //! [`Channel::Development`] and never claims to be out of date. Telling a
 //! developer that the release they are ahead of is newer than their working
 //! tree would be worse than saying nothing.
+//!
+//! That last paragraph was also, until TASK-037, a description of every build
+//! anybody had ever downloaded. Only the draft lane set the variable; gate 5,
+//! which builds what a `main` release publishes, and the prerelease lane, which
+//! builds every alpha, both left it unset. So a released Spagitty reported
+//! itself as a development build and could never say a newer one existed — the
+//! feature shipped, passed its tests, and did nothing. Nothing in this file was
+//! wrong, which is why nothing in this file caught it.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -35,7 +43,12 @@ use crate::{Error, Result};
 /// The project's own repository, hard-coded. This is not a setting: a check for
 /// a newer Spagitty that could be pointed somewhere else is a way to hand
 /// somebody a different program.
-const RELEASES: &str = "https://api.github.com/repos/Spa-git-ty/spagitty/releases/latest";
+///
+/// Spelled the way the repository is spelled. GitHub resolves an owner login
+/// case-insensitively, so `Spa-git-ty` — which this said until TASK-037 — did
+/// answer; it was still a path this project does not have, and the AppImage's
+/// embedded update source names the same repository in the same letters.
+const RELEASES: &str = "https://api.github.com/repos/spa-git-ty/spagitty/releases/latest";
 
 const HOST: &str = "api.github.com";
 
@@ -110,7 +123,7 @@ pub fn read(body: &str, current: Option<&str>) -> Result<Update> {
     let url = json["html_url"]
         .as_str()
         .filter(|url| url.starts_with("https://"))
-        .unwrap_or("https://github.com/Spa-git-ty/spagitty/releases")
+        .unwrap_or("https://github.com/spa-git-ty/spagitty/releases")
         .to_string();
 
     let channel = match current {
@@ -136,7 +149,7 @@ mod tests {
     fn answer(tag: &str) -> String {
         serde_json::json!({
             "tag_name": tag,
-            "html_url": format!("https://github.com/Spa-git-ty/spagitty/releases/tag/{tag}")
+            "html_url": format!("https://github.com/spa-git-ty/spagitty/releases/tag/{tag}")
         })
         .to_string()
     }
@@ -210,7 +223,7 @@ mod tests {
         let body = serde_json::json!({ "tag_name": "v9.9.9" }).to_string();
         let found = read(&body, Some("v0.1.0-preview.1")).unwrap();
 
-        assert_eq!(found.url, "https://github.com/Spa-git-ty/spagitty/releases");
+        assert_eq!(found.url, "https://github.com/spa-git-ty/spagitty/releases");
     }
 
     #[test]
@@ -226,7 +239,7 @@ mod tests {
             let found = read(&body, None).unwrap();
 
             assert_eq!(
-                found.url, "https://github.com/Spa-git-ty/spagitty/releases",
+                found.url, "https://github.com/spa-git-ty/spagitty/releases",
                 "for {hostile}"
             );
         }
@@ -236,6 +249,15 @@ mod tests {
     fn the_endpoint_is_this_project_and_is_not_configurable() {
         // A check for a newer Spagitty that could be pointed elsewhere is a way
         // to hand somebody a different program.
-        assert!(RELEASES.starts_with("https://api.github.com/repos/Spa-git-ty/spagitty/"));
+        assert!(RELEASES.starts_with("https://api.github.com/repos/spa-git-ty/spagitty/"));
+    }
+
+    #[test]
+    fn the_endpoint_is_spelled_the_way_the_repository_is_spelled() {
+        // Not pedantry about a host that happens to be case-insensitive. The
+        // AppImage carries an update source naming the same owner and
+        // repository (TASK-037), and `tools/appimage-update.test.ts` holds the
+        // two together — two spellings of one project is how they drift apart.
+        assert_eq!(RELEASES, RELEASES.to_lowercase());
     }
 }
