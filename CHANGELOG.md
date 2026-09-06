@@ -14,6 +14,8 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-06
+
 ### Added
 
 - The Linux AppImage carries zsync update information, and every release
