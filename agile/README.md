@@ -161,6 +161,11 @@ rather than an audit.
 | [BUG-021](items/BUG-021-a-run-says-nothing-until-it-ends.md) | A run says nothing until it ends | Farm (1Q) | Fixed |
 | [BUG-022](items/BUG-022-the-farm-subscribes-after-it-asks.md) | The farm subscribes after it asks, so the answer is lost | Farm (1Q) | Fixed |
 | [BUG-023](items/BUG-023-a-record-test-reads-another-tests-clone.md) | A record test reads another test's clone | none | Fixed |
+| [BUG-024](items/BUG-024-cancellable-runs.md) | Stop a run while its waiter owns it | Farm (1Q) | Open |
+| [BUG-025](items/BUG-025-single-run-watcher.md) | One completion watcher per run | Farm (1Q) | Open |
+| [BUG-026](items/BUG-026-verification-output.md) | Verification keeps draining and can be stopped | Farm (1Q) | Open |
+| [BUG-027](items/BUG-027-verified-merges.md) | Require current evidence before automatic merging | Farm (1Q) | Open |
+| [BUG-028](items/BUG-028-dev-styles.md) | Development styles depend on request order | All | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -201,6 +206,9 @@ of its own.
 | [TASK-029](items/TASK-029-candidate-feature-backlog.md) | Candidate feature backlog items | — | Done |
 | [TASK-030](items/TASK-030-the-farm-refresh-stops-working-on-the-main-thread.md) | The farm's refresh stops working on the main thread | Farm (1Q) | Done |
 | [TASK-031](items/TASK-031-long-sessions-stay-fast.md) | A long session stays fast | Farm (1Q) | Done |
+| [TASK-032](items/TASK-032-release-baseline.md) | Restore the release baseline and record the reliability plan | — | Open |
+| [TASK-033](items/TASK-033-coverage-platforms.md) | Restore coverage and platform tests | All | Open |
+| [TASK-036](items/TASK-036-sync-amendments.md) | Use the current shared amendments book | — | Open |
 
 ## Skipped identifiers
 

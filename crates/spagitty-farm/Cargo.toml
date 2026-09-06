@@ -30,6 +30,11 @@ thiserror = { workspace = true }
 # under gix.
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+# Windows job objects keep descendants cancellable after their parent exits.
+# MIT OR Apache-2.0; this version is already present through Tauri.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading"] }
+
 [features]
 # Fixture repositories for the tests of the crates above this one, mirroring
 # `spagitty-core`'s own switch. The Tauri layer's farm tests want a real

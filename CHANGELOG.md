@@ -14,6 +14,35 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep development window sizing and alignment intact when component stylesheet
+  requests arrive before their JavaScript.
+
+### Documentation
+
+- Correct the repository's amendments reference to the current shared book,
+  including the frozen range and the roles of Amendments 19 and 20. Direct
+  agents to read the canonical book from `AGENTS.md`.
+
+### Reliability
+
+- Measure frontend routes in coverage and check descendant termination and noisy
+  verification on Linux, macOS and Windows before release.
+
+- Automatic merges now require checks and successful independent review for
+  the current committed work, plus merge permission. Tasks retain their intended
+  destination, and competing farm merges serialize.
+
+- Drain verification output continuously with bounded retention. Stopping a
+  check or reaching its deadline terminates its process tree.
+
+- Claim one completion watcher per run, including review runs, and keep late
+  results attached to the attempt that produced them.
+
+- Keep running agents and planners cancellable while background threads wait for
+  them; contain Windows agent descendants in jobs before execution starts.
+
 ## [0.5.0] - 2026-09-05
 
 The farm could run a plan but there was almost no way to watch it run. This is

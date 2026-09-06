@@ -48,12 +48,12 @@ export default defineConfig({
 			provider: 'v8',
 			// First-party frontend code only. Amendment 10 counts nothing else,
 			// in either direction.
-			include: ['src/lib/**'],
-			exclude: ['src/lib/**/*.test.ts'],
+			include: ['src/lib/**', 'src/routes/**'],
+			exclude: ['src/**/*.test.ts'],
 			reporter: ['text', 'json-summary'],
 			// The floor. A change that drops below it fails the run rather than
 			// being noticed later, or not at all.
-			thresholds: { statements: 65, branches: 65, functions: 65, lines: 65 }
+			thresholds: { statements: 70, branches: 70, functions: 70, lines: 70 }
 		}
 	}
 });

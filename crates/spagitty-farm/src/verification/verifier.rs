@@ -24,6 +24,7 @@
 //! rests on not telling.
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -117,6 +118,22 @@ pub fn run(
     commands: &[String],
     report: &mut dyn FnMut(&CommandResult),
 ) -> Verification {
+    run_cancellable(
+        workdir,
+        commands,
+        &AtomicBool::new(false),
+        &mut |_| {},
+        report,
+    )
+}
+
+pub fn run_cancellable(
+    workdir: &Path,
+    commands: &[String],
+    cancelled: &AtomicBool,
+    starting: &mut dyn FnMut(&str),
+    report: &mut dyn FnMut(&CommandResult),
+) -> Verification {
     if commands.is_empty() {
         return Verification {
             results: Vec::new(),
@@ -127,7 +144,11 @@ pub fn run(
 
     let mut results = Vec::new();
     for line in commands {
-        let result = command::run(workdir, line);
+        if cancelled.load(Ordering::Acquire) {
+            break;
+        }
+        starting(line);
+        let result = command::run_cancellable(workdir, line, cancelled, command::TIMEOUT);
         let failed = !result.passed;
         report(&result);
         results.push(result);
@@ -137,7 +158,9 @@ pub fn run(
     }
 
     Verification {
-        passed: results.iter().all(|result| result.passed),
+        passed: !cancelled.load(Ordering::Acquire)
+            && results.len() == commands.len()
+            && results.iter().all(|result| result.passed),
         unverified: false,
         results,
     }

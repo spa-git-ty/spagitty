@@ -232,3 +232,12 @@ Then `xdotool mousemove`, `xdotool click`, `xdotool type` and
 
 Findings go into the item's `agile/testing/<ID>-sweep.md` as filled-in results,
 not into a commit message.
+
+## Development stylesheet regression
+
+`bun run test tools/dev-styles.test.ts` checks the installed Vite/Svelte pipeline
+against a stylesheet request arriving before its component (BUG-028). Development
+injects scoped styles with component JavaScript through `emitCss: false`;
+production continues extracting CSS assets. This avoids the v5 plugin's cold-cache
+fallback serving Svelte source as CSS. Build success alone does not test this
+development request order, and this headless test does not replace a visual sweep.

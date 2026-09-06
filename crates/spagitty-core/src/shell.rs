@@ -34,8 +34,10 @@
 //! Nothing in this module is called by the Graph screen. It exists now so the
 //! boundary is drawn before the screens that need it are built.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::Instant;
 
 use crate::error::{Error, Result};
@@ -134,7 +136,24 @@ fn record_spawn(mut command: Command, args: &[&str]) -> Result<std::process::Chi
 
 /// Run `git` in `repo` and return stdout on success.
 fn run(repo: &Path, args: &[&str]) -> Result<String> {
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
     finish(command(repo, args), args)
+}
+
+/// Serialize synchronous Git operations for the same checkout inside Spagitty.
+/// External Git processes still own their own coordination and Git lockfiles.
+fn operation_lock(repo: &Path) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<PathBuf, Weak<Mutex<()>>>>> = OnceLock::new();
+    let key = repo.canonicalize().unwrap_or_else(|_| repo.to_path_buf());
+    let mut locks = LOCKS.get_or_init(Mutex::default).lock().expect("git locks");
+    locks.retain(|_, lock| lock.strong_count() > 0);
+    if let Some(lock) = locks.get(&key).and_then(Weak::upgrade) {
+        return lock;
+    }
+    let lock = Arc::new(Mutex::new(()));
+    locks.insert(key, Arc::downgrade(&lock));
+    lock
 }
 
 /// The `git` version on PATH, or an error if there is no usable `git`.
@@ -628,6 +647,21 @@ pub fn merge(repo: &Path, source: &str, ff_only: bool, no_ff: bool) -> Result<()
     args.push(source);
 
     run(repo, &args)?;
+    Ok(())
+}
+
+/// Merge a pinned commit only while the intended branch remains checked out.
+/// The same lock is used by checkout and other synchronous Git mutations, so
+/// an in-app branch switch cannot slip between validation and the merge.
+pub fn merge_into(repo: &Path, commit: &str, destination: &str) -> Result<()> {
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
+    let opened = crate::repo::open(repo)?;
+    if crate::repo::head(&opened).branch.as_deref() != Some(destination) {
+        return Err(Error::Stale(format!("destination branch {destination}")));
+    }
+    let args = ["merge", "--no-edit", "--no-ff", commit];
+    finish(command(repo, &args), &args)?;
     Ok(())
 }
 
@@ -1436,5 +1470,52 @@ mod tests {
             }
             other => panic!("expected a Git error, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod farm_merge_tests {
+    use super::*;
+    use crate::fixture::Fixture;
+
+    #[test]
+    fn a_destination_change_is_rejected_before_merge() {
+        let fixture = Fixture::woven();
+        let before = fixture.git(&["rev-parse", "HEAD"]);
+        let source = fixture.git(&["rev-parse", "HEAD~1"]);
+        assert!(merge_into(fixture.path(), source.trim(), "unrelated").is_err());
+        assert_eq!(fixture.git(&["rev-parse", "HEAD"]), before);
+    }
+
+    #[test]
+    fn concurrent_merges_into_one_checkout_preserve_both_changes() {
+        let fixture = Arc::new(Fixture::woven());
+        let mut commits = Vec::new();
+        for name in ["merge-one", "merge-two"] {
+            fixture.git(&["switch", "-c", name, "main"]);
+            std::fs::write(fixture.path().join(name), name).unwrap();
+            fixture.git(&["add", name]);
+            fixture.git(&["commit", "-qm", name]);
+            commits.push(fixture.git(&["rev-parse", "HEAD"]).trim().to_string());
+        }
+        fixture.git(&["switch", "main"]);
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let workers: Vec<_> = commits
+            .into_iter()
+            .map(|commit| {
+                let fixture = fixture.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    merge_into(fixture.path(), &commit, "main")
+                })
+            })
+            .collect();
+        for worker in workers {
+            worker.join().unwrap().unwrap();
+        }
+        assert!(fixture.path().join("merge-one").exists());
+        assert!(fixture.path().join("merge-two").exists());
+        assert_eq!(fixture.git(&["branch", "--show-current"]).trim(), "main");
     }
 }

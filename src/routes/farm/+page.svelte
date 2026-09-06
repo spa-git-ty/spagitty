@@ -449,7 +449,7 @@
 							disabled={busy}
 							onclick={() =>
 								farm && act('Could not change the autonomy level', () =>
-									api.configure({ autonomy: level.id })
+									api.configure({ autonomy: level.id, permissions: { ...farm.permissions, merge: level.id === 'auto' || level.id === 'yolo' } })
 								)}
 						>
 							<span class="level-name">{level.label}</span>

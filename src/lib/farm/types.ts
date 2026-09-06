@@ -133,6 +133,7 @@ export interface Task {
 	verification: string[];
 	verificationOverrides: boolean;
 	branch: string | null;
+	mergeTarget?: string | null;
 	worktree: string | null;
 	attempts: number;
 	note: string | null;

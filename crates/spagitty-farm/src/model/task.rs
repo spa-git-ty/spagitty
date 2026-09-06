@@ -116,7 +116,7 @@ impl TaskStatus {
             // A task that came back for want of a dependency re-enters the
             // queue rather than jumping straight to a process.
             Waiting => matches!(next, Ready | Assigned | Blocked | Failed),
-            Blocked => matches!(next, Ready | Draft | Failed),
+            Blocked => matches!(next, Ready | Draft | Failed | Verification),
             // `Blocked` is the common one: a verification that fails hands the
             // task to a person unless the farm is unattended, and `Waiting` is
             // the unattended path back into the queue.
@@ -124,7 +124,10 @@ impl TaskStatus {
             // `Assigned` again is a review asking for changes: same task, same
             // agent, another run. `Waiting` is the same thing at a level of
             // autonomy that retries without asking.
-            Review => matches!(next, Done | Assigned | Blocked | Failed | Waiting),
+            Review => matches!(
+                next,
+                Done | Assigned | Blocked | Failed | Waiting | Verification
+            ),
             Done | Failed | Cancelled => false,
         }
     }
@@ -299,6 +302,9 @@ pub struct Task {
     /// The branch the work lives on, once a workspace exists.
     #[serde(default)]
     pub branch: Option<String>,
+    /// Destination captured when the task first starts; absent in older farms.
+    #[serde(default)]
+    pub merge_target: Option<String>,
     /// The worktree directory, once one has been cut.
     #[serde(default)]
     pub worktree: Option<String>,
@@ -340,6 +346,7 @@ impl Task {
             verification: Vec::new(),
             verification_overrides: false,
             branch: None,
+            merge_target: None,
             worktree: None,
             attempts: 0,
             note: None,

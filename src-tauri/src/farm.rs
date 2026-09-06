@@ -556,7 +556,7 @@ pub fn farm_run_task(
 ) -> Result<()> {
     let service = state.service()?;
     service.run_task(&id, agent)?;
-    watch(&service, id);
+    watch_all(&service);
     Ok(())
 }
 
@@ -600,7 +600,7 @@ pub fn farm_merge_task(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
 pub fn farm_review_task(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
     let service = state.service()?;
     service.request_review(&id)?;
-    watch(&service, id);
+    watch_all(&service);
     Ok(())
 }
 
@@ -613,7 +613,10 @@ pub fn farm_verify_task(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
     std::thread::Builder::new()
         .name("spagitty-farm-verify".into())
         .spawn(move || {
-            let _ = service.verify(&id);
+            if let Err(error) = service.verify(&id) {
+                let _ = service.set_status(&id, TaskStatus::Blocked, Some(error.to_string()));
+            }
+            watch_all(&service);
         })
         .ok();
     Ok(())
@@ -688,43 +691,10 @@ pub fn farm_sweep(state: State<'_, FarmState>) -> Result<Vec<StaleWorkspace>> {
         .collect())
 }
 
-/// Wait for one task's agent on a thread, then let the scheduler decide again.
-///
-/// This is where an agent run's minutes are spent. The command that started it
-/// has already returned; everything the user sees from here is events.
-fn watch(service: &Arc<FarmService>, task: TaskId) {
-    let service = service.clone();
-    std::thread::Builder::new()
-        .name(format!("spagitty-farm-{task}"))
-        .spawn(move || {
-            let _ = service.await_task(&task);
-            // A finished task frees a lease and may satisfy a dependency, so
-            // the scheduler is asked again rather than waiting for a timer.
-            service.tick();
-            watch_all(&service);
-        })
-        .ok();
-}
-
-/// Watch every task that has a run in flight.
-///
-/// Called after anything that may have started work. A task already being
-/// watched is not watched twice: `await_task` takes the session out of the map,
-/// so a second waiter finds nothing and returns.
+/// The service claims each pending run before creating its completion thread.
+/// This includes review runs, whose task status remains Review.
 fn watch_all(service: &Arc<FarmService>) {
-    let running: Vec<TaskId> = service
-        .farm()
-        .map(|farm| {
-            farm.tasks
-                .iter()
-                .filter(|task| task.status == TaskStatus::Running)
-                .map(|task| task.id.clone())
-                .collect()
-        })
-        .unwrap_or_default();
-    for task in running {
-        watch(service, task);
-    }
+    service.watch_pending();
 }
 
 /// Close the farm when the repository closes.

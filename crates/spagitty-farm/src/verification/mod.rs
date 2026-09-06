@@ -11,3 +11,5 @@ pub mod verifier;
 
 pub use command::CommandResult;
 pub use verifier::{commands_for, Verification};
+
+pub(crate) mod evidence;

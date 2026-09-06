@@ -34,7 +34,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use spagitty_core::shell;
@@ -49,7 +49,7 @@ use crate::orchestrator::{planner, router, scheduler, Scoreboard};
 use crate::persistence::store;
 use crate::policy::{self, Policy};
 use crate::review::{reviewer, Review};
-use crate::verification::{verifier, CommandResult, Verification};
+use crate::verification::{evidence, verifier, CommandResult, Verification};
 use crate::workspace::{self, Leases};
 
 /// Where farm events go.
@@ -160,6 +160,9 @@ struct State {
     change_requests: HashMap<TaskId, String>,
     verifications: HashMap<TaskId, Verification>,
     reviews: HashMap<TaskId, Review>,
+    verified_commits: HashMap<TaskId, evidence::CheckedCommit>,
+    reviewed_commits: HashMap<TaskId, evidence::ReviewedCommit>,
+    review_inputs: HashMap<RunId, String>,
     /// When each run last said something, by run (FEAT-077). Written by the
     /// sink on the reader thread, read when the runs are asked for.
     heard: HashMap<RunId, Arc<AtomicU64>>,
@@ -219,6 +222,14 @@ impl State {
     }
 }
 
+/// The only owner allowed to reap and complete a particular run.
+struct PendingRun {
+    task: TaskId,
+    run: RunId,
+    phase: RunPhase,
+    session: Session,
+}
+
 /// One repository's farm.
 pub struct FarmService {
     repo: PathBuf,
@@ -226,7 +237,8 @@ pub struct FarmService {
     registry: Mutex<AgentRegistry>,
     observer: Arc<dyn Observer>,
     /// The agent processes running right now, by task.
-    sessions: Mutex<HashMap<TaskId, Session>>,
+    sessions: Mutex<HashMap<RunId, PendingRun>>,
+    cancellations: Mutex<HashMap<TaskId, (RunId, execution::Cancellation)>>,
     /// The event history, in memory.
     ///
     /// The log on disk is still the record — this is loaded from it once, when
@@ -236,6 +248,8 @@ pub struct FarmService {
     /// cost of watching a farm proportional to how much it had already done
     /// (TASK-030).
     recent: Mutex<VecDeque<Recorded>>,
+    verification_stops: Mutex<HashMap<TaskId, Arc<AtomicBool>>>,
+    merge_lock: Mutex<()>,
 }
 
 impl FarmService {
@@ -266,7 +280,10 @@ impl FarmService {
             registry: Mutex::new(registry),
             observer,
             sessions: Mutex::new(HashMap::new()),
+            cancellations: Mutex::new(HashMap::new()),
             recent: Mutex::new(store::load_events(&repo_for_events).into()),
+            verification_stops: Mutex::new(HashMap::new()),
+            merge_lock: Mutex::new(()),
         };
         service.recover();
         service
@@ -554,10 +571,10 @@ impl FarmService {
             let task = farm
                 .task_mut(id)
                 .ok_or_else(|| Error::NoSuchTask(id.clone()))?;
-            if task.status == next {
+            if task.status == next && task.note == note {
                 return Ok(());
             }
-            if !task.status.can_become(next) {
+            if task.status != next && !task.status.can_become(next) {
                 return Err(Error::BadTransition {
                     from: task.status.label().to_string(),
                     to: next.label().to_string(),
@@ -587,15 +604,51 @@ impl FarmService {
 
     /// Stop whatever is running for this task and cancel it.
     pub fn cancel_task(&self, id: &TaskId) -> Result<()> {
-        // Out of the map first, cancelled after — the sessions lock is not held
-        // while the child is signalled and, more to the point, not held while
-        // the `Session` is dropped, which joins its reader threads and reaps
-        // the process. See [`Self::collect_plan`] for what holding it costs.
-        let running = self.sessions.lock().expect("sessions lock").remove(id);
-        if let Some(session) = running {
-            session.cancel();
+        self.set_status(id, TaskStatus::Cancelled, Some("Stopped by hand.".into()))?;
+        if let Some(stop) = self
+            .verification_stops
+            .lock()
+            .expect("verification stop lock")
+            .get(id)
+        {
+            stop.store(true, Ordering::Release);
         }
-        self.set_status(id, TaskStatus::Cancelled, Some("Stopped by hand.".into()))
+        self.stop_session(id);
+        Ok(())
+    }
+
+    fn stop_session(&self, id: &TaskId) {
+        let cancellation = self
+            .cancellations
+            .lock()
+            .expect("cancellation lock")
+            .get(id)
+            .cloned();
+        if let Some((_, cancellation)) = cancellation {
+            cancellation.cancel();
+        }
+        // An unclaimed session still needs its readers joined and child reaped.
+        // The option is dropped outside the map lock.
+        let run = self
+            .cancellations
+            .lock()
+            .expect("cancellation lock")
+            .get(id)
+            .map(|(run, _)| run.clone());
+        if let Some(run) = run {
+            let pending = self.sessions.lock().expect("sessions lock").remove(&run);
+            if pending.is_some() {
+                drop(pending);
+                self.forget_cancellation(id, &run);
+            }
+        }
+    }
+
+    fn forget_cancellation(&self, task: &TaskId, run: &RunId) {
+        let mut handles = self.cancellations.lock().expect("cancellation lock");
+        if handles.get(task).map(|(id, _)| id) == Some(run) {
+            handles.remove(task);
+        }
     }
 
     /// Put a failed or blocked task back in the queue for another attempt.
@@ -603,6 +656,22 @@ impl FarmService {
     /// The attempt counter is *not* reset. A person retrying a task three times
     /// is making a decision; a farm that forgot each time would loop.
     pub fn retry_task(&self, id: &TaskId) -> Result<()> {
+        if self
+            .verification_stops
+            .lock()
+            .expect("verification stop lock")
+            .contains_key(id)
+        {
+            return Err(Error::Refused("Verification is still stopping.".into()));
+        }
+        if self
+            .cancellations
+            .lock()
+            .expect("cancellation lock")
+            .contains_key(id)
+        {
+            return Err(Error::Refused("The previous run is still stopping.".into()));
+        }
         let mut state = self.state.lock().expect("farm lock");
         let farm = state.farm.as_mut().ok_or(Error::NoFarm)?;
         let task = farm
@@ -683,19 +752,6 @@ impl FarmService {
 
     /// Stop every running agent and cancel every unfinished task.
     pub fn cancel_farm(&self) -> Result<()> {
-        let running: Vec<TaskId> = self
-            .sessions
-            .lock()
-            .expect("sessions lock")
-            .keys()
-            .cloned()
-            .collect();
-        for task in running {
-            let session = self.sessions.lock().expect("sessions lock").remove(&task);
-            if let Some(session) = session {
-                session.cancel();
-            }
-        }
         let unfinished: Vec<TaskId> = self
             .farm()
             .map(|farm| {
@@ -712,6 +768,24 @@ impl FarmService {
                 TaskStatus::Cancelled,
                 Some("The farm was stopped.".into()),
             );
+        }
+        for stop in self
+            .verification_stops
+            .lock()
+            .expect("verification stop lock")
+            .values()
+        {
+            stop.store(true, Ordering::Release);
+        }
+        let running: Vec<TaskId> = self
+            .cancellations
+            .lock()
+            .expect("cancellation lock")
+            .keys()
+            .cloned()
+            .collect();
+        for task in running {
+            self.stop_session(&task);
         }
         self.set_farm_status(FarmStatus::Cancelled)
     }
@@ -886,15 +960,22 @@ impl FarmService {
             });
             let unattended = farm.autonomy >= Autonomy::Assisted;
             state.leases.acquire(&task.id, &task.allowed_paths)?;
+            state.verified_commits.remove(id);
+            state.reviewed_commits.remove(id);
             (task, prompt, unattended)
         };
 
+        let destination = task
+            .merge_target
+            .clone()
+            .map(Ok)
+            .unwrap_or_else(|| evidence::branch(&self.repo))?;
         self.set_status(id, TaskStatus::Assigned, None)?;
 
         // The worktree is cut from the branch the user is on, so a farm run
         // starts from what they can see rather than from `main` on a checkout
         // that has moved on.
-        let workspace = match workspace::create(&self.repo, id, definition.provider, "HEAD") {
+        let workspace = match workspace::create(&self.repo, id, definition.provider, &destination) {
             Ok(workspace) => workspace,
             Err(error) => {
                 self.state.lock().expect("farm lock").leases.release(id);
@@ -909,6 +990,9 @@ impl FarmService {
         });
 
         self.edit_task(id, |task| {
+            if task.merge_target.is_none() {
+                task.merge_target = Some(destination);
+            }
             task.branch = Some(workspace.branch.clone());
             task.worktree = Some(workspace.path.to_string_lossy().into_owned());
             task.assigned_agent = Some(definition.id.clone());
@@ -996,10 +1080,19 @@ impl FarmService {
             self.set_status(&task, TaskStatus::Running, None)?;
         }
 
-        self.sessions
+        self.cancellations
             .lock()
-            .expect("sessions lock")
-            .insert(task.clone(), session);
+            .expect("cancellation lock")
+            .insert(task.clone(), (run.clone(), session.cancellation()));
+        self.sessions.lock().expect("sessions lock").insert(
+            run.clone(),
+            PendingRun {
+                task: task.clone(),
+                run,
+                phase,
+                session,
+            },
+        );
         Ok(())
     }
 
@@ -1010,22 +1103,121 @@ impl FarmService {
     /// tests call it directly, which is what makes the whole pipeline testable
     /// without a scheduler thread to synchronise against.
     pub fn await_task(&self, id: &TaskId) -> Result<()> {
-        let Some(session) = self.sessions.lock().expect("sessions lock").remove(id) else {
+        let run = self
+            .sessions
+            .lock()
+            .expect("sessions lock")
+            .values()
+            .find(|pending| &pending.task == id)
+            .map(|pending| pending.run.clone());
+        let Some(run) = run else {
             return Ok(());
         };
-        let ended = session.wait();
-        self.finish_run(id, ended)
+        let pending = self.sessions.lock().expect("sessions lock").remove(&run);
+        if let Some(pending) = pending {
+            self.await_claimed(pending)?;
+        }
+        Ok(())
+    }
+
+    fn await_claimed(&self, pending: PendingRun) -> Result<()> {
+        let ended = pending.session.wait();
+        let result = self.finish_run(&pending.task, &pending.run, ended);
+        self.forget_cancellation(&pending.task, &pending.run);
+        result
+    }
+
+    /// Claim before spawning. Concurrent callers cannot create duplicate
+    /// waiters, and review runs are discovered by phase rather than UI status.
+    pub fn watch_pending(self: &Arc<Self>) -> usize {
+        let mut started = 0;
+        let runs: Vec<RunId> = self
+            .sessions
+            .lock()
+            .expect("sessions lock")
+            .values()
+            .filter(|pending| pending.phase != RunPhase::Planning)
+            .map(|pending| pending.run.clone())
+            .collect();
+        for run in runs {
+            let pending = self.sessions.lock().expect("sessions lock").remove(&run);
+            let Some(pending) = pending else {
+                continue;
+            };
+            let task = pending.task.clone();
+            let service = self.clone();
+            let report_task = task.clone();
+            let report_run = run.clone();
+            let spawned = std::thread::Builder::new()
+                .name(format!("spagitty-farm-{run}"))
+                .spawn(move || {
+                    if let Err(error) = service.await_claimed(pending) {
+                        service.report_run_error(&report_task, &report_run, error.to_string());
+                    }
+                    service.tick();
+                    service.watch_pending();
+                });
+            if let Err(error) = spawned {
+                self.forget_cancellation(&task, &run);
+                self.report_run_error(&task, &run, format!("Could not watch the run: {error}"));
+            } else {
+                started += 1;
+            }
+        }
+        started
+    }
+
+    fn report_run_error(&self, task: &TaskId, run: &RunId, message: String) {
+        let current = self
+            .state
+            .lock()
+            .expect("farm lock")
+            .runs
+            .iter()
+            .rev()
+            .find(|entry| &entry.task == task)
+            .map(|entry| entry.id.clone());
+        if current.as_ref() != Some(run) {
+            return;
+        }
+        if self
+            .farm()
+            .and_then(|farm| farm.task(task).map(|task| task.status.is_terminal()))
+            .unwrap_or(true)
+        {
+            return;
+        }
+        let _ = self.set_status(task, TaskStatus::Blocked, Some(message));
     }
 
     /// Record how a run ended and decide what happens next.
-    fn finish_run(&self, id: &TaskId, ended: execution::Ended) -> Result<()> {
+    fn finish_run(&self, id: &TaskId, run_id: &RunId, ended: execution::Ended) -> Result<()> {
+        let ended = if self
+            .farm()
+            .and_then(|farm| farm.task(id).map(|task| task.status))
+            == Some(TaskStatus::Cancelled)
+        {
+            execution::Ended::Cancelled
+        } else {
+            ended
+        };
         let (run, agent, phase, duration) = {
             let mut state = self.state.lock().expect("farm lock");
+            if state
+                .runs
+                .iter()
+                .rev()
+                .find(|run| &run.task == id)
+                .map(|run| &run.id)
+                != Some(run_id)
+            {
+                return Ok(());
+            }
             let run = state
                 .runs
                 .iter_mut()
                 .rev()
-                .find(|run| &run.task == id && run.outcome == RunOutcome::Running);
+                .find(|run| &run.id == run_id && run.outcome == RunOutcome::Running);
             let Some(run) = run else {
                 return Ok(());
             };
@@ -1058,14 +1250,26 @@ impl FarmService {
         });
 
         if ended == execution::Ended::Cancelled {
-            self.state.lock().expect("farm lock").leases.release(id);
+            let mut state = self.state.lock().expect("farm lock");
+            state.leases.release(id);
+            state.review_inputs.remove(run_id);
             return Ok(());
         }
 
         let transcript = execution::log::read(&execution::log::log_path(&self.repo, id, &run));
 
         match phase {
-            RunPhase::Review => self.conclude_review(id, &agent, &transcript),
+            RunPhase::Review => {
+                if let execution::Ended::Failed { message, .. } = &ended {
+                    {
+                        let mut state = self.state.lock().expect("farm lock");
+                        state.reviewed_commits.remove(id);
+                        state.review_inputs.remove(run_id);
+                    }
+                    return self.after_rejection(id, format!("Reviewer failed: {message}"));
+                }
+                self.conclude_review(id, run_id, &agent, &transcript)
+            }
             RunPhase::Planning => Ok(()),
             RunPhase::Implementation => {
                 let handoff = Handoff::parse(&transcript);
@@ -1104,6 +1308,26 @@ impl FarmService {
     ///
     /// Blocking, like [`Self::await_task`], and for the same reason.
     pub fn verify(&self, id: &TaskId) -> Result<()> {
+        let stop = Arc::new(AtomicBool::new(false));
+        {
+            let mut stops = self
+                .verification_stops
+                .lock()
+                .expect("verification stop lock");
+            if stops.contains_key(id) {
+                return Err(Error::Refused("Verification is already running.".into()));
+            }
+            stops.insert(id.clone(), stop.clone());
+        }
+        let result = self.verify_with_stop(id, &stop);
+        self.verification_stops
+            .lock()
+            .expect("verification stop lock")
+            .remove(id);
+        result
+    }
+
+    fn verify_with_stop(&self, id: &TaskId, stop: &AtomicBool) -> Result<()> {
         let (workdir, commands) = {
             let state = self.state.lock().expect("farm lock");
             let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
@@ -1117,18 +1341,25 @@ impl FarmService {
         };
 
         self.set_status(id, TaskStatus::Verification, None)?;
+        let before = evidence::clean_commit(&workdir).ok();
+        {
+            let mut state = self.state.lock().expect("farm lock");
+            state.verified_commits.remove(id);
+            state.reviewed_commits.remove(id);
+            state.reviews.remove(id);
+        }
 
         // Through `emit`, not straight to the observer. These two used to go
         // directly to the interface, which meant a verification was on screen
         // while it happened and in no record afterwards: it was in neither the
         // log on disk nor the history a reopened farm reads back.
         let task_id = id.clone();
-        for command in &commands {
+        let mut starting = |command: &str| {
             self.emit(FarmEvent::VerificationStarted {
                 task: task_id.clone(),
-                command: command.clone(),
+                command: command.to_string(),
             });
-        }
+        };
         let mut report = |result: &CommandResult| {
             self.emit(FarmEvent::VerificationFinished {
                 task: task_id.clone(),
@@ -1137,7 +1368,11 @@ impl FarmService {
                 output: result.output.clone(),
             });
         };
-        let verification = verifier::run(&workdir, &commands, &mut report);
+        let verification =
+            verifier::run_cancellable(&workdir, &commands, stop, &mut starting, &mut report);
+        if stop.load(Ordering::Acquire) {
+            return Ok(());
+        }
 
         self.state
             .lock()
@@ -1145,6 +1380,23 @@ impl FarmService {
             .verifications
             .insert(id.clone(), verification.clone());
 
+        if verification.passed {
+            if let Some(commit) = before {
+                if evidence::clean_commit(&workdir).ok().as_ref() == Some(&commit) {
+                    self.state
+                        .lock()
+                        .expect("farm lock")
+                        .verified_commits
+                        .insert(
+                            id.clone(),
+                            evidence::CheckedCommit {
+                                commit,
+                                commands: commands.clone(),
+                            },
+                        );
+                }
+            }
+        }
         if !verification.passed && !verification.unverified {
             return self.after_rejection(id, verification.summary());
         }
@@ -1217,6 +1469,13 @@ impl FarmService {
             id.as_str().to_lowercase(),
             now_ms()
         ));
+        if let Ok(commit) = evidence::clean_commit(&workdir) {
+            self.state
+                .lock()
+                .expect("farm lock")
+                .review_inputs
+                .insert(run.clone(), commit);
+        }
         let command = adapter_for(reviewer.provider).command(
             &reviewer,
             &AgentRunRequest {
@@ -1238,7 +1497,19 @@ impl FarmService {
         })
     }
 
-    fn conclude_review(&self, id: &TaskId, reviewer: &AgentId, transcript: &str) -> Result<()> {
+    fn conclude_review(
+        &self,
+        id: &TaskId,
+        run: &RunId,
+        reviewer: &AgentId,
+        transcript: &str,
+    ) -> Result<()> {
+        let input = self
+            .state
+            .lock()
+            .expect("farm lock")
+            .review_inputs
+            .remove(run);
         let review = Review::parse(transcript);
         self.state
             .lock()
@@ -1273,6 +1544,28 @@ impl FarmService {
             return self.after_rejection(id, review.summary.clone());
         }
 
+        let task = self
+            .farm()
+            .and_then(|farm| farm.task(id).cloned())
+            .ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+        if let Some(implementer) = &task.implemented_by {
+            reviewer::check(implementer, reviewer)?;
+        }
+        if let (Some(commit), Some(path)) = (input, &task.worktree) {
+            if evidence::clean_commit(Path::new(path)).ok().as_ref() == Some(&commit) {
+                self.state
+                    .lock()
+                    .expect("farm lock")
+                    .reviewed_commits
+                    .insert(
+                        id.clone(),
+                        evidence::ReviewedCommit {
+                            commit,
+                            reviewer: reviewer.clone(),
+                        },
+                    );
+            }
+        }
         self.approve(id)
     }
 
@@ -1280,7 +1573,10 @@ impl FarmService {
     pub fn approve(&self, id: &TaskId) -> Result<()> {
         let autonomy = self.farm().map(|farm| farm.autonomy).unwrap_or_default();
         if autonomy.merges() {
-            self.merge(id)
+            match self.merge_checked(id, true) {
+                Ok(()) => Ok(()),
+                Err(error) => self.set_status(id, TaskStatus::Review, Some(error.to_string())),
+            }
         } else {
             // Stays in Review with nothing running: the human's queue.
             Ok(())
@@ -1289,20 +1585,52 @@ impl FarmService {
 
     /// Merge a task's branch into the branch the user is on, then clean up.
     pub fn merge(&self, id: &TaskId) -> Result<()> {
-        let (branch, provider) = {
+        self.merge_checked(id, false)
+    }
+
+    fn merge_checked(&self, id: &TaskId, automatic: bool) -> Result<()> {
+        let merge_guard = self.merge_lock.lock().expect("merge lock");
+        let (task, provider) = {
             let state = self.state.lock().expect("farm lock");
-            // No permission check here on purpose: this is the *button*, and a
-            // person pressing merge has given the permission by pressing it.
-            // `permissions.merge` gates the farm merging unprompted, which is
-            // decided in `approve`.
             let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
             let task = farm.task(id).ok_or_else(|| Error::NoSuchTask(id.clone()))?;
-            let branch = task
-                .branch
-                .clone()
-                .ok_or_else(|| Error::Refused("This task has no branch to merge.".into()))?;
-            (branch, self.provider_of(task))
+            if task.status != TaskStatus::Review
+                || state
+                    .runs
+                    .iter()
+                    .any(|run| &run.task == id && run.outcome == RunOutcome::Running)
+            {
+                return Err(Error::Refused(
+                    "Wait for the task and its review to finish before merging.".into(),
+                ));
+            }
+            (task.clone(), self.provider_of(task))
         };
+        let branch = task
+            .branch
+            .clone()
+            .ok_or_else(|| Error::Refused("This task has no branch to merge.".into()))?;
+        let workdir = task
+            .worktree
+            .as_deref()
+            .map(Path::new)
+            .ok_or_else(|| Error::Refused("This task has no worktree.".into()))?;
+        let commit = evidence::clean_commit(workdir)?;
+        let destination = evidence::branch(&self.repo)?;
+        if let Some(expected) = &task.merge_target {
+            if expected != &destination {
+                return Err(Error::Refused(format!(
+                    "Switch back to {expected} before merging this task."
+                )));
+            }
+        } else if automatic {
+            return Err(Error::Refused(
+                "This older task has no recorded merge destination; merge it by hand.".into(),
+            ));
+        }
+        if automatic {
+            self.check_merge_evidence(&task, &commit)?;
+        }
 
         self.emit(FarmEvent::MergeRequested {
             task: id.clone(),
@@ -1311,7 +1639,7 @@ impl FarmService {
 
         // `--no-ff`, always. A farm branch that fast-forwards disappears from
         // the history, and "which agent wrote this" stops having an answer.
-        match shell::merge(&self.repo, &branch, false, true) {
+        match shell::merge_into(&self.repo, &commit, &destination) {
             Ok(()) => {
                 self.emit(FarmEvent::MergeCompleted {
                     task: id.clone(),
@@ -1328,6 +1656,7 @@ impl FarmService {
                         .into_owned(),
                     created: false,
                 });
+                drop(merge_guard);
                 self.tick();
                 Ok(())
             }
@@ -1349,6 +1678,42 @@ impl FarmService {
                 )
             }
         }
+    }
+
+    fn check_merge_evidence(&self, task: &Task, commit: &str) -> Result<()> {
+        let state = self.state.lock().expect("farm lock");
+        let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
+        if !farm.autonomy.merges() || !farm.permissions.merge {
+            return Err(Error::Refused(
+                "Automatic merging is not enabled. Choose the autonomy level again to allow it."
+                    .into(),
+            ));
+        }
+        let checked = state.verified_commits.get(&task.id).filter(|checked| {
+            checked.commit == commit
+                && checked.commands == verifier::commands_for(&farm.verification, task)
+        });
+        if checked.is_none() {
+            return Err(Error::Refused(
+                "Run passing verification checks for the current commit before automatic merging."
+                    .into(),
+            ));
+        }
+        let reviewed = state
+            .reviewed_commits
+            .get(&task.id)
+            .filter(|review| review.commit == commit);
+        let Some(reviewed) = reviewed else {
+            return Err(Error::Refused(
+                "The current commit needs a successful independent review.".into(),
+            ));
+        };
+        let implementer = task
+            .implemented_by
+            .as_ref()
+            .ok_or_else(|| Error::Refused("The task's implementer is unknown.".into()))?;
+        reviewer::check(implementer, &reviewed.reviewer)?;
+        Ok(())
     }
 
     /// A verification failure or a requested change: try again, or give up.
@@ -1497,10 +1862,19 @@ impl FarmService {
             });
             state.heard.insert(run.clone(), heard);
         }
-        self.sessions
+        self.cancellations
             .lock()
-            .expect("sessions lock")
-            .insert(planning_task, session);
+            .expect("cancellation lock")
+            .insert(planning_task.clone(), (run.clone(), session.cancellation()));
+        self.sessions.lock().expect("sessions lock").insert(
+            run.clone(),
+            PendingRun {
+                task: planning_task,
+                run: run.clone(),
+                phase: RunPhase::Planning,
+                session,
+            },
+        );
         Ok(run)
     }
 
@@ -1519,18 +1893,15 @@ impl FarmService {
         // starts, stops or schedules a task takes that lock, and they run on
         // the main thread, so the window froze until the planner finished
         // (BUG-020). `await_task` has always had the shape this now copies.
-        let waiting = self
-            .sessions
-            .lock()
-            .expect("sessions lock")
-            .remove(&planning_task);
+        let waiting = self.sessions.lock().expect("sessions lock").remove(run);
         let ended = match waiting {
-            Some(session) => session.wait(),
+            Some(pending) => pending.session.wait(),
             // Nothing to wait for: the run is already over, or was never
             // started. Treated as a clean end so the transcript is still read.
             None => execution::Ended::Ok,
         };
 
+        self.forget_cancellation(&planning_task, run);
         let outcome = match &ended {
             execution::Ended::Ok => RunOutcome::Completed { exit_code: 0 },
             execution::Ended::Cancelled => RunOutcome::Cancelled,
@@ -1629,13 +2000,14 @@ impl FarmService {
     /// The lock is held across `cancel`, which sends a signal and returns; it
     /// never waits for the process, which is the distinction BUG-020 turned on.
     pub fn cancel_plan(&self) -> Result<()> {
-        if let Some(session) = self
-            .sessions
+        let cancellation = self
+            .cancellations
             .lock()
-            .expect("sessions lock")
+            .expect("cancellation lock")
             .get(&TaskId::new("planning"))
-        {
-            session.cancel();
+            .cloned();
+        if let Some((_, cancellation)) = cancellation {
+            cancellation.cancel();
         }
         Ok(())
     }

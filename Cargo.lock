@@ -4414,6 +4414,7 @@ dependencies = [
  "spagitty-core",
  "tempfile",
  "thiserror 2.0.20",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

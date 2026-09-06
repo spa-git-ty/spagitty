@@ -28,9 +28,8 @@
 //! happened to leave behind. That is not a hypothetical — it turned a
 //! cancellation test that should take milliseconds into a twenty-second wait.
 //!
-//! So on Unix the child is put in a process group of its own and the *group* is
-//! signalled. On Windows there is no equivalent one-liner, and the child alone
-//! is killed; that is a known gap, recorded rather than hidden.
+//! Unix runs use process groups; Windows runs enter a job before their primary
+//! thread is resumed. The cancellation handle outlives transfer to a waiter.
 //!
 //! # stdout and stderr are one stream
 //!
@@ -39,9 +38,6 @@
 //! have to be merged by timestamp to be read, and the timestamps are the ones
 //! we added rather than the ones the agent meant.
 
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
-
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -49,6 +45,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
+use super::tree::ProcessTree;
 use crate::agent::AgentCommand;
 use crate::error::{Error, Result};
 use crate::execution::log::TranscriptWriter;
@@ -92,6 +89,31 @@ pub enum Ended {
     Cancelled,
 }
 
+/// Cancellation remains accessible after the session moves to a waiter.
+#[derive(Debug, Clone)]
+pub struct Cancellation {
+    child: Arc<Mutex<Child>>,
+    cancelled: Arc<AtomicBool>,
+    finished: Arc<AtomicBool>,
+    tree: Arc<ProcessTree>,
+}
+
+impl Cancellation {
+    pub fn cancel(&self) {
+        let mut child = self.child.lock().expect("agent child lock");
+        if self.finished.load(Ordering::Acquire) {
+            return;
+        }
+        self.cancelled.store(true, Ordering::Release);
+        self.tree.terminate();
+        let _ = child.kill();
+    }
+
+    pub fn was_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Acquire)
+    }
+}
+
 /// A running agent.
 ///
 /// Dropping one cancels it and waits, so a farm that goes away does not leave
@@ -99,8 +121,7 @@ pub enum Ended {
 /// the same contract `CloneWorker` has, and for the same reason.
 #[derive(Debug)]
 pub struct Session {
-    child: Arc<Mutex<Child>>,
-    cancelled: Arc<AtomicBool>,
+    cancellation: Cancellation,
     readers: Vec<JoinHandle<()>>,
 }
 
@@ -110,17 +131,15 @@ impl Session {
     /// A child that has already exited is not an error: pressing stop as a run
     /// finishes is a race, not a failure.
     pub fn cancel(&self) {
-        self.cancelled.store(true, Ordering::Relaxed);
-        let mut child = self.child.lock().expect("agent child lock");
-        kill_group(child.id());
-        // The group signal covers the child too, but only if `setpgid` took
-        // effect. Killing it directly as well costs nothing and covers the
-        // platforms where it did not.
-        let _ = child.kill();
+        self.cancellation.cancel();
+    }
+
+    pub fn cancellation(&self) -> Cancellation {
+        self.cancellation.clone()
     }
 
     pub fn was_cancelled(&self) -> bool {
-        self.cancelled.load(Ordering::Relaxed)
+        self.cancellation.was_cancelled()
     }
 
     /// Wait for the agent to finish and say how it went.
@@ -133,8 +152,22 @@ impl Session {
         for reader in self.readers.drain(..) {
             let _ = reader.join();
         }
-        let status = self.child.lock().expect("agent child lock").wait();
-        let cancelled = self.cancelled.load(Ordering::Relaxed);
+        // Never hold the child mutex across a blocking wait: a program may
+        // close its pipes and keep running, and Stop must still acquire it.
+        let status = loop {
+            let mut child = self.cancellation.child.lock().expect("agent child lock");
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    self.cancellation.finished.store(true, Ordering::Release);
+                    break Ok(status);
+                }
+                Err(error) => break Err(error),
+                Ok(None) => {}
+            }
+            drop(child);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        };
+        let cancelled = self.was_cancelled();
 
         match status {
             _ if cancelled => Ended::Cancelled,
@@ -158,7 +191,12 @@ impl Drop for Session {
             for reader in self.readers.drain(..) {
                 let _ = reader.join();
             }
-            let _ = self.child.lock().expect("agent child lock").wait();
+            let _ = self
+                .cancellation
+                .child
+                .lock()
+                .expect("agent child lock")
+                .wait();
         }
     }
 }
@@ -196,8 +234,7 @@ pub fn start(
     // A group of its own, so cancelling reaches everything the agent starts.
     // Without it a stopped agent leaves `cargo test` running against a worktree
     // that is about to be deleted.
-    #[cfg(unix)]
-    process.process_group(0);
+    ProcessTree::prepare(&mut process);
 
     process.stdin(if command.stdin.is_some() {
         Stdio::piped()
@@ -214,6 +251,17 @@ pub fn start(
             command.program.display()
         ))
     })?;
+
+    let tree = match ProcessTree::attach(&child) {
+        Ok(tree) => Arc::new(tree),
+        Err(error) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(Error::Refused(format!(
+                "could not contain agent process: {error}"
+            )));
+        }
+    };
 
     if let Some(prompt) = &command.stdin {
         // Written and closed immediately: an agent reading its prompt from a
@@ -253,33 +301,15 @@ pub fn start(
     }
 
     Ok(Session {
-        child,
-        cancelled,
+        cancellation: Cancellation {
+            child,
+            cancelled,
+            tree,
+            finished: Arc::new(AtomicBool::new(false)),
+        },
         readers,
     })
 }
-
-/// Signal the whole process group `pid` leads.
-///
-/// `kill(-pid)` addresses the group rather than the process. The child was put
-/// in a group of its own at spawn, so this reaches the agent and everything it
-/// started and nothing else — in particular not Spagitty, which would be the
-/// consequence of doing this without the `process_group(0)` below.
-#[cfg(unix)]
-fn kill_group(pid: u32) {
-    if pid == 0 {
-        return;
-    }
-    // SAFETY: `kill` with a negative pid signals a process group. The group is
-    // the one created for this child at spawn, so the only processes reached
-    // are the agent and its descendants.
-    unsafe {
-        libc::kill(-(pid as i32), libc::SIGKILL);
-    }
-}
-
-#[cfg(not(unix))]
-fn kill_group(_pid: u32) {}
 
 enum Pipe {
     Out(std::process::ChildStdout),

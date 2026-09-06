@@ -9,7 +9,8 @@
 pub mod log;
 pub mod narrate;
 pub mod process;
+pub(crate) mod tree;
 
 pub use log::{log_path, tail, TranscriptWriter};
 pub use narrate::{ClaudeStream, Narrator, Verbatim};
-pub use process::{start, Collected, Ended, Session, Sink};
+pub use process::{start, Cancellation, Collected, Ended, Session, Sink};

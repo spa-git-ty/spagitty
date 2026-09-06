@@ -197,10 +197,29 @@ jobs:
       - name: Frontend tests and coverage
         run: bun run coverage
 
+  farm_processes:
+    name: 3 · farm processes (${{ matrix.os }})
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/linux-deps
+        if: matrix.os == 'ubuntu-latest'
+      - name: Descendant containment and noisy/cancellable verification
+        run: |
+          cargo test -p spagitty-farm --lib execution::tree::tests
+          cargo test -p spagitty-farm --lib verification::command::tests
+
   # --- Gate 4 -------------------------------------------------------------
   security:
     name: 4 · security
-    needs: tests
+    needs: [tests, farm_processes]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -11,6 +11,11 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
  */
 const config = {
 	preprocess: vitePreprocess(),
+	// In dev, styles travel with the component. The v5 Vite plugin can serve
+	// raw .svelte source when a CSS request arrives before its compile cache is
+	// warm, leaving broken, unscoped styles cached for the session (BUG-028).
+	// Production still extracts CSS into independently cacheable assets.
+	vitePlugin: { emitCss: process.env.NODE_ENV !== 'development' },
 	kit: {
 		adapter: adapter({ fallback: 'index.html', strict: false }),
 		alias: { $lib: 'src/lib' },

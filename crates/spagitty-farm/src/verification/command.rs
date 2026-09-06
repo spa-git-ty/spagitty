@@ -23,8 +23,13 @@
 //! `sh -c "..."` — and that is then a visible decision rather than a property of
 //! every command they type.
 
+use crate::execution::tree::ProcessTree;
+use std::collections::VecDeque;
+use std::io::Read;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -97,82 +102,139 @@ pub fn split(line: &str) -> Vec<String> {
 /// the verification list, and raising it would stop the remaining commands from
 /// running and hide it.
 pub fn run(workdir: &Path, line: &str) -> CommandResult {
+    run_cancellable(workdir, line, &AtomicBool::new(false), TIMEOUT)
+}
+
+pub fn run_cancellable(
+    workdir: &Path,
+    line: &str,
+    cancelled: &AtomicBool,
+    timeout: Duration,
+) -> CommandResult {
     let started = Instant::now();
+    let result = |passed, output| CommandResult {
+        command: line.to_string(),
+        passed,
+        output,
+        duration_ms: started.elapsed().as_millis() as u64,
+    };
+    if cancelled.load(Ordering::Acquire) {
+        return result(false, "Verification stopped.".into());
+    }
     let parts = split(line);
     let Some((program, args)) = parts.split_first() else {
-        return CommandResult {
-            command: line.to_string(),
-            passed: false,
-            output: "there is no command here".into(),
-            duration_ms: 0,
-        };
+        return result(false, "there is no command here".into());
     };
-
-    let spawned = Command::new(program)
+    let mut command = Command::new(program);
+    command
         .args(args)
         .current_dir(workdir)
-        // Same reasoning as everywhere else: a check that waits for a human is
-        // a check that never finishes.
         .stdin(Stdio::null())
         .env("GIT_TERMINAL_PROMPT", "0")
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
-
-    let mut child = match spawned {
+        .stderr(Stdio::piped());
+    ProcessTree::prepare(&mut command);
+    let mut child = match command.spawn() {
         Ok(child) => child,
+        Err(error) => return result(false, format!("could not run `{program}`: {error}")),
+    };
+    let tree = match ProcessTree::attach(&child) {
+        Ok(tree) => tree,
         Err(error) => {
-            return CommandResult {
-                command: line.to_string(),
-                passed: false,
-                output: format!("could not run `{program}`: {error}"),
-                duration_ms: started.elapsed().as_millis() as u64,
-            }
+            let _ = child.kill();
+            let _ = child.wait();
+            return result(
+                false,
+                format!("could not contain verification process: {error}"),
+            );
         }
     };
-
-    let deadline = Instant::now() + TIMEOUT;
-    let timed_out = loop {
-        match child.try_wait() {
-            Ok(Some(_)) => break false,
-            Ok(None) if Instant::now() >= deadline => {
-                let _ = child.kill();
-                break true;
-            }
-            Ok(None) => std::thread::sleep(Duration::from_millis(50)),
-            Err(_) => break false,
+    let output = Arc::new(Mutex::new(VecDeque::with_capacity(OUTPUT_BYTES)));
+    let readers = [
+        drain(child.stdout.take().expect("piped stdout"), output.clone()),
+        drain(child.stderr.take().expect("piped stderr"), output.clone()),
+    ];
+    let deadline = Instant::now() + timeout;
+    let mut status = None;
+    let mut stopped = None;
+    loop {
+        if cancelled.load(Ordering::Acquire) {
+            stopped = Some("Verification stopped.".to_string());
+        } else if Instant::now() >= deadline {
+            stopped = Some(format!(
+                "Verification timed out after {} seconds.",
+                timeout.as_secs()
+            ));
         }
-    };
-
-    let output = child.wait_with_output();
-    let duration_ms = started.elapsed().as_millis() as u64;
-
-    match output {
-        Ok(output) => {
-            let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
-            text.push_str(&String::from_utf8_lossy(&output.stderr));
-            CommandResult {
-                command: line.to_string(),
-                passed: !timed_out && output.status.success(),
-                output: if timed_out {
-                    format!(
-                        "gave up after {} minutes\n{}",
-                        TIMEOUT.as_secs() / 60,
-                        tail(&text)
-                    )
-                } else {
-                    tail(&text)
-                },
-                duration_ms,
+        if stopped.is_some() {
+            tree.terminate();
+            let _ = child.kill();
+            let _ = child.wait();
+            break;
+        }
+        if status.is_none() {
+            match child.try_wait() {
+                Ok(found) => status = found,
+                Err(error) => {
+                    stopped = Some(error.to_string());
+                    tree.terminate();
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break;
+                }
             }
         }
-        Err(error) => CommandResult {
-            command: line.to_string(),
-            passed: false,
-            output: error.to_string(),
-            duration_ms,
-        },
+        // An exited parent can leave descendants holding its pipes. Keep the
+        // deadline and Stop active until both streams have reached EOF.
+        if status.is_some() && readers.iter().all(|reader| reader.is_finished()) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
     }
+    for reader in readers {
+        match reader.join() {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                stopped.get_or_insert(error.to_string());
+            }
+            Err(_) => {
+                stopped.get_or_insert("Could not read verification output.".into());
+            }
+        }
+    }
+    let bytes: Vec<u8> = output
+        .lock()
+        .expect("verification output lock")
+        .iter()
+        .copied()
+        .collect();
+    let text = tail(&String::from_utf8_lossy(&bytes));
+    match stopped {
+        Some(reason) => result(false, format!("{reason}\n{text}")),
+        None => result(status.is_some_and(|status| status.success()), text),
+    }
+}
+
+fn drain(
+    mut pipe: impl Read + Send + 'static,
+    output: Arc<Mutex<VecDeque<u8>>>,
+) -> std::thread::JoinHandle<std::io::Result<()>> {
+    std::thread::spawn(move || {
+        let mut buffer = [0; 4096];
+        loop {
+            let read = match pipe.read(&mut buffer) {
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                other => other?,
+            };
+            if read == 0 {
+                return Ok(());
+            }
+            let mut output = output.lock().expect("verification output lock");
+            let overflow = (output.len() + read).saturating_sub(OUTPUT_BYTES);
+            output.drain(..overflow);
+            output.extend(&buffer[..read]);
+        }
+    })
 }
 
 /// The last [`OUTPUT_BYTES`] of `text`, cut at a line boundary.
@@ -195,6 +257,92 @@ fn tail(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fixture_line() -> String {
+        format!(
+            "\"{}\" --exact verification::command::tests::command_fixture --nocapture",
+            std::env::current_exe().unwrap().display()
+        )
+    }
+
+    #[test]
+    fn command_fixture() {
+        let Ok(mode) = std::fs::read_to_string(".spagitty-verification-test-mode") else {
+            return;
+        };
+        if mode == "echo" {
+            println!("all good");
+            return;
+        }
+        if mode == "failure" {
+            eprintln!("2 tests failed");
+            std::process::exit(1);
+        }
+        if mode == "cwd" {
+            assert_eq!(std::fs::read_to_string("here.txt").unwrap(), "yes");
+            return;
+        }
+        if mode == "hang" {
+            std::thread::sleep(Duration::from_secs(3));
+            return;
+        }
+        use std::io::Write;
+        let bytes = vec![b'x'; 1024 * 1024];
+        std::io::stdout().write_all(&bytes).unwrap();
+        std::io::stderr().write_all(&bytes).unwrap();
+        if mode == "fail" {
+            std::process::exit(7);
+        }
+    }
+
+    #[test]
+    fn noisy_commands_finish_and_keep_only_a_bounded_tail() {
+        for mode in ["pass", "fail"] {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(dir.path().join(".spagitty-verification-test-mode"), mode).unwrap();
+            let result = run_cancellable(
+                dir.path(),
+                &fixture_line(),
+                &AtomicBool::new(false),
+                Duration::from_secs(3),
+            );
+            assert_eq!(result.passed, mode == "pass", "{}", result.output);
+            assert!(result.output.len() <= OUTPUT_BYTES);
+            assert!(result.output.contains('x'));
+        }
+    }
+
+    #[test]
+    fn a_deadline_stops_a_check_promptly() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".spagitty-verification-test-mode"), "hang").unwrap();
+        let result = run_cancellable(
+            dir.path(),
+            &fixture_line(),
+            &AtomicBool::new(false),
+            Duration::from_millis(50),
+        );
+        assert!(!result.passed);
+        assert!(result.output.contains("timed out"));
+        assert!(result.duration_ms < 2000);
+    }
+
+    #[test]
+    fn a_running_check_can_be_cancelled() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".spagitty-verification-test-mode"), "hang").unwrap();
+        let stop = Arc::new(AtomicBool::new(false));
+        let trigger = stop.clone();
+        let worker = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            trigger.store(true, Ordering::Release);
+        });
+        let result = run_cancellable(dir.path(), &fixture_line(), &stop, Duration::from_secs(3));
+        worker.join().unwrap();
+        assert!(!result.passed);
+        assert!(result.output.contains("stopped"));
+        assert!(result.duration_ms < 2000);
+    }
 
     #[test]
     fn a_plain_command_splits_on_spaces() {
@@ -228,16 +376,23 @@ mod tests {
     #[test]
     fn a_passing_command_passes() {
         let dir = tempfile::tempdir().unwrap();
-        let result = run(dir.path(), "/bin/sh -c 'echo all good'");
+        std::fs::write(dir.path().join(".spagitty-verification-test-mode"), "echo").unwrap();
+        let line = fixture_line();
+        let result = run(dir.path(), &line);
         assert!(result.passed);
-        assert_eq!(result.output.trim(), "all good");
-        assert_eq!(result.command, "/bin/sh -c 'echo all good'");
+        assert!(result.output.contains("all good"));
+        assert_eq!(result.command, line);
     }
 
     #[test]
     fn a_failing_command_keeps_what_it_said() {
         let dir = tempfile::tempdir().unwrap();
-        let result = run(dir.path(), "/bin/sh -c 'echo 2 tests failed >&2; exit 1'");
+        std::fs::write(
+            dir.path().join(".spagitty-verification-test-mode"),
+            "failure",
+        )
+        .unwrap();
+        let result = run(dir.path(), &fixture_line());
         assert!(!result.passed);
         assert!(
             result.output.contains("2 tests failed"),
@@ -266,7 +421,8 @@ mod tests {
     fn a_command_runs_where_it_was_told_to() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("here.txt"), "yes").unwrap();
-        assert!(run(dir.path(), "/bin/sh -c 'test -f here.txt'").passed);
+        std::fs::write(dir.path().join(".spagitty-verification-test-mode"), "cwd").unwrap();
+        assert!(run(dir.path(), &fixture_line()).passed);
     }
 
     #[test]
