@@ -10,6 +10,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
 	About,
+	AvatarAnswer,
 	BinaryDiff,
 	Blame,
 	CommitDetail,
@@ -616,6 +617,21 @@ export function checkUpdate(): Promise<Update> {
 /** Spagitty's own behaviour toggles. */
 export function settings(): Promise<Settings> {
 	return invoke('settings');
+}
+
+/**
+ * One author's picture and handle, for a node on the graph (FEAT-079).
+ *
+ * Per address, because that is what is cached: a screen of three hundred rows
+ * is a handful of distinct authors, and the second look at a repository makes
+ * no requests at all.
+ *
+ * Never rejects for an ordinary absence — no picture, no network, the
+ * preference turned off — because none of those is an error and all of them
+ * mean the same thing to the caller: draw the generated face.
+ */
+export function avatar(email: string): Promise<AvatarAnswer> {
+	return invoke('avatar', { email });
 }
 
 /** Every linked worktree for the open repository (FEAT-062). */

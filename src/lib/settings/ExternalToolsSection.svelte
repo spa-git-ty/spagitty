@@ -58,14 +58,9 @@
 		<h2 class="heading">External Tools</h2>
 		<label class="scope-toggle">
 			<input type="checkbox" bind:checked={isGlobal} />
-			<span>Save changes to global git config (~/.gitconfig)</span>
+			<span>Save to <span class="mono">~/.gitconfig</span></span>
 		</label>
 	</div>
-
-	<p class="note">
-		Configure external 2-way diff and 3-way merge tools to launch from file context menus and
-		conflict resolution screens.
-	</p>
 
 	{#if loading && !config}
 		<div class="note">Scanning for installed tools on $PATH…</div>

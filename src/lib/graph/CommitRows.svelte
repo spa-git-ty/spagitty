@@ -12,7 +12,8 @@
 	import { selection } from '$lib/graph/selection.svelte';
 	import * as act from '$lib/graph/actions';
 	import { clockTime, fullDate, isNotable, relativeTime } from '$lib/format';
-	import { laneColumnWidth, laneSpanFor } from '$lib/metrics';
+	import { laneColumnWidth, laneNodeRadius, laneSpanFor, laneX } from '$lib/metrics';
+	import { avatars } from '$lib/graph/avatars.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import RefChip from '$lib/ui/RefChip.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
@@ -214,6 +215,60 @@
 		void graph.version;
 		return byAuthor(columns.author, (i) => graph.row(i), range.first, range.last + 1);
 	});
+
+	// --- Who a node belongs to (FEAT-079) --------------------------------
+
+	/**
+	 * Ask for the real picture of everybody currently on screen.
+	 *
+	 * Here rather than in the canvas because the canvas paints inside a scroll
+	 * frame: a fling across a large repository would ask once per author *per
+	 * frame*, and the store would spend that fling filling and draining a
+	 * queue. This runs when the visible range changes, which is the rate the
+	 * question actually changes at.
+	 *
+	 * The store deduplicates by address and never asks twice, so the loop being
+	 * a loop over rows rather than over authors costs a map lookup each.
+	 */
+	$effect(() => {
+		void graph.version;
+		void avatars.enabled;
+
+		for (let i = range.first; i <= range.last; i++) {
+			const row = graph.row(i);
+			if (row) avatars.lookup(row.authorEmail ?? '', row.authorName);
+		}
+	});
+
+	/**
+	 * How far into the lane column a row's node sits, and how wide it is.
+	 *
+	 * The same three functions the canvas draws with, so the hover target and
+	 * the circle it is over cannot land in different places — a target computed
+	 * a second way would drift the first time a column was dragged.
+	 */
+	function nodeAt(row: GraphRow): { x: number; r: number } {
+		return {
+			x: laneX(row.lane, laneCount, scale.zoom, laneSpan),
+			r: laneNodeRadius(laneCount) * scale.zoom
+		};
+	}
+
+	/**
+	 * What hovering a node says: the name, the address, and the handle when the
+	 * address spelled one out.
+	 *
+	 * A merge node is excluded by the caller rather than here — it is drawn as
+	 * a plain dot precisely because it is not one person's work, and naming its
+	 * author over the branch it swallowed would be the claim the dot exists to
+	 * avoid.
+	 */
+	function describeAuthor(row: GraphRow): string {
+		const { handle } = avatars.lookup(row.authorEmail ?? '', row.authorName);
+		const parts = [row.authorName, row.authorEmail].filter(Boolean);
+		if (handle) parts.push(`@${handle}`);
+		return parts.join(' · ');
+	}
 
 	/** Row index -> how many stashes hang off it. */
 	const stashRows = $derived.by(() => {
@@ -667,8 +722,29 @@
 									{/if}
 								</div>
 							{:else if column.id === 'graph'}
-								<!-- Reserves the lane column; the canvas overlays exactly this. -->
-								<div class="cell lane-space lane-band" style="width: {laneWidth}px"></div>
+								<!--
+									Reserves the lane column; the canvas overlays exactly
+									this.
+
+									It also carries the node's hover target (FEAT-079). The
+									canvas above cannot: it is one element for the whole
+									column and takes no pointer events, by design, so that
+									the rows underneath keep their clicks. This is that row,
+									at that row's height already, so the target only has to
+									find the node's x — and it finds it with the same
+									functions the canvas drew it with.
+								-->
+								<div class="cell lane-space lane-band" style="width: {laneWidth}px">
+									{#if row.parents.length <= 1}
+										{@const node = nodeAt(row)}
+										<span
+											class="node-hit"
+											style="left: {node.x - node.r}px; width: {node.r * 2}px; height: {node.r *
+												2}px"
+											title={describeAuthor(row)}
+										></span>
+									{/if}
+								</div>
 							{:else if column.id === 'message'}
 								<div class="cell message">
 									{#if row.signed}
@@ -693,21 +769,24 @@
 									{#if time}<span class="mono muted when">{time}</span>{/if}
 								</div>
 							{:else if column.id === 'author'}
+								{@const face = avatars.drawable(row.authorEmail, row.authorName)}
 								<div class="cell text author" style="width: {column.width}px">
 									<!--
-										The same portrait the node carries, from the same
-										seed — one face per person on the screen, so the
-										author column and the graph agree about who is who.
+										The same face the node carries, resolved the same way
+										— one face per person on the screen, so the author
+										column and the graph agree about who is who. The real
+										picture when one has arrived, and the generated
+										portrait until then (FEAT-079).
 									-->
 									<span
 										class="avatar"
-										style="background: {portraitBackground(
-											seedOf(row.authorEmail, row.authorName)
-										)}"
-										title={row.authorEmail || row.authorName}
+										style="background: {face
+											? `url(${face.src}) center / cover no-repeat`
+											: portraitBackground(seedOf(row.authorEmail, row.authorName))}"
+										title={describeAuthor(row)}
 										aria-hidden="true"
 									></span>
-									<span class="ellipsis" title={row.authorName}>{row.authorName}</span>
+									<span class="ellipsis" title={describeAuthor(row)}>{row.authorName}</span>
 								</div>
 							{:else if column.id === 'time'}
 								<div class="cell text" style="width: {column.width}px">
@@ -970,6 +1049,38 @@
 		box-shadow:
 			inset 1px 0 0 var(--graph-line),
 			inset -1px 0 0 var(--graph-line);
+	}
+
+	/*
+	 * The node's hover target (FEAT-079).
+	 *
+	 * A cell that used to be a spacer now positions one thing, so it needs a
+	 * containing block. Nothing else about it changes: the canvas still paints
+	 * over it, and the target is transparent.
+	 */
+	.lane-space {
+		position: relative;
+	}
+
+	/*
+	 * Invisible, and deliberately so — the circle a person is hovering is
+	 * already drawn, on the canvas above this. Duplicating it here would mean
+	 * two circles to keep in step, and the canvas is the one that can draw a
+	 * picture.
+	 *
+	 * Sized to the node exactly rather than generously. A larger target would
+	 * be easier to hit and would answer "who is this" for a pointer that is
+	 * over the lane *beside* the node, which is a different row's line — and a
+	 * tooltip naming the wrong person is worse than one that takes a second
+	 * attempt to summon.
+	 */
+	.node-hit {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		border-radius: var(--r-pill);
+		/* The row owns the click; this only wants the pointer. */
+		cursor: default;
 	}
 
 	.row:hover {

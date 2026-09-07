@@ -111,17 +111,11 @@
 <section class="section">
 	<header>
 		<h2 class="heading">God mode</h2>
-		<span class="note">
-			The delight layer, driven by hand. Previewing costs nothing; everything below it
-			writes to the badge record of the open repository.
-		</span>
+		<span class="note">The delight layer, driven by hand.</span>
 	</header>
 
 	{#if !bound}
-		<p class="note warn">
-			No repository is open. Previews and sounds work; anything that writes a record has
-			nowhere to write it.
-		</p>
+		<p class="note warn">No repository is open — previews and sounds work, writes have nowhere to go.</p>
 	{:else}
 		<p class="note">
 			Writing to <span class="mono">{repo.info?.name}</span>, as
@@ -133,10 +127,7 @@
 	<!-- 1. Look at a card. Writes nothing. -->
 	<div class="group">
 		<h3 class="sub">Preview a reward moment</h3>
-		<p class="note">
-			Shows the card and plays its sound without earning anything. Ignores the personality
-			setting — pressing this is asking for the card.
-		</p>
+		<p class="note">Shows the card and plays its sound. Earns nothing; ignores Personality.</p>
 		{#each groups as group (group.id)}
 			<div class="line">
 				<span class="note label">{group.label}</span>
@@ -159,10 +150,7 @@
 	<!-- 2. Drive the engine with the events it really sees. -->
 	<div class="group">
 		<h3 class="sub">Fire an event</h3>
-		<p class="note">
-			The shapes the application really produces, put through the real rules. What is
-			earned is what would be earned.
-		</p>
+		<p class="note">Real shapes through the real rules. What is earned is what would be earned.</p>
 		<div class="demos">
 			{#each DEMOS as demo (demo.id)}
 				<div class="demo">
@@ -178,10 +166,7 @@
 	<!-- 3. Award and take back, bypassing the engine entirely. -->
 	<div class="group">
 		<h3 class="sub">Grant or revoke</h3>
-		<p class="note">
-			Straight into the record, no rule consulted. Click a badge to toggle it. Revoking is
-			the one thing the engine itself will never do.
-		</p>
+		<p class="note">Straight into the record, no rule consulted. Click a badge to toggle it.</p>
 		<div class="grid">
 			{#each BADGES as found (found.id)}
 				<BadgeChip
@@ -203,18 +188,13 @@
 			<Btn disabled={!bound} onclick={() => delight.seedAgents()}>Seed three agents</Btn>
 			<Btn disabled={!bound} onclick={clear}>Clear the record</Btn>
 		</div>
-		<p class="note">
-			Seeding runs real tasks through the real engine for Claude, GPT and Codex, so the
-			agent table on Badges shows numbers the rules could actually have produced.
-		</p>
+		<p class="note">Seeding runs real tasks for Claude, GPT and Codex through the real engine.</p>
 	</div>
 
 	<div class="group">
 		<h3 class="sub">Sounds</h3>
 		<p class="note">
-			At the level Personality is set to
-			(<span class="mono">{settings.settings.sound}</span>). Silent at Off, which is the
-			point of Off.
+			At the level Personality is set to (<span class="mono">{settings.settings.sound}</span>).
 		</p>
 		<div class="row wrap">
 			{#each CUES as cue (cue.id)}
@@ -233,7 +213,7 @@
 			checking.
 		-->
 		{#if settings.settings.sound === 'off'}
-			<p class="note">Sound is Off. Nothing here will make a noise until it is not.</p>
+			<p class="note">Sound is Off. Nothing here will make a noise.</p>
 		{:else if audio}
 			<p class="note" class:warn={!audio.supported}>
 				Audio device: <span class="mono">{audio.state}</span>. {audio.note}

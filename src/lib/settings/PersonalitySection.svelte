@@ -25,17 +25,17 @@
 		{
 			id: 'professional',
 			label: 'Professional',
-			what: 'No reward moments, no jokes, no Hall of Shame, no sound. Badges are still earned, and the Badges screen still shows them.'
+			what: 'No reward moments, no jokes, no sound. Badges are still earned.'
 		},
 		{
 			id: 'balanced',
 			label: 'Balanced',
-			what: 'A short card when something is earned, and nothing else. The default.'
+			what: 'A short card when something is earned. The default.'
 		},
 		{
 			id: 'fullSpagitty',
 			label: 'Full Spagitty',
-			what: 'Everything: the reward moments, the anti-badges, and the occasional joke about what just happened.'
+			what: 'Reward moments, anti-badges, and the occasional joke.'
 		}
 	];
 
@@ -68,9 +68,7 @@
 <section class="section">
 	<header>
 		<h2 class="heading">Personality</h2>
-		<span class="note">
-			What Spagitty does when something goes right. Badges are earned at every level.
-		</span>
+		<span class="note">Badges are earned at every level.</span>
 	</header>
 
 	<div class="group" role="group" aria-label="Personality">
@@ -92,9 +90,7 @@
 
 	<header>
 		<h2 class="heading">Sound</h2>
-		<span class="note">
-			Off until you ask. Selecting a level plays the commit sound at it.
-		</span>
+		<span class="note">Selecting a level plays it.</span>
 	</header>
 
 	<div class="group" role="group" aria-label="Sound">

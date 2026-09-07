@@ -14,6 +14,42 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- A commit's node on the Graph screen shows the author's real picture, and
+  hovering it says who they are — their name, their address, and their account
+  handle where the address carries one. Pictures come from the address already
+  in the commit: a GitHub no-reply address resolves with no lookup at all, and
+  anything else is asked of Gravatar as a hash, never as an address. Each
+  author is fetched once and cached on disk, so a second look at a repository
+  makes no requests. With no network, no picture, or the preference off, the
+  generated face is drawn exactly as before.
+- A Behaviour preference — on by default — turns the pictures off. Turning it
+  off stops every request and empties the cache.
+
+### Changed
+
+- The Settings screen stops explaining itself. Section subtitles and the
+  paragraphs under individual controls are gone; the detail they carried is on
+  the control, one hover away. Everything that says what leaves the machine,
+  everything a control cannot demonstrate — a keyboard shortcut, a token's
+  required scopes, where a value in effect came from — and every admission that
+  a switch is not honoured yet has been kept.
+
+### Fixed
+
+- The window no longer draws a card inside the one the desktop already drew it.
+  On Linux the compositor supplies the corner, the border and the shadow, and
+  Spagitty's own left a transparent margin between the two which Hyprland
+  filled with blurred desktop — a band of smeared wallpaper around the
+  application. The Linux window is now flush and opaque; macOS and Windows are
+  unchanged.
+- Development builds really do keep component styles with their components. The
+  guard added for this in 0.5.1 asked whether the environment was *not*
+  development, and a plain `vite dev` reaches it with nothing set at all — so
+  every development run took the production path and could still serve raw
+  component source as a stylesheet.
+
 ## [0.6.0] - 2026-09-06
 
 ### Added

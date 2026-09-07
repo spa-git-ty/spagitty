@@ -26,7 +26,6 @@
 <section class="section">
 	<header class="row">
 		<h2 class="heading">You</h2>
-		<span class="note">What your commits are signed with by name and address.</span>
 	</header>
 
 	<div class="row">
@@ -44,7 +43,10 @@
 			this repository
 		</Chip>
 		{#if !settings.canEditLocally}
-			<span class="note">No repository is open, so only the global configuration is offered.</span>
+			<!-- Why the chip beside this is disabled. The chip's own title says
+			     the same thing; this says it without a hover, because a control
+			     that cannot be pressed has to explain itself where it is. -->
+			<span class="note">No repository is open.</span>
 		{/if}
 	</div>
 
@@ -72,7 +74,7 @@
 				</Btn>
 				<Btn
 					disabled={settings.busy || settings.draft(field.key) === ''}
-					title="Empty the field. Saving an empty field unsets the key rather than storing a blank value."
+					title="Empty the field. Saving it empty unsets the key rather than storing a blank value."
 					onclick={() => settings.clear(field.key)}
 				>
 					Clear
@@ -90,13 +92,13 @@
 			{/if}
 		{/each}
 
-		<p class="note">
-			Written with <span class="mono">git config {settings.scope === 'local'
-				? '--local'
-				: '--global'}</span>, so it is the same file and the same value your own
-			<span class="mono">git</span> reads. Saving an empty field unsets the key instead of
-			writing an empty string, which git would otherwise commit with.
-		</p>
+		<!--
+			The paragraph that used to close this section said two things: that
+			the write goes through `git config`, and what Clear does. The first
+			is visible in the "In effect" line above every field, which names
+			the file the value came from. The second belongs on the button that
+			does it, and is on it (TASK-038).
+		-->
 	{/if}
 </section>
 

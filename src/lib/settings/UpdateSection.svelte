@@ -37,7 +37,6 @@
 <section class="section" id="updates">
 	<header>
 		<h2 class="heading">Updates</h2>
-		<span class="note">Whether a newer Spagitty has been released.</span>
 	</header>
 
 	<div class="row">
@@ -51,10 +50,15 @@
 		</Chip>
 		<div class="text">
 			<div>Check for updates when Spagitty starts</div>
+			<!--
+				Trimmed to the two claims, and only the two (TASK-038). What
+				this line is for is answering "what does it send" and "does off
+				mean off" — everything else it used to say was an elaboration
+				of the first answer.
+			-->
 			<div class="note">
-				One request to the project's own releases page. No account, no identifier, and nothing
-				about this machine or your repositories. Turning it off stops every request; the button
-				below still works when you ask it to.
+				One request to the project's releases page: no account, no identifier. Turning it off
+				stops every request.
 			</div>
 		</div>
 	</div>
@@ -83,8 +87,8 @@
 			ahead of every release. Telling them otherwise would be wrong.
 		-->
 		<p class="note">
-			This is a development build, so there is nothing to be out of date against. The latest
-			release is <span class="mono">{update.latest}</span>.
+			A development build, so nothing to be out of date against. Latest release:
+			<span class="mono">{update.latest}</span>.
 		</p>
 	{:else if update.newer}
 		<p class="note">
@@ -96,7 +100,7 @@
 		</div>
 	{:else}
 		<p class="note">
-			Up to date. <span class="mono">{update.latest}</span> is the latest release.
+			Up to date — <span class="mono">{update.latest}</span> is the latest release.
 		</p>
 	{/if}
 </section>

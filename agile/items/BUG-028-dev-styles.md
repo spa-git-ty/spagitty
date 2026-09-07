@@ -2,7 +2,7 @@
 
 # BUG-028 — Development styles depend on request order
 
-**Status:** Fixed — author confirmed centering and window fill; extended sweep pending.
+**Status:** Fixed — the guard was incomplete and was corrected; extended sweep pending.
 **Branch:** `bugfix/BUG-028-dev-styles`
 **Screens:** All screens.
 
@@ -34,3 +34,36 @@ The author authorized visual testing in this session. Native UI automation is
 unavailable. The supplied screenshots establish the before state; after the
 server reloaded with the fix, the author confirmed "both fixed" for centering
 and Farm background filling the window.
+
+## Reopened and re-fixed, 2026-09-07
+
+The fix was `emitCss: process.env.NODE_ENV !== 'development'` in
+`svelte.config.js`, and it did not work for the case it was written for.
+
+`@sveltejs/kit/vite` reads `svelte.config.js` **eagerly**, while `vite.config.ts`
+is still being evaluated and before Vite has set `NODE_ENV` for the run. A bare
+`vite dev` — which is what `bun run dev`, and therefore `tauri dev`, was —
+reached the guard with the variable unset. `!== 'development'` answered
+*production*, `emitCss` stayed on, and every development run armed the exact
+failure the guard exists to disarm. It was found in a `tauri dev` log:
+
+```
+[postcss] .../CommitRows.svelte?svelte&type=style&lang.css:3:11: Unknown word graph
+  3  |  	import { graph } from '$lib/graph/store.svelte';
+```
+
+— the raw component source being parsed as CSS, which is BUG-028's exact
+signature, on a build that was supposed to be immune to it.
+
+`tools/dev-styles.test.ts` passed throughout, because both of its tests set
+`NODE_ENV` before compiling. The case that was wrong is the one they could not
+express.
+
+**What changed.** The question is now asked as `=== 'production'`, so an unset
+variable takes the *development* path — the safe direction, where a wrong guess
+costs styles inlined in the JS rather than a broken page. `package.json` names
+the environment on both `dev` and `build`, so the answer is never inferred.
+`tools/dev-styles.test.ts` gained a fourth describe block that loads
+`svelte.config.js` under each environment directly, including absent, and
+asserts the scripts still say which one they are. That block fails against the
+old condition.

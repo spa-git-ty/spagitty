@@ -54,7 +54,6 @@
 <section class="section">
 	<header class="row">
 		<h2 class="heading">Signing</h2>
-		<span class="note">Whether your commits carry a cryptographic signature.</span>
 	</header>
 
 	{#if signing === null}
@@ -70,11 +69,10 @@
 				{signing.enabled ? 'on' : 'off'}
 			</Chip>
 			<div class="text">
+				<!-- The signer is the only part a person cannot infer from the
+				     switch, so it is what the line under it says. -->
 				<div>Sign my commits</div>
-				<div class="note">
-					Commits are made with <span class="mono">--gpg-sign</span>, through
-					{describeSigningFormat(signing.format)}.
-				</div>
+				<div class="note">Through {describeSigningFormat(signing.format)}.</div>
 			</div>
 		</div>
 
@@ -98,16 +96,15 @@
 			</p>
 		{:else if signing.format === 'openPgp'}
 			<p class="note under">
-				No <span class="mono">user.signingkey</span> is set. GPG will look for a key matching your
-				committer address, which is how git behaves without one.
+				No <span class="mono">user.signingkey</span> — GPG will match your committer address.
 			</p>
 		{/if}
 
 		<div class="row">
 			<span class="note">
-				{settings.scope === 'local' ? 'This repository' : 'Your global configuration'} holds
+				{settings.scope === 'local' ? 'This repository' : 'Global'} holds
 				{#if inScope === null}
-					nothing, so the value above comes from somewhere else
+					nothing
 				{:else}
 					<span class="mono">{inScope}</span>
 				{/if}
@@ -121,20 +118,15 @@
 			</Btn>
 		</div>
 
-		<p class="note">
-			Written with <span class="mono">git config {settings.scope === 'local'
-				? '--local'
-				: '--global'} commit.gpgsign</span>, so it is the same switch your own
-			<span class="mono">git</span> reads. Turning it off writes
-			<span class="mono">false</span> rather than removing the key — in a repository whose global
-			setting is on, that is the difference between "not here" and "ask again".
-		</p>
-
-		<p class="note">
-			Spagitty does not create, import or store signing keys. It uses the program git is already
-			configured with, so a passphrase prompt is the one you have configured — and a signer that
-			cannot ask fails rather than hanging.
-		</p>
+		<!--
+			Two paragraphs stood here (TASK-038). The first explained that the
+			switch writes `commit.gpgsign` and that off writes `false` rather
+			than unsetting it — which is exactly what the "Global holds" line
+			and the Clear button beside it now show, as a value rather than as
+			prose about a value. The second promised that Spagitty stores no
+			keys of its own; that is a claim about the whole application and it
+			is in the README, not a caption on a toggle.
+		-->
 	{/if}
 </section>
 

@@ -50,7 +50,6 @@
 <section class="section">
 	<header>
 		<h2 class="heading">Appearance</h2>
-		<span class="note">Applied immediately and remembered on this machine.</span>
 	</header>
 
 	<div class="row">
@@ -88,11 +87,6 @@
 		{/each}
 	</div>
 
-	<p class="note">
-		The first time Spagitty runs it takes light or dark from the system preference and opens on
-		{FAMILIES[0].name}. Choosing here replaces both until they are changed again.
-	</p>
-
 	<div class="hr"></div>
 
 	<div class="row">
@@ -109,12 +103,8 @@
 		/>
 		<span class="mono muted reading">{Math.round(scale.text * 100)}%</span>
 		<Chip onclick={() => scale.setText(1)}>Reset</Chip>
+		<span class="note">Type and row height.</span>
 	</div>
-
-	<p class="note">
-		Scales the type and the commit-row height with it, so a bigger message is not clipped by the
-		row it sits in. Everything else keeps its size.
-	</p>
 
 	<div class="row">
 		<span class="note label">Zoom</span>
@@ -130,13 +120,15 @@
 		/>
 		<span class="mono muted reading">{Math.round(scale.zoom * 100)}%</span>
 		<Chip onclick={() => scale.setZoom(1)}>Reset</Chip>
+		<!--
+			The one thing here a person cannot work out by dragging the slider:
+			that the same control has a keyboard shortcut, from anywhere.
+		-->
+		<span class="note">
+			Everything. <span class="mono">Ctrl</span> with <span class="mono">+</span>,
+			<span class="mono">−</span> or <span class="mono">0</span>.
+		</span>
 	</div>
-
-	<p class="note">
-		Scales the whole interface — panels, gutters, lane spacing, corner radii and type together.
-		<span class="mono">Ctrl</span> with <span class="mono">+</span>,
-		<span class="mono">−</span> or <span class="mono">0</span> does the same from anywhere.
-	</p>
 </section>
 
 <style>
@@ -230,7 +222,4 @@
 		text-align: right;
 	}
 
-	p {
-		margin: 0;
-	}
 </style>

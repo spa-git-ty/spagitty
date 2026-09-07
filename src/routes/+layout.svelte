@@ -26,6 +26,7 @@
 	import StatusStrip from '$lib/chrome/StatusStrip.svelte';
 	import TitleBar from '$lib/chrome/TitleBar.svelte';
 	import Toolbar from '$lib/chrome/Toolbar.svelte';
+	import { avatars } from '$lib/graph/avatars.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { ROW_PITCH } from '$lib/metrics';
 	import Palette from '$lib/palette/Palette.svelte';
@@ -244,6 +245,19 @@
 			identity.email?.local ?? identity.email?.global ?? null
 		);
 	});
+
+	/*
+	 * Author pictures follow the preference (FEAT-079).
+	 *
+	 * Here rather than inside the avatar store, which has no component to own
+	 * an effect, and here rather than on the Graph screen, which is not the
+	 * only thing that draws a face and is not mounted when the preference is
+	 * changed on Settings. The store starts disabled, so nothing leaves the
+	 * machine in the window between the first paint and this read landing.
+	 */
+	$effect(() => {
+		avatars.setEnabled(settings.settings.fetchAvatars);
+	});
 </script>
 
 <svelte:window onkeydown={shortcut} />
@@ -403,10 +417,23 @@
 		border-radius: inherit;
 	}
 
-	/* Square against the screen edge, and nothing to cast a shadow onto. */
-	:global(:root[data-window='maximized']) .app {
+	/*
+	 * Square against the screen edge, and nothing to cast a shadow onto.
+	 *
+	 * `flush` is the same picture arrived at from the other direction: the
+	 * compositor drew the corner and the shadow already, so a second set inside
+	 * them is a card sitting in a window rather than a window (BUG-029). The
+	 * outline goes too — it was the inner card's edge, and against the
+	 * compositor's own border it reads as a double rule.
+	 */
+	:global(:root[data-window='maximized']) .app,
+	:global(:root[data-window='flush']) .app {
 		border-radius: 0;
 		box-shadow: none;
+	}
+
+	:global(:root[data-window='flush']) .app {
+		outline: none;
 	}
 
 	.main {

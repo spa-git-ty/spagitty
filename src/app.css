@@ -582,13 +582,17 @@ body > div {
 /*
  * The shadow margin. Kept off the maximized and fullscreen states, where a
  * floating card with a gap around it is just a window that does not fit its
- * own screen.
+ * own screen — and off `flush` for the reason on `decoratesItself` in
+ * `chrome/window.ts`: on Linux the compositor already drew the corner and the
+ * shadow, and this margin is the transparent band its blur showed through
+ * (BUG-029).
  */
 :root {
 	--window-gap: 10px;
 }
 
-:root[data-window="maximized"] {
+:root[data-window="maximized"],
+:root[data-window="flush"] {
 	--window-gap: 0px;
 }
 

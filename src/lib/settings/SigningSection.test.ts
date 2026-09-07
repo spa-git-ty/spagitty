@@ -106,7 +106,7 @@ describe('what a commit made now would do', () => {
 		state.signing = aSigning({ key: null, format: 'openPgp' });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('No user.signingkey is set');
+		expect(view.text()).toContain('No user.signingkey');
 		expect(view.text()).toContain('committer address');
 
 		view.destroy();
@@ -191,7 +191,7 @@ describe('what the chosen scope actually holds', () => {
 		state.signing = aSigning({ global: true });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('Your global configuration holds');
+		expect(view.text()).toContain('Global holds');
 
 		view.destroy();
 	});
@@ -206,12 +206,14 @@ describe('what the chosen scope actually holds', () => {
 		view.destroy();
 	});
 
-	it('says a scope that holds nothing holds nothing, and why that matters', () => {
+	it('says a scope that holds nothing holds nothing', () => {
+		// The "In effect" line above already names where the live value came
+		// from, so this line only has to say that it did not come from here.
 		state.scope = 'local';
 		state.signing = aSigning({ local: null });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('nothing, so the value above comes from somewhere else');
+		expect(view.text()).toContain('This repository holds nothing');
 
 		view.destroy();
 	});
