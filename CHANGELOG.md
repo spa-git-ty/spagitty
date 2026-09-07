@@ -14,6 +14,8 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-07
+
 ### Added
 
 - A commit's node on the Graph screen shows the author's real picture, and

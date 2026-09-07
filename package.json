@@ -1,6 +1,6 @@
 {
   "name": "spagitty",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Your gateway to a Git-managed agent farm \u2014 a local-first desktop Git client",
   "license": "GPL-3.0-or-later",
   "private": true,
