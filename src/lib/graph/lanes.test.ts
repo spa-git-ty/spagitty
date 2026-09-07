@@ -128,6 +128,13 @@ function fakeContext() {
 		fill: record('fill'),
 		stroke: record('stroke'),
 		fillText: vi.fn(),
+		// The node clips a face into its circle (FEAT-079). Recorded rather
+		// than stubbed away, because which image reached `drawImage` is the
+		// whole of what the picture tests assert.
+		save: record('save'),
+		restore: record('restore'),
+		clip: record('clip'),
+		drawImage: vi.fn(),
 		lineWidth: 0,
 		lineCap: '',
 		strokeStyle: '',
@@ -143,7 +150,10 @@ function draw(
 	rows: GraphRow[],
 	first: number,
 	last: number,
-	overrides: { columns?: number } = {}
+	overrides: {
+		columns?: number;
+		picture?: (row: GraphRow) => CanvasImageSource | null;
+	} = {}
 ) {
 	const { ctx, calls } = fakeContext();
 	drawLanes({
@@ -161,6 +171,66 @@ function draw(
 	});
 	return { ctx, calls };
 }
+
+/**
+ * The author's real picture on the node (FEAT-079).
+ *
+ * `lanes.ts` knows nothing about where a picture comes from — it takes a
+ * lookup and draws what it returns — so these are about the geometry and the
+ * fallback, which is all this module is responsible for.
+ */
+describe('the face on a node', () => {
+	const style = { getPropertyValue: () => 'monospace' };
+	vi.stubGlobal('getComputedStyle', () => style);
+
+	/** Stands in for a decoded image; `drawLanes` only ever passes it along. */
+	const face = { width: 96, height: 96 } as unknown as CanvasImageSource;
+
+	it('draws the picture it is handed, at the node', () => {
+		const { ctx } = draw([row(0)], 0, 0, { picture: () => face });
+
+		const radius = laneNodeRadius(LANE_COLUMNS_MIN);
+		expect(ctx.drawImage).toHaveBeenCalledWith(
+			face,
+			laneX(0, LANE_COLUMNS_MIN) - radius,
+			rowCenterY(0, ROW_PITCH) - radius,
+			radius * 2,
+			radius * 2
+		);
+	});
+
+	it('asks for a picture once per node and no more', () => {
+		// The canvas repaints on every scroll frame. A lookup that were called
+		// twice per node would double whatever the caller does in it.
+		const picture = vi.fn(() => face);
+		draw([row(0), row(1), row(2)], 0, 2, { picture });
+
+		expect(picture).toHaveBeenCalledTimes(3);
+	});
+
+	it('never asks for one for a merge, which is nobody\'s own work', () => {
+		const merge = { ...row(0), parents: ['a', 'b'] };
+		const picture = vi.fn(() => face);
+		draw([merge], 0, 0, { picture });
+
+		expect(picture).not.toHaveBeenCalled();
+	});
+
+	it('draws the node without one when there is none', () => {
+		// The generated face, or a plain disc where even that cannot be made.
+		// Either way the graph keeps its shape — a missing picture is the
+		// ordinary case, not a failure.
+		const { ctx, calls } = draw([row(0)], 0, 0, { picture: () => null });
+
+		expect(ctx.drawImage).not.toHaveBeenCalled();
+		expect(calls.some((call) => call.op === 'arc')).toBe(true);
+	});
+
+	it('draws the node without one when no lookup was given at all', () => {
+		const { ctx } = draw([row(0)], 0, 0);
+		expect(ctx.drawImage).not.toHaveBeenCalled();
+	});
+});
 
 describe('drawLanes', () => {
 	// `getComputedStyle` is read for the node font. In node there is no DOM, so

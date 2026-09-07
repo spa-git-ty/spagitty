@@ -1057,6 +1057,16 @@ export interface Settings {
 	 */
 	pruneOnFetch: boolean;
 	/**
+	 * Fetch each author's real picture for the graph's nodes (FEAT-079).
+	 *
+	 * On by default, and the second preference here to change what the
+	 * application does and still be on. A generated face disambiguates — these
+	 * rows are one person — and does not identify, which is the question a node
+	 * is looked at to answer. Off falls back to the generated face and empties
+	 * the cache.
+	 */
+	fetchAvatars: boolean;
+	/**
 	 * How much personality the delight layer shows (FEAT-072).
 	 *
 	 * Opt-in intensity, never opt-in existence: badges are earned and the badge
@@ -1066,6 +1076,19 @@ export interface Settings {
 	personality: Personality;
 	/** Whether Spagitty makes a sound, and how loud. Off until asked. */
 	sound: SoundLevel;
+}
+
+/**
+ * What is known about one author, beyond what the commit already said.
+ *
+ * Mirrors `commands::AvatarAnswer`. Both halves are absent more often than
+ * not, and neither absence is a failure: a handle needs an address that spells
+ * one out, and a picture needs somebody to have uploaded one.
+ */
+export interface AvatarAnswer {
+	handle: string | null;
+	/** A `data:` URL, ready to draw. */
+	picture: string | null;
 }
 
 /** Mirrors `settings::Personality`. */

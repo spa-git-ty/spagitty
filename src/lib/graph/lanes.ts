@@ -75,6 +75,19 @@ export interface LaneDrawOptions {
 	 * being given a row of its own — see `overlay.svelte.ts`.
 	 */
 	stashes?: Map<number, number>;
+	/**
+	 * The author's real picture for a row, when one has already been fetched
+	 * and decoded (FEAT-079).
+	 *
+	 * A lookup passed in rather than a store imported, so this module stays
+	 * what it is: geometry and paint, with no idea that a network exists. It is
+	 * also what makes the node testable — a test hands in a function.
+	 *
+	 * It must never start a request. The canvas runs inside a scroll frame and
+	 * a fling across a large repository would otherwise be a request per author
+	 * per frame; the rows do the asking, and this draws what asking produced.
+	 */
+	picture?: (row: GraphRow) => CanvasImageSource | null;
 }
 
 /** How much of its colour a row keeps when another branch is being hovered. */
@@ -96,7 +109,8 @@ export function drawLanes(options: LaneDrawOptions): void {
 		pitch = ROW_PITCH,
 		zoom = 1,
 		highlight = null,
-		stashes
+		stashes,
+		picture
 	} = options;
 
 	ctx.clearRect(0, 0, width, height);
@@ -199,7 +213,18 @@ export function drawLanes(options: LaneDrawOptions): void {
 			ctx.arc(x, y, MERGE_R * zoom, 0, TAU);
 			ctx.fill();
 		} else {
-			drawHead(ctx, commit, x, y, radius, tileSize, colors, lane, nodeRing);
+			drawHead(
+				ctx,
+				commit,
+				x,
+				y,
+				radius,
+				tileSize,
+				colors,
+				lane,
+				nodeRing,
+				picture?.(commit) ?? null
+			);
 		}
 
 		// A stash sits to the right of the commit it was made on, joined by a
@@ -223,14 +248,20 @@ export function drawLanes(options: LaneDrawOptions): void {
 }
 
 /**
- * One commit's node: the author's portrait, clipped to a circle, ringed in the
+ * One commit's node: the author's face, clipped to a circle, ringed in the
  * column's own background colour and outlined in the lane's.
  *
- * The portrait comes from `portrait.ts` pre-rendered at device resolution and
- * cached, because this runs for every visible node on every scroll frame. When
- * a portrait cannot be produced — no 2d context, which happens in tests and in
- * a webview that has run out of canvases — the node falls back to a filled disc
- * in the lane colour, so the graph never loses its shape over a decoration.
+ * Three faces, in order of how much they say about who the author is:
+ *
+ * 1. the **real picture**, when one has been fetched for this address
+ *    (FEAT-079). It identifies;
+ * 2. the **generated portrait** from `portrait.ts`, pre-rendered at device
+ *    resolution and cached because this runs for every visible node on every
+ *    scroll frame. It disambiguates — the same person is the same face — which
+ *    is most of the value and needs no network;
+ * 3. a **filled disc** in the lane colour, when no portrait can be produced —
+ *    no 2d context, which happens in tests and in a webview that has run out of
+ *    canvases. The graph never loses its shape over a decoration.
  */
 function drawHead(
 	ctx: CanvasRenderingContext2D,
@@ -241,9 +272,11 @@ function drawHead(
 	tileSize: number,
 	colors: string[],
 	lane: string,
-	ring: string
+	ring: string,
+	real: CanvasImageSource | null
 ): void {
-	const tile = portraitTile(seedOf(commit.authorEmail ?? '', commit.authorName), tileSize, colors);
+	const tile =
+		real ?? portraitTile(seedOf(commit.authorEmail ?? '', commit.authorName), tileSize, colors);
 
 	// The gap that separates a head from the line running behind it. Two pixels,
 	// not the lane's own stroke width — a thicker halo eats the daylight between

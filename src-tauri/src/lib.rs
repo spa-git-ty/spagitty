@@ -156,6 +156,7 @@ pub fn run() {
             commands::clear_signing,
             commands::settings,
             commands::set_settings,
+            commands::avatar,
             commands::launch_path,
             commands::git_commands,
             commands::clear_git_commands,

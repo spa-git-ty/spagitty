@@ -26,6 +26,7 @@
 	import StatusStrip from '$lib/chrome/StatusStrip.svelte';
 	import TitleBar from '$lib/chrome/TitleBar.svelte';
 	import Toolbar from '$lib/chrome/Toolbar.svelte';
+	import { avatars } from '$lib/graph/avatars.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { ROW_PITCH } from '$lib/metrics';
 	import Palette from '$lib/palette/Palette.svelte';
@@ -243,6 +244,19 @@
 			identity.name?.local ?? identity.name?.global ?? null,
 			identity.email?.local ?? identity.email?.global ?? null
 		);
+	});
+
+	/*
+	 * Author pictures follow the preference (FEAT-079).
+	 *
+	 * Here rather than inside the avatar store, which has no component to own
+	 * an effect, and here rather than on the Graph screen, which is not the
+	 * only thing that draws a face and is not mounted when the preference is
+	 * changed on Settings. The store starts disabled, so nothing leaves the
+	 * machine in the window between the first paint and this read landing.
+	 */
+	$effect(() => {
+		avatars.setEnabled(settings.settings.fetchAvatars);
 	});
 </script>
 

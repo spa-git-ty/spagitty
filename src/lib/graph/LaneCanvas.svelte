@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { avatars } from '$lib/graph/avatars.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { drawLanes } from '$lib/graph/lanes';
 	import { forgetPortraits } from '$lib/graph/portrait';
@@ -85,6 +86,9 @@
 		void theme.id;
 		void highlight;
 		void stashes;
+		// A picture arriving is a repaint: the node it belongs to was drawn
+		// with a generated face and now has a real one (FEAT-079).
+		void avatars.version;
 		// Row pitch and lane spacing both move with these, so a zoom is a
 		// repaint even when nothing scrolled.
 		const pitch = scale.pitch;
@@ -117,7 +121,10 @@
 			pitch,
 			zoom,
 			highlight,
-			stashes
+			stashes,
+			// Reads what has arrived; never asks. The rows ask — see the note
+			// on `picture` in `lanes.ts`.
+			picture: (commit) => avatars.drawable(commit.authorEmail ?? '', commit.authorName)
 		});
 	});
 </script>

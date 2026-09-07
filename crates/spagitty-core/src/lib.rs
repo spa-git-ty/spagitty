@@ -21,6 +21,7 @@
 //! spawns, and read by the Settings toggle "Show the git command behind each
 //! action".
 
+pub mod avatars;
 pub mod blame;
 pub mod branches;
 pub mod clone;

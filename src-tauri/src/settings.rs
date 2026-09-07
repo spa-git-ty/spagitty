@@ -112,6 +112,19 @@ pub struct Settings {
     /// thing Amendment 6 exists to stop — it was passed on every fetch before
     /// this was added.
     pub prune_on_fetch: bool,
+    /// Fetch each author's real picture for the graph's nodes (FEAT-079).
+    ///
+    /// On by default, and the second preference here to earn that — the
+    /// reasoning is the same shape as the update check's. What it costs is one
+    /// request per author, once, to a host that already knows the address; what
+    /// it buys is a graph where a node says *who*, which is the question a node
+    /// is looked at to answer. Off falls back to the generated face, which is
+    /// what the graph drew before this existed and is never worse than nothing.
+    ///
+    /// Turning it off stops every request and empties the cache: a picture
+    /// fetched before somebody opted out must not go on being shown from disk
+    /// afterwards.
+    pub fetch_avatars: bool,
     /// How much personality the delight layer shows (FEAT-072).
     #[serde(deserialize_with = "lenient")]
     pub personality: Personality,
@@ -137,6 +150,9 @@ impl Default for Settings {
             // A branch that vanishes from the graph because a fetch pruned it
             // is a surprise, and one nobody asked for.
             prune_on_fetch: false,
+            // On, for the reasoning on the field: a node that cannot say who
+            // somebody is has not answered the question it is there for.
+            fetch_avatars: true,
             // The middle setting: an unlock is acknowledged, and nothing
             // blocks or interrupts. See the type for why this one is not off.
             personality: Personality::Balanced,
@@ -277,12 +293,21 @@ mod tests {
             confirm_history_rewrite: false,
             show_git_commands: true,
             prune_on_fetch: true,
+            fetch_avatars: false,
             personality: Personality::FullSpagitty,
             sound: SoundLevel::Full,
         };
         let text = serde_json::to_string_pretty(&written).expect("serialising");
 
         assert_eq!(parse(&text), written);
+    }
+
+    #[test]
+    fn author_pictures_are_fetched_by_default() {
+        // The second preference here that changes what the application does
+        // and is still on: a node that cannot say who somebody is has not
+        // answered the question a node is looked at to answer (FEAT-079).
+        assert!(Settings::default().fetch_avatars);
     }
 
     #[test]
@@ -295,6 +320,7 @@ mod tests {
         assert!(text.contains("confirmHistoryRewrite"), "{text}");
         assert!(text.contains("showGitCommands"), "{text}");
         assert!(text.contains("pruneOnFetch"), "{text}");
+        assert!(text.contains("fetchAvatars"), "{text}");
         assert!(text.contains("personality"), "{text}");
         assert!(text.contains("sound"), "{text}");
         // And the one that left: writing it again would recreate a second

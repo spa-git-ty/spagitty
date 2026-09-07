@@ -28,6 +28,7 @@
 //! store. A desktop client behind a corporate proxy with a custom root works
 //! without being told about it, which a bundled root store would not.
 
+use std::io::Read;
 use std::time::Duration;
 
 use crate::{Error, Result};
@@ -93,6 +94,57 @@ pub fn get_json(url: &str, token: &str, host: &str) -> Result<Response> {
         }),
         Err(error) => Err(Error::ForgeOffline {
             host: host.to_string(),
+            detail: error.to_string(),
+        }),
+    }
+}
+
+/// The bytes of a small file, from a URL that carries no credential.
+///
+/// The one request in the application that fetches something other than JSON,
+/// and the one that sends **no** `Authorization` header ever — not "empty
+/// token means no header" as [`get_json`] allows, but no parameter to pass one
+/// through. An avatar is a public image on a public URL; a request for one
+/// that could carry a token would be a way for a redirect or a typo in a host
+/// name to leak it (FEAT-079).
+///
+/// `limit` caps what is read. A URL that answered with a gigabyte would
+/// otherwise be a gigabyte in memory, on a path that runs for every author in
+/// a repository — and nothing this fetches is legitimately large. A body that
+/// exceeds it is discarded rather than truncated: half a PNG is not an avatar,
+/// and a caller that got one back would cache it.
+///
+/// Like the others: a status is an answer, not an error. A 404 from Gravatar
+/// is how "this address has no picture" is spelled, and it is the common case
+/// rather than a failure.
+pub fn get_bytes(url: &str, limit: usize) -> Result<(u16, Vec<u8>)> {
+    if !url.starts_with("https://") {
+        return Err(Error::Forge {
+            host: String::new(),
+            detail: "refusing to fetch over an unencrypted connection".into(),
+        });
+    }
+
+    match agent().get(url).call() {
+        Ok(mut response) => {
+            let status = response.status().as_u16();
+            // One byte past the limit, so a body sitting exactly on it is kept
+            // and one over it is known to be over rather than assumed.
+            let mut body = Vec::new();
+            let read = response
+                .body_mut()
+                .as_reader()
+                .take(limit as u64 + 1)
+                .read_to_end(&mut body);
+
+            if read.is_err() || body.len() > limit {
+                return Ok((status, Vec::new()));
+            }
+            Ok((status, body))
+        }
+        Err(ureq::Error::StatusCode(status)) => Ok((status, Vec::new())),
+        Err(error) => Err(Error::ForgeOffline {
+            host: String::new(),
             detail: error.to_string(),
         }),
     }

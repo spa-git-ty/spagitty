@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
 use serde::Serialize;
+use spagitty_core::avatars;
 use spagitty_core::blame::{self, Blame};
 use spagitty_core::branches::{self, BranchRow};
 use spagitty_core::clone::{self, Plan};
@@ -127,6 +128,22 @@ pub struct OpenResult {
 pub struct Snapshot {
     pub info: RepoInfo,
     pub counts: RepoCounts,
+}
+
+/// What is known about one author, beyond what the commit already said.
+///
+/// Two independent answers rather than one optional record, because they are
+/// found in different ways and either can be present without the other: a
+/// no-reply address yields a handle with no request at all and may still have
+/// no picture, and an ordinary address can have a picture and no handle
+/// anybody could name without asking a host who it belongs to.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AvatarAnswer {
+    /// The account name, when the address is one that spells it out.
+    pub handle: Option<String>,
+    /// The picture, as a `data:` URL ready to draw.
+    pub picture: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1715,12 +1732,80 @@ pub fn settings<R: Runtime>(app: AppHandle<R>) -> Settings {
 ///
 /// A failed write is reported rather than swallowed: a toggle that did not
 /// persist looks exactly like one that did, until the next restart.
+///
+/// **Turning the avatars off empties their cache.** A preference that stops
+/// future requests but leaves the pictures already on disk being drawn is a
+/// preference that did not do what it says; the pictures go with the switch.
 #[tauri::command]
 pub fn set_settings<R: Runtime>(
     app: AppHandle<R>,
     settings: Settings,
 ) -> std::result::Result<(), String> {
+    if !settings.fetch_avatars {
+        if let Some(cache) = avatar_cache(&app) {
+            let _ = avatars::forget(&cache);
+        }
+    }
     crate::settings::save(&app, settings)
+}
+
+/// One author's picture and handle, for a node on the graph (FEAT-079).
+///
+/// Answers for a single address, because that is the unit that is cached and
+/// the unit the frontend deduplicates to: a screen of three hundred rows is a
+/// handful of distinct authors, and asking per author is what makes the second
+/// look at a repository cost nothing.
+///
+/// Both halves are absent far more often than not, and neither absence is a
+/// failure. A `handle` needs an address that carries one; a `picture` needs
+/// somebody to have uploaded one, and a network to fetch it over. The graph
+/// draws its generated face when this says nothing, which is what it drew
+/// before this command existed.
+///
+/// **The preference is checked here, not by the caller.** A setting that stops
+/// a request has to stop it in the place the request is made — a frontend that
+/// forgot to ask would otherwise be the whole opt-out.
+#[tauri::command]
+pub async fn avatar<R: Runtime>(app: AppHandle<R>, email: String) -> AvatarAnswer {
+    let source = avatars::source(&email);
+    let handle = source.handle;
+
+    if !crate::settings::load(&app).fetch_avatars {
+        // The handle still stands: it was read out of the address, and reading
+        // it sent nothing anywhere.
+        return AvatarAnswer {
+            handle,
+            picture: None,
+        };
+    }
+
+    let Some(cache) = avatar_cache(&app) else {
+        return AvatarAnswer {
+            handle,
+            picture: None,
+        };
+    };
+
+    // Off the main thread for the reason on `check_update`: this is a network
+    // request with a timeout on it, and a synchronous command holds the window
+    // for as long as it takes.
+    let picture = tauri::async_runtime::spawn_blocking(move || avatars::picture(&cache, &email))
+        .await
+        .unwrap_or(None);
+
+    AvatarAnswer { handle, picture }
+}
+
+/// Where fetched pictures are kept.
+///
+/// The cache directory rather than the configuration one: this is data that
+/// can be thrown away and rebuilt from the network, which is what a cache
+/// directory is for and what makes it right for a backup tool to skip.
+fn avatar_cache<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
+    app.path()
+        .app_cache_dir()
+        .ok()
+        .map(|dir| dir.join("avatars"))
 }
 
 /// The path the app was launched with, if any: `spagitty /path/to/repo`.
