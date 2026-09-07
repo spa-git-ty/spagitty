@@ -132,6 +132,7 @@ rather than an audit.
 | [FEAT-076](items/FEAT-076-the-farm-takes-on-large-work.md) | The farm takes on large work | Farm (1Q) | Done |
 | [FEAT-078](items/FEAT-078-who-asked-for-this-task.md) | Who asked for this task | Farm (1Q) | Done |
 | [FEAT-077](items/FEAT-077-the-farm-is-worth-watching.md) | The farm is worth watching | Farm (1Q) | Done |
+| [FEAT-079](items/FEAT-079-a-node-that-says-who.md) | A node that says who | Graph | Open |
 
 ## Bugs
 
@@ -166,6 +167,7 @@ rather than an audit.
 | [BUG-026](items/BUG-026-verification-output.md) | Verification keeps draining and can be stopped | Farm (1Q) | Open |
 | [BUG-027](items/BUG-027-verified-merges.md) | Require current evidence before automatic merging | Farm (1Q) | Open |
 | [BUG-028](items/BUG-028-dev-styles.md) | Development styles depend on request order | All | Fixed |
+| [BUG-029](items/BUG-029-the-window-is-ringed-with-blurred-desktop.md) | The packaged Linux window is ringed with blurred desktop | All | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -210,6 +212,7 @@ of its own.
 | [TASK-033](items/TASK-033-coverage-platforms.md) | Restore coverage and platform tests | All | Open |
 | [TASK-036](items/TASK-036-sync-amendments.md) | Use the current shared amendments book | — | Open |
 | [TASK-037](items/TASK-037-updates-that-actually-arrive.md) | Updates that actually arrive | 1K | Done |
+| [TASK-038](items/TASK-038-settings-that-stop-lecturing.md) | Settings that stop lecturing | Settings | Done |
 
 ## Skipped identifiers
 

@@ -17,13 +17,23 @@
 	 * up: `commit.gpgsign` is the same switch in the place every other tool
 	 * looks, so it lives under **You** with the identity and is written with
 	 * `git config`.
+	 *
+	 * # The label is the setting; `what` is for hovering (TASK-038)
+	 *
+	 * Every row used to print its `what` under its label, so three switches
+	 * filled the screen with six lines of prose and the reader had to find the
+	 * three that were the actual controls. A label that needs a paragraph under
+	 * it is a label that has not been written yet, so the labels were rewritten
+	 * to stand alone and the paragraph moved to the chip's `title`. Nothing was
+	 * deleted — it is one hover away, where a person who wants the detail can
+	 * ask for it and a person who does not is not made to read it.
 	 */
 	const TOGGLES: { key: BooleanSetting; label: string; what: string; pending: string | null }[] = [
 		{
 			key: 'confirmHistoryRewrite',
 			label: 'Ask before rewriting history',
-			what: 'Confirm before anything that changes commits that already exist.',
-			pending: 'Nothing in this build rewrites history yet.'
+			what: 'Confirms before anything that changes commits that already exist.',
+			pending: 'nothing in this build rewrites history'
 		},
 		{
 			key: 'showGitCommands',
@@ -35,12 +45,20 @@
 			pending: null
 		},
 		{
+			key: 'fetchAvatars',
+			label: "Show authors' real pictures on the graph",
+			// FEAT-079. The label says what is gained; the hover says what is
+			// sent, because that is the part somebody turning this off is
+			// deciding about.
+			what: 'Fetches each author\'s picture once, from the address in their commits. Off draws the generated face instead and empties the cache.',
+			pending: null
+		},
+		{
 			key: 'pruneOnFetch',
-			label: 'Prune deleted branches when fetching',
-			// FEAT-018. `--prune` was passed on every fetch, so refs were being
-			// deleted without anybody choosing it. The wording says what is
-			// deleted and what is not: a remote-tracking ref, never a local
-			// branch, and never a commit.
+			// The label carries the reassurance that used to be a sentence
+			// under it: what a prune deletes is a remote-tracking ref, never a
+			// local branch and never a commit (FEAT-018).
+			label: 'Prune deleted remote branches when fetching',
 			what: 'Deletes remote-tracking refs for branches the remote no longer has. Your own local branches are untouched.',
 			pending: null
 		}
@@ -50,7 +68,6 @@
 <section class="section">
 	<header>
 		<h2 class="heading">Behaviour</h2>
-		<span class="note">Stored in Spagitty's own configuration, not in any repository.</span>
 	</header>
 
 	{#each TOGGLES as toggle (toggle.key)}
@@ -63,10 +80,14 @@
 				{settings.settings[toggle.key] ? 'on' : 'off'}
 			</Chip>
 			<div class="text">
-				<div>{toggle.label}</div>
-				<div class="note">{toggle.what}</div>
+				<div title={toggle.what}>{toggle.label}</div>
 				{#if toggle.pending}
-					<div class="note">Persisted, not yet honoured: {toggle.pending}</div>
+					<!--
+						The one line that survives the trim, because it is not a
+						description of the switch — it is the switch admitting it
+						does not work yet, which nothing else on screen says.
+					-->
+					<div class="note">Not honoured yet: {toggle.pending}.</div>
 				{/if}
 			</div>
 		</div>

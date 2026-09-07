@@ -80,6 +80,7 @@ beforeEach(async () => {
 		checkForUpdates: true,
 		confirmHistoryRewrite: true,
 		showGitCommands: false, pruneOnFetch: false,
+fetchAvatars: false,
 			personality: 'balanced',
 			sound: 'off'
 	});
@@ -205,7 +206,7 @@ describe('BehaviourSection', () => {
 		await settings.load();
 		const mounted = render(BehaviourSection, {});
 
-		expect(mounted.text()).toContain('Persisted, not yet honoured');
+		expect(mounted.text()).toContain('Not honoured yet');
 		expect(mounted.text()).toContain('rewrites history');
 		expect(mounted.text()).not.toMatch(/FEAT-\d/);
 
@@ -223,6 +224,7 @@ describe('BehaviourSection', () => {
 			confirmHistoryRewrite: false,
 			showGitCommands: false,
 			pruneOnFetch: false,
+			fetchAvatars: false,
 			personality: 'balanced',
 			sound: 'off'
 		});
@@ -235,17 +237,21 @@ describe('BehaviourSection', () => {
 			confirmHistoryRewrite: false,
 			showGitCommands: true,
 			pruneOnFetch: false,
+			fetchAvatars: false,
 			personality: 'balanced',
 			sound: 'off'
 		});
 		await settings.load();
 		const mounted = render(BehaviourSection, {});
 
-		// Three toggles: FEAT-018 added pruning and FEAT-019 took signing away,
-		// which is now `commit.gpgsign` under You rather than a preference here.
+		// Four toggles, in the order they are declared: FEAT-018 added pruning,
+		// FEAT-019 took signing away — it is now `commit.gpgsign` under You
+		// rather than a preference here — and FEAT-079 added the author
+		// pictures.
 		expect(mounted.all('button.chip').map((chip) => chip.textContent?.trim())).toEqual([
 			'off',
 			'on',
+			'off',
 			'off'
 		]);
 		mounted.destroy();
@@ -476,7 +482,7 @@ describe('UpdateSection', () => {
 		const mounted = render(UpdateSection, {});
 		const text = mounted.text();
 
-		expect(text).toContain('No account, no identifier');
+		expect(text).toContain('no account, no identifier');
 		expect(text).toContain('Turning it off stops every request');
 
 		mounted.destroy();

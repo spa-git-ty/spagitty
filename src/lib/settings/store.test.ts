@@ -50,6 +50,7 @@ const STORED: Settings = {
 	checkForUpdates: true,
 	confirmHistoryRewrite: true,
 	showGitCommands: false, pruneOnFetch: false,
+fetchAvatars: false,
 			personality: 'balanced',
 			sound: 'off'
 };
@@ -334,6 +335,7 @@ describe('checking for a newer Spagitty', () => {
 			confirmHistoryRewrite: true,
 			showGitCommands: false,
 			pruneOnFetch: false,
+			fetchAvatars: false,
 			personality: 'balanced',
 			sound: 'off'
 		});

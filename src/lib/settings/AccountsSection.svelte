@@ -53,7 +53,6 @@
 				<div>
 					<span class="mono">{account.user}</span> on <span class="mono">{account.host}</span>
 				</div>
-				<div class="note">Its token is in this machine's keychain.</div>
 			</div>
 			<Btn
 				disabled={busy}
@@ -91,42 +90,39 @@
 		</Btn>
 	</div>
 
+	<!--
+		The scopes stay (TASK-038). Everything else in this section was prose a
+		reader could skip; this is the one paragraph that is a set of
+		instructions somebody has to follow to get the screen working, and
+		hiding it behind a hover would cost them a trip to the host's
+		documentation.
+	-->
 	<p class="note">
-		A personal access token with read access to repositories and pull requests. On GitHub:
-		<span class="mono">Settings → Developer settings → Personal access tokens</span>. A
-		fine-grained token needs <span class="mono">Pull requests: read</span> and
-		<span class="mono">Metadata: read</span>; a classic one needs <span class="mono">repo</span>.
-	</p>
-
-	<p class="note">
-		A GitHub Enterprise installation works too — put its hostname in the Host field.
+		A personal access token, read-only. Fine-grained needs
+		<span class="mono">Pull requests: read</span> and <span class="mono">Metadata: read</span>;
+		classic needs <span class="mono">repo</span>. Enterprise hosts go in Host.
 	</p>
 
 	<!--
-		The privacy promise, narrowed to what is now true. It used to say nothing
-		leaves the machine; something does now, and a sentence that stayed
-		absolute would be a sentence that had become false.
+		The privacy promise, kept and shortened (TASK-038).
+		 
+		Four paragraphs stood here. They were not padding — each said something
+		true and load-bearing: repositories are never uploaded, the token goes
+		only to the host it was issued for, reads never write, the update check
+		is the only other request, and the token lives in the keychain. This is
+		the one place in the application a reader comes to ask what leaves the
+		machine, so none of those claims could be dropped.
+		 
+		What could go is the *saying it twice*. Each claim is now one clause,
+		and the list of them is the paragraph. Nothing here is a sentence about
+		another sentence.
 	-->
 	<p class="note">
-		Spagitty reads your repositories from disk and uploads none of them. Connecting an account adds
-		one thing that leaves this machine: a request to the host you named, carrying the token you
-		issued, asking for the pull requests you can already see in a browser. It reads; it never
-		approves, merges or comments.
-	</p>
-
-	<!--
-		Named here rather than left for somebody to find. This screen is where a
-		reader comes to ask what the application sends, and an answer that
-		listed one of the two would be the wrong kind of true.
-	-->
-	<p class="note">
-		The only other request Spagitty makes is the update check, under Behaviour, which asks this
-		project for its latest release and can be turned off.
-	</p>
-
-	<p class="note">
-		The token is stored in this machine's keychain and never in a configuration file. Disconnecting
-		deletes it.
+		Spagitty reads your repositories from disk and uploads none of them. A connected account adds
+		one request: to the host you named, with the token you issued, for pull requests you can
+		already see in a browser. It reads — it never approves, merges or comments. The token is in
+		this machine's keychain, never in a file; disconnecting deletes it. The only other request is
+		the update check under Behaviour, which can be turned off.
 	</p>
 </section>
 

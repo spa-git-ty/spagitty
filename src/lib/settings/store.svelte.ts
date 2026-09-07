@@ -69,6 +69,7 @@ const DEFAULTS: Settings = {
 	confirmHistoryRewrite: true,
 	showGitCommands: false,
 	pruneOnFetch: false,
+	fetchAvatars: true,
 	personality: 'balanced',
 	sound: 'off'
 };
