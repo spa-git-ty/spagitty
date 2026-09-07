@@ -1,13 +1,13 @@
 {
   "name": "spagitty",
   "version": "0.6.0",
-  "description": "Your gateway to a Git-managed agent farm — a local-first desktop Git client",
+  "description": "Your gateway to a Git-managed agent farm \u2014 a local-first desktop Git client",
   "license": "GPL-3.0-or-later",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "NODE_ENV=development vite dev",
+    "build": "NODE_ENV=production vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
