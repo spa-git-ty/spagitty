@@ -403,10 +403,23 @@
 		border-radius: inherit;
 	}
 
-	/* Square against the screen edge, and nothing to cast a shadow onto. */
-	:global(:root[data-window='maximized']) .app {
+	/*
+	 * Square against the screen edge, and nothing to cast a shadow onto.
+	 *
+	 * `flush` is the same picture arrived at from the other direction: the
+	 * compositor drew the corner and the shadow already, so a second set inside
+	 * them is a card sitting in a window rather than a window (BUG-029). The
+	 * outline goes too — it was the inner card's edge, and against the
+	 * compositor's own border it reads as a double rule.
+	 */
+	:global(:root[data-window='maximized']) .app,
+	:global(:root[data-window='flush']) .app {
 		border-radius: 0;
 		box-shadow: none;
+	}
+
+	:global(:root[data-window='flush']) .app {
+		outline: none;
 	}
 
 	.main {
