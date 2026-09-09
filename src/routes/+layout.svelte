@@ -1,13 +1,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import '../app.css';
 
 	import * as api from '$lib/api';
+	import { gentleFly } from '$lib/motion';
 	import CloneModal from '$lib/clone/CloneModal.svelte';
 	import { clone } from '$lib/clone/store.svelte';
 	import WorktreesModal from '$lib/worktrees/WorktreesModal.svelte';
@@ -27,6 +27,7 @@
 	import TitleBar from '$lib/chrome/TitleBar.svelte';
 	import Toolbar from '$lib/chrome/Toolbar.svelte';
 	import { avatars } from '$lib/graph/avatars.svelte';
+	import { density } from '$lib/graph/density.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { ROW_PITCH } from '$lib/metrics';
 	import Palette from '$lib/palette/Palette.svelte';
@@ -65,6 +66,9 @@
 		scale.init();
 		// After the metrics, so stored panel widths win over the defaults.
 		panels.init();
+		// The graph's column density, before the Graph screen lays itself out
+		// (TASK-041).
+		density.init();
 		// The tab strip, before anything can open a repository into it.
 		workspace.init();
 		registerCommands();
@@ -354,11 +358,19 @@
 				Keyed on the path, so every navigation remounts the screen inside
 				a short upward slide — which is what a rail click already does
 				invisibly. The motion is 140ms and 6px: enough to say "this is a
-				different screen", not enough to wait for. `prefers-reduced-motion`
-				turns it off in `app.css`, along with everything else that moves.
+				different screen", not enough to wait for.
+
+				`gentleFly` rather than `fly`, and that is a fix rather than a
+				preference (TASK-041). This comment used to claim
+				`prefers-reduced-motion` turned it off in `app.css`. It did not
+				and could not: a Svelte transition is driven from JavaScript,
+				writing a new transform every frame, so there is no CSS
+				transition for the media query to shorten. Somebody who had
+				asked their machine to stop moving things got this slide on
+				every navigation, and a stylesheet rule that could not see it.
 			-->
 			{#key page.url.pathname}
-				<div class="screen-slot" in:fly={{ y: 6, duration: 140 }}>
+				<div class="screen-slot" in:gentleFly={{ y: 6, duration: 140 }}>
 					{@render children()}
 				</div>
 			{/key}

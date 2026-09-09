@@ -978,19 +978,16 @@ input[type='radio'] {
  * Motion is a preference, and it is honoured everywhere at once rather than by
  * each component remembering to.
  *
- * Entrances stop moving and everything that transitions does so instantly. The interface still works and still says the
- * same things — it just stops moving while it does.
+ * There was a second copy of the block here, with 0.001ms where the one above
+ * has 0.01ms (TASK-041). Two blocks with the same selector and different
+ * durations is not two rules; it is one rule and a question about which wins,
+ * and the answer — source order — was not a thing anybody chose.
+ *
+ * What neither copy could reach is anything **JavaScript** animates, which is
+ * every Svelte transition in the application: the runtime writes a new
+ * transform each frame, so there is no CSS transition for the query to
+ * shorten. Those ask the question themselves, through `src/lib/motion.ts`.
  */
-@media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		animation-duration: 0.001ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.001ms !important;
-		scroll-behavior: auto !important;
-	}
-}
 
 /* Syntax highlighting tokens (FEAT-064) */
 .tok-keyword {

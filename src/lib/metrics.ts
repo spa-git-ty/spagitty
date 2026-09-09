@@ -157,6 +157,69 @@ export const LANE_PITCH_MIN = 14;
 export const LANE_INDEX_MAX = Math.floor(LANE_SPAN / LANE_PITCH_MIN);
 
 /**
+ * How much room the graph column asks for (TASK-041).
+ *
+ * Three numbers, and they are the three the column's width is made of: the
+ * distance between lanes, the size of a node, and how many lanes the column is
+ * sized for before any history is looked at. Everything else in this file is
+ * derived from them.
+ *
+ * They are a **set** rather than three settings, because they are not
+ * independent. The whole argument for [`LANE_PITCH`] is that a lane closer than
+ * a node is wide draws lines through faces — so a smaller pitch that kept the
+ * portrait would be a column of overlapping heads, and a smaller portrait that
+ * kept the pitch would waste the space it saved. One choice, three consequences.
+ *
+ * `comfortable` is what every release before this one drew, unchanged.
+ *
+ * `compact` is for the case the design's numbers are worst at: a history that
+ * is two or three lanes deep, on a 1280 window, where five lanes' worth of
+ * column is reserved for lanes that are not there and the commit subject — the
+ * thing the screen exists to show — gets what is left. Three columns rather
+ * than five, a 16px pitch and a 6px node: the node stops being a portrait and
+ * becomes a mark, which is the trade being offered rather than a bug. The
+ * portrait is still shown wherever there is room for a face to be a face — the
+ * author column, the commit detail — which is FEAT-079's own argument for
+ * where a picture belongs.
+ *
+ * 16 is above [`LANE_PITCH_MIN`] on purpose: compression is still allowed to
+ * happen underneath a compact column, and a resting pitch at or below the floor
+ * would mean a deep history in compact mode had nothing left to give.
+ */
+export interface Density {
+	/** Distance between two lanes at rest, before any compression. */
+	pitch: number;
+	/** Radius of a commit's node at rest. */
+	node: number;
+	/** Lane columns the column is sized for when the history needs fewer. */
+	columnsMin: number;
+}
+
+export const COMFORTABLE: Density = {
+	pitch: LANE_PITCH,
+	node: NODE_R,
+	columnsMin: LANE_COLUMNS_MIN
+};
+
+export const COMPACT: Density = { pitch: 16, node: 6, columnsMin: 3 };
+
+/**
+ * The span a density lays its lanes out across at rest.
+ *
+ * [`LANE_SPAN`] is this for the comfortable density and is kept as its own
+ * constant because half the graph's call sites default to it. A compact column
+ * is narrower by construction, so its resting span is narrower too — and the
+ * distinction matters in exactly one place: the node's size is decided by how
+ * deep the *history* is, deliberately and not by how wide the column has been
+ * dragged (FEAT-039). That decision needs a reference span that belongs to the
+ * density rather than to the drag, and `LANE_SPAN` would be the wrong one for a
+ * compact column by 110 pixels.
+ */
+export function laneSpanOf(density: Density = COMFORTABLE): number {
+	return (LANE_COLUMNS_MAX - 1) * density.pitch;
+}
+
+/**
  * Horizontal distance between two lanes, once `needed` of them must fit.
  *
  * At or under the cap this is the design pitch and nothing moves. Past it the
@@ -168,9 +231,13 @@ export const LANE_INDEX_MAX = Math.floor(LANE_SPAN / LANE_PITCH_MIN);
  * sat precisely where a node on lane 12 did and the graph stopped being a graph
  * at the point a busy history most needs one.
  */
-export function lanePitch(needed: number, span: number = LANE_SPAN): number {
-	if (needed <= 1) return LANE_PITCH;
-	return Math.max(LANE_PITCH_MIN, Math.min(LANE_PITCH, span / (needed - 1)));
+export function lanePitch(
+	needed: number,
+	span: number = LANE_SPAN,
+	density: Density = COMFORTABLE
+): number {
+	if (needed <= 1) return density.pitch;
+	return Math.max(LANE_PITCH_MIN, Math.min(density.pitch, span / (needed - 1)));
 }
 
 /**
@@ -181,8 +248,8 @@ export function lanePitch(needed: number, span: number = LANE_SPAN): number {
  * for lanes once the first lane's offset, the node's own radius and the tail
  * before the message column are taken out.
  */
-export function laneSpanFor(width: number, zoom = 1): number {
-	const usable = width / Math.max(zoom, 0.01) - LANE_X0 - NODE_R - LANE_TAIL;
+export function laneSpanFor(width: number, zoom = 1, density: Density = COMFORTABLE): number {
+	const usable = width / Math.max(zoom, 0.01) - LANE_X0 - density.node - LANE_TAIL;
 	return Math.max(0, usable);
 }
 
@@ -205,10 +272,14 @@ export function laneSpanFor(width: number, zoom = 1): number {
  * than the pitch it was derived from, and the radius picks the portrait tile
  * size, so a fractional one would mint a cache entry per scroll.
  */
-export function laneNodeRadius(needed: number, span: number = LANE_SPAN): number {
-	const pitch = lanePitch(needed, span);
-	if (pitch >= LANE_PITCH) return NODE_R;
-	return Math.max(MERGE_R, Math.min(NODE_R, Math.floor((pitch - LANE_STROKE) / 2)));
+export function laneNodeRadius(
+	needed: number,
+	span: number = LANE_SPAN,
+	density: Density = COMFORTABLE
+): number {
+	const pitch = lanePitch(needed, span, density);
+	if (pitch >= density.pitch) return density.node;
+	return Math.max(MERGE_R, Math.min(density.node, Math.floor((pitch - LANE_STROKE) / 2)));
 }
 
 /**
@@ -223,8 +294,8 @@ export function laneNodeRadius(needed: number, span: number = LANE_SPAN): number
 const LANE_TAIL = 18;
 
 /** Clamp a lane count into the range the column can render. */
-export function laneColumns(needed: number): number {
-	return Math.min(Math.max(needed, LANE_COLUMNS_MIN), LANE_COLUMNS_MAX);
+export function laneColumns(needed: number, density: Density = COMFORTABLE): number {
+	return Math.min(Math.max(needed, density.columnsMin), LANE_COLUMNS_MAX);
 }
 
 /**
@@ -235,9 +306,17 @@ export function laneColumns(needed: number): number {
  * different device-pixel boundaries, which shows up as a lane line that is one
  * pixel off the node it is drawn through.
  */
-export function laneColumnWidth(needed: number, zoom = 1): number {
+export function laneColumnWidth(
+	needed: number,
+	zoom = 1,
+	density: Density = COMFORTABLE
+): number {
 	return Math.round(
-		(LANE_X0 + (laneColumns(needed) - 1) * LANE_PITCH + NODE_R + LANE_TAIL) * zoom
+		(LANE_X0 +
+			(laneColumns(needed, density) - 1) * density.pitch +
+			density.node +
+			LANE_TAIL) *
+			zoom
 	);
 }
 
@@ -247,7 +326,30 @@ export const LANE_COLOR_COUNT = 5;
 // --- Chrome ---------------------------------------------------------------
 
 export const TITLEBAR_H = 30;
-export const TOOLBAR_H = 50;
+
+/**
+ * The action bar under the tabs.
+ *
+ * **Fifty, and now forty (TASK-041).** The application frame was 110px before
+ * the screen's own header — a 30px title bar, a 30px tab strip and a 50px
+ * toolbar — on a window whose default height is 800. That is an eighth of the
+ * window spent on chrome before the work starts, and the toolbar was the part
+ * with slack in it: its controls are an icon over a label, and the two together
+ * measure 15px + 16px at the application's smallest type, plus 3px of padding
+ * top and bottom. Thirty-eight. The other twelve pixels were not doing
+ * anything.
+ *
+ * Forty rather than thirty-eight, so the row still has a pixel of air at each
+ * end at 100% and does not become the tightest thing on screen. It scales with
+ * zoom like every other metric here, so a person who has zoomed to 150% gets a
+ * 60px bar rather than a 40px one with 24px controls in it.
+ *
+ * Going further means taking the labels off, and that is a different decision
+ * with a real cost — a row of eight unlabelled glyphs is a row nobody can aim
+ * at without hovering. The narrow layout already drops them below 900px, which
+ * is the case where the trade is worth making.
+ */
+export const TOOLBAR_H = 40;
 /** The repository tab row, below the title bar (FEAT-044). */
 export const TABS_H = 30;
 /**
@@ -380,9 +482,10 @@ export function laneX(
 	lane: number,
 	columns: number = LANE_COLUMNS_MIN,
 	zoom = 1,
-	span: number = LANE_SPAN
+	span: number = LANE_SPAN,
+	density: Density = COMFORTABLE
 ): number {
-	const pitch = lanePitch(columns, span);
+	const pitch = lanePitch(columns, span, density);
 
 	// How many lanes land on a distinct x. Above the floor the pitch was chosen
 	// so that all of them do, by construction; at the floor it is the span that

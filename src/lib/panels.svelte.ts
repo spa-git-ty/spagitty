@@ -156,6 +156,58 @@ function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(Math.round(value), min), max);
 }
 
+/**
+ * The window the defaults were chosen for, and the one below which they stop
+ * making sense (TASK-041).
+ *
+ * The handoff's numbers are a 1440-wide window's numbers. On the 1280 the
+ * application actually opens at, the Graph screen reserves the rail at 186, the
+ * refs gutter at 186, five lanes' worth of column at 149 and the detail panel
+ * at 270 — 791 pixels spoken for before a single divider or a word of a commit
+ * message. That leaves 489 for the subject line and its metadata, on a screen
+ * whose entire job is reading commit subjects.
+ *
+ * So the defaults scale with the window they first open in, between these two
+ * marks. Above 1440 they are the handoff's; at 1100 and below they are the
+ * narrow end of each panel's own range; between, they interpolate.
+ */
+const WIDE_WINDOW = 1440;
+const NARROW_WINDOW = 1100;
+
+/**
+ * How much of the way from narrow to wide this window is, 0 to 1.
+ *
+ * One number for every panel, so the chrome scales as a set rather than each
+ * panel making its own decision and the proportions drifting apart at some
+ * width nobody tested.
+ */
+function windowFactor(width: number): number {
+	if (!Number.isFinite(width) || width <= 0) return 1;
+	const span = WIDE_WINDOW - NARROW_WINDOW;
+	return Math.min(1, Math.max(0, (width - NARROW_WINDOW) / span));
+}
+
+/**
+ * A panel's starting width in a window of `width`.
+ *
+ * Interpolated between a floor and the design's own value. The floor is
+ * deliberately **not** the panel's `min` — that is the width below which a
+ * panel stops being useful at all, and starting there would mean a narrow
+ * window opens with every panel already at the edge of usefulness and no room
+ * to be dragged narrower. Two-thirds of the way from the minimum to the design
+ * value is a panel that is visibly tighter and still has somewhere to go.
+ *
+ * Pure, and exported, because "what does a 1280 window open at" is a question
+ * worth answering in a test rather than by opening one.
+ */
+export function initialWidth(spec: PanelSpec, width: number): number {
+	// A drawer's height has nothing to do with how wide the window is.
+	if (spec.side === 'bottom') return spec.initial;
+
+	const floor = spec.min + (spec.initial - spec.min) * (2 / 3);
+	return clamp(floor + (spec.initial - floor) * windowFactor(width), spec.min, spec.max);
+}
+
 function publish() {
 	if (typeof document === 'undefined') return;
 	const root = document.documentElement;
@@ -271,7 +323,28 @@ export const panels = {
 		save();
 	},
 
+	/**
+	 * The widths a first run opens at, for the window it opens in.
+	 *
+	 * Only ever applied where nothing is stored — a width somebody dragged is a
+	 * decision and outranks any arithmetic here, including after they move the
+	 * window to a different screen. This runs before the stored values are
+	 * read, so each stored one simply overwrites its adaptive default.
+	 */
+	adapt(width: number) {
+		rail = initialWidth(PANELS.rail, width);
+		detail = initialWidth(PANELS.detail, width);
+		const adapted = { ...extra };
+		for (const key of Object.keys(adapted) as PanelKey[]) {
+			adapted[key] = initialWidth(PANELS[key], width);
+		}
+		extra = adapted;
+	},
+
 	init() {
+		// Before the stored widths, never after: a dragged width outranks this.
+		this.adapt(typeof window === 'undefined' ? WIDE_WINDOW : window.innerWidth);
+
 		try {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			if (stored) {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { DIFF_ROUTE, isActive, NAV_ITEMS, OFF_RAIL } from './nav';
+import { DIFF_ROUTE, isActive, NAV_ITEMS, navRows, OFF_RAIL } from './nav';
 
 describe('isActive', () => {
 	it('matches the graph only on the root path', () => {
@@ -113,5 +113,73 @@ describe('NAV_ITEMS', () => {
 	it('keeps the divider before All repositories', () => {
 		const repos = NAV_ITEMS.find((item) => item.href === '/repos');
 		expect(repos?.dividerBefore).toBe(true);
+	});
+});
+
+/**
+ * The rail is four groups, not fourteen equal rows (TASK-041).
+ *
+ * Supervising a farm, doing routine git work, reaching for an occasional tool
+ * and going somewhere that is not about this repository at all are four
+ * different activities, and the rail gave the eye no way to tell them apart
+ * without reading every label.
+ */
+describe('grouping', () => {
+	const rows = navRows();
+
+	it('covers every item exactly once, in the same order', () => {
+		expect(rows.map((row) => row.item.href)).toEqual(NAV_ITEMS.map((item) => item.href));
+	});
+
+	/** Grouping must not move anything. Whatever a hand has learned still holds. */
+	it('leaves the Farm first and the Graph second', () => {
+		expect(rows[0].item.href).toBe('/farm');
+		expect(rows[1].item.href).toBe('/');
+	});
+
+	it('gives the Farm a group of its own', () => {
+		expect(NAV_ITEMS.filter((item) => item.group === 'farm')).toHaveLength(1);
+		// And no heading: a heading over a single row is a label for nothing.
+		expect(rows[0].heading).toBeNull();
+	});
+
+	it('starts a group exactly at each boundary', () => {
+		const starts = rows.filter((row) => row.startsGroup).map((row) => row.item.href);
+		expect(starts).toEqual(['/farm', '/', '/rebase', '/repos']);
+	});
+
+	it('heads every group but the first', () => {
+		expect(rows.filter((row) => row.heading !== null).map((row) => row.heading)).toEqual([
+			'Repository',
+			'Tools',
+			'Spagitty'
+		]);
+	});
+
+	/**
+	 * Each group is one contiguous run.
+	 *
+	 * The rail draws a heading wherever the group changes, so a group whose
+	 * items were interleaved with another's would get two headings saying the
+	 * same word — which is not a grouping, it is a list with labels sprinkled
+	 * through it.
+	 */
+	it('keeps each group in one run', () => {
+		const seen = new Set<string>();
+		let previous: string | null = null;
+
+		for (const row of rows) {
+			if (row.item.group === previous) continue;
+			expect(seen.has(row.item.group), `${row.item.group} appears twice`).toBe(false);
+			seen.add(row.item.group);
+			previous = row.item.group;
+		}
+	});
+
+	it('puts the two screens that are not about this repository together', () => {
+		expect(NAV_ITEMS.filter((item) => item.group === 'app').map((item) => item.href)).toEqual([
+			'/repos',
+			'/settings'
+		]);
 	});
 });
