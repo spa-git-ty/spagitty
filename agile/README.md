@@ -168,6 +168,7 @@ rather than an audit.
 | [BUG-027](items/BUG-027-verified-merges.md) | Require current evidence before automatic merging | Farm (1Q) | Open |
 | [BUG-028](items/BUG-028-dev-styles.md) | Development styles depend on request order | All | Fixed |
 | [BUG-029](items/BUG-029-the-window-is-ringed-with-blurred-desktop.md) | The packaged Linux window is ringed with blurred desktop | All | Fixed |
+| [BUG-030](items/BUG-030-the-toolbar-offers-what-it-cannot-do.md) | The toolbar offers what it cannot do, and hides what it can | chrome | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

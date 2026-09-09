@@ -15,6 +15,8 @@
 
 import { goto } from '$app/navigation';
 
+import { shortcut } from '$lib/platform';
+
 import { commandLog } from '$lib/commandlog/store.svelte';
 import { fetchAll, pushCurrent } from '$lib/graph/actions';
 import { columns, type ColumnId } from '$lib/graph/columns.svelte';
@@ -29,10 +31,6 @@ import { worktreeModal } from '$lib/worktrees/modal.svelte';
 import { submodules } from '$lib/submodules/store.svelte';
 import { submoduleModal } from '$lib/submodules/modal.svelte';
 
-/** The modifier as this platform writes it. Display only. */
-const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-	? '⌘'
-	: 'Ctrl+';
 
 /** True when a repository is open. Most commands are meaningless without one. */
 function hasRepo(): boolean {
@@ -82,7 +80,7 @@ function navigation(): Command[] {
 		title,
 		group: 'Go',
 		keywords,
-		shortcut: id === 'go.search' ? `${MOD}F` : undefined,
+		shortcut: id === 'go.search' ? shortcut('F') : undefined,
 		run: () => goto(path)
 	}));
 }
@@ -143,7 +141,7 @@ function appearance(): Command[] {
 			title: 'Zoom in',
 			group: 'Appearance',
 			keywords: ['bigger', 'interface scale'],
-			shortcut: `${MOD}+`,
+			shortcut: shortcut('+'),
 			run: () => scale.zoomIn()
 		},
 		{
@@ -151,7 +149,7 @@ function appearance(): Command[] {
 			title: 'Zoom out',
 			group: 'Appearance',
 			keywords: ['smaller', 'interface scale'],
-			shortcut: `${MOD}-`,
+			shortcut: shortcut('−'),
 			run: () => scale.zoomOut()
 		},
 		{
@@ -159,7 +157,7 @@ function appearance(): Command[] {
 			title: 'Reset zoom and text size',
 			group: 'Appearance',
 			keywords: ['100%', 'default scale'],
-			shortcut: `${MOD}0`,
+			shortcut: shortcut('0'),
 			run: () => scale.reset()
 		},
 		{

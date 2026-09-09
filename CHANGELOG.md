@@ -16,6 +16,21 @@ stays backward-compatible.
 
 ### Fixed
 
+- The toolbar no longer offers Undo and Redo. Neither was built: they had no
+  handler, they were not disabled, and clicking either did nothing — while
+  taking focus, taking the pointer, and announcing themselves to a screen
+  reader as buttons. The recovery Spagitty actually has is the Reflog screen.
+- Pull and Fetch show their alternatives. The three ways to pull and the
+  choice of which remote to fetch existed only behind a right-click, which
+  nobody can see and a keyboard cannot reach at all — so fast-forward-only was
+  the only pull anyone working without a mouse could perform. Both are split
+  buttons now: the main half does the safe thing, and a caret beside it opens
+  the choices, from the keyboard as well as the pointer. Right-clicking still
+  works.
+- Keyboard shortcuts are written the way the platform writes them. macOS reads
+  `⌘F` and everything else `Ctrl+F`, from one place rather than three that
+  disagreed — the Appearance section used to say `Ctrl` on a Mac.
+
 - Eleven components stopped painting themselves. The worktrees manager, the
   submodules dialog, Create pull request, Settings → Profiles, the binary and
   image diffs, file history and the status strip all read colour variables that

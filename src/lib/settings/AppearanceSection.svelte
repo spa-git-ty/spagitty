@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { mod } from '$lib/platform';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { theme } from '$lib/theme.svelte';
 	import { FAMILIES, paletteOf, type Mode } from '$lib/themes';
@@ -125,7 +126,7 @@
 			that the same control has a keyboard shortcut, from anywhere.
 		-->
 		<span class="note">
-			Everything. <span class="mono">Ctrl</span> with <span class="mono">+</span>,
+			Everything. <span class="mono">{mod()}</span> with <span class="mono">+</span>,
 			<span class="mono">−</span> or <span class="mono">0</span>.
 		</span>
 	</div>
