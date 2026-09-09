@@ -41,7 +41,10 @@ stays backward-compatible.
   saved the answer as an explicit setting, and from then on a desktop that
   switched to dark in the evening moved everything except Spagitty — with no
   way back short of clearing stored data.
-
+- Switching screens no longer animates for anybody who has asked their machine
+  to stop moving things. The stylesheet said it did and could not: the slide is
+  driven from JavaScript, writing a new transform every frame, so a CSS rule
+  about transition durations had nothing to shorten.
 - The toolbar no longer offers Undo and Redo. Neither was built: they had no
   handler, they were not disabled, and clicking either did nothing — while
   taking focus, taking the pointer, and announcing themselves to a screen
@@ -56,7 +59,6 @@ stays backward-compatible.
 - Keyboard shortcuts are written the way the platform writes them. macOS reads
   `⌘F` and everything else `Ctrl+F`, from one place rather than three that
   disagreed — the Appearance section used to say `Ctrl` on a Mac.
-
 - Eleven components stopped painting themselves. The worktrees manager, the
   submodules dialog, Create pull request, Settings → Profiles, the binary and
   image diffs, file history and the status strip all read colour variables that
