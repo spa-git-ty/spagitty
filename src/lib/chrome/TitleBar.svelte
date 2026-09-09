@@ -2,6 +2,7 @@
 <script lang="ts">
 
 	import { appWindow } from '$lib/chrome/window';
+	import { isMac } from '$lib/platform';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
 
@@ -15,14 +16,23 @@
 	 */
 
 	/**
-	 * The window has no platform decorations, so these are the only close,
-	 * minimize and maximize controls there are.
+	 * On Linux and Windows the window has no platform decorations, so these are
+	 * the only close, minimize and maximize controls there are.
 	 *
 	 * Deliberately neither macOS traffic lights nor Windows' full-height filled
 	 * blocks: small, evenly weighted glyph buttons that read as Spagitty's own,
 	 * and entirely colourless — they use the theme's neutral tokens and nothing
 	 * else, including the close button.
+	 *
+	 * **Not on macOS** (TASK-042). Three neutral glyphs on the right is not what
+	 * a Mac window looks like, and on that platform the difference between "an
+	 * application" and "a web page inside a custom frame" is mostly this one
+	 * detail. `src-tauri/tauri.macos.conf.json` restores real decorations with
+	 * an overlay title bar, so the system draws its own traffic lights at the
+	 * top left, over this bar — and drawing a second set on the right would be
+	 * two answers to one question.
 	 */
+	const mac = isMac();
 	const CONTROLS: { kind: string; icon: IconName; label: string; run: () => void }[] = [
 		{ kind: 'minimize', icon: 'minimize', label: 'Minimize', run: () => appWindow.minimize() },
 		{ kind: 'maximize', icon: 'maximize', label: 'Maximize', run: () => appWindow.toggleMaximize() },
@@ -47,7 +57,7 @@
 		controls left over. Without this the name would be centred in a space
 		that is short by the width of three buttons, and land visibly left.
 	-->
-	<span class="side" aria-hidden="true"></span>
+	<span class="side" class:traffic={mac} aria-hidden="true"></span>
 
 	<span class="name">Spagitty</span>
 
@@ -74,7 +84,7 @@
 	-->
 
 	<div class="controls">
-		{#each CONTROLS as control (control.kind)}
+		{#each mac ? [] : CONTROLS as control (control.kind)}
 			<button
 				class="control {control.kind}"
 				title={control.label}
@@ -122,7 +132,7 @@
 		background-color: var(--chrome-veil);
 		border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 		box-shadow: var(--glass-rim);
-		font-size: 12px;
+		font-size: var(--fs-secondary);
 	}
 
 	/* Hard against the right edge, whatever its column has been given. */
@@ -142,7 +152,7 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		line-height: 1;
 		color: var(--muted);
 		transition:
@@ -188,6 +198,24 @@
 
 	.side {
 		min-width: 0;
+	}
+
+	/*
+	 * Room for the traffic lights macOS draws over this bar (TASK-042).
+	 *
+	 * With `titleBarStyle: "Overlay"` the system's three buttons are painted at
+	 * the top left *on top of* the webview, so anything Spagitty puts there is
+	 * underneath them. Seventy-eight pixels is the width they occupy at the
+	 * standard spacing; the outer columns of this grid are equal, so reserving
+	 * it on the left keeps the name centred in the window rather than centred
+	 * in what is left.
+	 *
+	 * Not a `--titlebar-*` metric, because it is not Spagitty's number — it is
+	 * Apple's, it does not scale with the interface zoom, and publishing it as a
+	 * token would invite something else to lay itself out against it.
+	 */
+	.side.traffic {
+		min-width: 78px;
 	}
 
 	.muted {

@@ -347,13 +347,26 @@
 			color var(--t-fast) var(--ease);
 	}
 
+	/*
+	 * Hover changes the colour and nothing else (TASK-042).
+	 *
+	 * It used to slide the row two pixels right, which is a target moving out
+	 * from under a pointer that is on its way to it — on a list of fourteen rows
+	 * where the pointer crosses several to reach one, that is fourteen small
+	 * shifts on the way down. The fill already says "this one", and it says it
+	 * without moving anything.
+	 *
+	 * The **press** keeps its motion: a press is a deliberate act and the
+	 * feedback is a key going down, which is a state change worth showing. That
+	 * is the line this task draws — motion for what somebody did, not for where
+	 * their pointer happens to be.
+	 */
 	.item:hover {
 		background: var(--hover);
-		transform: translateX(2px);
 	}
 
 	.item:active {
-		transform: translateX(1px) scale(0.99);
+		transform: scale(0.99);
 	}
 
 	/*
@@ -371,7 +384,8 @@
 		font-weight: 600;
 	}
 
-	.item[data-active='true']:hover {
+	/* The active row does not press either: it is already where you are. */
+	.item[data-active='true']:active {
 		transform: none;
 	}
 

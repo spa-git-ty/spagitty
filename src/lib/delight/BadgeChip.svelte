@@ -78,8 +78,13 @@
 		transform: translateY(-2px);
 	}
 
+	/*
+	 * The badge's own mark. Sized from the type scale rather than in pixels
+	 * (TASK-042), so raising the text size grows the badges with everything
+	 * else — they were 22px and 54px whatever anybody had chosen.
+	 */
 	.glyph {
-		font-size: 22px;
+		font-size: calc(var(--fs-title) * 1.15);
 		line-height: 1.1;
 	}
 
@@ -90,7 +95,7 @@
 	}
 
 	.small .glyph {
-		font-size: 14px;
+		font-size: var(--fs-ui);
 	}
 
 	.large {
@@ -99,7 +104,7 @@
 	}
 
 	.large .glyph {
-		font-size: 54px;
+		font-size: calc(var(--fs-title) * 2.8);
 	}
 
 	.name {
@@ -175,7 +180,7 @@
 		position: absolute;
 		top: -7px;
 		right: -6px;
-		font-size: 9px;
+		font-size: var(--fs-mono);
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		padding: 1px 5px;
