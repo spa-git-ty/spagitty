@@ -45,10 +45,13 @@
 		<dd>{about?.license ?? version.license}</dd>
 	</dl>
 
-	<p class="note">
-		Spagitty is free software under the GNU General Public License, version 3 or later. The
-		commit above identifies the source this binary was built from, so the corresponding source
-		can be obtained for this exact build.
+	<!-- The licence. Why the commit matters is a hover (TASK-044): it is an
+	     argument, not a fact anybody is scanning for. -->
+	<p
+		class="note"
+		title="The commit above identifies the source this binary was built from, so the corresponding source can be obtained for this exact build."
+	>
+		Free software under the GNU General Public License, version 3 or later.
 	</p>
 
 	<h3 class="heading">Dependency licenses</h3>
@@ -81,9 +84,8 @@
 		{/each}
 
 		{#if missing > 0}
-			<p class="note">
-				{missing} of them declare no license in their manifest and are listed as not declared,
-				rather than left out.
+			<p class="note" title="Listed as not declared rather than left out.">
+				{missing} declare no license.
 			</p>
 		{/if}
 
@@ -115,10 +117,11 @@
 			</section>
 		</div>
 
-		<p class="note">
-			Generated at build time from <span class="mono">Cargo.lock</span> and
-			<span class="mono">package-lock.json</span>, and covering what is linked into this
-			binary — the tools that build and test Spagitty are not part of it and are not listed.
+		<p
+			class="note"
+			title="Generated at build time from Cargo.lock and package-lock.json. The tools that build and test Spagitty are not linked into it and are not listed."
+		>
+			What is linked into this binary.
 		</p>
 	{/if}
 

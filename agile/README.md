@@ -221,6 +221,7 @@ of its own.
 | [TASK-041](items/TASK-041-the-frame-stops-competing-with-the-work.md) | The frame stops competing with the work | chrome, Graph | Done |
 | [TASK-042](items/TASK-042-one-control-scale-and-a-platform-policy.md) | One control scale, and a window that knows its platform | chrome, all | Done |
 | [TASK-043](items/TASK-043-the-linux-renderer-and-the-accessibility-bridge.md) | The Linux renderer and the accessibility bridge | — | Backlog |
+| [TASK-044](items/TASK-044-settings-stops-explaining-itself.md) | Settings stops explaining itself | Settings | Done |
 
 ## Skipped identifiers
 

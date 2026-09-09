@@ -115,7 +115,7 @@
 	</header>
 
 	{#if !bound}
-		<p class="note warn">No repository is open — previews and sounds work, writes have nowhere to go.</p>
+		<p class="note warn">No repository open — writes have nowhere to go.</p>
 	{:else}
 		<p class="note">
 			Writing to <span class="mono">{repo.info?.name}</span>, as
@@ -188,7 +188,7 @@
 			<Btn disabled={!bound} onclick={() => delight.seedAgents()}>Seed three agents</Btn>
 			<Btn disabled={!bound} onclick={clear}>Clear the record</Btn>
 		</div>
-		<p class="note">Seeding runs real tasks for Claude, GPT and Codex through the real engine.</p>
+		<p class="note" title="Seeding runs real tasks for Claude, GPT and Codex through the real engine.">Real tasks, real engine.</p>
 	</div>
 
 	<div class="group">

@@ -56,9 +56,8 @@
 				mean off" — everything else it used to say was an elaboration
 				of the first answer.
 			-->
-			<div class="note">
-				One request to the project's releases page: no account, no identifier. Turning it off
-				stops every request.
+			<div class="note" title="One request to the project's releases page. Turning it off stops every request.">
+				No account, no identifier.
 			</div>
 		</div>
 	</div>
@@ -86,10 +85,7 @@
 			A build somebody compiled has no tag to be behind, and is usually
 			ahead of every release. Telling them otherwise would be wrong.
 		-->
-		<p class="note">
-			A development build, so nothing to be out of date against. Latest release:
-			<span class="mono">{update.latest}</span>.
-		</p>
+		<p class="note">Development build. Latest release: <span class="mono">{update.latest}</span>.</p>
 	{:else if update.newer}
 		<p class="note">
 			<span class="mono">{update.latest}</span> has been released.

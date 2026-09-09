@@ -83,6 +83,11 @@ stays backward-compatible.
 
 ### Changed
 
+- Settings stops explaining itself. The privacy paragraph under the token field
+  was five sentences; it is one line, with the rest on a hover. The licence
+  section, the update preference and the empty remotes state got the same
+  treatment. Nothing was dropped — every claim about what leaves the machine is
+  still there and still tested — it is just no longer in the way.
 - macOS gets a macOS window. Spagitty drew the same three neutral glyph buttons
   on the right on every platform, over a frame the system was not allowed to
   draw; on a Mac that is most of the difference between an application and a web

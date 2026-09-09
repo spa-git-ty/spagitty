@@ -91,38 +91,24 @@
 	</div>
 
 	<!--
-		The scopes stay (TASK-038). Everything else in this section was prose a
-		reader could skip; this is the one paragraph that is a set of
-		instructions somebody has to follow to get the screen working, and
-		hiding it behind a hover would cost them a trip to the host's
-		documentation.
+		Scopes, because nobody can guess them; everything else was prose
+		(TASK-044).
+
+		The privacy paragraph before this was five sentences and it was five
+		sentences of reassurance. What it actually said — read-only, host you
+		named, keychain, deleted on disconnect — is four words a piece and fits
+		on one line. A reader who wants the argument can hover.
 	-->
 	<p class="note">
-		A personal access token, read-only. Fine-grained needs
-		<span class="mono">Pull requests: read</span> and <span class="mono">Metadata: read</span>;
-		classic needs <span class="mono">repo</span>. Enterprise hosts go in Host.
+		Read-only token. Fine-grained: <span class="mono">Pull requests: read</span> +
+		<span class="mono">Metadata: read</span>. Classic: <span class="mono">repo</span>.
 	</p>
 
-	<!--
-		The privacy promise, kept and shortened (TASK-038).
-		 
-		Four paragraphs stood here. They were not padding — each said something
-		true and load-bearing: repositories are never uploaded, the token goes
-		only to the host it was issued for, reads never write, the update check
-		is the only other request, and the token lives in the keychain. This is
-		the one place in the application a reader comes to ask what leaves the
-		machine, so none of those claims could be dropped.
-		 
-		What could go is the *saying it twice*. Each claim is now one clause,
-		and the list of them is the paragraph. Nothing here is a sentence about
-		another sentence.
-	-->
-	<p class="note">
-		Spagitty reads your repositories from disk and uploads none of them. A connected account adds
-		one request: to the host you named, with the token you issued, for pull requests you can
-		already see in a browser. It reads — it never approves, merges or comments. The token is in
-		this machine's keychain, never in a file; disconnecting deletes it. The only other request is
-		the update check under Behaviour, which can be turned off.
+	<p
+		class="note"
+		title="Spagitty uploads no repository. A connected account adds one request — to the host you named, with the token you issued, for pull requests you can already see in a browser. It never approves, merges or comments. The only other request is the update check under Behaviour."
+	>
+		Read-only, to the host you named. Token in the keychain; disconnecting deletes it.
 	</p>
 </section>
 
