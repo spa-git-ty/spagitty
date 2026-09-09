@@ -31,6 +31,17 @@
 	];
 
 	/**
+	 * Following the desktop is a third choice beside Light and Dark, not a
+	 * checkbox above them (BUG-031).
+	 *
+	 * The three are one decision — where light-or-dark comes from — and a
+	 * switch that greyed the other two out would be two controls for it. The
+	 * chip that is active is the answer; pressing Light or Dark is the act of
+	 * taking over, which is why `theme.setMode` sets the source itself.
+	 */
+	const following = $derived(theme.source === 'system');
+
+	/**
 	 * Each family is shown in the mode that is on, so the swatches are the
 	 * colours that would actually appear rather than a light preview of a theme
 	 * about to be used in the dark.
@@ -56,10 +67,28 @@
 	<div class="row">
 		<span class="note label">Mode</span>
 		{#each MODES as option (option.id)}
-			<Chip active={theme.mode === option.id} onclick={() => theme.setMode(option.id)}>
+			<Chip
+				active={!following && theme.mode === option.id}
+				onclick={() => theme.setMode(option.id)}
+			>
 				{option.label}
 			</Chip>
 		{/each}
+		<Chip
+			active={following}
+			title="Follow the desktop's light and dark setting, and keep following it"
+			onclick={() => theme.followSystem()}
+		>
+			Follow system
+		</Chip>
+		<!--
+			What "follow system" is currently resolving to. Without it the
+			control says what it will do and never what it did, which on a
+			desktop that has just changed is the one thing worth showing.
+		-->
+		{#if following}
+			<span class="note">now {theme.mode}</span>
+		{/if}
 	</div>
 
 	<div class="row">

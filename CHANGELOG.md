@@ -14,7 +14,23 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- Appearance can follow the desktop's light and dark setting, and keep
+  following it. Choosing Light or Dark still takes over, and still sticks.
+
 ### Fixed
+
+- Spagitty opens in the theme you chose, on the first frame. It used to paint
+  the default light palette and then change its mind once the application had
+  loaded — a flash on any machine, and several frames on Linux, where the
+  release build renders in software. A fresh install on a dark desktop opens
+  dark now too.
+- The desktop's light/dark preference is no longer read once and written down
+  as though you had chosen it. It was: the first launch sampled the system,
+  saved the answer as an explicit setting, and from then on a desktop that
+  switched to dark in the evening moved everything except Spagitty — with no
+  way back short of clearing stored data.
 
 - The toolbar no longer offers Undo and Redo. Neither was built: they had no
   handler, they were not disabled, and clicking either did nothing — while
