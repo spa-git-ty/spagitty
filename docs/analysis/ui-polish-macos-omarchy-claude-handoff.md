@@ -2,7 +2,9 @@
 
 Date: 2026-09-09. Source baseline: `e4ff3c4` (`0.7.0`).
 
-The requested outcome is a Git client that feels composed, responsive, and trustworthy beside GitKraken, a macOS download with a verified installation path, and an additional appearance option that matches the active Omarchy desktop. This report is an implementation brief; the fixes described below have **not** been implemented.
+The requested outcome is a Git client that feels composed, responsive, and trustworthy beside GitKraken, a macOS download with a verified installation path, and an additional appearance option that matches the active Omarchy desktop. This report is an implementation brief.
+
+> **Implemented.** See [`ui-polish-macos-omarchy-completion.md`](ui-polish-macos-omarchy-completion.md) for what changed, the measured results, the stated macOS signing policy, and — the important part — what remains unverified. Seven work items: TASK-039, TASK-040, TASK-041, TASK-042, BUG-030, BUG-031 and FEAT-080, with TASK-043 recorded as backlog. Nothing has run on a Mac and no screenshots were taken; the sweeps carry both.
 
 ## Evidence and limits
 
