@@ -53,9 +53,7 @@
 		{:else if !remotes.loaded}
 			<p class="note">Reading…</p>
 		{:else if remotes.list.length === 0}
-			<p class="note">
-				This repository has no remotes. Nothing can be fetched or pushed until it has one.
-			</p>
+			<p class="note">No remotes.</p>
 		{:else}
 			<ul class="list">
 				{#each remotes.list as remote (remote.name)}
@@ -126,10 +124,7 @@
 			<Btn primary disabled={!remotes.addable} onclick={() => remotes.add()}>Add</Btn>
 		</div>
 
-		<p class="note">
-			Adding a remote writes configuration and fetches nothing. Fetch when you want its
-			refs.
-		</p>
+		
 
 		{#if remotes.writeError}
 			<p class="note error">{remotes.writeError}</p>

@@ -5,6 +5,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, flushSync, render } from '../../testing/mount';
 import type { Identity, IdentityValue, Licenses } from '$lib/types';
 
+/**
+ * Everything a reader can get to: the visible text, plus every `title`.
+ *
+ * TASK-044 moved the long-form claims onto hovers. The contract was never
+ * "these words are on the screen" — it was "a reader who asks can find this
+ * out", and a claim only in a comment would fail that while a claim in a title
+ * passes it. So the assertions read both, and what changed is the *volume* on
+ * the screen rather than what the application is willing to tell you.
+ */
+function readable(view: { text(): string; all(selector: string): HTMLElement[] }): string {
+	const titles = view.all('[title]').map((element) => element.getAttribute('title') ?? '');
+	return [view.text(), ...titles].join(' ');
+}
+
 vi.mock('$lib/api', () => ({
 	inTauri: vi.fn(() => true),
 	identity: vi.fn(),
@@ -381,9 +395,9 @@ describe('AccountsSection', () => {
 		// The promise narrowed when FEAT-017 landed. A sentence that stayed
 		// absolute would be a sentence that had become false.
 		const mounted = render(AccountsSection, {});
-		const text = mounted.text();
+		const text = readable(mounted);
 
-		expect(text).toContain('uploads none of them');
+		expect(text).toContain('uploads no repository');
 		expect(text).toContain('keychain');
 		expect(text).toMatch(/never approves, merges or comments/);
 
@@ -480,9 +494,9 @@ describe('UpdateSection', () => {
 		// The one preference in the application that causes a network request,
 		// so the sentence explaining it belongs where the decision is made.
 		const mounted = render(UpdateSection, {});
-		const text = mounted.text();
+		const text = readable(mounted);
 
-		expect(text).toContain('no account, no identifier');
+		expect(text).toContain('No account, no identifier');
 		expect(text).toContain('Turning it off stops every request');
 
 		mounted.destroy();
@@ -518,7 +532,7 @@ describe('UpdateSection', () => {
 		await settings.checkForUpdate();
 		const mounted = render(UpdateSection, {});
 
-		expect(mounted.text()).toContain('development build');
+		expect(readable(mounted)).toContain('Development build');
 		expect(mounted.text()).toContain('v0.1.0-preview.9');
 		// No download offered: the only thing that appears for a newer release
 		// is the link and its copy button, and this is not one.

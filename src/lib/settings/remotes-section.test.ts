@@ -88,7 +88,7 @@ describe('when there is nothing to show', () => {
 		openRepository();
 		const view = await show();
 
-		expect(view.text()).toContain('has no remotes');
+		expect(view.text()).toContain('No remotes');
 		expect(view.all('input')).toHaveLength(2);
 
 		view.destroy();
