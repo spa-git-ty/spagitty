@@ -199,6 +199,98 @@ describe('native widgets are taken over rather than trusted', () => {
 	});
 });
 
+/**
+ * A control does not move while it is being aimed at (TASK-042).
+ *
+ * Every button, chip and rail row lifted a pixel or two on hover. Each one is
+ * a small thing and the sum is not: a pointer crossing a dialog's row of
+ * buttons, or running down fourteen rail destinations to reach the eleventh,
+ * sets off a shift under itself at every step. It is exactly the "incidental
+ * motion" a UI review named, and it makes dense work feel unsteady in a way
+ * nobody can point at.
+ *
+ * **The press keeps its motion.** That is the line: motion for something
+ * somebody did, not for where their pointer happens to be. A key going down is
+ * a state change; a hover is a position.
+ *
+ * Scoped to the shared kit and the chrome — the controls that appear on every
+ * screen and repeat down a list. A card in the repositories grid or a badge in
+ * the gallery still lifts, because those are single objects on a browsing
+ * surface rather than targets in a row, and that affordance is doing work.
+ */
+/**
+ * The type scale reaches every component (TASK-039, TASK-042).
+ *
+ * `scale.svelte.ts` implements the text-size preference by rewriting the
+ * `--fs-*` tokens and nothing else. A component that names a pixel size is
+ * therefore not merely off-scale, it is **unresizable**: somebody who raises
+ * the text to 130% gets a larger application and a handful of components that
+ * stay exactly where they were. There were 83 such sizes in eleven dialogs and
+ * eight more scattered through the chrome and the badges; there are none.
+ *
+ * `em` and `calc(var(--fs-…) * n)` are both fine — they follow the scale. It is
+ * the absolute unit that does not.
+ */
+describe('nothing names its own type size', () => {
+	const everything = [...componentsUnder('src/lib'), ...componentsUnder('src/routes')];
+
+	it('uses the scale, or a multiple of it, everywhere', () => {
+		const offenders = everything
+			.map((path) => {
+				const text = readFileSync(path, 'utf8');
+				const style = text.slice(text.indexOf('<style>')).replace(/\/\*[\s\S]*?\*\//g, '');
+				const fixed = [...style.matchAll(/font-size:\s*(\d+(?:\.\d+)?px)/g)].map((m) => m[1]);
+				return fixed.length > 0 ? `${path}: ${fixed.join(' ')}` : null;
+			})
+			.filter((entry) => entry !== null);
+
+		expect(
+			offenders,
+			'a pixel size does not follow the text-size preference; use --fs-* or an em'
+		).toEqual([]);
+	});
+});
+
+describe('controls stay where they are', () => {
+	const KIT = [
+		'src/lib/ui/Btn.svelte',
+		'src/lib/ui/Chip.svelte',
+		'src/lib/ui/RefChip.svelte',
+		'src/lib/ui/Menu.svelte',
+		'src/lib/chrome/NavRail.svelte',
+		'src/lib/chrome/Toolbar.svelte',
+		'src/lib/chrome/TitleBar.svelte'
+	];
+
+	/** `:hover` rules in a component's stylesheet, comments stripped. */
+	function hoverRules(path: string): { selector: string; body: string }[] {
+		const text = readFileSync(path, 'utf8');
+		const style = text.slice(text.indexOf('<style>')).replace(/\/\*[\s\S]*?\*\//g, '');
+
+		return [...style.matchAll(/([^{}]*:hover[^{}]*)\{([^{}]*)\}/g)].map((match) => ({
+			selector: match[1].trim().split('\n').pop()!.trim(),
+			body: match[2]
+		}));
+	}
+
+	it.each(KIT)('%s moves nothing on hover', (path) => {
+		const moving = hoverRules(path)
+			.filter((rule) => /transform:/.test(rule.body) && !/transform:\s*none/.test(rule.body))
+			.map((rule) => rule.selector);
+
+		expect(moving, 'hover changes colour; a press may move').toEqual([]);
+	});
+
+	/**
+	 * And the other half, so this is a contract rather than a deletion: the
+	 * feedback still exists, it has moved to the event that earns it.
+	 */
+	it('still answers a press', () => {
+		const btn = readFileSync('src/lib/ui/Btn.svelte', 'utf8');
+		expect(btn).toMatch(/:active:not\(:disabled\) \{[^}]*transform:/s);
+	});
+});
+
 describe('the soft spatial interface', () => {
 	it('keeps ordinary cards opaque', () => {
 		expect(css).toMatch(/\.card\s*{[^}]*background-color:\s*var\(--surface\)/s);

@@ -95,12 +95,22 @@
 	 * `:not(.glow)` here for the same reason as the fill above: the glow's
 	 * border *is* its travelling ring, painted through `border-box`, so an
 	 * opaque border colour on hover paints over the effect.
+	 *
+	 * Hover changes the border and the label. It no longer lifts (TASK-042).
+	 *
+	 * A control that rises a pixel as the pointer nears it is a target moving
+	 * while it is being aimed at, and in a dialog with a row of buttons the
+	 * pointer crosses two of them to reach the third. The colour change says
+	 * "this one" at least as clearly and says it without moving the thing being
+	 * pointed at.
+	 *
+	 * The press below keeps its motion: that is a key going down in response to
+	 * something somebody did, which is exactly what motion is for.
 	 */
 	.btn:not(.glow):hover:not(:disabled) {
 		border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
 		color: var(--accent);
 		box-shadow: none;
-		transform: translateY(-1px);
 	}
 
 	/* Pressed, the key goes down. */
@@ -134,7 +144,6 @@
 	.btn.primary:hover:not(:disabled) {
 		color: var(--on-accent);
 		filter: brightness(1.07) saturate(1.05);
-		transform: translateY(-1px);
 	}
 
 	.btn.primary:active:not(:disabled) {

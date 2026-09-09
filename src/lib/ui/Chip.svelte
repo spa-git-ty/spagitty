@@ -67,12 +67,11 @@
 			color var(--t-fast) var(--ease);
 	}
 
-	button.chip:hover:not(:disabled) {
-		transform: translateY(-1px);
-	}
-
+	/* Colour on hover, motion on press (TASK-042). A chip that rises as the
+	   pointer nears it is a target moving while it is aimed at, and a row of
+	   filter chips is exactly the case where the pointer crosses several. */
 	button.chip:active:not(:disabled) {
-		transform: translateY(0) scale(0.97);
+		transform: scale(0.97);
 	}
 
 	.chip:disabled {

@@ -219,6 +219,8 @@ of its own.
 | [TASK-039](items/TASK-039-one-colour-system-in-every-dialog.md) | One colour system in every dialog | all dialogs | Done |
 | [TASK-040](items/TASK-040-the-macos-download-says-what-it-is.md) | The macOS download says what it is | — | Done |
 | [TASK-041](items/TASK-041-the-frame-stops-competing-with-the-work.md) | The frame stops competing with the work | chrome, Graph | Done |
+| [TASK-042](items/TASK-042-one-control-scale-and-a-platform-policy.md) | One control scale, and a window that knows its platform | chrome, all | Done |
+| [TASK-043](items/TASK-043-the-linux-renderer-and-the-accessibility-bridge.md) | The Linux renderer and the accessibility bridge | — | Backlog |
 
 ## Skipped identifiers
 

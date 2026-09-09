@@ -197,7 +197,7 @@
 	}
 
 	.hero-name {
-		font-size: 24px;
+		font-size: calc(var(--fs-title) * 1.25);
 		font-weight: 700;
 		letter-spacing: 0.045em;
 	}
