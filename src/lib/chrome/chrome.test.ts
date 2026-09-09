@@ -537,18 +537,27 @@ describe('Toolbar', () => {
 		view.destroy();
 	});
 
-	it('says which actions are still not built, and no longer lies about the ones that are', () => {
+	/**
+	 * This assertion used to require the opposite (BUG-030).
+	 *
+	 * It read `title="Not built yet"` on Undo and Redo and passed, which is
+	 * what a test looks like when it has been written to describe the code
+	 * rather than the requirement: two prominent buttons that took focus, took
+	 * the pointer, announced themselves to a screen reader as buttons, and did
+	 * nothing — and the test's job was to check the tooltip apologising for it
+	 * was still attached.
+	 *
+	 * A control that does nothing is not on the toolbar now, and no control on
+	 * it carries an apology.
+	 */
+	it('offers no action it cannot perform', () => {
 		const view = render(Toolbar, {});
 
-		for (const label of ['Undo', 'Redo']) {
-			const button = view.all('.tool').find((b) => b.textContent?.includes(label));
-			expect(button?.getAttribute('title')).toBe('Not built yet');
-		}
+		expect(view.text()).not.toContain('Undo');
+		expect(view.text()).not.toContain('Redo');
 
-		// FEAT-022 built these two; the toolbar had gone on claiming otherwise.
-		for (const label of ['Fetch', 'Push']) {
-			const button = view.all('.tool').find((b) => b.textContent?.includes(label));
-			expect(button?.getAttribute('title')).not.toBe('Not built yet');
+		for (const button of view.all('.tool')) {
+			expect(button.getAttribute('title') ?? '').not.toMatch(/not built/i);
 		}
 
 		view.destroy();
@@ -557,8 +566,67 @@ describe('Toolbar', () => {
 	it('groups the actions rather than running them together', () => {
 		const view = render(Toolbar, {});
 
-		// Two dividers for three groups: history, remote, branch.
-		expect(view.all('.actions .vr')).toHaveLength(2);
+		// One divider for two groups: remote, and moving work about. It was
+		// two dividers for three groups until the first group — Undo and Redo,
+		// neither of them built — was removed.
+		expect(view.all('.actions .vr')).toHaveLength(1);
+		view.destroy();
+	});
+
+	/**
+	 * The alternatives are visible and reachable, not folded into a
+	 * right-click (BUG-030).
+	 *
+	 * `pull()` takes three modes and `fetch` takes a remote, and both choices
+	 * existed only behind `oncontextmenu` — undiscoverable with a pointer,
+	 * unreachable without one. There is a caret now, and it is a `<button>`,
+	 * which is what puts it in the tab order and makes it answer Enter.
+	 */
+	it('offers the pull and fetch alternatives from a real control', () => {
+		const view = render(Toolbar, {});
+
+		const carets = view.all('.caret');
+		expect(carets).toHaveLength(2);
+
+		for (const caret of carets) {
+			expect(caret.tagName).toBe('BUTTON');
+			expect(caret.getAttribute('aria-haspopup')).toBe('menu');
+			expect(caret.getAttribute('aria-expanded')).toBe('false');
+			// A glyph is not a name. Without this the control announces itself
+			// as "▾, button".
+			expect(caret.getAttribute('aria-label')).toBeTruthy();
+		}
+
+		expect(carets.map((caret) => caret.getAttribute('aria-label'))).toEqual([
+			'How to pull',
+			'What to fetch'
+		]);
+
+		view.destroy();
+	});
+
+	it('opens the pull choices when the caret is pressed', () => {
+		const view = render(Toolbar, {});
+		const caret = view.all('.caret')[0];
+
+		click(caret as HTMLElement);
+
+		expect(caret.getAttribute('aria-expanded')).toBe('true');
+		expect(document.body.textContent).toContain('Fast-forward only');
+		expect(document.body.textContent).toContain('Rebase my commits on top');
+
+		view.destroy();
+	});
+
+	/** The habit of everybody who found the old way still works. */
+	it('keeps the right-click path it used to be hidden behind', () => {
+		const view = render(Toolbar, {});
+		const pull = view.all('.tool').find((b) => b.textContent?.includes('Pull'));
+
+		pull?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+		flushSync();
+
+		expect(document.body.textContent).toContain('Fast-forward only');
 		view.destroy();
 	});
 

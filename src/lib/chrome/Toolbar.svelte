@@ -92,13 +92,24 @@
 	});
 
 	/**
-	 * Actions that are still not built say so when you point at them, rather
-	 * than failing silently when clicked. Fetch and Push used to be among them
-	 * and no longer are: FEAT-022 built both, and a button that claims to be
-	 * unbuilt while the palette runs the same operation is a worse lie than the
-	 * original one.
+	 * There is no `PENDING` any more, and that is the change (BUG-030).
+	 *
+	 * Undo and Redo sat in the first group with `title: 'Not built yet'` and
+	 * nothing else — no handler, no `disabled`, no `aria-disabled`. They
+	 * rendered as ordinary toolbar buttons in the most prominent row in the
+	 * application, they took the pointer, they took focus, they announced
+	 * themselves to a screen reader as buttons, and clicking either did
+	 * nothing at all. A tooltip does not repair that: a tooltip is read after
+	 * the click, by a pointer user, on hover, if they wait.
+	 *
+	 * They are gone rather than disabled. A permanently dead control is still
+	 * a claim that the feature is nearly here, and Spagitty's actual recovery
+	 * story is not an undo stack — it is the Reflog screen, which is
+	 * operation-specific, already built, and reachable from the rail and the
+	 * palette. A general Undo would need a model of what each git operation
+	 * reverses, and inventing one to fill a gap in a toolbar is the wrong
+	 * reason to design it.
 	 */
-	const PENDING = 'Not built yet';
 
 	interface ToolItem {
 		icon: IconName;
@@ -108,35 +119,63 @@
 		/** What it does, for the actions that are not. */
 		act?: () => void;
 		title?: string;
-		/** Offers a choice of how, on right-click. */
-		menu?: boolean;
-		/** Offers a choice of which remote, on right-click (FEAT-018). */
-		fetchMenu?: boolean;
+		/**
+		 * The alternatives this action offers, and the label its caret
+		 * announces. Present means the button is a split button: the main half
+		 * does the safe default, the caret opens the choices.
+		 */
+		alternatives?: { label: string; open: (anchor: HTMLElement) => void };
 	}
 
 	/**
-	 * Three groups, divided: what has happened, what talks to a remote, and what
-	 * moves work about. Grouping is how a row of eight glyphs becomes something
-	 * you can aim at without reading every label.
+	 * Two groups, divided: what talks to a remote, and what moves work about.
+	 * Grouping is how a row of glyphs becomes something you can aim at without
+	 * reading every label. It was three; the first held only Undo and Redo.
 	 */
-	let pullMenu = $state<{ x: number; y: number } | null>(null);
-	let fetchMenu = $state<{ x: number; y: number } | null>(null);
+	type Anchored = { x: number; y: number; anchor: HTMLElement };
+
+	let pullMenu = $state<Anchored | null>(null);
+	let fetchMenu = $state<Anchored | null>(null);
 
 	/**
-	 * Right-clicking Fetch offers one remote at a time (FEAT-018).
+	 * Where a menu opens: under the control, aligned to its left edge.
+	 *
+	 * Both of these used to open at the pointer, because both were reachable
+	 * only by right-clicking. A menu opened at the pointer cannot be opened
+	 * from the keyboard at all — there is no pointer — and the two would have
+	 * appeared in different places depending on which half of the button was
+	 * hit. Anchoring is the same arrangement the branch switcher already uses,
+	 * and for the same reason (FEAT-045).
+	 */
+	function under(anchor: HTMLElement): Anchored {
+		const box = anchor.getBoundingClientRect();
+		return { x: box.left, y: box.bottom + 4, anchor };
+	}
+
+	/**
+	 * Fetch offers one remote at a time (FEAT-018).
 	 *
 	 * Every layer has taken a remote since the plumbing was built; the button
 	 * always sent the empty string, so "fetch one remote" existed everywhere
-	 * except where somebody could ask for it. The list is read on opening the
-	 * menu rather than kept live: remotes change about once a year, and a store
-	 * loaded on every repository change to fill a menu nobody opened would be
-	 * work done for nothing.
+	 * except where somebody could ask for it — and then, once it existed, it
+	 * was on a right-click handler, which is to say it existed for people who
+	 * already knew it was there (BUG-030). The caret is what says so.
+	 *
+	 * The list is read on opening the menu rather than kept live: remotes change
+	 * about once a year, and a store loaded on every repository change to fill a
+	 * menu nobody opened would be work done for nothing.
 	 */
-	async function openFetchMenu(event: MouseEvent) {
-		event.preventDefault();
-		event.stopPropagation();
+	async function openFetchMenu(anchor: HTMLElement) {
+		if (fetchMenu) {
+			fetchMenu = null;
+			return;
+		}
+		// Anchored before the await, so the menu lands under the control the
+		// user pressed rather than wherever it has scrolled to by the time the
+		// remotes have been read.
+		const at = under(anchor);
 		await remotes.load();
-		fetchMenu = { x: event.clientX, y: event.clientY };
+		fetchMenu = at;
 	}
 
 	const FETCH_ITEMS = $derived<MenuItem[]>([
@@ -156,10 +195,10 @@
 		}))
 	]);
 
-	function openPullMenu(event: MouseEvent) {
-		event.preventDefault();
-		event.stopPropagation();
-		pullMenu = { x: event.clientX, y: event.clientY };
+	function openPullMenu(anchor: HTMLElement) {
+		// A second press closes it, the convention `Menu` is built around
+		// (BUG-018).
+		pullMenu = pullMenu ? null : under(anchor);
 	}
 
 	/**
@@ -188,27 +227,23 @@
 		}
 	];
 
-	const GROUPS: ToolItem[][] = [
-		[
-			{ icon: 'undo', label: 'Undo', title: PENDING },
-			{ icon: 'redo', label: 'Redo', title: PENDING }
-		],
+	const GROUPS: ToolItem[][] = $derived([
 		[
 			{
 				icon: 'pull',
 				label: 'Pull',
-				title: 'Fetch and bring the upstream in — right-click for how',
+				title: 'Fetch and fast-forward the current branch',
 				act: () => pull(),
-				menu: true
+				alternatives: { label: 'How to pull', open: openPullMenu }
 			},
 			{
 				icon: 'fetch',
 				label: 'Fetch',
 				title: settings.settings.pruneOnFetch
-					? 'Fetch every remote, pruning — right-click for one'
-					: 'Fetch every remote — right-click for one',
+					? 'Fetch every remote, pruning'
+					: 'Fetch every remote',
 				act: () => fetchAll(),
-				fetchMenu: true
+				alternatives: { label: 'What to fetch', open: (anchor) => void openFetchMenu(anchor) }
 			},
 			{
 				icon: 'push',
@@ -223,7 +258,7 @@
 			{ icon: 'stash', label: 'Stash', href: '/stash' },
 			{ icon: 'rebase', label: 'Rebase', href: '/rebase' }
 		]
-	];
+	]);
 </script>
 
 {#if branchMenu}
@@ -241,6 +276,7 @@
 	<Menu
 		x={fetchMenu.x}
 		y={fetchMenu.y}
+		anchor={fetchMenu.anchor}
 		label="What to fetch"
 		items={FETCH_ITEMS}
 		onclose={() => (fetchMenu = null)}
@@ -251,6 +287,7 @@
 	<Menu
 		x={pullMenu.x}
 		y={pullMenu.y}
+		anchor={pullMenu.anchor}
 		label="How to pull"
 		items={PULL_ITEMS}
 		onclose={() => (pullMenu = null)}
@@ -317,18 +354,54 @@
 				<span class="vr" style="height: 26px"></span>
 			{/if}
 			{#each group as action (action.label)}
-				<button
-					class="tool"
-					title={action.title}
-					oncontextmenu={(event) => {
-						if (action.menu) openPullMenu(event);
-						else if (action.fetchMenu) void openFetchMenu(event);
-					}}
-					onclick={() => (action.act ? action.act() : action.href && goto(action.href))}
-				>
-					<Icon name={action.icon} size="1.25em" />
-					<span>{action.label}</span>
-				</button>
+				<!--
+					A split button where there are alternatives (BUG-030).
+
+					The two halves are wrapped rather than made one control,
+					because they do different things and both have to be
+					reachable: the main half runs the safe default, the caret
+					opens the choices. Both are `<button>`s, so both are in the
+					tab order and both answer Enter and Space — which is the
+					whole defect being fixed, since a `contextmenu` handler is
+					unreachable without a pointer and undiscoverable with one.
+				-->
+				<div class="tool-group" class:split={action.alternatives !== undefined}>
+					<button
+						class="tool"
+						title={action.title}
+						oncontextmenu={(event) => {
+							if (!action.alternatives) return;
+							// Kept: it was the only way in, and taking it away
+							// would break the habit of everybody who found it.
+							event.preventDefault();
+							action.alternatives.open(event.currentTarget as HTMLElement);
+						}}
+						onkeydown={(event) => {
+							// The convention for a menu button, so the caret
+							// does not have to be tabbed to separately.
+							if (!action.alternatives || event.key !== 'ArrowDown') return;
+							event.preventDefault();
+							action.alternatives.open(event.currentTarget as HTMLElement);
+						}}
+						onclick={() => (action.act ? action.act() : action.href && goto(action.href))}
+					>
+						<Icon name={action.icon} size="1.25em" />
+						<span>{action.label}</span>
+					</button>
+					{#if action.alternatives}
+						{@const open = action.alternatives.open}
+						<button
+							class="caret"
+							aria-haspopup="menu"
+							aria-expanded={(action.label === 'Pull' ? pullMenu : fetchMenu) !== null}
+							aria-label={action.alternatives.label}
+							title={action.alternatives.label}
+							onclick={(event) => open(event.currentTarget as HTMLElement)}
+						>
+							<span aria-hidden="true">▾</span>
+						</button>
+					{/if}
+				</div>
 			{/each}
 		{/each}
 	</div>
@@ -478,13 +551,27 @@
 		font-size: 12px;
 	}
 
+	/*
+	 * A button and, where there are alternatives, its caret.
+	 *
+	 * The two are one visual object with a hairline between them: separate
+	 * pills would read as two actions, and one control would leave the choices
+	 * reachable only by guessing which half to press. The group carries the
+	 * corner so the halves square up against each other.
+	 */
+	.tool-group {
+		display: flex;
+		align-items: stretch;
+		border-radius: var(--r-button);
+	}
+
 	.tool {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		gap: 1px;
 		padding: 3px 6px;
-		border-radius: var(--r-button);
+		border-radius: inherit;
 		font-size: var(--fs-mono);
 		color: var(--muted);
 		min-width: 44px;
@@ -494,12 +581,57 @@
 			color var(--t-fast) var(--ease);
 	}
 
+	.split .tool {
+		border-start-end-radius: 0;
+		border-end-end-radius: 0;
+		padding-inline-end: 4px;
+	}
+
 	.tool:hover {
 		color: var(--accent);
 		background: var(--accent-soft);
 	}
 
 	.tool:active {
+		background: var(--press);
+	}
+
+	/*
+	 * The caret.
+	 *
+	 * Deliberately its own button rather than a glyph inside the first one. It
+	 * is what makes the alternatives *visible* — the whole defect was that
+	 * "right-click for how" is a sentence in a tooltip — and a `<button>` is
+	 * what makes them reachable from the keyboard, which a `contextmenu`
+	 * handler never was.
+	 *
+	 * It stays put on hover. The rest of the toolbar lifts and this does not,
+	 * because a two-part control whose halves move independently reads as
+	 * coming apart.
+	 */
+	.caret {
+		display: flex;
+		align-items: center;
+		padding: 0 5px;
+		border-radius: inherit;
+		border-start-start-radius: 0;
+		border-end-start-radius: 0;
+		border-left: 1px solid var(--soft);
+		font-size: var(--fs-mono);
+		color: var(--muted);
+		user-select: none;
+		transition:
+			background var(--t-fast) var(--ease),
+			color var(--t-fast) var(--ease);
+	}
+
+	.caret:hover,
+	.caret[aria-expanded='true'] {
+		color: var(--accent);
+		background: var(--accent-soft);
+	}
+
+	.caret:active {
 		background: var(--press);
 	}
 
@@ -533,7 +665,16 @@
 			padding-inline: 4px;
 		}
 
-		.tool span:last-child {
+		.split .tool {
+			padding-inline-end: 2px;
+		}
+
+		.caret {
+			padding-inline: 3px;
+		}
+
+		/* The label goes; the caret's glyph is not a label and must not. */
+		.tool > span:last-child {
 			display: none;
 		}
 
