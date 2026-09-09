@@ -26,13 +26,21 @@
 #            rather than a universal binary, so each download is the size of one
 #            architecture.
 #
-# **The macOS build is unsigned, and the notes say so.** This workflow used to
-# skip macOS entirely on the reasoning that an unsigned .app Gatekeeper refuses
-# to open is worse than no download at all. The author's decision is that all
-# three platforms are built: a Mac user with no build is stuck, where a Mac user
-# with an unsigned build has one documented step. Signing and notarisation need
-# an Apple Developer account and secrets in this repository, and neither exists
-# yet; when they do, they belong here and in gates.yml together.
+# **The macOS build is ad-hoc signed and not notarized, and the notes say so.**
+# This workflow used to skip macOS entirely on the reasoning that an unsigned
+# .app Gatekeeper refuses to open is worse than no download at all. The author's
+# decision is that all three platforms are built: a Mac user with no build is
+# stuck, where a Mac user with a signed build has one documented step.
+#
+# It used to be *unsigned*, which is not the same thing and does not fail the
+# same way (TASK-040): an app with no signature at all is reported as **damaged**
+# and offered a Move to Bin button, where an app whose signature is valid but
+# whose developer is unknown gets the *unidentified developer* dialog and a
+# documented Open Anyway path. `./.github/actions/macos-signing` decides the
+# policy for the lane and `./.github/actions/macos-verify` opens the finished
+# .dmg and checks it. Notarisation still needs an Apple Developer account and
+# secrets in this repository; when they exist, this lane picks them up without
+# an edit and gates.yml refuses to publish without them.
 
 # Two ways in, because `workflow_dispatch` alone is not enough here. GitHub
 # only offers a dispatchable workflow that exists on the **default branch**,
@@ -147,10 +155,16 @@ jobs:
             os: macos-latest
             bundles: dmg
             target: aarch64-apple-darwin
+            arch: arm64
+          # Intel. `macos-13` was here and GitHub closed that image down, so
+          # this lane had a runner that no longer exists — a build defect on
+          # its own, and not the reason any already-downloaded app is called
+          # damaged. `macos-15-intel` is the supported x86_64 label.
           - name: macos-x86_64
-            os: macos-13
+            os: macos-15-intel
             bundles: dmg
             target: x86_64-apple-darwin
+            arch: x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -180,6 +194,21 @@ jobs:
       - uses: ./.github/actions/appimage-update-info
         if: runner.os == 'Linux'
 
+      # What signs the macOS bundle, decided before it is built. `interim`, so
+      # a repository with no Apple certificate falls back to an ad-hoc
+      # signature rather than failing — a draft is exactly the lane that may.
+      - id: signing
+        uses: ./.github/actions/macos-signing
+        if: runner.os == 'macOS'
+        with:
+          lane: interim
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          apple-id: ${{ secrets.APPLE_ID }}
+          apple-password: ${{ secrets.APPLE_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          signing-identity: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
       # The bundler runs `appimagetool`, which wants FUSE. GitHub's runners do
       # not have it, and this variable is how AppImage tooling is told to
       # unpack itself instead of mounting.
@@ -195,6 +224,16 @@ jobs:
           # that is not this one, which is how a locally compiled Spagitty
           # knows it has no release to be behind.
           SPAGITTY_RELEASE: ${{ needs.tag.outputs.tag }}
+
+      # Before the upload, never after: the point of checking is that a broken
+      # container or an unsigned app stops here instead of reaching somebody's
+      # Downloads folder.
+      - uses: ./.github/actions/macos-verify
+        if: runner.os == 'macOS'
+        with:
+          policy: ${{ steps.signing.outputs.policy }}
+          notarized: ${{ steps.signing.outputs.notarized }}
+          architecture: ${{ matrix.arch }}
 
       # This lane always collected only the installers, which is why it never
       # hit the clash that killed v0.2.0. That collection now lives in a shared
@@ -258,12 +297,27 @@ jobs:
             \`AppImageUpdate\` reads to patch an installed copy in place.
           - **Windows** — \`*-setup.exe\` installs; \`spagitty-windows-x86_64.exe\` is the bare binary.
           - **macOS** — \`*-macos-arm64.dmg\` for Apple silicon, \`*-macos-x86_64.dmg\` for Intel.
+            Check you have the right one: an Intel download on Apple silicon, or the
+            reverse, fails in a way that looks like every other macOS failure.
+          - **\`SHA256SUMS-*.txt\`** covers the downloads from each build machine. If a
+            download misbehaves, compare it against these **first** — a truncated
+            transfer and a packaging defect produce the same dialogs.
 
-          **Every build here is unsigned.** On macOS that is not cosmetic: Gatekeeper
-          refuses an unsigned app on a double-click, so open it once from the right-click
-          menu, or run \`xattr -d com.apple.quarantine /Applications/Spagitty.app\`.
-          Windows SmartScreen will also warn. Signing needs certificates this repository
-          does not have yet.
+          **macOS: this build is ad-hoc signed, not notarized.** It carries a real code
+          signature over its own bytes, and no identity behind it, so macOS will not
+          recognise the developer. Expect the *unidentified developer* dialog on first
+          open: open it once from the right-click **Open** menu, or allow it under
+          **System Settings → Privacy & Security → Open Anyway**, and macOS remembers
+          the choice.
+
+          If instead macOS says the app is **damaged**, that is a different message and
+          it means the copy you are holding failed an integrity check — check the
+          SHA-256 above before anything else, and please report the mismatch. Do not
+          reach for \`xattr\`: stripping quarantine only silences the check, it does not
+          repair a file, and a build that needs it is a build worth reporting.
+
+          Windows SmartScreen will also warn; those builds are unsigned. Notarized macOS
+          and signed Windows releases need certificates this repository does not have yet.
 
           Licensed GPL-3.0-or-later." \
             $files

@@ -1,0 +1,160 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Decide, once, what signs the macOS bundle in this lane.
+#
+# This exists because the answer differs per lane and the question is asked in
+# three workflows. Written into `tauri.conf.json` instead, the answer would be
+# the *same* in all three — and the answer that is right for a draft build
+# (ad-hoc, so the app has a signature at all) is the one that must never reach a
+# production release, because an ad-hoc-signed app is refused by Gatekeeper on
+# every machine except the one that built it. A file that cannot tell a draft
+# from a release is the wrong place for the decision.
+#
+# `tauri-bundler` takes the identity from `APPLE_SIGNING_IDENTITY` and the
+# notarization credentials from `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID`
+# (or `APPLE_API_*`), all read from the environment of the build step. So the
+# whole interface here is a set of exported variables plus a refusal.
+#
+# # The three outcomes
+#
+# | Certificate secret | lane        | Result |
+# |--------------------|-------------|--------|
+# | present            | any         | Developer ID signing, notarized and stapled by the bundler |
+# | absent             | interim     | Ad-hoc signature (`-`). Verifiable, not trusted. |
+# | absent             | production  | **The job fails.** |
+#
+# The last row is the point of the action. Without it a production lane whose
+# secrets were removed, rotated or never added would quietly publish an
+# unsigned build with release notes claiming it was signed, and nothing would
+# say so until a user was told their download was damaged.
+#
+# # What ad-hoc signing does and does not buy
+#
+# It gives the bundle a real code signature, so its seal covers its own bytes.
+# That converts one specific failure — "this app is damaged and can't be
+# opened", which is what an app with *no* signature or a *broken* one gets —
+# into the unidentified-developer dialog, which has a documented Open Anyway
+# path in Privacy & Security. It is **not** notarization and it is not a
+# guarantee of a warning-free install: Apple's policy on what an ad-hoc build
+# may do has tightened before and can again. The release notes say this in the
+# same words.
+name: Decide the macOS signing policy
+description: Export the signing and notarization environment for a lane, or refuse to build an unsigned production release
+
+inputs:
+  lane:
+    description: >
+      `interim` for a draft or alpha build, which may fall back to an ad-hoc
+      signature. `production` for a release anybody is pointed at, which may
+      not — an absent certificate fails the job instead.
+    required: true
+  certificate:
+    description: The base64 `Developer ID Application` .p12, from secrets. Empty when there is none.
+    required: false
+    default: ''
+  certificate-password:
+    description: Password for that .p12.
+    required: false
+    default: ''
+  apple-id:
+    description: Apple ID used for notarization.
+    required: false
+    default: ''
+  apple-password:
+    description: App-specific password for that Apple ID.
+    required: false
+    default: ''
+  apple-team-id:
+    description: The Developer Team ID the certificate belongs to.
+    required: false
+    default: ''
+  signing-identity:
+    description: >
+      The identity string to sign with, e.g. `Developer ID Application: Name
+      (TEAMID)`. Only meaningful with a certificate.
+    required: false
+    default: ''
+
+outputs:
+  policy:
+    description: '`developer-id`, `ad-hoc`, or the job has already failed.'
+    value: ${{ steps.decide.outputs.policy }}
+  notarized:
+    description: '`true` when the bundler was given notarization credentials.'
+    value: ${{ steps.decide.outputs.notarized }}
+
+runs:
+  using: composite
+  steps:
+    - id: decide
+      shell: bash
+      env:
+        LANE: ${{ inputs.lane }}
+        CERTIFICATE: ${{ inputs.certificate }}
+        CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
+        APPLE_ID_IN: ${{ inputs.apple-id }}
+        APPLE_PASSWORD_IN: ${{ inputs.apple-password }}
+        APPLE_TEAM_ID_IN: ${{ inputs.apple-team-id }}
+        SIGNING_IDENTITY_IN: ${{ inputs.signing-identity }}
+      run: |
+        set -euo pipefail
+
+        case "${LANE}" in
+          interim|production) ;;
+          *)
+            echo "::error::lane must be 'interim' or 'production', not '${LANE}'"
+            exit 1
+            ;;
+        esac
+
+        if [ -n "${CERTIFICATE}" ]; then
+          # Developer ID. The certificate and its password go to the bundler,
+          # which imports it into a temporary keychain of its own — this action
+          # deliberately does not create one, so nothing it does outlives the
+          # job.
+          {
+            echo "APPLE_CERTIFICATE=${CERTIFICATE}"
+            echo "APPLE_CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}"
+          } >> "$GITHUB_ENV"
+
+          if [ -n "${SIGNING_IDENTITY_IN}" ]; then
+            echo "APPLE_SIGNING_IDENTITY=${SIGNING_IDENTITY_IN}" >> "$GITHUB_ENV"
+          fi
+
+          # Notarization is separate from signing and is requested by the
+          # presence of credentials. A signed-but-not-notarized build still
+          # warns on first open, so the two are reported separately rather than
+          # collapsed into "signed".
+          if [ -n "${APPLE_ID_IN}" ] && [ -n "${APPLE_PASSWORD_IN}" ] && [ -n "${APPLE_TEAM_ID_IN}" ]; then
+            {
+              echo "APPLE_ID=${APPLE_ID_IN}"
+              echo "APPLE_PASSWORD=${APPLE_PASSWORD_IN}"
+              echo "APPLE_TEAM_ID=${APPLE_TEAM_ID_IN}"
+            } >> "$GITHUB_ENV"
+            echo "notarized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "notarized=false" >> "$GITHUB_OUTPUT"
+            if [ "${LANE}" = "production" ]; then
+              echo "::error::a production release needs APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID as well as a certificate; a signed but unnotarized build still warns on first open"
+              exit 1
+            fi
+            echo "::warning::signing with Developer ID but not notarizing — first open will still warn"
+          fi
+
+          echo "policy=developer-id" >> "$GITHUB_OUTPUT"
+          echo "::notice::macOS lane '${LANE}': Developer ID signing"
+          exit 0
+        fi
+
+        # No certificate.
+        if [ "${LANE}" = "production" ]; then
+          echo "::error::no Developer ID certificate is configured, and a production release may not be published unsigned. Add APPLE_CERTIFICATE (and the notarization credentials) to this repository's secrets, or cut this build from an interim lane."
+          exit 1
+        fi
+
+        # `-` is codesign's own spelling of an ad-hoc signature: a real seal
+        # over the app's own bytes, with no identity behind it.
+        echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+        echo "policy=ad-hoc" >> "$GITHUB_OUTPUT"
+        echo "notarized=false" >> "$GITHUB_OUTPUT"
+        echo "::notice::macOS lane '${LANE}': ad-hoc signature. Verifiable, not trusted — the download will need a security exception."

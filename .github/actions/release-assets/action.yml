@@ -139,6 +139,31 @@ runs:
           echo "$appimage is updatable: $information"
         fi
 
+        # Checksums, published with the downloads (TASK-040).
+        #
+        # A user told their macOS download is damaged has no way to find out
+        # whether they are holding the bytes that were built. That is the first
+        # question any diagnosis of that dialog has to answer, and until this
+        # existed the honest answer was "nobody knows" — so an incomplete
+        # download and a packaging defect were indistinguishable from the
+        # outside, and the release notes guessed.
+        #
+        # One file per runner, named for the artifact set it covers, because
+        # each lane's runners upload into a shared directory and a single
+        # `SHA256SUMS` written three times would collide exactly the way the
+        # .dmg names did. The release ends up carrying one per platform.
+        #
+        # `shasum` on macOS, `sha256sum` on Linux and on Windows' bash — the
+        # runners genuinely differ, and neither is present on both.
+        sums="SHA256SUMS-${SUFFIX:-$(echo "${RUNNER_OS}" | tr '[:upper:]' '[:lower:]')}.txt"
+        if command -v sha256sum >/dev/null 2>&1; then
+          (cd out && sha256sum -- * > "../$sums")
+        else
+          (cd out && shasum -a 256 -- * > "../$sums")
+        fi
+        mv "$sums" out/
+        cat "out/$sums"
+
         ls -l out
       env:
         SUFFIX: ${{ inputs.suffix }}

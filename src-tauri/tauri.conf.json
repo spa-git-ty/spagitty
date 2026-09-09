@@ -38,6 +38,9 @@
     ],
     "longDescription": "A cross-platform desktop Git client. Free software under GPL-3.0-or-later. Not affiliated with the Git project or the Software Freedom Conservancy.",
     "shortDescription": "Desktop Git client",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
     "windows": {
       "wix": {
         "version": "0.7.0.0"

@@ -1,0 +1,158 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Open the macOS artefact and ask it three different questions, before anybody
+# downloads it.
+#
+# Every macOS release Spagitty has cut was published without anything ever
+# opening the `.dmg`. `release-assets` checks that files exist and that their
+# names do not clash; it has never looked *inside* one. So the whole class of
+# failure this action is about — a container that does not mount, an app with no
+# signature, a signature that does not match the bytes it seals, a bundle built
+# for the other architecture — first became visible to a person who had already
+# downloaded it and was told their copy was damaged.
+#
+# # The three questions are not one question
+#
+# | Tool | Answers | Can pass while the others fail |
+# |------|---------|--------------------------------|
+# | `hdiutil verify`  | is the **container** intact? | yes — a perfect DMG can hold a broken app |
+# | `codesign --verify` | does the **seal match the bytes**? | yes — an ad-hoc signature is internally perfect |
+# | `spctl --assess`  | will **this machine's policy** run it? | yes — a notarized app can sit in a corrupt image |
+#
+# Collapsing them into "it's signed" is how a build gets described as fine when
+# only one of the three is true. Each is reported on its own line with its own
+# verdict, and the failure conditions differ by lane: integrity is fatal
+# everywhere, because a build that cannot be verified must not be published at
+# all, while an `spctl` rejection is fatal only where the lane claimed to
+# notarize — an ad-hoc lane is *expected* to be rejected, and a lane that
+# treated that as a failure could never be green.
+#
+# # `--deep` is here for reading, not for signing
+#
+# `codesign --verify --deep --strict` walks the nested code inside the bundle,
+# which is what makes it a useful check. The matching *signing* flag is not used
+# anywhere and must not be: deep-signing an assembled bundle after the fact is
+# the "repair" that produces an app whose outer seal covers resources that were
+# changed after they were sealed — the state macOS reports as damaged.
+name: Verify the macOS artefact
+description: Mount the DMG, verify the container, the app's signature and Gatekeeper's verdict, and confirm the architecture
+
+inputs:
+  policy:
+    description: '`developer-id` or `ad-hoc` — what the signing action decided.'
+    required: true
+  notarized:
+    description: '`true` when the lane notarized, in which case a Gatekeeper rejection fails the job.'
+    required: false
+    default: 'false'
+  architecture:
+    description: >
+      The architecture this lane claims to have built — `arm64` or `x86_64`.
+      Checked against the executable, because a download named for one
+      architecture and built for the other fails on a user's machine with a
+      message that looks like every other macOS failure.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Verify the container, the signature and the policy verdict
+      shell: bash
+      env:
+        POLICY: ${{ inputs.policy }}
+        NOTARIZED: ${{ inputs.notarized }}
+        WANT_ARCH: ${{ inputs.architecture }}
+      run: |
+        set -euo pipefail
+
+        if [ "${RUNNER_OS}" != "macOS" ]; then
+          echo "::error::this action only means anything on a macOS runner"
+          exit 1
+        fi
+
+        # The same search `release-assets` does, and for the same reason: Tauri
+        # has put its bundle under both `target/` and `src-tauri/target/`.
+        dmg=$(find . -path ./node_modules -prune -o -name '*.dmg' -print -quit)
+        if [ -z "$dmg" ]; then
+          echo "::error::no .dmg in the build tree; nothing to verify"
+          exit 1
+        fi
+        echo "artefact: $dmg"
+        shasum -a 256 "$dmg"
+
+        # --- 1. the container ------------------------------------------------
+        # Fatal on every lane. A DMG that does not verify is the one failure
+        # mode that genuinely is a broken download, and publishing it would
+        # make every later diagnosis ambiguous.
+        echo "::group::hdiutil verify — is the container intact?"
+        hdiutil verify "$dmg"
+        echo "::endgroup::"
+
+        mount=$(mktemp -d)
+        # `-nobrowse` keeps it out of the Finder, `-readonly` guarantees
+        # nothing here can alter the bytes that are about to be published.
+        hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount"
+        # Detach whatever happens, or a later step in the same job inherits a
+        # mounted image and a confusing failure.
+        trap 'hdiutil detach "$mount" >/dev/null 2>&1 || true' EXIT
+
+        app=$(find "$mount" -maxdepth 1 -name '*.app' -print -quit)
+        if [ -z "$app" ]; then
+          echo "::error::the image mounted but holds no .app"
+          exit 1
+        fi
+        echo "app: $app"
+
+        # --- 2. the seal -----------------------------------------------------
+        # Fatal on every lane. `-dvvv` prints what the signature claims;
+        # `--verify` decides whether it still matches the bundle. An unsigned
+        # app fails here with "code object is not signed at all", which is the
+        # state that produces the damaged-app dialog.
+        echo "::group::codesign — does the seal match the bytes?"
+        codesign -dvvv "$app" 2>&1
+        codesign --verify --deep --strict --verbose=2 "$app" 2>&1
+        echo "::endgroup::"
+
+        # --- 3. the verdict --------------------------------------------------
+        # Never fatal on an ad-hoc lane, and always fatal on a notarized one.
+        # An ad-hoc signature is *supposed* to be rejected here: it is valid and
+        # untrusted, and that is the whole difference between the two policies.
+        echo "::group::spctl — will Gatekeeper run it?"
+        if spctl --assess --type execute --verbose=4 "$app" 2>&1; then
+          echo "Gatekeeper accepts this build."
+        else
+          verdict=$?
+          if [ "${NOTARIZED}" = "true" ]; then
+            echo "::error::the lane notarized this build and Gatekeeper still rejects it (spctl exit ${verdict}). Do not publish it."
+            exit 1
+          fi
+          echo "::notice::Gatekeeper rejects this ${POLICY} build, which is expected for a build that is not notarized. The release notes must say so."
+        fi
+        echo "::endgroup::"
+
+        # A ticket is stapled to the artefact, so it can be validated offline.
+        # Only asked for where one was meant to be attached.
+        if [ "${NOTARIZED}" = "true" ]; then
+          echo "::group::stapler — is the notarization ticket attached?"
+          xcrun stapler validate "$app"
+          xcrun stapler validate "$dmg"
+          echo "::endgroup::"
+        fi
+
+        # --- 4. the architecture ---------------------------------------------
+        # Read from the bundle rather than assumed from the runner: a build
+        # that silently took the host's architecture instead of `--target` is
+        # a download that fails on half the Macs it is offered to, and it fails
+        # with a message that reads like all the others.
+        executable=$(plutil -extract CFBundleExecutable raw "$app/Contents/Info.plist")
+        binary="$app/Contents/MacOS/$executable"
+        echo "::group::file — is this the architecture the filename claims?"
+        file "$binary"
+        echo "::endgroup::"
+
+        if ! file "$binary" | grep -q "${WANT_ARCH}"; then
+          echo "::error::this lane claims ${WANT_ARCH} and built $(file "$binary")"
+          exit 1
+        fi
+
+        echo "::notice::${dmg##*/}: container verified, signature ${POLICY}, architecture ${WANT_ARCH}, notarized=${NOTARIZED}"
