@@ -39,19 +39,63 @@ they are given.
 
 Cheapest and most certain first, so an obvious failure never burns a full build.
 
-**Every lane builds all three platforms.** Gate 5 and the prerelease workflow
-each run `ubuntu-latest`, `macos-latest` and `windows-latest`; the draft
-workflow builds Linux, Windows, and macOS on two runners — `macos-latest` for
-Apple silicon and `macos-13` for Intel, since a build made on one does not run
-on the other. Gate 5's macOS build is Apple silicon only, so a published
-release currently has no Intel Mac download; that is recorded as an open
-question in TASK-025 rather than fixed unwatched on the blocking release path.
+**Every lane builds all four downloads.** Linux, Windows, and macOS on two
+runners: `macos-latest` for Apple silicon and `macos-15-intel` for Intel, since
+a build made on one does not run on the other. Until TASK-040 only the draft
+lane split the architectures — and it split them onto `macos-13`, an image
+GitHub has closed down — while gate 5 and the prerelease lane each ran a single
+`macos-latest` job. `macos-latest` is Apple silicon, so no published release and
+no alpha has ever carried an Intel Mac download.
 
-**Nothing is signed.** There is no Apple Developer account and no code-signing
-certificate in this repository, so macOS Gatekeeper refuses a downloaded build
-on a double-click and Windows SmartScreen warns. The draft lane's release notes
-carry the one step a Mac user needs; adding real signing is a change to gate 5
-and the draft lane together, not to one of them.
+## macOS signing policy
+
+Two policies, chosen per lane by `.github/actions/macos-signing`, because the
+right answer for a draft is the wrong answer for a release and one setting in
+`tauri.conf.json` cannot tell them apart.
+
+| Lane | Policy | What it means |
+| --- | --- | --- |
+| draft, prerelease | `interim` | Developer ID when a certificate is configured; otherwise an **ad-hoc** signature (`APPLE_SIGNING_IDENTITY=-`) |
+| gate 5 | `production` | Developer ID, notarized and stapled. **No certificate fails the gate** |
+
+**These three things are different, and the difference is the whole subject.**
+
+- *Unsigned* — no signature at all. macOS reports the app as **damaged** and
+  offers to move it to the Bin. There is no Open Anyway path from that dialog.
+  This is what every Spagitty macOS build was before TASK-040.
+- *Ad-hoc signed* — a real seal over the app's own bytes with no identity
+  behind it. macOS reports an **unidentified developer**, which has a
+  documented first-open path: right-click → Open, or System Settings → Privacy
+  & Security → Open Anyway. It is not notarization, and it is not a promise of
+  a warning-free install.
+- *Developer ID signed and notarized* — Apple has seen the build and issued a
+  ticket, stapled to the artefacts. This is the only policy whose acceptance
+  criterion is that the app opens through the expected first-open confirmation
+  with no damaged-app warning at all.
+
+`.github/actions/macos-verify` opens the finished `.dmg` on the runner and asks
+three questions that are not one question: `hdiutil verify` on the container,
+`codesign --verify --deep --strict` on the app, and `spctl --assess` for the
+policy verdict — plus `file` on the executable, because a lane that silently
+built the host's architecture instead of its `--target` produces a download
+that fails on half the Macs it is offered to. A valid ad-hoc signature passes
+the second and fails the third; reading either as the other is how a build gets
+described as fine.
+
+**`xattr -d com.apple.quarantine` is a diagnostic, not an installation step.**
+It removes the quarantine attribute, which silences Gatekeeper for that copy. It
+repairs nothing: an app reported as damaged is still damaged afterwards, and a
+truncated download is still truncated. It used to be in the draft lane's release
+notes as the remedy, which taught every Mac user to disarm the check that would
+have caught a genuinely broken file. It must not appear in an acceptance test.
+
+**Windows is still unsigned** and SmartScreen still warns. Same class of
+problem, different authority, separate decision.
+
+Every release now also carries `SHA256SUMS-*.txt`, one per build machine.
+Comparing a download against it is the first step of any macOS diagnosis: until
+it existed, an incomplete transfer and a packaging defect were
+indistinguishable from outside.
 
 ## The Linux build can be updated in place
 

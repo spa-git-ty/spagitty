@@ -274,15 +274,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `name` rather than `os` as the identity, because macOS is two entries
+        # on two runners now (TASK-040) and `os` stopped being unique. This lane
+        # built one `macos-latest` job, which is Apple silicon, so a `main`
+        # release has never carried an Intel download at all.
         include:
-          - os: ubuntu-latest
-          - os: macos-latest
-          - os: windows-latest
+          - name: linux
+            os: ubuntu-latest
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+          - name: macos-x86_64
+            os: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x86_64
+          - name: windows
+            os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          # Empty on Linux and Windows, where the runner's own triple is the
+          # one wanted; named on macOS so each runner builds for the
+          # architecture it is published as.
+          targets: ${{ matrix.target || '' }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.name }}
       - uses: ./.github/actions/linux-deps
         if: matrix.os == 'ubuntu-latest'
 
@@ -309,7 +329,26 @@ jobs:
         shell: bash
         run: echo "tag=v$(bun -e "console.log(require('./package.json').version)")" >> "$GITHUB_OUTPUT"
 
-      - run: bun run tauri build
+      # This is the release lane, so the signing policy is `production`: a
+      # missing certificate fails the gate rather than quietly publishing an
+      # unsigned build with notes claiming otherwise (TASK-040). Until an Apple
+      # Developer account exists this step is what stops `main` shipping a
+      # macOS download at all — which is the correct half of the trade, because
+      # the draft and alpha lanes still produce one and say what it is.
+      - id: signing
+        uses: ./.github/actions/macos-signing
+        if: runner.os == 'macOS'
+        with:
+          lane: production
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          apple-id: ${{ secrets.APPLE_ID }}
+          apple-password: ${{ secrets.APPLE_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          signing-identity: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
+      - run: bun run tauri build ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+        shell: bash
         env:
           # What the update check compares itself against, and the whole reason
           # it can answer at all: `Cargo.toml` says one version across every
@@ -322,14 +361,29 @@ jobs:
           # say a newer one existed. The feature was shipped and inert.
           SPAGITTY_RELEASE: ${{ steps.release.outputs.tag }}
 
+      # The container, the signature, Gatekeeper's verdict and the
+      # architecture, asked of the finished .dmg before it is uploaded.
+      - uses: ./.github/actions/macos-verify
+        if: runner.os == 'macOS'
+        with:
+          policy: ${{ steps.signing.outputs.policy }}
+          notarized: ${{ steps.signing.outputs.notarized }}
+          architecture: ${{ matrix.arch }}
+
       # Only the downloads, never the whole bundle tree — see the action for
       # what uploading the tree did to the v0.2.0 release. It also refuses an
       # AppImage that came out without its update information.
+      #
+      # The suffix is what keeps the two macOS runners apart: a .dmg is named
+      # from the product name and version, which is identical on both, and gate
+      # 6 refuses a release whose basenames clash.
       - uses: ./.github/actions/release-assets
+        with:
+          suffix: ${{ runner.os == 'macOS' && matrix.name || '' }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: spagitty-${{ matrix.os }}
+          name: spagitty-${{ matrix.name }}
           path: out/**
           # A build that produced nothing used to pass this step with a
           # warning, and gate 6 would then publish a release with no downloads

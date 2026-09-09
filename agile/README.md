@@ -213,6 +213,7 @@ of its own.
 | [TASK-036](items/TASK-036-sync-amendments.md) | Use the current shared amendments book | — | Open |
 | [TASK-037](items/TASK-037-updates-that-actually-arrive.md) | Updates that actually arrive | 1K | Done |
 | [TASK-038](items/TASK-038-settings-that-stop-lecturing.md) | Settings that stop lecturing | Settings | Done |
+| [TASK-040](items/TASK-040-the-macos-download-says-what-it-is.md) | The macOS download says what it is | — | Done |
 
 ## Skipped identifiers
 

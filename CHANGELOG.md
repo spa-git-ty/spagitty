@@ -14,6 +14,35 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Changed
+
+- The macOS downloads are signed. They were not signed at all before, and an
+  app with no signature is not what macOS calls an unidentified developer — it
+  is what macOS calls **damaged**, with a Move to Bin button and no Open Anyway
+  path. Every build now carries at least an ad-hoc signature, so the dialog a
+  Mac user meets is the one with a documented way through it. Ad-hoc is not
+  notarization and the release notes no longer imply otherwise.
+- Every release lane builds both Mac architectures. `main` and the alpha lane
+  each built one Apple silicon job, so no published release has ever carried an
+  Intel Mac download; the draft lane split them onto a runner image GitHub has
+  since closed down. Both now build `arm64` and `x86_64` on supported runners.
+- The finished `.dmg` is opened and checked on the build machine before it is
+  attached to anything — the container, the app's signature, Gatekeeper's
+  verdict and the architecture, each reported separately because they answer
+  different questions.
+- Releases carry `SHA256SUMS` files. A download that misbehaves can now be
+  compared against what was built, which is the first question any report of a
+  damaged app has to answer.
+- The macOS install instructions no longer tell everybody to remove the
+  quarantine attribute. It silences the check rather than repairing the file,
+  and as *the* documented step it taught every Mac user to disarm the one thing
+  that would have caught a genuinely broken download. It survives in
+  `docs/ci.md` as a diagnostic, labelled as a bypass.
+- A release published from `main` now refuses to build macOS at all without a
+  Developer ID certificate, rather than quietly publishing an unsigned build.
+  Until an Apple Developer account exists, the draft and alpha lanes are where
+  a Mac download comes from.
+
 ## [0.7.0] - 2026-09-07
 
 ### Added

@@ -71,17 +71,36 @@ jobs:
           fi
 
   build:
-    name: build ${{ matrix.os }}
+    name: build ${{ matrix.name }}
     needs: tag
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Four entries, not three (TASK-040). `macos-latest` is Apple silicon,
+        # so every alpha this lane has ever cut was an arm64-only macOS
+        # release; an Intel Mac had nothing to download from it.
+        include:
+          - name: linux
+            os: ubuntu-latest
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+          - name: macos-x86_64
+            os: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x86_64
+          - name: windows
+            os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target || '' }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.name }}
       - uses: ./.github/actions/linux-deps
         if: matrix.os == 'ubuntu-latest'
 
@@ -95,21 +114,46 @@ jobs:
       - uses: ./.github/actions/appimage-update-info
         if: matrix.os == 'ubuntu-latest'
 
-      - run: bun run tauri build
+      # `interim`: an alpha may fall back to an ad-hoc signature, and says so
+      # in its notes. Only gate 6's production lane refuses to build without a
+      # certificate.
+      - id: signing
+        uses: ./.github/actions/macos-signing
+        if: runner.os == 'macOS'
+        with:
+          lane: interim
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          apple-id: ${{ secrets.APPLE_ID }}
+          apple-password: ${{ secrets.APPLE_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          signing-identity: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
+      - run: bun run tauri build ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+        shell: bash
         env:
           # What the update check compares itself against. Without it an alpha
           # reports itself as a development build and can never say a newer
           # release exists — which is what every alpha did until TASK-037.
           SPAGITTY_RELEASE: ${{ needs.tag.outputs.tag }}
 
+      - uses: ./.github/actions/macos-verify
+        if: runner.os == 'macOS'
+        with:
+          policy: ${{ steps.signing.outputs.policy }}
+          notarized: ${{ steps.signing.outputs.notarized }}
+          architecture: ${{ matrix.arch }}
+
       # Only the downloads, never the whole bundle tree. Attaching the tree is
       # what killed the v0.2.0 release; the action carries the account of it.
       # It also refuses an AppImage that came out without its update information.
       - uses: ./.github/actions/release-assets
+        with:
+          suffix: ${{ runner.os == 'macOS' && matrix.name || '' }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: spagitty-alpha-${{ matrix.os }}
+          name: spagitty-alpha-${{ matrix.name }}
           path: out/**
           if-no-files-found: error
 
