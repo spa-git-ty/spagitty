@@ -42,6 +42,16 @@
 	const following = $derived(theme.source === 'system');
 
 	/**
+	 * Following the desktop's whole palette (FEAT-080).
+	 *
+	 * Offered only when one has actually been read. The alternative — always
+	 * showing it and explaining on click why it cannot be used — puts a control
+	 * that does nothing on the screen of every user who is not running Omarchy,
+	 * which is the defect BUG-030 was about.
+	 */
+	const desktop = $derived(theme.source === 'omarchy');
+
+	/**
 	 * Each family is shown in the mode that is on, so the swatches are the
 	 * colours that would actually appear rather than a light preview of a theme
 	 * about to be used in the dark.
@@ -91,17 +101,40 @@
 		{/if}
 	</div>
 
+	{#if theme.desktopAvailable}
+		<div class="row">
+			<span class="note label">Desktop</span>
+			<Chip
+				active={desktop}
+				title="Take the colours from the desktop's own theme, and follow it as it changes"
+				onclick={() => theme.followDesktop()}
+			>
+				Follow Omarchy
+			</Chip>
+			{#if desktop}
+				<!--
+					The desktop's own name for what is on. Worth showing because
+					a followed palette has no family and no variant, so the row
+					above it says nothing about which colours these are.
+				-->
+				<span class="note">{theme.desktopName ?? 'the desktop palette'}</span>
+			{:else}
+				<span class="note">Colours from {theme.desktopName ?? 'the desktop'}.</span>
+			{/if}
+		</div>
+	{/if}
+
 	<div class="row">
 		<span class="note label">Theme</span>
-		<span class="note">{theme.variant.name}</span>
+		<span class="note">{theme.label}</span>
 	</div>
 
 	<div class="families">
 		{#each swatches as family (family.id)}
 			<button
 				class="family"
-				class:active={theme.family === family.id}
-				aria-pressed={theme.family === family.id}
+				class:active={!desktop && theme.family === family.id}
+				aria-pressed={!desktop && theme.family === family.id}
 				onclick={() => theme.setFamily(family.id)}
 			>
 				<span class="swatch" aria-hidden="true">

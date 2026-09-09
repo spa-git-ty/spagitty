@@ -350,12 +350,26 @@ describe('the source of the mode', () => {
 	});
 
 	it('ignores a stored source that is not a source', () => {
-		stubStorage({ [SOURCE_KEY]: 'omarchy', [MODE_KEY]: 'dark' });
+		// `omarchy` was the invalid value here until FEAT-080 made it a real
+		// one, which is the sort of thing this assertion exists to notice.
+		stubStorage({ [SOURCE_KEY]: 'whatever-the-desktop-says', [MODE_KEY]: 'dark' });
 		stubLiveQuery(false);
 
 		theme.init();
 
 		expect(theme.source).toBe('manual');
+	});
+
+	/** The third source restores like the other two. */
+	it('remembers that the desktop palette was chosen', () => {
+		const store = stubStorage();
+		stubLiveQuery(true);
+
+		theme.followDesktop();
+		expect(store.get(SOURCE_KEY)).toBe('omarchy');
+
+		theme.init();
+		expect(theme.source).toBe('omarchy');
 	});
 });
 
@@ -399,5 +413,199 @@ describe('the cached palette', () => {
 		for (const name of ['--bg', '--panel', '--ink', '--accent', '--lane-1', '--lane-5']) {
 			expect(cached.tokens[name], name).toBeTruthy();
 		}
+	});
+});
+
+/**
+ * Following the desktop's whole palette (FEAT-080).
+ *
+ * The store's side of it: what a reading does, what a *failed* reading does,
+ * and what makes the revision move. The derivation itself is `omarchy.test.ts`.
+ */
+describe('following the desktop palette', () => {
+	const SUSHI = {
+		available: true,
+		name: 'sushi-dark-palette',
+		layout: 'state' as const,
+		reason: null,
+		palette: {
+			mode: 'dark',
+			background: '#191724',
+			foreground: '#fcfcfd',
+			accent: '#cf6348',
+			darkBg: '#13101e',
+			lighterBg: '#2a2735',
+			muted: '#5f5e63',
+			selectionBackground: '#cf6348',
+			selectionForeground: '#191724',
+			red: '#bda8a4',
+			green: '#8fa487',
+			yellow: '#cd9071',
+			blue: '#778291',
+			magenta: '#a1758a',
+			cyan: '#4a89a4',
+			ansi: Array(16).fill(null)
+		}
+	};
+
+	it('is not offered until a palette has actually been read', () => {
+		stubStorage();
+		expect(theme.desktopAvailable).toBe(false);
+
+		theme.receiveDesktop(SUSHI);
+		expect(theme.desktopAvailable).toBe(true);
+		expect(theme.desktopName).toBe('sushi-dark-palette');
+	});
+
+	it('paints the desktop palette once it is being followed', () => {
+		stubStorage();
+		theme.receiveDesktop(SUSHI);
+		theme.followDesktop();
+
+		expect(theme.source).toBe('omarchy');
+		expect(property('--bg')).toBe('#191724');
+		expect(property('--accent')).toBe('#cf6348');
+		// Derived, not copied: the desktop's own muted is 2.75:1 on that ground.
+		expect(property('--muted')).not.toBe('#5f5e63');
+	});
+
+	/** The desktop decides light or dark too, or `app.css`'s boot values fight
+	 *  the inline properties on any token a palette does not set. */
+	it('takes the mode from the desktop palette', () => {
+		stubStorage();
+		theme.setMode('light');
+		theme.receiveDesktop(SUSHI);
+		theme.followDesktop();
+		theme.receiveDesktop(SUSHI);
+
+		expect(theme.mode).toBe('dark');
+		expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+	});
+
+	/**
+	 * `omarchy-theme-set` replaces a directory, so there is a moment with no
+	 * readable palette at all. Falling back to the built-in family for that
+	 * moment would be a flash of Catppuccin in the middle of a theme change.
+	 */
+	it('keeps the last good palette through an unreadable reading', () => {
+		stubStorage();
+		theme.receiveDesktop(SUSHI);
+		theme.followDesktop();
+
+		theme.receiveDesktop({
+			available: false,
+			name: null,
+			layout: null,
+			palette: null,
+			reason: 'mid-swap'
+		});
+
+		expect(property('--bg')).toBe('#191724');
+		expect(theme.desktopReason).toBe('mid-swap');
+	});
+
+	/** A family and a desktop palette are two answers to the same question. */
+	it('stops following when a family is chosen', () => {
+		stubStorage();
+		theme.receiveDesktop(SUSHI);
+		theme.followDesktop();
+
+		theme.setFamily('nord');
+
+		expect(theme.source).toBe('manual');
+		expect(property('--bg')).toBe(paletteOf('nord', 'dark').bg);
+	});
+
+	/** Choosing a family is not an opt-out of following light/dark. */
+	it('leaves the system source alone when a family is chosen', () => {
+		stubStorage();
+		stubLiveQuery(false);
+		theme.followSystem();
+
+		theme.setFamily('nord');
+
+		expect(theme.source).toBe('system');
+	});
+
+	it('says the desktop name rather than a variant it is not', () => {
+		stubStorage();
+		theme.receiveDesktop(SUSHI);
+		theme.followDesktop();
+
+		expect(theme.label).toBe('sushi-dark-palette');
+
+		theme.setFamily('catppuccin');
+		expect(theme.label).toBe('Mocha');
+	});
+});
+
+/**
+ * The revision, which is what a colour cache should read (FEAT-080).
+ *
+ * `id` is `family-mode`. Every followed palette is `omarchy-dark`, so a switch
+ * between two dark desktop themes is invisible to it — and `LaneCanvas`
+ * invalidates its lane colours and its whole portrait cache from exactly that
+ * string.
+ */
+describe('the palette revision', () => {
+	const desktopTheme = (background: string, accent: string) => ({
+		available: true,
+		name: 'a-theme',
+		layout: 'state' as const,
+		reason: null,
+		palette: {
+			mode: 'dark',
+			background,
+			foreground: '#fcfcfd',
+			accent,
+			darkBg: null,
+			lighterBg: null,
+			muted: null,
+			selectionBackground: null,
+			selectionForeground: null,
+			red: null,
+			green: null,
+			yellow: null,
+			blue: null,
+			magenta: null,
+			cyan: null,
+			ansi: Array(16).fill(null)
+		}
+	});
+
+	it('moves when the family changes', () => {
+		stubStorage();
+		theme.setFamily('catppuccin');
+		const before = theme.revision;
+
+		theme.setFamily('nord');
+
+		expect(theme.revision).toBeGreaterThan(before);
+	});
+
+	/** The case `id` cannot see: same source, same mode, different colours. */
+	it('moves between two desktop palettes that share an id', () => {
+		stubStorage();
+		theme.receiveDesktop(desktopTheme('#191724', '#cf6348'));
+		theme.followDesktop();
+		const id = theme.id;
+		const before = theme.revision;
+
+		theme.receiveDesktop(desktopTheme('#101018', '#6ba9c5'));
+
+		expect(theme.id, 'the identity genuinely does not change').toBe(id);
+		expect(theme.revision).toBeGreaterThan(before);
+	});
+
+	/** An event that re-reads an identical palette is not a repaint. */
+	it('stands still when nothing actually changed', () => {
+		stubStorage();
+		theme.receiveDesktop(desktopTheme('#191724', '#cf6348'));
+		theme.followDesktop();
+		const before = theme.revision;
+
+		theme.receiveDesktop(desktopTheme('#191724', '#cf6348'));
+
+		expect(theme.revision).toBe(before);
 	});
 });

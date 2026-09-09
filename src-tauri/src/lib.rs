@@ -11,6 +11,7 @@ mod accounts;
 mod clone_worker;
 mod command_log;
 mod commands;
+mod desktop;
 mod farm;
 mod graph_worker;
 mod network_worker;
@@ -160,6 +161,12 @@ pub fn run() {
             commands::launch_path,
             commands::git_commands,
             commands::clear_git_commands,
+            // The desktop's own palette (FEAT-080). Its own module rather than
+            // more of `commands.rs`: it is filesystem reading and a watcher,
+            // and it touches no git at all.
+            desktop::desktop_theme,
+            desktop::desktop_theme_watch,
+            desktop::desktop_theme_unwatch,
             // The agent farm (FEAT-073). A separate module rather than more of
             // `commands.rs`: see its header.
             farm::farm_open,
@@ -209,6 +216,10 @@ pub fn run() {
 
             // The farm's state, empty until a repository is opened.
             farm::manage(app.handle());
+
+            // The desktop theme watcher's slot. Empty until somebody chooses
+            // to follow the desktop.
+            desktop::manage(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())

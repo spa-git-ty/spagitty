@@ -133,7 +133,7 @@ rather than an audit.
 | [FEAT-078](items/FEAT-078-who-asked-for-this-task.md) | Who asked for this task | Farm (1Q) | Done |
 | [FEAT-077](items/FEAT-077-the-farm-is-worth-watching.md) | The farm is worth watching | Farm (1Q) | Done |
 | [FEAT-079](items/FEAT-079-a-node-that-says-who.md) | A node that says who | Graph | Open |
-| [FEAT-080](items/FEAT-080-follow-omarchy.md) | Follow Omarchy | Settings, all | Backlog |
+| [FEAT-080](items/FEAT-080-follow-omarchy.md) | Follow Omarchy | Settings, all | Done |
 
 ## Bugs
 

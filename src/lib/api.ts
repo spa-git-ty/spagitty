@@ -8,6 +8,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import type { DesktopTheme } from './omarchy';
 import type {
 	About,
 	AvatarAnswer,
@@ -765,6 +766,29 @@ export function launchPath(): Promise<string | null> {
 /** Rust's view of the shared structural constants. */
 export function metrics(): Promise<{ rowPitch: number }> {
 	return invoke('metrics');
+}
+
+// --- The desktop's own palette (FEAT-080) ----------------------------------
+//
+// Three commands and no path among them. The backend answers "what is the
+// desktop painted with"; it does not take a file to read, which is the
+// difference between a theme feature and a filesystem hole in the webview.
+
+export function desktopTheme(): Promise<DesktopTheme> {
+	return invoke('desktop_theme');
+}
+
+/**
+ * Start being told when it changes. Returns whether a watch is actually
+ * running — a machine can have Omarchy and no inotify watches left, and
+ * "the theme works, live updates do not" is a thing Appearance can say.
+ */
+export function desktopThemeWatch(): Promise<boolean> {
+	return invoke('desktop_theme_watch');
+}
+
+export function desktopThemeUnwatch(): Promise<void> {
+	return invoke('desktop_theme_unwatch');
 }
 
 /** True when running inside the Tauri webview rather than a plain browser. */
