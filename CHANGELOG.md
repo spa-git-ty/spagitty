@@ -14,6 +14,23 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Eleven components stopped painting themselves. The worktrees manager, the
+  submodules dialog, Create pull request, Settings → Profiles, the binary and
+  image diffs, file history and the status strip all read colour variables that
+  do not exist and fell through to fixed dark values, so they rendered the same
+  dark dialog on every one of the sixteen palettes — obviously wrong on the
+  light ones. They use the theme's own colours now, as does everything they had
+  written down as a literal: the near-black scrim behind four modals, the brand
+  amber used as "the accent" where every family has its own, Material Design's
+  red and yellow where the palette's `danger` and `warn` exist, and a
+  transparency checkerboard in two fixed greys that was the darkest thing on a
+  light screen.
+- The text-size preference reaches those eleven components. They carried 83
+  fixed pixel sizes, so raising the text size grew the whole application except
+  them — 10px labels in Profiles against a 15.6px default everywhere else.
+
 ### Changed
 
 - The macOS downloads are signed. They were not signed at all before, and an

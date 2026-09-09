@@ -189,7 +189,7 @@
 	.scrim {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
+		background: color-mix(in srgb, var(--umbra) 40%, transparent);
 		z-index: 1000;
 		display: flex;
 		align-items: center;
@@ -218,7 +218,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 12px 16px;
-		border-bottom: 1px solid var(--line, #333);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.head-left {
@@ -229,14 +229,14 @@
 
 	.title {
 		font-weight: 600;
-		font-size: 14px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-ui);
+		color: var(--ink);
 	}
 
 	.badge {
-		background: var(--bg-3, #2a2a2d);
-		color: var(--dim, #aaa);
-		font-size: 11px;
+		background: var(--soft);
+		color: var(--muted);
+		font-size: var(--fs-mono);
 		padding: 2px 6px;
 		border-radius: 10px;
 	}
@@ -250,15 +250,15 @@
 	.close {
 		background: transparent;
 		border: none;
-		color: var(--dim, #888);
+		color: var(--muted);
 		cursor: pointer;
-		font-size: 14px;
+		font-size: var(--fs-ui);
 		padding: 4px;
 		margin-left: 4px;
 	}
 
 	.close:hover {
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.body {
@@ -272,8 +272,8 @@
 	.empty {
 		text-align: center;
 		padding: 32px;
-		color: var(--dim, #888);
-		font-size: 13px;
+		color: var(--muted);
+		font-size: var(--fs-secondary);
 	}
 
 	.submodule-list {
@@ -287,8 +287,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 10px 12px;
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--line, #2e2e32);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 6px;
 		gap: 12px;
 	}
@@ -310,34 +310,34 @@
 
 	.name {
 		font-weight: 500;
-		font-size: 13px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 	}
 
 	.pill {
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		padding: 1px 6px;
 		border-radius: 4px;
 	}
 
 	.ok-pill {
-		background: rgba(46, 125, 31, 0.15);
-		color: var(--ok, #2e7d1f);
+		background: var(--ok-soft);
+		color: var(--ok);
 	}
 
 	.warn-pill {
-		background: rgba(188, 106, 0, 0.15);
-		color: var(--warn, #bc6a00);
+		background: var(--warn-soft);
+		color: var(--warn);
 	}
 
 	.danger-pill {
-		background: rgba(210, 15, 57, 0.15);
-		color: var(--danger, #d20f39);
+		background: var(--danger-soft);
+		color: var(--danger);
 	}
 
 	.desc-pill {
-		background: var(--bg-3, #2a2a2d);
-		color: var(--dim, #aaa);
+		background: var(--soft);
+		color: var(--muted);
 	}
 
 	.card-bottom {
@@ -347,18 +347,18 @@
 	}
 
 	.path {
-		font-size: 11px;
-		color: var(--dim, #888);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 	}
 
 	.sha {
-		font-size: 11px;
-		color: var(--accent, #eeb04d);
+		font-size: var(--fs-mono);
+		color: var(--accent);
 	}
 
 	.url {
-		font-size: 11px;
-		color: var(--dim, #666);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -366,7 +366,7 @@
 	}
 
 	.mono {
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-family: var(--font-mono);
 	}
 
 	.card-actions {
@@ -377,26 +377,26 @@
 
 	.deinit-btn {
 		background: transparent;
-		border: 1px solid var(--line, #333);
+		border: 1px solid var(--line);
 		border-radius: 4px;
-		color: var(--dim, #888);
+		color: var(--muted);
 		padding: 4px 8px;
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		cursor: pointer;
 	}
 
 	.deinit-btn:hover {
-		color: var(--danger, #d20f39);
-		border-color: var(--danger, #d20f39);
+		color: var(--danger);
+		border-color: var(--danger);
 	}
 
 	.output-box {
-		background: var(--bg-3, #141416);
-		border: 1px solid var(--line, #28282c);
+		background: var(--sunken);
+		border: 1px solid var(--line);
 		border-radius: 4px;
 		padding: 8px 12px;
-		font-size: 11px;
-		color: var(--dim, #ccc);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 		white-space: pre-wrap;
 	}
 </style>

@@ -213,21 +213,21 @@
 
 	.title {
 		margin: 0;
-		font-size: 16px;
+		font-size: var(--fs-title);
 		font-weight: 600;
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.desc {
 		margin: 0;
-		font-size: 13px;
-		color: var(--dim, #888);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		line-height: 1.4;
 	}
 
 	.form-card {
-		background: var(--panel, #18181a);
-		border: 1px solid var(--line, #333);
+		background: var(--panel);
+		border: 1px solid var(--line);
 		border-radius: var(--r-field, 6px);
 		padding: 16px;
 		display: flex;
@@ -237,9 +237,9 @@
 
 	.form-title {
 		margin: 0;
-		font-size: 13px;
+		font-size: var(--fs-secondary);
 		font-weight: 600;
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.form-grid {
@@ -255,23 +255,23 @@
 	}
 
 	.field-label {
-		font-size: 11px;
-		color: var(--dim, #aaa);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 		font-weight: 500;
 	}
 
 	.field-input {
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--line, #333);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 4px;
 		padding: 6px 8px;
-		font-size: 12px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 		outline: none;
 	}
 
 	.field-input:focus {
-		border-color: var(--accent, #eeb04d);
+		border-color: var(--accent);
 	}
 
 	.form-actions {
@@ -292,8 +292,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 10px 14px;
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--line, #28282c);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 6px;
 		gap: 12px;
 	}
@@ -314,27 +314,27 @@
 
 	.profile-name {
 		font-weight: 600;
-		font-size: 13px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 	}
 
 	.key-pill {
-		font-size: 10px;
-		background: var(--bg-3, #2a2a2d);
-		color: var(--dim, #aaa);
+		font-size: var(--fs-mono);
+		background: var(--soft);
+		color: var(--muted);
 		padding: 1px 6px;
 		border-radius: 4px;
 	}
 
 	.detail-row {
-		font-size: 12px;
-		color: var(--dim, #888);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		display: flex;
 		gap: 6px;
 	}
 
 	.author {
-		color: var(--fg, #ccc);
+		color: var(--ink);
 	}
 
 	.card-actions {
@@ -345,33 +345,33 @@
 
 	.delete-btn {
 		background: transparent;
-		border: 1px solid var(--line, #333);
+		border: 1px solid var(--line);
 		border-radius: 4px;
 		padding: 4px 6px;
 		cursor: pointer;
-		font-size: 12px;
+		font-size: var(--fs-secondary);
 	}
 
 	.delete-btn:hover {
-		border-color: var(--danger, #e5534b);
+		border-color: var(--danger);
 	}
 
 	.empty-note {
 		text-align: center;
 		padding: 24px;
-		color: var(--dim, #888);
-		font-size: 13px;
+		color: var(--muted);
+		font-size: var(--fs-secondary);
 	}
 
 	.error {
-		font-size: 12px;
-		color: var(--danger, #e5534b);
-		background: rgba(229, 83, 75, 0.1);
+		font-size: var(--fs-secondary);
+		color: var(--danger);
+		background: var(--danger-soft);
 		padding: 6px 8px;
 		border-radius: 4px;
 	}
 
 	.mono {
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-family: var(--font-mono);
 	}
 </style>

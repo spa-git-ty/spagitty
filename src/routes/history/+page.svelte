@@ -59,7 +59,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: var(--bg-1, #1e1e20);
+		background: var(--bg);
 		overflow: hidden;
 	}
 
@@ -72,8 +72,8 @@
 	}
 
 	.prompt-box {
-		background: var(--panel, #1e1e20);
-		border: 1px solid var(--line, #333);
+		background: var(--panel);
+		border: 1px solid var(--line);
 		border-radius: var(--r-field, 6px);
 		padding: 24px;
 		max-width: 480px;
@@ -85,15 +85,15 @@
 
 	.title {
 		margin: 0;
-		font-size: 16px;
+		font-size: var(--fs-title);
 		font-weight: 600;
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.desc {
 		margin: 0;
-		font-size: 13px;
-		color: var(--dim, #888);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		line-height: 1.4;
 	}
 
@@ -105,20 +105,20 @@
 
 	.field {
 		flex: 1;
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--line, #333);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 4px;
 		padding: 8px 10px;
-		font-size: 13px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 		outline: none;
 	}
 
 	.field:focus {
-		border-color: var(--accent, #eeb04d);
+		border-color: var(--accent);
 	}
 
 	.mono {
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-family: var(--font-mono);
 	}
 </style>

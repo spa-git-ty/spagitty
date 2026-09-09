@@ -69,12 +69,12 @@
 		flex: 1;
 		height: 100%;
 		padding: 32px;
-		background: var(--bg-1, #1e1e20);
+		background: var(--bg);
 	}
 
 	.card {
-		background: var(--panel, #18181a);
-		border: 1px solid var(--line, #333);
+		background: var(--panel);
+		border: 1px solid var(--line);
 		border-radius: var(--r-field, 6px);
 		padding: 24px 32px;
 		max-width: 480px;
@@ -87,18 +87,18 @@
 	}
 
 	.icon {
-		font-size: 32px;
+		font-size: 2em;
 	}
 
 	.title {
-		font-size: 15px;
+		font-size: var(--fs-ui);
 		font-weight: 600;
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.path {
-		font-size: 12px;
-		color: var(--dim, #888);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		word-break: break-all;
 	}
 
@@ -108,8 +108,8 @@
 		justify-content: center;
 		gap: 16px;
 		padding: 16px;
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--line, #28282c);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 6px;
 		width: 100%;
 		margin-top: 6px;
@@ -122,48 +122,48 @@
 	}
 
 	.stat-arrow {
-		color: var(--dim, #666);
-		font-size: 14px;
+		color: var(--muted);
+		font-size: var(--fs-ui);
 	}
 
 	.stat-label {
-		font-size: 11px;
-		color: var(--dim, #888);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 		text-transform: uppercase;
 		font-weight: 500;
 	}
 
 	.stat-val {
-		font-size: 13px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 	}
 
 	.delta.added .stat-val {
-		color: var(--accent, #eeb04d);
+		color: var(--accent);
 	}
 
 	.delta.removed .stat-val {
-		color: var(--ok, #2e7d1f);
+		color: var(--ok);
 	}
 
 	.meta-row {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: 12px;
-		color: var(--dim, #aaa);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		margin-top: 4px;
 	}
 
 	.mime-pill {
-		background: var(--bg-3, #222);
+		background: var(--soft);
 		padding: 2px 8px;
 		border-radius: 4px;
-		font-size: 11px;
-		color: var(--dim, #ccc);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 	}
 
 	.mono {
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-family: var(--font-mono);
 	}
 </style>

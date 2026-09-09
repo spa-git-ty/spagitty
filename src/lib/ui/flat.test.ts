@@ -61,24 +61,15 @@ describe('the tokens components read', () => {
 	/**
 	 * Components that still read tokens that do not exist.
 	 *
-	 * All of them arrived with FEAT-063, FEAT-067, FEAT-069, FEAT-070 and
-	 * FEAT-071, which is the same run of work that is holding the coverage floor
-	 * down. They are a theming pass of their own, not a passenger to whatever
-	 * change comes next.
+	 * **Empty, as of TASK-039.** It held eleven files — everything that arrived
+	 * with FEAT-063, FEAT-067, FEAT-069, FEAT-070 and FEAT-071 — and the list
+	 * was written as a shrinking debt rather than an exemption, so this is
+	 * where that ends. The array stays because the *mechanism* is what the
+	 * three assertions below are: a new offender fails the first, and a row
+	 * left here after its file is fixed fails the second. Deleting the array
+	 * would delete the only thing stopping the debt being re-opened quietly.
 	 */
-	const KNOWN = [
-		'src/lib/chrome/StatusStrip.svelte',
-		'src/lib/diff/BinaryDiff.svelte',
-		'src/lib/diff/ImageDiff.svelte',
-		'src/lib/history/FileHistoryView.svelte',
-		'src/lib/requests/CreatePRModal.svelte',
-		'src/lib/requests/PRWorkspace.svelte',
-		'src/lib/settings/ProfilesSection.svelte',
-		'src/lib/submodules/SubmodulesModal.svelte',
-		'src/lib/worktrees/AddWorktreeModal.svelte',
-		'src/lib/worktrees/WorktreesModal.svelte',
-		'src/routes/history/+page.svelte'
-	];
+	const KNOWN: string[] = [];
 
 	/** The tokens a file reads that nothing defines — its own included. */
 	function undefinedTokens(path: string): string[] {
@@ -119,6 +110,53 @@ describe('the tokens components read', () => {
 
 	it('and the section that was reported is one of the fixed ones', () => {
 		expect(undefinedTokens('src/lib/settings/ExternalToolsSection.svelte')).toEqual([]);
+	});
+
+	/**
+	 * The half of the defect this file could not see (TASK-039).
+	 *
+	 * `var(--nope, #eee)` is one way to paint a fixed colour. `#eee` is the
+	 * other, and it is the *commoner* one: eleven components read undefined
+	 * tokens, and the same eleven also wrote plain literals — a near-black
+	 * scrim, an amber that is Catppuccin Mocha's accent and nobody else's, a
+	 * `#ffc107` warning, a checkerboard in two fixed greys. Every assertion
+	 * above passed while those shipped, because a literal reads no token at
+	 * all.
+	 *
+	 * So the contract is the stronger one: **a component's stylesheet names no
+	 * colour.** Every colour in this application is either a palette token or
+	 * derived from one with `color-mix`, and there is no case left that needs a
+	 * literal — the two that looked like exceptions, a transparency
+	 * checkerboard and text on a filled accent, are `--sunken`/`--soft` and
+	 * `--on-accent` respectively.
+	 *
+	 * Comments are stripped first, because the accounts of *why* these were
+	 * wrong quote the colours they replaced, and a test that forbade writing
+	 * `#eee` in prose would delete its own evidence.
+	 */
+	it('names no colour of its own, anywhere', () => {
+		const offenders = components
+			.map((path) => {
+				const text = readFileSync(path, 'utf8');
+				const style = text.slice(text.indexOf('<style>'));
+				const code = style.replace(/\/\*[\s\S]*?\*\//g, '');
+				const literals = [
+					...new Set(
+						[...code.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g)]
+							.map((match) => match[0])
+							// `rgb(from …)` is a relative colour built out of a token,
+							// which is the sanctioned way to derive one.
+							.filter((value) => !/^rgba?\(\s*(?:var|from)/.test(value))
+					)
+				];
+				return literals.length > 0 ? `${path}: ${literals.join(' ')}` : null;
+			})
+			.filter((entry) => entry !== null);
+
+		expect(
+			offenders,
+			'a colour written here is a colour the theme cannot change; use a token or color-mix'
+		).toEqual([]);
 	});
 });
 

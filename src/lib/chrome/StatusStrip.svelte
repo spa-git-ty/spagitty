@@ -336,11 +336,11 @@
 
 	.profile-btn:hover {
 		background: var(--soft);
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.avatar-dot {
-		font-size: 11px;
+		font-size: var(--fs-mono);
 	}
 
 	.profile-text {
