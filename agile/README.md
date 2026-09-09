@@ -218,6 +218,7 @@ of its own.
 | [TASK-038](items/TASK-038-settings-that-stop-lecturing.md) | Settings that stop lecturing | Settings | Done |
 | [TASK-039](items/TASK-039-one-colour-system-in-every-dialog.md) | One colour system in every dialog | all dialogs | Done |
 | [TASK-040](items/TASK-040-the-macos-download-says-what-it-is.md) | The macOS download says what it is | — | Done |
+| [TASK-041](items/TASK-041-the-frame-stops-competing-with-the-work.md) | The frame stops competing with the work | chrome, Graph | Done |
 
 ## Skipped identifiers
 

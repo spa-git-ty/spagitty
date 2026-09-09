@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { avatars } from '$lib/graph/avatars.svelte';
+	import { density } from './density.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { drawLanes } from '$lib/graph/lanes';
 	import { forgetPortraits } from '$lib/graph/portrait';
@@ -77,6 +78,10 @@
 	 */
 	$effect(() => {
 		void theme.revision;
+		// A node that has changed size has a cache full of tiles at the old one
+		// (TASK-041). The tile size is derived from the radius, so a density
+		// change invalidates every portrait exactly as a palette change does.
+		void density.id;
 		forgetPortraits();
 	});
 
@@ -92,6 +97,7 @@
 		void columns;
 		void span;
 		void theme.revision;
+		void density.id;
 		void highlight;
 		void stashes;
 		// A picture arriving is a repaint: the node it belongs to was drawn
@@ -128,6 +134,7 @@
 			span,
 			pitch,
 			zoom,
+			density: density.current,
 			highlight,
 			stashes,
 			// Reads what has arrived; never asks. The rows ask — see the note

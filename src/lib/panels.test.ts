@@ -37,8 +37,24 @@ function cssVar(name: string): string {
 	return document.documentElement.style.getPropertyValue(name);
 }
 
+/**
+ * The window the adaptive defaults treat as "wide" (TASK-041).
+ *
+ * Set in `beforeEach`, because happy-dom's own `innerWidth` is 1024 and every
+ * assertion in this file that names `RAIL_W` or `DETAIL_W` is about the design
+ * value rather than about a narrow window's version of it. The adaptive
+ * behaviour has a describe block of its own, which sets the width it is
+ * testing.
+ */
+const WIDE = 1600;
+
+function stubWindowWidth(width: number) {
+	Object.defineProperty(window, 'innerWidth', { value: width, configurable: true });
+}
+
 beforeEach(() => {
 	stubStorage();
+	stubWindowWidth(WIDE);
 	panels.reset();
 });
 
@@ -313,6 +329,96 @@ describe('the panel registry', () => {
 			expect(spec.min, key).toBeLessThan(spec.max);
 			expect(spec.initial, key).toBeGreaterThanOrEqual(spec.min);
 			expect(spec.initial, key).toBeLessThanOrEqual(spec.max);
+		}
+	});
+});
+
+/**
+ * The widths a first run opens at, in the window it opens in (TASK-041).
+ *
+ * The handoff's numbers are a 1440-wide window's numbers. On the 1280 the
+ * application actually opens at, the Graph screen reserves 791 pixels — rail,
+ * refs gutter, five lanes and the detail panel — before a divider or a word of
+ * a commit message, leaving 489 for the subject line on a screen whose whole
+ * job is reading subject lines.
+ */
+describe('adaptive defaults', () => {
+	it('is the design width in a wide window', () => {
+		stubStorage();
+		stubWindowWidth(1600);
+		panels.init();
+
+		expect(panels.rail).toBe(RAIL_W);
+		expect(panels.detail).toBe(DETAIL_W);
+	});
+
+	it('gives the work more room in a narrow one', () => {
+		stubStorage();
+		stubWindowWidth(1280);
+		panels.init();
+
+		expect(panels.rail).toBeLessThan(RAIL_W);
+		expect(panels.detail).toBeLessThan(DETAIL_W);
+	});
+
+	/**
+	 * The floor is deliberately not the panel's `min`. Starting there would
+	 * open every panel at the edge of usefulness with nowhere left to drag.
+	 */
+	it('never starts a panel at the width it stops being useful at', () => {
+		stubStorage();
+		stubWindowWidth(600);
+		panels.init();
+
+		expect(panels.rail).toBeGreaterThan(RAIL_MIN);
+		expect(panels.detail).toBeGreaterThan(DETAIL_MIN);
+		expect(panels.rail).toBeLessThan(RAIL_W);
+	});
+
+	it('is monotonic in the window width', () => {
+		const widths = [900, 1100, 1280, 1440, 1920].map((width) => {
+			stubStorage();
+			stubWindowWidth(width);
+			panels.init();
+			return panels.rail;
+		});
+
+		for (let index = 1; index < widths.length; index++) {
+			expect(widths[index]).toBeGreaterThanOrEqual(widths[index - 1]);
+		}
+	});
+
+	/**
+	 * **A dragged width is a decision and outranks the arithmetic.** Including
+	 * after the window is moved to a different screen: `adapt` runs before the
+	 * stored values are read, so each stored one overwrites its default.
+	 */
+	it('never overrides a width somebody chose', () => {
+		stubStorage({ [KEY]: JSON.stringify({ rail: 300, detail: 500 }) });
+		stubWindowWidth(900);
+		panels.init();
+
+		expect(panels.rail).toBe(300);
+		expect(panels.detail).toBe(500);
+	});
+
+	/** A drawer's height has nothing to do with how wide the window is. */
+	it('leaves a bottom drawer alone', () => {
+		stubStorage();
+		stubWindowWidth(900);
+		panels.init();
+
+		expect(panels.size('farmLog')).toBe(FARM_LOG_H);
+	});
+
+	it('scales every side panel, not only the two named ones', () => {
+		stubStorage();
+		stubWindowWidth(900);
+		panels.init();
+
+		for (const key of ['changesFiles', 'diffFiles', 'stashEntries', 'requestsDetail'] as const) {
+			expect(panels.size(key), key).toBeLessThan(PANELS[key].initial);
+			expect(panels.size(key), key).toBeGreaterThan(PANELS[key].min);
 		}
 	});
 });

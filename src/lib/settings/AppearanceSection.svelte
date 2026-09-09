@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { density, DENSITIES } from '$lib/graph/density.svelte';
 	import { mod } from '$lib/platform';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { theme } from '$lib/theme.svelte';
@@ -148,6 +149,31 @@
 				</span>
 			</button>
 		{/each}
+	</div>
+
+	<div class="hr"></div>
+
+	<!--
+		How much room the graph column asks for (TASK-041).
+
+		Here rather than on the Graph screen's own header: it is an appearance
+		preference, it persists, and it belongs beside the other two dials that
+		decide how much of the window the work gets.
+	-->
+	<div class="row">
+		<span class="note label">Graph</span>
+		{#each DENSITIES as option (option.id)}
+			<Chip
+				active={density.id === option.id}
+				title={option.note}
+				onclick={() => density.set(option.id)}
+			>
+				{option.label}
+			</Chip>
+		{/each}
+		<span class="note">
+			{DENSITIES.find((option) => option.id === density.id)?.note}
+		</span>
 	</div>
 
 	<div class="hr"></div>

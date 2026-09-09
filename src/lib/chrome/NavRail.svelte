@@ -2,7 +2,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { isActive, NAV_ITEMS } from '$lib/nav';
+	import { isActive, navRows } from '$lib/nav';
 	import { panels } from '$lib/panels.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -92,26 +92,38 @@
 		</div>
 	{/if}
 
-	{#each NAV_ITEMS as item (item.href)}
-		{#if item.dividerBefore}
-			<div class="hr"></div>
+	<!--
+		Three groups rather than fourteen equal rows (TASK-041).
+
+		Expanded, each group after the first carries a heading; collapsed, the
+		same boundary is a divider, because a heading needs a word and 48px of
+		rail does not have room for one. The order of the rows is unchanged, so
+		nothing anybody's hand has learned has moved.
+	-->
+	{#each navRows() as row (row.item.href)}
+		{#if row.startsGroup && row.heading}
+			{#if collapsed}
+				<div class="hr"></div>
+			{:else}
+				<h2 class="group">{row.heading}</h2>
+			{/if}
 		{/if}
 		<button
 			class="item"
-			data-active={isActive(item.href, page.url.pathname)}
-			title={item.label}
-			aria-label={item.label}
-			onclick={() => goto(item.href)}
+			data-active={isActive(row.item.href, page.url.pathname)}
+			title={row.item.label}
+			aria-label={row.item.label}
+			onclick={() => goto(row.item.href)}
 		>
 			{#if collapsed}
-				<Icon name={item.icon} size="1.2em" />
+				<Icon name={row.item.icon} size="1.2em" />
 			{:else}
 				<span class="name">
-					<Icon name={item.icon} size="1.15em" />
-					<span>{item.label}</span>
+					<Icon name={row.item.icon} size="1.15em" />
+					<span>{row.item.label}</span>
 				</span>
 				<span class="count mono">
-					{item.count ? countLabel(item.count) : ''}
+					{row.item.count ? countLabel(row.item.count) : ''}
 				</span>
 			{/if}
 		</button>
@@ -272,6 +284,43 @@
 	}
 
 	/*
+	 * A group's name (TASK-041).
+	 *
+	 * Quiet on purpose. It is a label for the run of rows below it, not a row
+	 * of its own, so it sits at the secondary size in the muted colour with a
+	 * wide letter-spacing — the treatment that reads as "this is a heading"
+	 * without reading as "this is something to click". A heading as loud as the
+	 * items under it would have made the rail busier rather than clearer, which
+	 * is the opposite of the point.
+	 *
+	 * `h2` rather than a `div`: a screen reader user navigating by heading gets
+	 * the same structure the eye does, and the rail already carries an
+	 * `aria-label` naming it.
+	 */
+	.group {
+		margin: 12px 6px 3px;
+		padding: 0 10px;
+		font-size: var(--fs-mono);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--muted);
+		user-select: none;
+	}
+
+	/* The first heading has the head's rule above it already. */
+	.head + .group,
+	.open + .group {
+		margin-top: 7px;
+	}
+
+	/* Collapsed, the boundary is the divider instead — a heading needs a word
+	   and 48px of rail has no room for one. */
+	.rail.collapsed .hr {
+		margin: 7px 10px;
+	}
+
+	/*
 	 * An item is a pill, not a full-width strip with a bar stuck on its left.
 	 *
 	 * The strip ran edge to edge, so the only thing that could mark the active
@@ -340,6 +389,10 @@
 		.head {
 			justify-content: center;
 			padding: 8px 4px;
+		}
+
+		.group {
+			display: none;
 		}
 
 		.count,

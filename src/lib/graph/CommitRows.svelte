@@ -12,7 +12,8 @@
 	import { selection } from '$lib/graph/selection.svelte';
 	import * as act from '$lib/graph/actions';
 	import { clockTime, fullDate, isNotable, relativeTime } from '$lib/format';
-	import { laneColumnWidth, laneNodeRadius, laneSpanFor, laneX } from '$lib/metrics';
+	import { laneColumnWidth, laneNodeRadius, laneSpanFor, laneSpanOf, laneX } from '$lib/metrics';
+	import { density } from './density.svelte';
 	import { avatars } from '$lib/graph/avatars.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import RefChip from '$lib/ui/RefChip.svelte';
@@ -136,9 +137,9 @@
 	 * built for a history deeper than the cap, now reachable by hand.
 	 */
 	const laneWidth = $derived(
-		columns.width('graph') || laneColumnWidth(laneCount, scale.zoom)
+		columns.width('graph') || laneColumnWidth(laneCount, scale.zoom, density.current)
 	);
-	const laneSpan = $derived(laneSpanFor(laneWidth, scale.zoom));
+	const laneSpan = $derived(laneSpanFor(laneWidth, scale.zoom, density.current));
 	const shown = $derived(columns.shown);
 
 	/**
@@ -249,8 +250,11 @@
 	 */
 	function nodeAt(row: GraphRow): { x: number; r: number } {
 		return {
-			x: laneX(row.lane, laneCount, scale.zoom, laneSpan),
-			r: laneNodeRadius(laneCount) * scale.zoom
+			x: laneX(row.lane, laneCount, scale.zoom, laneSpan, density.current),
+			// The node's size follows the *history's* depth rather than the
+			// dragged width (FEAT-039), so it is measured against the density's
+			// own resting span rather than against the column on screen.
+			r: laneNodeRadius(laneCount, laneSpanOf(density.current), density.current) * scale.zoom
 		};
 	}
 

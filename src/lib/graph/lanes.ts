@@ -12,14 +12,17 @@
  */
 
 import {
+	COMFORTABLE,
 	ELBOW_RADIUS,
 	LANE_SPAN,
 	LANE_STROKE,
 	MERGE_R,
 	ROW_PITCH,
 	laneNodeRadius,
+	laneSpanOf,
 	laneX,
-	rowCenterY
+	rowCenterY,
+	type Density
 } from '../metrics';
 import { portraitTile, seedOf } from './portrait';
 import type { GraphRow } from '../types';
@@ -58,6 +61,16 @@ export interface LaneDrawOptions {
 	pitch?: number;
 	/** Interface zoom, which scales the horizontal geometry and the node. */
 	zoom?: number;
+	/**
+	 * How much room the column asks for — the pitch, the node size and the
+	 * lane-count floor, as one set (TASK-041).
+	 *
+	 * Passed in rather than read from the preference store, for the same reason
+	 * `picture` is a function rather than an import: this module is geometry
+	 * and paint, and a painter that reached for a store would stop being
+	 * testable by handing it numbers.
+	 */
+	density?: Density;
 	/**
 	 * Rows to paint at full strength while everything else fades. Null means
 	 * nothing is dimmed, which is not the same as an empty set — an empty set
@@ -108,6 +121,7 @@ export function drawLanes(options: LaneDrawOptions): void {
 		span = LANE_SPAN,
 		pitch = ROW_PITCH,
 		zoom = 1,
+		density = COMFORTABLE,
 		highlight = null,
 		stashes,
 		picture
@@ -141,8 +155,8 @@ export function drawLanes(options: LaneDrawOptions): void {
 		ctx.globalAlpha = Math.max(alphaFor(i), alphaFor(i - 1));
 
 		for (const edge of commit.edges) {
-			const x0 = laneX(edge.from, columns, zoom, span);
-			const x1 = laneX(edge.to, columns, zoom, span);
+			const x0 = laneX(edge.from, columns, zoom, span, density);
+			const x1 = laneX(edge.to, columns, zoom, span, density);
 
 			ctx.strokeStyle = colors[edge.color % colors.length];
 			ctx.beginPath();
@@ -189,7 +203,7 @@ export function drawLanes(options: LaneDrawOptions): void {
 	// This reverses FEAT-035's decision in the case the user caused. Its
 	// argument — that portraits at full size redraw over the compression they
 	// were meant to make room for — is true, and is now the intended picture.
-	const radius = laneNodeRadius(columns) * zoom;
+	const radius = laneNodeRadius(columns, laneSpanOf(density), density) * zoom;
 	const ratio = devicePixelRatio();
 	const tileSize = Math.max(8, Math.round(radius * 2 * ratio));
 
@@ -197,7 +211,7 @@ export function drawLanes(options: LaneDrawOptions): void {
 		const commit = row(i);
 		if (!commit) continue;
 
-		const x = laneX(commit.lane, columns, zoom, span);
+		const x = laneX(commit.lane, columns, zoom, span, density);
 		const y = rowCenterY(i, pitch) - scrollTop;
 		if (y < -radius || y > height + radius) continue;
 
@@ -329,7 +343,8 @@ function drawGhost(
 	zoom: number,
 	scrollTop: number,
 	colors: string[],
-	span: number
+	span: number,
+	density: Density
 ): void {
 	if (path.length < 2) return;
 
@@ -344,7 +359,7 @@ function drawGhost(
 	for (const index of path) {
 		const commit = row(index);
 		if (!commit) continue;
-		const x = laneX(commit.lane, columns, zoom, span);
+		const x = laneX(commit.lane, columns, zoom, span, density);
 		const y = rowCenterY(index, pitch) - scrollTop;
 		if (started) ctx.lineTo(x, y);
 		else {
