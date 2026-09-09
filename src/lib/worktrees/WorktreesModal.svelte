@@ -212,7 +212,7 @@
 	.scrim {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
+		background: color-mix(in srgb, var(--umbra) 40%, transparent);
 		z-index: 1000;
 		display: flex;
 		align-items: center;
@@ -241,7 +241,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 12px 16px;
-		border-bottom: 1px solid var(--border-soft, #333);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.head-left {
@@ -252,14 +252,14 @@
 
 	.title {
 		font-weight: 600;
-		font-size: 14px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-ui);
+		color: var(--ink);
 	}
 
 	.badge {
-		background: var(--bg-3, #2a2a2d);
-		color: var(--dim, #aaa);
-		font-size: 11px;
+		background: var(--soft);
+		color: var(--muted);
+		font-size: var(--fs-mono);
 		padding: 2px 6px;
 		border-radius: 10px;
 	}
@@ -273,15 +273,15 @@
 	.close {
 		background: transparent;
 		border: none;
-		color: var(--dim, #888);
+		color: var(--muted);
 		cursor: pointer;
-		font-size: 14px;
+		font-size: var(--fs-ui);
 		padding: 4px;
 		margin-left: 4px;
 	}
 
 	.close:hover {
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.body {
@@ -295,8 +295,8 @@
 	.empty {
 		text-align: center;
 		padding: 32px;
-		color: var(--dim, #888);
-		font-size: 13px;
+		color: var(--muted);
+		font-size: var(--fs-secondary);
 	}
 
 	.worktree-list {
@@ -310,14 +310,14 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 10px 12px;
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--border-soft, #2e2e32);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 6px;
 		gap: 12px;
 	}
 
 	.worktree-card.main {
-		border-left: 3px solid var(--accent, #eeb04d);
+		border-left: 3px solid var(--accent);
 	}
 
 	.card-info {
@@ -337,39 +337,39 @@
 
 	.name {
 		font-weight: 500;
-		font-size: 13px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 	}
 
 	.pill {
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		padding: 1px 6px;
 		border-radius: 4px;
 	}
 
 	.main-pill {
-		background: rgba(238, 176, 77, 0.15);
-		color: var(--accent, #eeb04d);
+		background: var(--accent-soft);
+		color: var(--accent);
 	}
 
 	.branch-pill {
-		background: var(--bg-3, #2a2a2d);
-		color: var(--fg, #ddd);
+		background: var(--soft);
+		color: var(--ink);
 	}
 
 	.detached-pill {
-		background: rgba(180, 180, 180, 0.15);
-		color: var(--dim, #aaa);
+		background: var(--soft);
+		color: var(--muted);
 	}
 
 	.locked-pill {
-		background: rgba(255, 193, 7, 0.15);
-		color: #ffc107;
+		background: var(--warn-soft);
+		color: var(--warn);
 	}
 
 	.prunable-pill {
-		background: rgba(244, 67, 54, 0.15);
-		color: #f44336;
+		background: var(--danger-soft);
+		color: var(--danger);
 	}
 
 	.card-bottom {
@@ -379,8 +379,8 @@
 	}
 
 	.path {
-		font-size: 11px;
-		color: var(--dim, #888);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -388,12 +388,12 @@
 	}
 
 	.sha {
-		font-size: 11px;
-		color: var(--accent, #eeb04d);
+		font-size: var(--fs-mono);
+		color: var(--accent);
 	}
 
 	.mono {
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-family: var(--font-mono);
 	}
 
 	.card-actions {
@@ -403,33 +403,33 @@
 	}
 
 	.active-label {
-		font-size: 11px;
-		color: var(--accent, #eeb04d);
+		font-size: var(--fs-mono);
+		color: var(--accent);
 		font-weight: 500;
 		padding: 4px 8px;
 	}
 
 	.icon-btn {
-		background: var(--bg-3, #222);
-		border: 1px solid var(--border-soft, #333);
+		background: var(--soft);
+		border: 1px solid var(--line);
 		border-radius: 4px;
 		padding: 4px 6px;
 		cursor: pointer;
-		font-size: 12px;
+		font-size: var(--fs-secondary);
 	}
 
 	.icon-btn:hover {
-		background: var(--bg-hover, #333);
+		background: var(--hover);
 	}
 
 	.icon-btn.danger:hover {
-		background: rgba(229, 83, 75, 0.2);
-		border-color: var(--danger, #e5534b);
+		background: color-mix(in srgb, var(--danger) 22%, transparent);
+		border-color: var(--danger);
 	}
 
 	.remove-dialog {
-		background: var(--bg-2, #18181a);
-		border-top: 1px solid var(--border-soft, #333);
+		background: var(--surface);
+		border-top: 1px solid var(--line);
 		padding: 16px;
 		display: flex;
 		flex-direction: column;
@@ -438,28 +438,28 @@
 
 	.remove-title {
 		font-weight: 600;
-		font-size: 13px;
-		color: var(--danger, #e5534b);
+		font-size: var(--fs-secondary);
+		color: var(--danger);
 	}
 
 	.remove-body {
-		font-size: 12px;
-		color: var(--fg, #ccc);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 	}
 
 	.force-checkbox {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: 12px;
-		color: var(--dim, #aaa);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		cursor: pointer;
 	}
 
 	.error {
-		font-size: 12px;
-		color: var(--danger, #e5534b);
-		background: rgba(229, 83, 75, 0.1);
+		font-size: var(--fs-secondary);
+		color: var(--danger);
+		background: var(--danger-soft);
 		padding: 6px 8px;
 		border-radius: 4px;
 	}

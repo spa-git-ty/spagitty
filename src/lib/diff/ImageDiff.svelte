@@ -159,7 +159,7 @@
 		flex-direction: column;
 		flex: 1;
 		height: 100%;
-		background: var(--bg-1, #1e1e20);
+		background: var(--bg);
 		overflow: hidden;
 	}
 
@@ -168,16 +168,16 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 8px 16px;
-		background: var(--bg-2, #18181a);
-		border-bottom: 1px solid var(--line, #333);
+		background: var(--surface);
+		border-bottom: 1px solid var(--line);
 		gap: 12px;
 		flex-wrap: wrap;
 	}
 
 	.mode-tabs {
 		display: flex;
-		background: var(--bg-3, #141416);
-		border: 1px solid var(--line, #333);
+		background: var(--sunken);
+		border: 1px solid var(--line);
 		border-radius: var(--r-field, 6px);
 		overflow: hidden;
 	}
@@ -186,19 +186,19 @@
 		background: transparent;
 		border: none;
 		padding: 6px 12px;
-		font-size: 12px;
-		color: var(--dim, #aaa);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		cursor: pointer;
 		transition: background 0.1s, color 0.1s;
 	}
 
 	.tab-btn:not(:last-child) {
-		border-right: 1px solid var(--line, #333);
+		border-right: 1px solid var(--line);
 	}
 
 	.tab-btn.active {
-		background: var(--bg-hover, #2a2a2e);
-		color: var(--accent, #eeb04d);
+		background: var(--hover);
+		color: var(--accent);
 		font-weight: 500;
 	}
 
@@ -211,19 +211,19 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: 12px;
+		font-size: var(--fs-secondary);
 	}
 
 	.mime-badge {
-		background: var(--bg-3, #2a2a2d);
-		color: var(--dim, #aaa);
+		background: var(--soft);
+		color: var(--muted);
 		padding: 2px 6px;
 		border-radius: 4px;
 	}
 
 	.size-badge {
-		color: var(--fg, #ddd);
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		color: var(--ink);
+		font-family: var(--font-mono);
 	}
 
 	.canvas-area {
@@ -235,13 +235,27 @@
 		justify-content: center;
 	}
 
+	/*
+	 * What transparency looks like.
+	 *
+	 * The convention is two neutral squares, and the only thing that matters is
+	 * that they differ enough to read as a pattern and little enough not to
+	 * compete with the image on top of them. It was two fixed near-blacks, so a
+	 * PNG with an alpha channel was checked against a dark grid on every theme,
+	 * including the light ones where the grid was the darkest thing on screen.
+	 *
+	 * Derived from the well the image sits in rather than added to the palette:
+	 * a checkerboard is not a colour anybody chooses per theme, and eight
+	 * hand-picked pairs is eight chances for one to drift — the argument
+	 * `--graph-bg` already makes in `app.css`.
+	 */
 	.checkerboard {
-		background-color: #222;
+		background-color: var(--sunken);
 		background-image:
-			linear-gradient(45deg, #181818 25%, transparent 25%),
-			linear-gradient(-45deg, #181818 25%, transparent 25%),
-			linear-gradient(45deg, transparent 75%, #181818 75%),
-			linear-gradient(-45deg, transparent 75%, #181818 75%);
+			linear-gradient(45deg, var(--soft) 25%, transparent 25%),
+			linear-gradient(-45deg, var(--soft) 25%, transparent 25%),
+			linear-gradient(45deg, transparent 75%, var(--soft) 75%),
+			linear-gradient(-45deg, transparent 75%, var(--soft) 75%);
 		background-size: 16px 16px;
 		background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 	}
@@ -262,14 +276,14 @@
 	}
 
 	.frame-label {
-		font-size: 12px;
+		font-size: var(--fs-secondary);
 		font-weight: 500;
-		color: var(--dim, #aaa);
+		color: var(--muted);
 	}
 
 	.frame-box {
 		flex: 1;
-		border: 1px solid var(--line, #333);
+		border: 1px solid var(--line);
 		border-radius: var(--r-field, 6px);
 		display: flex;
 		align-items: center;
@@ -286,8 +300,8 @@
 	}
 
 	.missing-note {
-		color: var(--dim, #888);
-		font-size: 13px;
+		color: var(--muted);
+		font-size: var(--fs-secondary);
 	}
 
 	.slider-wrapper {
@@ -301,7 +315,7 @@
 	.slider-canvas,
 	.onion-canvas {
 		position: relative;
-		border: 1px solid var(--line, #333);
+		border: 1px solid var(--line);
 		border-radius: var(--r-field, 6px);
 		overflow: hidden;
 		min-width: 300px;
@@ -344,7 +358,7 @@
 		top: 0;
 		bottom: 0;
 		width: 2px;
-		background: var(--accent, #eeb04d);
+		background: var(--accent);
 		z-index: 10;
 	}
 
@@ -353,9 +367,9 @@
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		background: var(--accent, #eeb04d);
-		color: #111;
-		font-size: 11px;
+		background: var(--accent);
+		color: var(--on-accent);
+		font-size: var(--fs-mono);
 		font-weight: bold;
 		padding: 2px 6px;
 		border-radius: 10px;
@@ -370,13 +384,13 @@
 	}
 
 	.slider-label {
-		font-size: 12px;
-		color: var(--dim, #aaa);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		white-space: nowrap;
 	}
 
 	.range-input {
 		flex: 1;
-		accent-color: var(--accent, #eeb04d);
+		accent-color: var(--accent);
 	}
 </style>

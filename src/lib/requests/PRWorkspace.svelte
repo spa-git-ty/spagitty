@@ -820,7 +820,7 @@
 	}
 
 	.changelog-badge {
-		font-size: 10px;
+		font-size: var(--fs-mono);
 		font-weight: 700;
 		padding: 2px 5px;
 		background: color-mix(in srgb, var(--accent) 15%, var(--panel));
@@ -927,7 +927,7 @@
 		flex: none;
 		width: 16px;
 		height: 16px;
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		font-weight: 600;
 		display: grid;
 		place-items: center;
@@ -962,7 +962,7 @@
 
 	.diff-stat {
 		flex: none;
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		display: flex;
 		gap: 4px;
 	}
@@ -1000,7 +1000,7 @@
 	}
 
 	.commit-sha {
-		font-size: 11px;
+		font-size: var(--fs-mono);
 		color: var(--accent);
 		background: var(--panel);
 		padding: 1px 4px;
@@ -1137,7 +1137,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
+		background: color-mix(in srgb, var(--umbra) 40%, transparent);
 		display: grid;
 		place-items: center;
 		z-index: 100;
@@ -1248,9 +1248,9 @@
 		width: 100%;
 		padding: 6px 8px;
 		font: inherit;
-		font-size: var(--fs-body);
+		font-size: var(--fs-ui);
 		background: var(--bg);
-		color: var(--text);
+		color: var(--ink);
 		border: 1px solid var(--line);
 		border-radius: var(--r-panel);
 		outline: none;
@@ -1262,8 +1262,8 @@
 
 	.close-warning {
 		margin: 0;
-		font-size: var(--fs-body);
-		color: var(--text-secondary);
+		font-size: var(--fs-ui);
+		color: var(--muted);
 		line-height: 1.5;
 	}
 </style>

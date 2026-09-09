@@ -186,7 +186,7 @@
 	.scrim {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
+		background: color-mix(in srgb, var(--umbra) 40%, transparent);
 		z-index: 1000;
 		display: flex;
 		align-items: center;
@@ -215,26 +215,26 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 12px 16px;
-		border-bottom: 1px solid var(--line, #333);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.title {
 		font-weight: 600;
-		font-size: 14px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-ui);
+		color: var(--ink);
 	}
 
 	.close {
 		background: transparent;
 		border: none;
-		color: var(--dim, #888);
+		color: var(--muted);
 		cursor: pointer;
-		font-size: 14px;
+		font-size: var(--fs-ui);
 		padding: 4px;
 	}
 
 	.close:hover {
-		color: var(--fg, #eee);
+		color: var(--ink);
 	}
 
 	.body {
@@ -252,8 +252,8 @@
 	}
 
 	.arrow {
-		color: var(--accent, #eeb04d);
-		font-size: 16px;
+		color: var(--accent);
+		font-size: var(--fs-title);
 		font-weight: bold;
 		padding-bottom: 6px;
 	}
@@ -266,23 +266,23 @@
 	}
 
 	.label {
-		font-size: 11px;
-		color: var(--dim, #aaa);
+		font-size: var(--fs-mono);
+		color: var(--muted);
 		font-weight: 500;
 	}
 
 	.field {
-		background: var(--bg-2, #141416);
-		border: 1px solid var(--line, #333);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		border-radius: 4px;
 		padding: 6px 10px;
-		font-size: 13px;
-		color: var(--fg, #eee);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 		outline: none;
 	}
 
 	.field:focus {
-		border-color: var(--accent, #eeb04d);
+		border-color: var(--accent);
 	}
 
 	.select {
@@ -299,15 +299,15 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: 12px;
-		color: var(--dim, #ccc);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
 		cursor: pointer;
 	}
 
 	.error {
-		font-size: 12px;
-		color: var(--danger, #e5534b);
-		background: rgba(229, 83, 75, 0.1);
+		font-size: var(--fs-secondary);
+		color: var(--danger);
+		background: var(--danger-soft);
 		padding: 6px 8px;
 		border-radius: 4px;
 	}
@@ -317,7 +317,7 @@
 		justify-content: flex-end;
 		gap: 8px;
 		padding: 12px 16px;
-		border-top: 1px solid var(--line, #333);
-		background: var(--bg-2, #18181a);
+		border-top: 1px solid var(--line);
+		background: var(--surface);
 	}
 </style>

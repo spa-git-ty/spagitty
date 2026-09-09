@@ -336,7 +336,7 @@
 
 	.comment-trigger:hover {
 		background: var(--accent);
-		color: #ffffff;
+		color: var(--on-accent);
 		border-color: var(--accent);
 	}
 
@@ -498,7 +498,7 @@
 
 	.resolve-btn:hover {
 		background: var(--ok);
-		color: #ffffff;
+		color: var(--on-accent);
 	}
 
 	.reply-section {
