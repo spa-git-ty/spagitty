@@ -28,6 +28,13 @@ stays backward-compatible.
   opted out. Machines without Omarchy see nothing new.
 - Appearance can follow the desktop's light and dark setting, and keep
   following it. Choosing Light or Dark still takes over, and still sticks.
+- A **compact graph** setting, in Settings → Appearance. The graph column is
+  sized for five lanes whatever the history is, so an ordinary two- or
+  three-lane repository pays for lanes it does not have; compact narrows the
+  lanes and gives an ordinary history about 77 pixels back, straight into the
+  commit subjects. Nodes become marks rather than author portraits at that
+  size — the picture is still there in the commit detail, where a face has room
+  to be a face.
 
 ### Fixed
 
@@ -76,6 +83,32 @@ stays backward-compatible.
 
 ### Changed
 
+- macOS gets a macOS window. Spagitty drew the same three neutral glyph buttons
+  on the right on every platform, over a frame the system was not allowed to
+  draw; on a Mac that is most of the difference between an application and a web
+  page in a custom frame. The window is properly decorated there now, with the
+  system's own traffic lights at the top left and no second set on the right, no
+  card drawn inside the real frame, and the system's resize edges instead of
+  eight invisible ones laid over them. Linux and Windows are untouched.
+- Controls stop moving while you aim at them. Buttons, chips and the nav rail's
+  rows all lifted a pixel or two under the pointer — the rail's slid sideways,
+  along the direction you were already travelling — so crossing a row of buttons
+  or running down the rail set off a small shift at every step. Hover changes
+  colour now; pressing still moves, because a press is something you did.
+- The last eight type sizes follow the text-size preference. The title bar, its
+  window controls, the toolbar's branch name, the badges and the repositories
+  heading were fixed pixel values, so raising the text size grew everything
+  except them. One badge label was 9px.
+- The window frame takes less of the window. The toolbar is 40 pixels rather
+  than 50 — its controls only ever measured 38 — and the nav rail's fourteen
+  destinations are four groups instead of one flat list, so supervising the
+  farm, doing routine git work and reaching for an occasional tool no longer
+  look like the same thing. Nothing moved: the rows are in exactly the order
+  they were.
+- Side panels open at a width that suits the window they open in. The defaults
+  were a 1440-wide window's defaults, and on the 1280 the application actually
+  opens at they left 489 pixels for commit subjects on a screen whose whole job
+  is reading them. A width you have dragged is still yours, at any window size.
 - The macOS downloads are signed. They were not signed at all before, and an
   app with no signature is not what macOS calls an unidentified developer — it
   is what macOS calls **damaged**, with a Move to Bin button and no Open Anyway
