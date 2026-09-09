@@ -28,15 +28,25 @@
  *
  * So *where the preference comes from* is now its own value:
  *
- * | source   | means |
- * |----------|-------|
- * | `manual` | the user picked light or dark, and it stays |
- * | `system` | follow the desktop, live |
+ * | source    | means |
+ * |-----------|-------|
+ * | `manual`  | the user picked light or dark, and it stays |
+ * | `system`  | follow the desktop's light/dark setting, live |
+ * | `omarchy` | follow the desktop's whole **palette**, live (FEAT-080) |
  *
  * `mode` remains what is **resolved** and on screen, which is what everything
  * else in the application wants to read. Picking a family does not change the
  * source; picking a mode does, because picking a mode is the act of taking
- * over. A third source arrives with FEAT-080.
+ * over.
+ *
+ * # The revision, and why `id` is not enough
+ *
+ * `id` is `family-mode`, and it is what `LaneCanvas` invalidates its colour and
+ * portrait caches from. Every followed desktop palette has the same one —
+ * `omarchy-dark` — so switching between two different dark desktop themes is
+ * invisible to anything keyed off it, and the graph would keep painting the
+ * previous theme's lane colours (FEAT-080). `revision` is a counter bumped
+ * whenever the *values* change, which is the question a cache actually has.
  *
  * # The cached palette
  *
@@ -47,6 +57,7 @@
  * it is a file rather than an inline script.
  */
 
+import { fingerprint, paletteFrom, modeOf, type DesktopTheme } from './omarchy';
 import {
 	DEFAULT_FAMILY,
 	isFamily,
@@ -55,6 +66,7 @@ import {
 	variantOf,
 	type FamilyId,
 	type Mode,
+	type Palette,
 	type Variant
 } from './themes';
 
@@ -66,12 +78,34 @@ const SOURCE_KEY = 'spagitty.theme.source';
 /** The resolved palette, for the boot script. Never read by this module. */
 export const PALETTE_KEY = 'spagitty.theme.palette';
 
-/** Where the light/dark answer comes from. */
-export type Source = 'manual' | 'system';
+/** Where the light/dark answer, and possibly the whole palette, comes from. */
+export type Source = 'manual' | 'system' | 'omarchy';
+
+const SOURCES: Source[] = ['manual', 'system', 'omarchy'];
 
 let mode = $state<Mode>('light');
 let family = $state<FamilyId>(DEFAULT_FAMILY);
 let source = $state<Source>('manual');
+let revision = $state(0);
+
+/**
+ * The desktop's palette, while one is being followed.
+ *
+ * Held rather than re-derived on every read, and **kept through a failed
+ * read**: `omarchy-theme-set` replaces a directory, so there is a moment when
+ * the old palette is gone and the new one is not there yet. Dropping to the
+ * built-in family for that moment would be a visible flash in the middle of a
+ * theme change, which is the opposite of the feature.
+ */
+let desktop = $state<Palette | null>(null);
+let desktopName = $state<string | null>(null);
+/** Light or dark, as the desktop's own palette declares it. */
+let desktopMode = $state<Mode | null>(null);
+/** Why the desktop palette is not in use, for Appearance's quiet status line. */
+let desktopReason = $state<string | null>(null);
+
+/** The fingerprint of what is on screen, so `revision` moves only on a change. */
+let painted = '';
 
 /** Torn down when the source stops being `system`, and on unmount. */
 let watching: (() => void) | null = null;
@@ -100,6 +134,19 @@ function systemMode(): Mode {
 	return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/**
+ * The palette that should be on screen.
+ *
+ * The desktop's, while one is being followed and one has been read; the chosen
+ * family's otherwise. The fallback is not a failure path — it is what a machine
+ * with no Omarchy gets, and what a followed machine gets before the first read
+ * lands.
+ */
+function current(): Palette {
+	if (source === 'omarchy' && desktop) return desktop;
+	return paletteOf(family, mode);
+}
+
 /** Put the current palette on the document. */
 function apply(): void {
 	if (typeof document === 'undefined') return;
@@ -109,14 +156,25 @@ function apply(): void {
 	// it is what any future stylesheet rule would need.
 	root.setAttribute('data-theme', mode);
 
-	const tokens = properties(paletteOf(family, mode));
+	const palette = current();
+	const tokens = properties(palette);
 	for (const [name, value] of Object.entries(tokens)) {
 		root.style.setProperty(name, value);
 	}
 
+	// The revision, bumped on a change of *values* rather than of identity.
+	// Two different desktop dark themes share `omarchy-dark`, so anything that
+	// caches by `id` — the lane canvas does — would keep the old colours
+	// through a switch between them.
+	const next = fingerprint(palette);
+	if (next !== painted) {
+		painted = next;
+		revision += 1;
+	}
+
 	// What the next cold start paints before any of this has loaded. Written
 	// here rather than in `commit`, so a palette that arrives any other way —
-	// a system change, and later a desktop's own palette — is cached too.
+	// a system change, a desktop's own palette — is cached too.
 	remember(PALETTE_KEY, JSON.stringify({ mode, tokens }));
 }
 
@@ -126,6 +184,37 @@ function commit(nextFamily: FamilyId, nextMode: Mode): void {
 	apply();
 	remember(FAMILY_KEY, nextFamily);
 	remember(MODE_KEY, nextMode);
+}
+
+/**
+ * Take a reading of the desktop's palette.
+ *
+ * **A failed read is not applied.** `omarchy-theme-set` builds a `next-theme`
+ * directory and replaces `current/theme`, so between those two moments there is
+ * no readable palette at all — and falling back to the built-in family for that
+ * moment would be a flash of Catppuccin in the middle of a theme change. The
+ * last valid palette stays until a new valid one arrives, which is also what
+ * happens if somebody uninstalls Omarchy while the window is open.
+ */
+export function receiveDesktop(theme: DesktopTheme | null): void {
+	if (!theme) return;
+
+	desktopReason = theme.reason;
+
+	if (!theme.available || !theme.palette) return;
+
+	desktop = paletteFrom(theme.palette);
+	desktopName = theme.name;
+	desktopMode = modeOf(theme.palette);
+
+	if (source !== 'omarchy') return;
+
+	// The desktop decides light or dark too: a followed palette carries its own
+	// mode, and `data-theme` has to agree with it or `app.css`'s boot values
+	// fight the inline properties on any token a palette does not set.
+	mode = desktopMode;
+	remember(MODE_KEY, mode);
+	apply();
 }
 
 /**
@@ -185,6 +274,36 @@ export const theme = {
 	},
 
 	/**
+	 * How many times the palette's *values* have changed.
+	 *
+	 * What a cache keyed on colours should read, in place of `id`. Two
+	 * different desktop dark themes share `omarchy-dark`, so `id` cannot see a
+	 * switch between them — which is exactly the case FEAT-080 introduces and
+	 * `LaneCanvas` would otherwise get wrong.
+	 */
+	get revision(): number {
+		return revision;
+	},
+
+	/** True once a desktop palette has been read. Appearance offers the option. */
+	get desktopAvailable(): boolean {
+		return desktop !== null;
+	},
+
+	/** The desktop's own name for what is on — `sushi-dark-palette`. */
+	get desktopName(): string | null {
+		return desktopName;
+	},
+
+	/** Why there is no desktop palette, when there is none. */
+	get desktopReason(): string | null {
+		return desktopReason;
+	},
+
+	/** Hand the store a reading from the backend. */
+	receiveDesktop,
+
+	/**
 	 * What is on, as one string: `"catppuccin-dark"`.
 	 *
 	 * Read by the lane canvas to know when to repaint. A boolean could not say
@@ -218,8 +337,34 @@ export const theme = {
 		commit(family, systemMode());
 	},
 
-	/** The family is orthogonal to where the mode comes from. */
+	/**
+	 * Follow the desktop's whole palette (FEAT-080).
+	 *
+	 * Selectable whether or not a palette has been read yet — the shell reads
+	 * one at startup, but a restored preference has to survive being restored
+	 * *before* that read lands, and refusing the source until the answer
+	 * arrives would silently demote somebody's choice on every launch.
+	 */
+	followDesktop(): void {
+		setSource('omarchy');
+		// The palette carries its own mode, and taking it here rather than
+		// waiting for the next reading is what stops the family chips and
+		// `data-theme` disagreeing with what is painted for one event.
+		if (desktopMode) {
+			mode = desktopMode;
+			remember(MODE_KEY, mode);
+		}
+		apply();
+	},
+
+	/**
+	 * The family is orthogonal to where the mode comes from — but choosing one
+	 * is an opt-out of following the desktop's palette, because a family and a
+	 * desktop palette are two answers to the same question. It is not an
+	 * opt-out of `system`, which answers a different one.
+	 */
 	setFamily(next: FamilyId): void {
+		if (source === 'omarchy') setSource('manual');
 		commit(next, mode);
 	},
 
@@ -250,15 +395,28 @@ export const theme = {
 		const validMode = storedMode === 'light' || storedMode === 'dark' ? storedMode : null;
 
 		const storedSource = stored(SOURCE_KEY);
-		if (storedSource === 'system' || storedSource === 'manual') {
-			source = storedSource;
-		} else {
-			source = validMode ? 'manual' : 'system';
-		}
+		source = SOURCES.includes(storedSource as Source)
+			? (storedSource as Source)
+			: validMode
+				? 'manual'
+				: 'system';
 
 		remember(SOURCE_KEY, source);
 		commit(family, source === 'system' ? systemMode() : (validMode ?? systemMode()));
 		watchSystem();
+	},
+
+	/**
+	 * The variant's name, for a screen that wants to say what is on.
+	 *
+	 * A followed desktop has no family and no variant, so it answers with the
+	 * desktop's own name where there is one — which is what somebody looking at
+	 * Appearance wants to read, rather than "Mocha" for a palette that is not
+	 * Catppuccin.
+	 */
+	get label(): string {
+		if (source === 'omarchy' && desktop) return desktopName ?? 'the desktop';
+		return variantOf(family, mode).name;
 	},
 
 	/** Stop following the desktop. For the shell's teardown. */

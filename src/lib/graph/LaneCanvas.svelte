@@ -42,11 +42,19 @@
 	/**
 	 * Lane colors come from the stylesheet, so switching theme repaints without
 	 * any color literal living in TypeScript. Re-resolved whenever the theme
-	 * changes; `theme.id` is read here purely to create that dependency, and it
-	 * names the family as well as the mode — switching family repaints too.
+	 * changes; `theme.revision` is read here purely to create that dependency.
+	 *
+	 * It used to be `theme.id`, which is `family-mode` and named the family as
+	 * well as the mode — enough while every palette was one of sixteen written
+	 * down in `themes.ts`. A followed desktop palette has no family: every one
+	 * of them is `omarchy-dark`, so switching between two dark desktop themes
+	 * changed nothing `id` could see and the graph kept the previous theme's
+	 * lane colours and its whole cache of portraits (FEAT-080). `revision`
+	 * counts changes to the palette's *values*, which is the question a cache
+	 * actually has.
 	 */
 	function resolveColors(el: HTMLElement): { lanes: string[]; nodeRing: string } {
-		void theme.id;
+		void theme.revision;
 		const styles = getComputedStyle(el);
 		const lanes: string[] = [];
 		for (let i = 0; i < LANE_COLOR_COUNT; i++) {
@@ -68,7 +76,7 @@
 	 * invalidates.
 	 */
 	$effect(() => {
-		void theme.id;
+		void theme.revision;
 		forgetPortraits();
 	});
 
@@ -83,7 +91,7 @@
 		void last;
 		void columns;
 		void span;
-		void theme.id;
+		void theme.revision;
 		void highlight;
 		void stashes;
 		// A picture arriving is a repaint: the node it belongs to was drawn

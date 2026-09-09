@@ -43,7 +43,8 @@
 	import { theme } from '$lib/theme.svelte';
 	import { resumeSession } from '$lib/session';
 	import { workspace } from '$lib/workspace.svelte';
-	import { REPO_CHANGED_EVENT, type RepoChangedEvent } from '$lib/types';
+	import { DESKTOP_THEME_EVENT, REPO_CHANGED_EVENT, type RepoChangedEvent } from '$lib/types';
+	import type { DesktopTheme } from '$lib/omarchy';
 
 	let { children } = $props();
 
@@ -113,6 +114,33 @@
 			// Recording starts with the app, not with the panel: turning the
 			// toggle on mid-session should show what has already run.
 			cleanups.push(await commandLog.attach());
+
+			/*
+			 * The desktop's own palette (FEAT-080).
+			 *
+			 * Read unconditionally, and *before* the watch: whether the option
+			 * can be offered at all is the answer to this call, so Appearance
+			 * cannot show it until the read has landed — and somebody who has
+			 * already chosen to follow the desktop needs the palette itself,
+			 * not the offer.
+			 *
+			 * The watch is started only when it is being followed. A machine
+			 * that is not following one has no reason to hold two inotify
+			 * watches on a directory it does not read.
+			 */
+			try {
+				theme.receiveDesktop(await api.desktopTheme());
+			} catch {
+				// An older backend without the command. The option is simply
+				// not offered, which is the same as any non-Omarchy machine.
+			}
+
+			const desktopEvent: UnlistenFn = await listen<DesktopTheme>(
+				DESKTOP_THEME_EVENT,
+				(event) => theme.receiveDesktop(event.payload)
+			);
+			cleanups.push(desktopEvent);
+			cleanups.push(() => void api.desktopThemeUnwatch().catch(() => {}));
 
 			// The toggles are read once, here, rather than by the Settings
 			// screen alone. Everything that consults them — the confirmation
@@ -248,6 +276,26 @@
 			identity.name?.local ?? identity.name?.global ?? null,
 			identity.email?.local ?? identity.email?.global ?? null
 		);
+	});
+
+	/*
+	 * The desktop palette is watched only while it is being followed
+	 * (FEAT-080).
+	 *
+	 * Here rather than inside the theme store, which has no component to own an
+	 * effect and must stay usable on a first paint before Tauri exists. A
+	 * machine that is not following a desktop palette has no reason to hold two
+	 * inotify watches on a directory it does not read, and a machine that
+	 * starts following one mid-session must not have to restart to get live
+	 * updates.
+	 */
+	$effect(() => {
+		if (!api.inTauri()) return;
+		const following = theme.source === 'omarchy';
+		void (following ? api.desktopThemeWatch() : api.desktopThemeUnwatch()).catch(() => {
+			// An older backend, or no watches left. The palette that has been
+			// read still applies; only live updates are lost.
+		});
 	});
 
 	/*

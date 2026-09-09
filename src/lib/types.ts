@@ -1233,5 +1233,15 @@ export const REPO_CHANGED_EVENT = 'repo-changed';
 export const GIT_COMMAND_EVENT = 'git-command';
 export const REBASE_PROGRESS_EVENT = 'rebase-progress';
 export const REBASE_DONE_EVENT = 'rebase-done';
+/**
+ * The desktop's palette changed under us (FEAT-080).
+ *
+ * Carries the whole new theme rather than a "go and look" ping: the payload is
+ * a few hundred bytes, and a signal that means "re-invoke a command" turns one
+ * event into a round trip during the exact moment the user is watching for a
+ * colour change.
+ */
+export const DESKTOP_THEME_EVENT = 'desktop-theme-changed';
+
 export const NETWORK_PROGRESS_EVENT = 'network-progress';
 export const NETWORK_DONE_EVENT = 'network-done';

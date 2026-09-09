@@ -16,6 +16,16 @@ stays backward-compatible.
 
 ### Added
 
+- **Follow Omarchy.** On a machine running Omarchy, Settings → Appearance
+  offers to take Spagitty's colours from the desktop's own theme and to keep
+  following it: change the desktop theme and the window repaints, graph
+  included, without a restart. The desktop's palette is not copied literally —
+  a terminal palette's roles and an application's are different requirements,
+  and on the theme this was built against the desktop's own secondary text
+  colour sits at 2.75:1 against its background, which is not readable. The
+  hues are the desktop's; the roles are derived and held to the same contrast
+  as the eight built-in palettes. Choosing a family opts back out, and stays
+  opted out. Machines without Omarchy see nothing new.
 - Appearance can follow the desktop's light and dark setting, and keep
   following it. Choosing Light or Dark still takes over, and still sticks.
 
