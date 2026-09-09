@@ -54,6 +54,10 @@
 
 	onMount(() => {
 		theme.init();
+		// The theme keeps a media query listener while it is following the
+		// desktop, and it belongs to the shell's lifetime like every other
+		// listener here (BUG-031).
+		cleanups.push(() => theme.dispose());
 		// Publishes the structural metrics as well as the type scale, at the
 		// stored zoom — so there is no frame at 100% before the user's zoom
 		// arrives.

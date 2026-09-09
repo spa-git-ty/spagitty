@@ -1,10 +1,20 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+	`data-theme="light"` is the last resort, not the decision.
+
+	It is what paints if `theme-boot.js` cannot read a cached palette and the
+	desktop has no light/dark preference either. The script below runs before
+	anything is painted and replaces both the attribute and the colours; it is
+	a file rather than an inline script because the content security policy in
+	`src-tauri/tauri.conf.json` allows scripts from `'self'` only (BUG-031).
+-->
 <html lang="en" data-theme="light">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Spagitty</title>
+		<script src="%sveltekit.assets%/theme-boot.js"></script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="tap">

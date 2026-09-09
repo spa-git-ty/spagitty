@@ -1,11 +1,55 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { readFileSync } from 'node:fs';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 
 const host = process.env.TAURI_DEV_HOST;
 
+/** Where the boot script lives, and the one name the document asks for. */
+const THEME_BOOT_SOURCE = 'src/theme-boot.js';
+const THEME_BOOT_URL = '/theme-boot.js';
+
+/**
+ * Serve and emit `theme-boot.js` at the bundle root (BUG-031).
+ *
+ * The script has to be a **file** rather than an inline `<script>`, because
+ * `src-tauri/tauri.conf.json` sets `default-src 'self'` and names no
+ * `script-src` — so inline scripts are blocked, and the alternatives were
+ * `'unsafe-inline'` for the whole application or a CSP hash that has to be kept
+ * in step with an HTML file by hand. See the header of `src/theme-boot.js`.
+ *
+ * It cannot live in the assets directory either: `svelte.config.js` scopes that
+ * to `assets/brand/favicon`, which `tools/make-brand.py --check` owns and
+ * regenerates. So the file sits beside `app.html` with the rest of the shell,
+ * and this plugin puts it where the document asks for it — emitted into the
+ * build, and served by the dev middleware, from one source.
+ */
+function themeBoot(): Plugin {
+	const read = () => readFileSync(THEME_BOOT_SOURCE, 'utf8');
+
+	return {
+		name: 'spagitty-theme-boot',
+
+		// `generateBundle` rather than `writeBundle`: the file has to be part of
+		// the bundle so the static adapter carries it into `build/`.
+		generateBundle() {
+			this.emitFile({ type: 'asset', fileName: 'theme-boot.js', source: read() });
+		},
+
+		configureServer(server) {
+			server.middlewares.use((request, response, next) => {
+				if (request.url?.split('?')[0] !== THEME_BOOT_URL) return next();
+				response.setHeader('Content-Type', 'text/javascript');
+				// Read per request, so editing it during a dev session works
+				// like editing anything else.
+				response.end(read());
+			});
+		}
+	};
+}
+
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [sveltekit(), themeBoot()],
 
 	// Tauri expects a fixed port and fails if it is not available.
 	clearScreen: false,
