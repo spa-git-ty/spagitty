@@ -14,6 +14,8 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-13
+
 ### Added
 
 - **Hover a commit subject for its whole message.** After a short rest the
