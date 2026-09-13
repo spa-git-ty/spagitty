@@ -641,9 +641,14 @@ export function settings(): Promise<Settings> {
  * Never rejects for an ordinary absence — no picture, no network, the
  * preference turned off — because none of those is an error and all of them
  * mean the same thing to the caller: draw the generated face.
+ *
+ * `commit` is one commit *authored* by this address (FEAT-081). It is what
+ * lets the repository's forge say which account an ordinary address belongs
+ * to, so it must be a commit the address authored — a committer's address
+ * asked with somebody else's commit would be given the author's face.
  */
-export function avatar(email: string): Promise<AvatarAnswer> {
-	return invoke('avatar', { email });
+export function avatar(email: string, commit: string | null = null): Promise<AvatarAnswer> {
+	return invoke('avatar', { email, commit });
 }
 
 /** Every linked worktree for the open repository (FEAT-062). */

@@ -99,6 +99,22 @@ pub fn get_json(url: &str, token: &str, host: &str) -> Result<Response> {
     }
 }
 
+/// What a host answered to a request for a small public file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fetched {
+    pub status: u16,
+    /// Empty for anything that is not a readable body within the limit.
+    pub body: Vec<u8>,
+    /// `Location`, on a redirect.
+    ///
+    /// The agent follows no redirect itself (see [`agent`]), so a 3xx comes
+    /// back here as an answer. Carried so that the one caller with a reason to
+    /// follow one — a public picture, never a credential — can decide which
+    /// hosts it is willing to be sent to, rather than the transport following
+    /// wherever it is told (FEAT-081).
+    pub location: Option<String>,
+}
+
 /// The bytes of a small file, from a URL that carries no credential.
 ///
 /// The one request in the application that fetches something other than JSON,
@@ -116,8 +132,9 @@ pub fn get_json(url: &str, token: &str, host: &str) -> Result<Response> {
 ///
 /// Like the others: a status is an answer, not an error. A 404 from Gravatar
 /// is how "this address has no picture" is spelled, and it is the common case
-/// rather than a failure.
-pub fn get_bytes(url: &str, limit: usize) -> Result<(u16, Vec<u8>)> {
+/// rather than a failure. So is a redirect, which is returned with its
+/// `Location` rather than followed.
+pub fn get_bytes(url: &str, limit: usize) -> Result<Fetched> {
     if !url.starts_with("https://") {
         return Err(Error::Forge {
             host: String::new(),
@@ -128,6 +145,11 @@ pub fn get_bytes(url: &str, limit: usize) -> Result<(u16, Vec<u8>)> {
     match agent().get(url).call() {
         Ok(mut response) => {
             let status = response.status().as_u16();
+            let location = response
+                .headers()
+                .get("location")
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_string);
             // One byte past the limit, so a body sitting exactly on it is kept
             // and one over it is known to be over rather than assumed.
             let mut body = Vec::new();
@@ -138,11 +160,19 @@ pub fn get_bytes(url: &str, limit: usize) -> Result<(u16, Vec<u8>)> {
                 .read_to_end(&mut body);
 
             if read.is_err() || body.len() > limit {
-                return Ok((status, Vec::new()));
+                body.clear();
             }
-            Ok((status, body))
+            Ok(Fetched {
+                status,
+                body,
+                location,
+            })
         }
-        Err(ureq::Error::StatusCode(status)) => Ok((status, Vec::new())),
+        Err(ureq::Error::StatusCode(status)) => Ok(Fetched {
+            status,
+            body: Vec::new(),
+            location: None,
+        }),
         Err(error) => Err(Error::ForgeOffline {
             host: String::new(),
             detail: error.to_string(),

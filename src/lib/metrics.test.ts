@@ -3,6 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import {
 	applyMetrics,
+	COMFORTABLE,
+	COMPACT,
 	LANE_COLOR_COUNT,
 	LANE_COLUMNS_MAX,
 	LANE_COLUMNS_MIN,
@@ -22,6 +24,7 @@ import {
 	lanePitch,
 	laneSpanFor,
 	laneX,
+	NODE_HALO,
 	rowCenterY
 } from './metrics';
 
@@ -200,10 +203,13 @@ describe('laneX under compression', () => {
 	/**
 	 * Some histories defeat any width. `git/git` peaks at 382 lanes; once the
 	 * pitch is at its floor the deepest still share a column — the old behaviour,
-	 * now reached at 48 lanes rather than 12.
+	 * now reached at 21 lanes rather than 12. They stack on the span's edge
+	 * rather than on the last whole lane before it (FEAT-081).
 	 */
 	it('stacks only once the pitch has nowhere left to go', () => {
-		expect(laneX(LANE_INDEX_MAX + 5, 382)).toBe(laneX(LANE_INDEX_MAX, 382));
+		expect(laneX(LANE_INDEX_MAX + 5, 382)).toBe(LANE_X0 + LANE_SPAN);
+		expect(laneX(LANE_INDEX_MAX + 1, 382)).toBe(LANE_X0 + LANE_SPAN);
+		expect(laneX(LANE_INDEX_MAX, 382)).toBe(LANE_X0 + LANE_INDEX_MAX * LANE_PITCH_MIN);
 		expect(LANE_INDEX_MAX + 1).toBeGreaterThan(LANE_COLUMNS_MAX);
 	});
 
@@ -216,94 +222,27 @@ describe('laneX under compression', () => {
 	});
 });
 
+/**
+ * FEAT-081, second reopening: the node's size is the density's alone. It used
+ * to shrink with the lanes in view, and since those are counted over the rows on
+ * screen the same ordinary commit changed size as history scrolled past.
+ */
 describe('laneNodeRadius', () => {
-	it('leaves the node alone until the lanes actually tighten', () => {
-		for (let lanes = 1; lanes <= LANE_COLUMNS_MAX; lanes++) {
-			expect(laneNodeRadius(lanes)).toBe(NODE_R);
+	it('is the full portrait at every depth a history can have', () => {
+		for (const lanes of [1, 5, 12, 13, 21, 48, 382, 100_000]) {
+			// No lane count reaches the radius any more, so there is nothing to pass.
+			expect(laneNodeRadius(), `${lanes} lanes`).toBe(NODE_R);
 		}
 	});
 
-	/**
-	 * The node is what set `LANE_PITCH` — "a lane closer than a node is wide
-	 * draws lines through faces" — so a compressed pitch has to bring it down or
-	 * the portraits paint over the room compression just made.
-	 */
-	it('never lets a node cover its neighbour’s lane, up to where the floor bites', () => {
-		for (let lanes = LANE_COLUMNS_MAX + 1; lanes <= 21; lanes++) {
-			expect(
-				laneNodeRadius(lanes) * 2,
-				`a node overlaps its neighbour at ${lanes} lanes`
-			).toBeLessThanOrEqual(lanePitch(lanes));
-		}
+	it('is the chosen density’s node, and only a density change moves it', () => {
+		expect(laneNodeRadius(COMFORTABLE)).toBe(COMFORTABLE.node);
+		expect(laneNodeRadius(COMPACT)).toBe(COMPACT.node);
 	});
 
-	/**
-	 * There used to be a depth past which nodes overlapped: at a 6px pitch the
-	 * `MERGE_R` floor was wider than the lane, and the trade was recorded here
-	 * as a deliberate end to the guarantee.
-	 *
-	 * Raising the pitch floor to half the design pitch removed the trade
-	 * entirely. The narrowest lane is now wide enough for the smallest node the
-	 * graph will draw, so a node never covers its neighbour's lane at **any**
-	 * depth — 382 lanes included. The guarantee got stronger, so the test says
-	 * so rather than being deleted.
-	 */
-	it('never lets a node cover its neighbour, at any depth at all', () => {
-		for (const lanes of [33, 48, 187, 382, 100_000]) {
-			expect(
-				laneNodeRadius(lanes) * 2,
-				`a node overlaps its neighbour at ${lanes} lanes`
-			).toBeLessThanOrEqual(lanePitch(lanes));
-		}
-	});
-
-	it('stops shrinking at the widest node the narrowest lane can hold', () => {
-		// Not `MERGE_R` any more: the pitch floor bottoms out first, and what it
-		// leaves room for is bigger than the mark of last resort. `MERGE_R` is
-		// still the hard floor underneath, it is simply never the binding one.
-		const deepest = laneNodeRadius(382);
-
-		expect(deepest).toBe(Math.floor((LANE_PITCH_MIN - LANE_STROKE) / 2));
-		expect(deepest).toBeGreaterThanOrEqual(MERGE_R);
-	});
-
-	it('shrinks as the lanes do, without stepping back up', () => {
-		let previous = laneNodeRadius(LANE_COLUMNS_MAX);
-		for (let lanes = LANE_COLUMNS_MAX + 1; lanes <= 60; lanes++) {
-			const radius = laneNodeRadius(lanes);
-			expect(radius).toBeLessThanOrEqual(previous);
-			previous = radius;
-		}
-	});
-
-	/**
-	 * A node too small to see would be worse than one that overlaps a little.
-	 *
-	 * `MERGE_R` is the hard floor and no longer the binding one — the pitch
-	 * floor bottoms out above it — so this asserts the *guarantee* rather than
-	 * the particular number, which is what it was always for.
-	 */
-	it('never shrinks past the graph’s smallest meaningful mark', () => {
-		expect(laneNodeRadius(382)).toBeGreaterThanOrEqual(MERGE_R);
-		expect(laneNodeRadius(100_000)).toBeGreaterThanOrEqual(MERGE_R);
-		// And it does bottom out, rather than creeping down forever.
-		expect(laneNodeRadius(100_000)).toBe(laneNodeRadius(382));
-	});
-
-	/**
-	 * The radius picks the portrait tile size, and the tile cache is keyed on it.
-	 * A radius that moved continuously with the lane count would mint a fresh
-	 * tile for every author on every scroll that changed the depth by one.
-	 */
-	it('takes only a handful of distinct values, so the portrait cache holds', () => {
-		const sizes = new Set<number>();
-		for (let lanes = 1; lanes <= 400; lanes++) sizes.add(laneNodeRadius(lanes));
-
-		expect(sizes.size).toBeLessThanOrEqual(12);
-		// Every one but the floor is a whole pixel; MERGE_R is 4.5 by design.
-		for (const size of sizes) {
-			expect(Number.isInteger(size) || size === MERGE_R).toBe(true);
-		}
+	it('stays larger than a merge dot, which is the only smaller mark the graph draws', () => {
+		expect(laneNodeRadius(COMPACT)).toBeGreaterThan(MERGE_R);
+		expect(laneNodeRadius(COMFORTABLE)).toBeGreaterThan(MERGE_R);
 	});
 });
 
@@ -317,7 +256,7 @@ describe('the canvas is always wide enough for the lanes it draws', () => {
 	it('holds for every lane count from one to a git/git-sized history', () => {
 		for (const lanes of [1, 5, 8, 12, 13, 16, 24, 48, 49, 100, 187, 382]) {
 			const width = laneColumnWidth(lanes);
-			const deepest = laneX(lanes - 1, lanes) + laneNodeRadius(lanes);
+			const deepest = laneX(lanes - 1, lanes) + laneNodeRadius();
 
 			expect(deepest, `${lanes} lanes overflow a ${width}px canvas`).toBeLessThanOrEqual(width);
 		}
@@ -327,7 +266,7 @@ describe('the canvas is always wide enough for the lanes it draws', () => {
 		for (const zoom of [1, 1.3, 1.7, 2]) {
 			for (const lanes of [5, 12, 20, 48, 382]) {
 				const width = laneColumnWidth(lanes, zoom);
-				const deepest = laneX(lanes - 1, lanes, zoom) + laneNodeRadius(lanes) * zoom;
+				const deepest = laneX(lanes - 1, lanes, zoom) + laneNodeRadius() * zoom;
 
 				expect(deepest).toBeLessThanOrEqual(width);
 			}
@@ -425,21 +364,17 @@ describe('laneSpanFor', () => {
 	});
 });
 
-describe('lanes compressing into a chosen width', () => {
-	it('keeps the design pitch when the column is wide enough', () => {
-		const span = laneSpanFor(laneColumnWidth(12));
-		expect(lanePitch(5, span)).toBe(LANE_PITCH);
+/**
+ * FEAT-039 left `lanePitch` taking a span, and it still does: a history deeper
+ * than the cap shares out the density's resting span. What FEAT-081 took away is
+ * the *dragged* span reaching it — see the next block.
+ */
+describe('lanePitch against a span', () => {
+	it('keeps the design pitch when the span is wide enough', () => {
+		expect(lanePitch(5, laneSpanFor(laneColumnWidth(12)))).toBe(LANE_PITCH);
 	});
 
-	/** The point of the whole item: a narrower column, the same lanes. */
-	it('tightens the pitch as the column narrows', () => {
-		const wide = laneSpanFor(laneColumnWidth(12));
-		const narrow = laneSpanFor(120);
-
-		expect(lanePitch(8, narrow)).toBeLessThan(lanePitch(8, wide));
-	});
-
-	it('never widens past the design pitch, however wide the column', () => {
+	it('never widens past the design pitch, however wide the span', () => {
 		expect(lanePitch(3, 5000)).toBe(LANE_PITCH);
 		expect(lanePitch(12, 5000)).toBe(LANE_PITCH);
 	});
@@ -448,20 +383,125 @@ describe('lanes compressing into a chosen width', () => {
 		expect(lanePitch(12, 10)).toBe(LANE_PITCH_MIN);
 		expect(lanePitch(40, 0)).toBe(LANE_PITCH_MIN);
 	});
+});
 
-	it('keeps every lane inside the column it was given', () => {
-		for (const width of [60, 90, 150, 220, 331]) {
-			const span = laneSpanFor(width);
-			for (const lanes of [2, 5, 8, 12, 20]) {
-				const deepest = laneX(lanes - 1, lanes, 1, span) + laneNodeRadius(lanes, span);
+/**
+ * FEAT-081, reopened a second time by
+ * `docs/analysis/graph-fold-avatar-claude-handoff-2026-09-13.md`.
+ *
+ * The previous revision kept tracks still, clipped the ones past the edge and
+ * parked their nodes beside it — continuous, and wrong: the runtime recording
+ * showed faces standing beside Commit Message with their lanes cut away. These
+ * pin the picture the user asked for: lanes that fit stay put, lanes the edge
+ * reaches fold onto it whole, and at the narrowest the graph is one lane.
+ */
+describe('narrowing the graph column', () => {
+	const widths = Array.from({ length: 331 - 40 + 1 }, (_, i) => 331 - i);
 
-				expect(deepest, `${lanes} lanes in a ${width}px column`).toBeLessThanOrEqual(width);
+	it('leaves a lane that still fits exactly where it rests', () => {
+		// 185px leaves 140px of span: lanes 0–5 (offsets 0–130) fit.
+		const span = laneSpanFor(185);
+		expect(span).toBe(140);
+		for (let lane = 0; lane <= 5; lane++) {
+			expect(laneX(lane, 12, 1, span)).toBe(LANE_X0 + lane * LANE_PITCH);
+		}
+	});
+
+	it('folds every lane the boundary has reached onto the boundary', () => {
+		const span = laneSpanFor(185);
+		for (const lane of [6, 7, 11]) {
+			expect(laneX(lane, 12, 1, span)).toBe(LANE_X0 + span);
+		}
+	});
+
+	it('merges every lane into lane 0 at the narrowest span', () => {
+		for (const columns of [2, 5, 12, 20, 382]) {
+			for (let lane = 0; lane < columns; lane++) {
+				expect(laneX(lane, columns, 1, 0)).toBe(laneX(0, columns, 1, 0));
+				expect(laneX(lane, columns, 1.5, 0, COMPACT)).toBe(LANE_X0 * 1.5);
 			}
 		}
 	});
 
-	it('brings the node down with the pitch in a narrowed column', () => {
-		const narrow = laneSpanFor(110);
-		expect(laneNodeRadius(8, narrow)).toBeLessThan(NODE_R);
+	it('reaches that narrowest span at the Graph column’s minimum width, at either density', () => {
+		expect(laneSpanFor(40)).toBe(0);
+		expect(laneSpanFor(40, 1, COMPACT)).toBe(0);
+	});
+
+	it('changes nothing for a column nobody has dragged, at any zoom', () => {
+		for (const zoom of [0.8, 1, 1.1, 1.3, 1.5, 2]) {
+			for (const density of [COMFORTABLE, COMPACT]) {
+				for (const columns of [1, 5, 8, 12, 13, 20, 48, 382]) {
+					const span = laneSpanFor(laneColumnWidth(columns, zoom, density), zoom, density);
+					for (let lane = 0; lane < columns; lane++) {
+						// A rounding pixel of span is all an undragged column can lose.
+						expect(
+							laneX(lane, columns, zoom, span, density),
+							`lane ${lane}/${columns} @${zoom}`
+						).toBeCloseTo(laneX(lane, columns, zoom, LANE_SPAN, density), 0);
+					}
+				}
+			}
+		}
+	});
+
+	it('never moves a lane further than the pointer moved, and never by a threshold', () => {
+		for (const zoom of [1, 1.5]) {
+			for (const columns of [2, 5, 12, 16, 24]) {
+				for (let width = 400 * zoom; width > 40 * zoom; width -= 1) {
+					const wide = laneSpanFor(width, zoom);
+					const narrow = laneSpanFor(width - 1, zoom);
+					for (let lane = 0; lane < columns; lane++) {
+						const step = laneX(lane, columns, zoom, wide) - laneX(lane, columns, zoom, narrow);
+						expect(step).toBeGreaterThanOrEqual(0);
+						expect(step).toBeLessThanOrEqual(1 + 1e-9);
+					}
+				}
+			}
+		}
+	});
+
+	it('keeps lane order: a deeper lane is never drawn left of a shallower one', () => {
+		for (const width of widths) {
+			const span = laneSpanFor(width);
+			for (let lane = 1; lane < 16; lane++) {
+				expect(laneX(lane, 16, 1, span)).toBeGreaterThanOrEqual(laneX(lane - 1, 16, 1, span));
+			}
+		}
+	});
+
+	it('keeps every full-size node inside the column it was given', () => {
+		for (const density of [COMFORTABLE, COMPACT]) {
+			for (const width of widths) {
+				const span = laneSpanFor(width, 1, density);
+				for (const lanes of [2, 5, 8, 12, 20]) {
+					const right = laneX(lanes - 1, lanes, 1, span, density) + laneNodeRadius(density) + NODE_HALO;
+					expect(right, `${lanes} lanes in a ${width}px column`).toBeLessThanOrEqual(width);
+				}
+			}
+		}
+	});
+
+	it('puts every lane back where it was when widened again, deepest last', () => {
+		const wide = laneSpanFor(laneColumnWidth(12));
+		expect(laneX(8, 12, 1, laneSpanFor(60))).toBe(LANE_X0 + laneSpanFor(60));
+		for (let lane = 0; lane < 12; lane++) {
+			expect(laneX(lane, 12, 1, wide)).toBe(LANE_X0 + lane * LANE_PITCH);
+		}
+		// Released in reverse order: widening from 100px, lane 3 comes free before lane 4.
+		const release = (lane: number) =>
+			widths.slice().reverse().find((w) => laneX(lane, 12, 1, laneSpanFor(w)) === LANE_X0 + lane * LANE_PITCH);
+		expect(release(3)).toBeLessThan(release(4) ?? Infinity);
+	});
+});
+
+describe('the author mark beside a commit', () => {
+	it('is published at the graph node’s diameter, following zoom', () => {
+		const set = new Map<string, string>();
+		const root = { style: { setProperty: (k: string, v: string) => set.set(k, v) } };
+
+		applyMetrics(root as unknown as HTMLElement, 1.5);
+
+		expect(set.get('--avatar-d')).toBe(`${Math.round(NODE_R * 2 * 1.5)}px`);
 	});
 });

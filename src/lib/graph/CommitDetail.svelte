@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { clockTime, fullDate, statusGlyph } from '$lib/format';
 	import { avatars } from '$lib/graph/avatars.svelte';
-	import { lettersOf, portraitBackground, seedOf } from '$lib/graph/portrait';
+	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -60,7 +60,9 @@
 	$effect(() => {
 		const current = detail;
 		if (!current) return;
-		avatars.lookup(current.authorEmail ?? '', current.authorName);
+		// The commit goes with the author only: it is the author the forge
+		// associates with it, and the committer may be somebody else (FEAT-081).
+		avatars.lookup(current.authorEmail ?? '', current.authorName, current.id);
 		avatars.lookup(current.committerEmail ?? '', current.committerName);
 	});
 
@@ -90,8 +92,6 @@
 		{:else if detail === null}
 			<div class="pad note">Loading…</div>
 		{:else}
-			{@const authorFace = avatars.drawable(detail.authorEmail, detail.authorName)}
-			{@const committerFace = avatars.drawable(detail.committerEmail, detail.committerName)}
 			<div class="pad column">
 				<div class="message">
 					<div class="summary">{detail.summary}</div>
@@ -99,14 +99,7 @@
 				</div>
 
 				<div class="person">
-					<span
-						class="avatar"
-						class:photo={authorFace !== null}
-						style="background: {authorFace
-							? `url(${authorFace.src}) center / cover no-repeat`
-							: portraitBackground(seedOf(detail.authorEmail, detail.authorName))}"
-						aria-hidden="true"
-					>{#if !authorFace}<span class="letters">{selected.initials}</span>{/if}</span>
+					<AuthorAvatar email={detail.authorEmail} name={detail.authorName} letters={selected.initials} />
 					<div class="who">
 						<div class="name" title={detail.authorEmail}>{detail.authorName}</div>
 						<div class="mono muted" title={fullDate(detail.authorTime)}>
@@ -116,14 +109,7 @@
 				</div>
 
 				<div class="person">
-					<span
-						class="avatar"
-						class:photo={committerFace !== null}
-						style="background: {committerFace
-							? `url(${committerFace.src}) center / cover no-repeat`
-							: portraitBackground(seedOf(detail.committerEmail, detail.committerName))}"
-						aria-hidden="true"
-					>{#if !committerFace}<span class="letters">{lettersOf(detail.committerName, detail.committerEmail)}</span>{/if}</span>
+					<AuthorAvatar email={detail.committerEmail} name={detail.committerName} />
 					<div class="who">
 						<div class="name" title={detail.committerEmail}>{detail.committerName}</div>
 						<div class="mono muted" title={fullDate(detail.commitTime)}>
@@ -296,28 +282,6 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-	}
-
-	.avatar {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		border: 1px solid var(--line);
-		display: grid;
-		place-items: center;
-		line-height: 1;
-		color: var(--bg);
-		flex: none;
-		user-select: none;
-	}
-
-	.avatar .letters {
-		font-size: 0.7em;
-		font-weight: 600;
-	}
-
-	.avatar.photo {
-		color: transparent;
 	}
 
 	.who {

@@ -21,6 +21,7 @@ import {
 	COMPACT,
 	LANE_COLUMNS_MAX,
 	LANE_PITCH_MIN,
+	LANE_SPAN,
 	laneColumnWidth,
 	laneColumns,
 	laneNodeRadius,
@@ -204,12 +205,11 @@ describe('the geometry stays consistent with itself', () => {
 		expect(lanePitch(40, span, COMPACT)).toBeGreaterThanOrEqual(LANE_PITCH_MIN);
 	});
 
-	it('rests at its own node size and shrinks from there', () => {
-		const span = laneSpanOf(COMPACT);
-
-		expect(laneNodeRadius(3, span, COMPACT)).toBe(COMPACT.node);
-		expect(laneNodeRadius(40, span, COMPACT)).toBeLessThan(COMPACT.node);
-		expect(laneNodeRadius(400, span, COMPACT)).toBeGreaterThanOrEqual(MERGE_R);
+	it('draws its own node size at every depth, and never a merge dot’s', () => {
+		// FEAT-081: only choosing the density changes the node — not the depth in
+		// view, which would change it as history scrolled past.
+		expect(laneNodeRadius(COMPACT)).toBe(COMPACT.node);
+		expect(laneNodeRadius(COMPACT)).toBeGreaterThan(MERGE_R);
 	});
 
 	/**
@@ -221,10 +221,10 @@ describe('the geometry stays consistent with itself', () => {
 		['comfortable', COMFORTABLE],
 		['compact', COMPACT]
 	])('%s keeps every node inside the column it was given', (_label, chosen) => {
-		for (const width of [400, 300, 200, 120, 80]) {
+		for (const width of [400, 300, 200, 120, 80, 40]) {
 			const span = laneSpanFor(width, 1, chosen);
 			for (const lanes of [1, 3, 5, 12, 30]) {
-				const deepest = laneX(lanes - 1, lanes, 1, span, chosen) + laneNodeRadius(lanes, span, chosen);
+				const deepest = laneX(lanes - 1, lanes, 1, span, chosen) + laneNodeRadius(chosen);
 				expect(deepest, `${lanes} lanes in ${width}px`).toBeLessThanOrEqual(width);
 			}
 		}
@@ -233,8 +233,6 @@ describe('the geometry stays consistent with itself', () => {
 	/** Lane 0 sits at the same x either way: the column's left edge does not
 	 *  move, so the rows and the canvas agree without knowing the density. */
 	it('starts both densities at the same first lane', () => {
-		expect(laneX(0, 5, 1, laneSpanOf(COMPACT), COMPACT)).toBe(
-			laneX(0, 5, 1, laneSpanOf(COMFORTABLE), COMFORTABLE)
-		);
+		expect(laneX(0, 5, 1, LANE_SPAN, COMPACT)).toBe(laneX(0, 5, 1, LANE_SPAN, COMFORTABLE));
 	});
 });

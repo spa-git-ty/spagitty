@@ -37,7 +37,14 @@ const CATALOGUE: Column<ColumnId>[] = [
 	// `width: 0` means "sizes itself" — the same convention the filling message
 	// column uses. The graph follows the lanes on screen until someone drags it,
 	// and a stored width is what says they did (FEAT-039).
-	{ id: 'graph', label: 'Graph', width: 0, min: 48, computed: true, required: true },
+	//
+	// Forty is the narrowest the column can be and still merge the whole graph
+	// into lane 0 (FEAT-081): the first lane's offset, a node and the tail add
+	// up to 45 comfortable and 40 compact, so at 40 no room is left for any lane
+	// to sit beside lane 0 at either density, and a full-size node on lane 0
+	// still ends well inside the column. At 48 the lanes stopped 3px short of
+	// merging and a folded graph read as two stacks a hair apart.
+	{ id: 'graph', label: 'Graph', width: 0, min: 40, computed: true, required: true },
 	{ id: 'message', label: 'Commit Message', width: 0, min: 160, fills: true, required: true },
 	{ id: 'author', label: 'Author', width: 150, min: 80 },
 	{ id: 'time', label: 'Date / Time', width: 150, min: 90 },
@@ -98,6 +105,8 @@ export const columns = {
 	toggle: (id: ColumnId) => store.toggle(id),
 	reorder: (from: number, to: number) => store.reorder(from, to),
 	resize: (id: ColumnId, next: number) => store.resize(id, next),
+	drag: (id: ColumnId, next: number) => store.drag(id, next),
+	settle: () => store.settle(),
 	unsize: (id: ColumnId) => store.unsize(id),
 	reset: () => store.reset(),
 	open: (path: string | null) => store.open(path)

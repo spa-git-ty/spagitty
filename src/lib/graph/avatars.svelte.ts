@@ -39,6 +39,16 @@ import { seedOf } from './portrait';
 /** How many requests are allowed to be in flight together. */
 const AT_ONCE = 4;
 
+/**
+ * How long to leave an address alone after the backend said "try later".
+ *
+ * The backend keeps its own bounded backoff on disk and answers from it
+ * without touching the network, so this only has to stop a scrolling screen
+ * from asking the same question every frame. A minute is enough for that and
+ * short enough that a connection coming back shows faces within the session.
+ */
+const RETRY_AFTER_MS = 60_000;
+
 /** What is known about one address. */
 interface Entry {
 	/** The decoded picture, once it has arrived and loaded. */
@@ -47,6 +57,15 @@ interface Entry {
 	handle: string | null;
 	/** Whether the answer is final, so it is never asked for twice. */
 	settled: boolean;
+	/**
+	 * One commit this address authored, when a caller had one (FEAT-081).
+	 *
+	 * The first lookup for an identity carries it, so the forge can be asked
+	 * which account wrote it. An address first seen without one — a committer
+	 * in the detail pane — is asked again, once, when a row it authored turns
+	 * up, because an answer given without the forge is not the whole answer.
+	 */
+	commit: string | null;
 }
 
 /**
@@ -59,6 +78,8 @@ const held = new Map<string, Entry>();
 
 let version = $state(0);
 let queue: string[] = [];
+/** Retry timers, so a reset or an opt-out does not leave one to fire later. */
+const timers = new Set<ReturnType<typeof setTimeout>>();
 let running = 0;
 
 /**
@@ -90,12 +111,26 @@ function decode(seed: string, picture: string): void {
 }
 
 async function run(seed: string): Promise<void> {
+	// The entry this request is for. A reset, an opt-out or an upgrade can put a
+	// different one under the same seed while it is in flight, and an answer to
+	// the old question must not settle the new one.
+	const asked = held.get(seed);
 	try {
-		const answer = await api.avatar(seed);
+		const answer = await api.avatar(seed, asked?.commit ?? null);
 		const entry = held.get(seed);
-		if (!entry) return;
+		if (!entry || entry !== asked) return;
 
 		entry.handle = answer.handle;
+		if (answer.retry && !answer.picture) {
+			// Offline or rate limited: not an answer. Forget the entry after a
+			// while, so the next row that asks starts a fresh request.
+			const timer = setTimeout(() => {
+				timers.delete(timer);
+				if (held.get(seed) === entry && entry.image === null) held.delete(seed);
+				version += 1;
+			}, RETRY_AFTER_MS);
+			timers.add(timer);
+		}
 		// A handle with no picture is still worth a repaint: it is what the
 		// hover says.
 		if (answer.handle) version += 1;
@@ -105,8 +140,7 @@ async function run(seed: string): Promise<void> {
 		// rejection here is the command itself being unavailable — in a plain
 		// browser, or during shutdown. The generated face is the answer.
 	} finally {
-		const entry = held.get(seed);
-		if (entry) entry.settled = true;
+		if (asked && held.get(seed) === asked) asked.settled = true;
 		running -= 1;
 		pump();
 	}
@@ -149,6 +183,8 @@ export const avatars = {
 		if (!value) {
 			held.clear();
 			queue = [];
+			for (const timer of timers) clearTimeout(timer);
+			timers.clear();
 		}
 		version += 1;
 	},
@@ -160,18 +196,36 @@ export const avatars = {
 	 * is the answer the graph draws a generated face for. Later calls return
 	 * whatever has arrived since.
 	 */
-	lookup(email: string, name = ''): { image: HTMLImageElement | null; handle: string | null } {
+	lookup(
+		email: string,
+		name = '',
+		commit: string | null = null
+	): { image: HTMLImageElement | null; handle: string | null } {
 		// Read so a change to the preference re-runs an effect that called this.
 		void enabled;
+		// The retry timer drops entries; reading the version is what lets an
+		// effect that asked before notice it should ask again.
+		void version;
 		const seed = seedOf(email, name);
 		if (!seed) return { image: null, handle: null };
 
+		// Only an address can be asked about by a commit: a name-only seed has
+		// nothing for the forge to match, and treating its commit as new
+		// information would re-ask it on every lookup.
+		const withCommit = email.trim() ? commit : null;
+
 		const entry = held.get(seed);
-		if (entry) return { image: entry.image, handle: entry.handle };
+		const upgrade =
+			entry !== undefined &&
+			entry.settled &&
+			entry.image === null &&
+			entry.commit === null &&
+			withCommit !== null;
+		if (entry && !upgrade) return { image: entry.image, handle: entry.handle };
 
 		if (!enabled) return { image: null, handle: null };
 
-		held.set(seed, { image: null, handle: null, settled: false });
+		held.set(seed, { image: null, handle: entry?.handle ?? null, settled: false, commit: withCommit });
 		queue.push(seed);
 		pump();
 		return { image: null, handle: null };
@@ -194,6 +248,8 @@ export const avatars = {
 	reset(): void {
 		held.clear();
 		queue = [];
+		for (const timer of timers) clearTimeout(timer);
+		timers.clear();
 		running = 0;
 		version += 1;
 	}

@@ -146,6 +146,10 @@ pub struct AvatarAnswer {
     pub handle: Option<String>,
     /// The picture, as a `data:` URL ready to draw.
     pub picture: Option<String>,
+    /// No answer yet, for a reason that may pass: offline, rate limited, a
+    /// server error. The frontend asks again later rather than settling on the
+    /// generated face for the session (FEAT-081).
+    pub retry: bool,
 }
 
 #[derive(Serialize)]
@@ -1805,10 +1809,19 @@ pub fn set_settings<R: Runtime>(
 /// **The preference is checked here, not by the caller.** A setting that stops
 /// a request has to stop it in the place the request is made — a frontend that
 /// forgot to ask would otherwise be the whole opt-out.
+///
+/// **`commit` is one of this author's commits (FEAT-081).** An ordinary address
+/// says nothing about which account wrote it, and the repository's forge does:
+/// when the open repository is on GitHub, the resolver asks it about this one
+/// commit, once per author. A connected account's token is read for that
+/// request only, and only when the disk has no answer already.
 #[tauri::command]
-pub async fn avatar<R: Runtime>(app: AppHandle<R>, email: String) -> AvatarAnswer {
-    let source = avatars::source(&email);
-    let handle = source.handle;
+pub async fn avatar<R: Runtime>(
+    app: AppHandle<R>,
+    email: String,
+    commit: Option<String>,
+) -> AvatarAnswer {
+    let handle = avatars::source(&email).handle;
 
     if !crate::settings::load(&app).fetch_avatars {
         // The handle still stands: it was read out of the address, and reading
@@ -1816,24 +1829,69 @@ pub async fn avatar<R: Runtime>(app: AppHandle<R>, email: String) -> AvatarAnswe
         return AvatarAnswer {
             handle,
             picture: None,
+            retry: false,
         };
     }
 
-    let Some(cache) = avatar_cache(&app) else {
+    let Some(root) = avatar_cache(&app) else {
         return AvatarAnswer {
             handle,
             picture: None,
+            retry: false,
         };
     };
 
+    // Taken from the app rather than as a command argument: an async command
+    // that borrows `State` has to return a `Result`, and nothing here is one.
+    let repo = forge_repo(app.state::<AppState>()).ok().flatten();
+
     // Off the main thread for the reason on `check_update`: this is a network
     // request with a timeout on it, and a synchronous command holds the window
-    // for as long as it takes.
-    let picture = tauri::async_runtime::spawn_blocking(move || avatars::picture(&cache, &email))
-        .await
-        .unwrap_or(None);
+    // for as long as it takes. The keychain read is blocking too.
+    let answer = tauri::async_runtime::spawn_blocking(move || {
+        static RETIRED: std::sync::Once = std::sync::Once::new();
+        RETIRED.call_once(|| avatars::retire_legacy(&root));
 
-    AvatarAnswer { handle, picture }
+        let token = || {
+            let host = &repo.as_ref()?.host;
+            let connected = accounts::load(&app);
+            let account = accounts::for_host(&connected, host)?;
+            forge::keychain::read(&account.host, &account.user)
+                .ok()
+                .flatten()
+        };
+        let cache = avatars::cache_dir(&root);
+
+        // An ordinary address in a GitHub repository, asked without a commit it
+        // authored — a committer in the detail pane. Only the forge can say who
+        // that is, so nothing is sent: a Gravatar miss written now would hide
+        // the forge's answer when a row this person authored asks properly.
+        let on_github = repo.as_ref().is_some_and(|repo| repo.kind == Kind::GitHub);
+        if on_github && commit.is_none() && avatars::source(&email).handle.is_none() {
+            return avatars::Answer {
+                picture: avatars::cached(&cache, &email),
+                ..avatars::Answer::default()
+            };
+        }
+
+        let commit = match (&repo, &commit) {
+            (Some(repo), Some(id)) => Some(avatars::Commit {
+                repo,
+                id,
+                token: &token,
+            }),
+            _ => None,
+        };
+        avatars::picture(&cache, &email, commit.as_ref(), &avatars::Live)
+    })
+    .await
+    .unwrap_or_default();
+
+    AvatarAnswer {
+        handle: answer.handle.or(handle),
+        picture: answer.picture,
+        retry: answer.retry,
+    }
 }
 
 /// Where fetched pictures are kept.

@@ -134,6 +134,7 @@ rather than an audit.
 | [FEAT-077](items/FEAT-077-the-farm-is-worth-watching.md) | The farm is worth watching | Farm (1Q) | Done |
 | [FEAT-079](items/FEAT-079-a-node-that-says-who.md) | A node that says who | Graph | Open |
 | [FEAT-080](items/FEAT-080-follow-omarchy.md) | Follow Omarchy | Settings, all | Done |
+| [FEAT-081](items/FEAT-081-the-graph-resizes-like-a-hand-moves.md) | The graph resizes like a hand moves | Graph | Open |
 
 ## Bugs
 

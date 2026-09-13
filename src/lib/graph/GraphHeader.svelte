@@ -2,6 +2,9 @@
 <script lang="ts">
 	import { columns, type ColumnId } from '$lib/graph/columns.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
+	import { createResizeDrag } from '$lib/ui/resize-drag';
+	import { scale } from '$lib/scale.svelte';
 	import type { MenuItem } from '$lib/ui/menu';
 
 	/**
@@ -52,8 +55,34 @@
 	/** Index of the header being dragged, and the slot it would land in. */
 	let dragging = $state<number | null>(null);
 	let over = $state<number | null>(null);
-	/** The resize in progress: which column, and where it started. */
-	let resizing: { id: ColumnId; startX: number; startWidth: number } | null = null;
+	/** Which column the drag in progress is sizing. */
+	let resizing: ColumnId | null = null;
+	/** The divider holding pointer capture, so teardown can let go of it. */
+	let captured: { handle: HTMLElement; pointerId: number } | null = null;
+
+	/**
+	 * One drag at a time, applied once per frame and saved once at the end
+	 * (FEAT-081). See `resize-drag.ts` for why a move is not a write.
+	 */
+	const drag = createResizeDrag({
+		apply: (width) => {
+			if (resizing) columns.drag(resizing, width);
+		},
+		settle: () => columns.settle()
+	});
+
+	// Unmounting mid-drag — switching repository tab with the button still held
+	// — must not leave a frame pending against a store nobody is looking at, or
+	// a width that was on screen but never saved.
+	$effect(() => () => finishResize());
+
+	/**
+	 * Below this the word does not fit and the header shows the graph's icon
+	 * instead (FEAT-081). "Graph" at the secondary size plus the cell's padding
+	 * is a little over fifty pixels; seventy-two leaves the ellipsis out of it,
+	 * because "Gr…" is a worse name for the column than a picture of one.
+	 */
+	const GRAPH_LABEL_MIN = 72;
 	let filtering = $state(false);
 
 	function widthOf(id: ColumnId): number {
@@ -115,19 +144,35 @@
 		const cell = handle.closest('.header-clip')?.querySelector<HTMLElement>(`[data-column="${id}"]`);
 		const startWidth = cell ? cell.getBoundingClientRect().width : columns.width(id);
 
-		resizing = { id, startX: event.clientX, startWidth };
-		handle.setPointerCapture(event.pointerId);
+		resizing = id;
+		drag.start(event.clientX, startWidth);
+		captured = { handle, pointerId: event.pointerId };
+		try {
+			handle.setPointerCapture(event.pointerId);
+		} catch {
+			// A pointer that is already gone cannot be captured. The drag still
+			// ends on the next `up` that reaches this handle.
+		}
 	}
 
 	function moveResize(event: PointerEvent) {
-		if (!resizing) return;
-		columns.resize(resizing.id, resizing.startWidth + (event.clientX - resizing.startX));
+		if (!drag.active) return;
+		drag.move(event.clientX);
 	}
 
-	function endResize(event: PointerEvent) {
-		if (!resizing) return;
-		(event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+	/**
+	 * Every way a drag stops comes through here: release, cancellation, lost
+	 * capture and unmount. `clientX` is absent for the last three, which keep
+	 * the boundary where the last frame drew it.
+	 */
+	function finishResize(clientX?: number) {
+		drag.end(clientX);
 		resizing = null;
+		const held = captured;
+		captured = null;
+		if (held && held.handle.hasPointerCapture?.(held.pointerId)) {
+			held.handle.releasePointerCapture(held.pointerId);
+		}
 	}
 
 	function drop(to: number) {
@@ -166,8 +211,9 @@
 				title={`Resize ${shown[freezeAt - 1]?.label} — double-click to reset`}
 				onpointerdown={(event) => startResize(event, freezeAt - 1)}
 				onpointermove={moveResize}
-				onpointerup={endResize}
-				onpointercancel={endResize}
+				onpointerup={(event) => finishResize(event.clientX)}
+				onpointercancel={() => finishResize()}
+				onlostpointercapture={() => finishResize()}
 				ondblclick={() => columns.unsize(resizeTarget(freezeAt - 1))}
 			></div>
 		{/if}
@@ -180,14 +226,18 @@
 {#snippet heading(column: (typeof shown)[0], index: number)}
 	{@const target = resizeTarget(index)}
 	{@const sized = shown.find((c) => c.id === target)?.label}
+	{@const compact = column.id === 'graph' && widthOf(column.id) < GRAPH_LABEL_MIN * scale.zoom}
 	<div
 		class="cell"
 		data-column={column.id}
 		class:fills={column.fills}
+		class:compact
 		class:dragging={dragging === index}
 		class:over={over === index && dragging !== index}
 		style={column.fills ? '' : `width: ${widthOf(column.id)}px`}
 		role="columnheader"
+		aria-label={column.label}
+		title={compact ? column.label : undefined}
 		tabindex="-1"
 		draggable="true"
 		ondragstart={() => (dragging = index)}
@@ -204,7 +254,18 @@
 			drop(index);
 		}}
 	>
-		<span class="label note">{column.label}</span>
+		{#if compact}
+			<!--
+				The column is too narrow for its name, so it shows what it is
+				instead (FEAT-081). Only a picture: it does not collapse or expand
+				anything, and the reference never shows it doing so. The header
+				keeps its accessible name, and the divider below is unchanged, so
+				the column can still be dragged back open from here.
+			-->
+			<span class="label icon-label" aria-hidden="true"><Icon name="graph" size="1.2em" /></span>
+		{:else}
+			<span class="label note">{column.label}</span>
+		{/if}
 
 		{#if column.id === 'author'}
 			<!--
@@ -251,8 +312,9 @@
 			title={`Resize ${sized} — double-click to reset`}
 			onpointerdown={(event) => startResize(event, index)}
 			onpointermove={moveResize}
-			onpointerup={endResize}
-			onpointercancel={endResize}
+			onpointerup={(event) => finishResize(event.clientX)}
+			onpointercancel={() => finishResize()}
+			onlostpointercapture={() => finishResize()}
 			ondblclick={() => columns.unsize(target)}
 		></div>
 	</div>
@@ -318,6 +380,16 @@
 		min-width: 0;
 		flex: none;
 		cursor: grab;
+	}
+
+	.cell.compact {
+		justify-content: center;
+		padding: 0;
+	}
+
+	.icon-label {
+		display: inline-flex;
+		color: var(--muted);
 	}
 
 	.cell.fills {

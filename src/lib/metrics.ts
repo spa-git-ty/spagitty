@@ -254,32 +254,27 @@ export function laneSpanFor(width: number, zoom = 1, density: Density = COMFORTA
 }
 
 /**
- * Radius of a commit's node once the lanes are compressed.
+ * Radius of an ordinary commit's node: the density's, and nothing else.
  *
- * The node is what set [`LANE_PITCH`] in the first place — "a lane closer than a
- * node is wide draws lines through faces" — so a compressed pitch has to bring
- * the node down with it or the thing compression was for is undone by the
- * portraits sitting on top of it.
+ * It used to follow the lanes in view — shrinking once a deep enough history
+ * compressed the pitch — on the argument that a lane closer than a node is wide
+ * draws lines through faces. The runtime recording (FEAT-081) showed what that
+ * costs: the lane count is measured over the rows on screen, so scrolling from a
+ * shallow part of history into a deep one turned the same kind of commit from a
+ * portrait into a mark and back. A face that changes size as you scroll past it
+ * reads as a different kind of object, which it is not.
  *
- * It never shrinks below [`MERGE_R`], which is already this graph's smallest
- * meaningful mark, and that floor is where the guarantee ends: **up to 32 lanes
- * a node fits inside its own pitch, and past that it starts covering its
- * neighbour's.** The alternative is a node that keeps shrinking until it cannot
- * be seen, which loses more than the overlap costs — by then the column is
- * dense enough that the node is the only thing locating a commit at all.
+ * So the size is a property of the density a person chose, and only that choice
+ * changes it — never the drag, never the scroll, never the depth. Where lanes
+ * crowd or fold, the portraits overlap and win and the lines run behind them, as
+ * FEAT-046 already required. Merge commits keep [`MERGE_R`]; that difference is
+ * a distinction between kinds of commit, not an inconsistency.
  *
- * Rounded **down**, for two reasons: rounding up could hand back a node wider
- * than the pitch it was derived from, and the radius picks the portrait tile
- * size, so a fractional one would mint a cache entry per scroll.
+ * The painter, the hover targets, the column's reserved width and every bounds
+ * test read this one function, so they cannot disagree about how big a head is.
  */
-export function laneNodeRadius(
-	needed: number,
-	span: number = LANE_SPAN,
-	density: Density = COMFORTABLE
-): number {
-	const pitch = lanePitch(needed, span, density);
-	if (pitch >= density.pitch) return density.node;
-	return Math.max(MERGE_R, Math.min(density.node, Math.floor((pitch - LANE_STROKE) / 2)));
+export function laneNodeRadius(density: Density = COMFORTABLE): number {
+	return density.node;
 }
 
 /**
@@ -457,23 +452,47 @@ export function rowCenterY(index: number, pitch: number = ROW_PITCH): number {
 }
 
 /**
- * Center x of a lane, at the pitch `columns` lanes have to share (FEAT-035).
+ * Center x of a lane — its track, its edges' ends, its node, its stash stub and
+ * its hover target, all of them (FEAT-081, second reopening).
  *
  * `columns` is the **true** number of lanes in view, not a clamped one: that is
  * what decides the pitch, and clamping it before it arrives here is what used to
- * fold the overflow onto the last column.
+ * fold the overflow onto the last column. A lane past `columns` — which a stale
+ * count can briefly produce while the shrink delay holds — lands on the last
+ * column's x.
  *
- * One clamp remains: above [`LANE_INDEX_MAX`] the pitch has hit its floor and
- * there is no room left, so the deepest lanes do stack — the old behaviour, now
- * reached at 48 lanes instead of 12.
+ * **One function for every object on a lane, on purpose.** The previous revision
+ * kept tracks at their resting x, cut them off at a clip line and parked the
+ * nodes against the edge by a second function. Each half was smooth, and
+ * together they were two coordinate systems: the runtime recording showed a
+ * column of faces beside Commit Message whose coloured paths had been clipped
+ * away, which no longer reads as a graph. A node that does not sit on its lane
+ * is the defect, however continuously it moves.
  *
- * There used to be a second, flooring the count at [`LANE_COLUMNS_MIN`] so that
- * three lanes would not spread across the whole column. At the design span it
- * did nothing — [`lanePitch`] caps at [`LANE_PITCH`], so two lanes and five sit
- * at identical x. Against a *dragged* span it compressed a two-lane repository
- * as though five lanes had to fit, and the squeeze began long before any two
- * lanes were touching (FEAT-046). The floor belongs to the column's width,
- * where [`laneColumns`] still applies it, and not to where the lanes go.
+ * **The fold, as a clamp.** The pitch is shared out across the density's
+ * *resting* span, so a lane's natural offset does not depend on the drag. The
+ * dragged `span` then caps that offset:
+ *
+ * - a lane that still fits does not move at all;
+ * - the boundary reaching a lane carries that whole lane — track, crossings,
+ *   node — onto the boundary, a pixel for a pixel, with no threshold;
+ * - deeper lanes join it one by one as the column narrows, and at a span of 0
+ *   every lane shares lane 0's x: the graph has merged into one visible lane,
+ *   which is what FEAT-046 described and what the reference does;
+ * - widening releases them in the reverse order, to exactly where they were.
+ *
+ * Logical lane and colour identity are untouched — only the drawn x folds.
+ *
+ * Two formulas this must not become again. Recomputing the pitch from the
+ * dragged span (the first FEAT-081 pass) pulls *every* lane toward lane 0 at
+ * once, the squeeze the review measured. And choosing a displayed lane count
+ * with `floor(span / pitch)` puts a step in the geometry, which is where the
+ * 14-pixel jumps came from.
+ *
+ * `span` defaults to [`LANE_SPAN`], which caps nothing at either density: a
+ * lane's natural offset never exceeds its density's resting span, and that is
+ * never wider than `LANE_SPAN`. A column nobody has dragged has a span equal to
+ * its lanes' own extent, so it caps nothing either.
  *
  * `zoom` scales the horizontal geometry the same way `applyMetrics` scales the
  * CSS widths, so the canvas and the reserved column keep agreeing.
@@ -485,19 +504,27 @@ export function laneX(
 	span: number = LANE_SPAN,
 	density: Density = COMFORTABLE
 ): number {
-	const pitch = lanePitch(columns, span, density);
-
-	// How many lanes land on a distinct x. Above the floor the pitch was chosen
-	// so that all of them do, by construction; at the floor it is the span that
-	// decides. Stated as the two cases rather than re-derived from the pitch,
-	// because `floor(286 / 9.2258)` is 30 rather than 31 and the last lane would
-	// silently fall a whole column short.
-	const drawable =
-		pitch > LANE_PITCH_MIN ? columns : Math.floor(span / LANE_PITCH_MIN) + 1;
-
-	const index = Math.min(lane, Math.min(columns, drawable) - 1);
-	return (LANE_X0 + Math.max(0, index) * pitch) * zoom;
+	// A deep history still compresses — against the span the density was sized
+	// for, which does not move under a drag. That automatic layout is a property
+	// of the history, not of the hand on the divider.
+	//
+	// Past the pitch floor even that span runs out and the deepest lanes stack on
+	// its end — against the span rather than on the last whole lane before it,
+	// which would put a step in the geometry where none is needed.
+	const resting = laneSpanOf(density);
+	const pitch = lanePitch(columns, resting, density);
+	const index = Math.max(0, Math.min(lane, columns - 1));
+	const natural = Math.min(index * pitch, resting);
+	return (LANE_X0 + Math.min(natural, Math.max(0, span))) * zoom;
 }
+
+/**
+ * The daylight ring painted around a portrait, in CSS pixels at 100%.
+ *
+ * Here rather than inside the painter so that anything measuring how far a head
+ * reaches — a bounds test, a hover target — agrees with what is painted.
+ */
+export const NODE_HALO = 2;
 
 /** CSS variable name of a lane's color. Lane colors cycle. */
 export function laneColorVar(colorIndex: number): string {
@@ -557,6 +584,9 @@ export function applyMetrics(
 		'requests-detail-w': REQUESTS_DETAIL_W,
 		'stash-entries-w': STASH_ENTRIES_W,
 		'farm-log-h': FARM_LOG_H,
+		// A person's mark beside a commit is the graph node's own diameter, so
+		// the Author column, the commit detail and the canvas agree (FEAT-081).
+		'avatar-d': NODE_R * 2,
 		...RADII
 	};
 	for (const [name, value] of Object.entries(px)) {

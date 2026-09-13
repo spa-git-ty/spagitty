@@ -63,6 +63,8 @@ export interface ColumnStore<Id extends string> {
 	toggle(id: Id): void;
 	reorder(from: number, to: number): void;
 	resize(id: Id, next: number): void;
+	drag(id: Id, next: number): void;
+	settle(): void;
 	unsize(id: Id): void;
 	reset(): void;
 	open(path: string | null): void;
@@ -155,6 +157,27 @@ export function createColumns<Id extends string>(options: ColumnsOptions<Id>): C
 		});
 	}
 
+	/**
+	 * Set a width for the length of a drag, without writing it down (FEAT-081).
+	 *
+	 * `resize` used to be what a divider called on every pointer move, and
+	 * every call was a synchronous `localStorage.setItem` of the whole layout
+	 * — sixty serialisations a second on the one frame budget the drag has.
+	 * The width is the same clamped, rounded number either way; only when it
+	 * is saved changed. The drag calls this as it moves and `settle` once
+	 * when it lets go, so a person who drags across the screen and back
+	 * writes one layout rather than a few hundred.
+	 */
+	function drag(id: Id, next: number): void {
+		const column = definition(id);
+		const width = Math.max(column.min, Math.round(next));
+		// Assigning an equal width would still notify every reader of `widths`,
+		// and a pointer that moved less than half a pixel should not repaint the
+		// table.
+		if (widths[id] === width) return;
+		widths = { ...widths, [id]: width };
+	}
+
 	return {
 		/** The shown columns, in draw order, with their current widths. */
 		get shown(): Column<Id>[] {
@@ -220,8 +243,14 @@ export function createColumns<Id extends string>(options: ColumnsOptions<Id>): C
 		 * sizing themselves through `unsize`.
 		 */
 		resize(id: Id, next: number): void {
-			const column = definition(id);
-			widths = { ...widths, [id]: Math.max(column.min, Math.round(next)) };
+			drag(id, next);
+			persist();
+		},
+
+		drag,
+
+		/** Write the layout as it now stands. What a drag does when it ends. */
+		settle(): void {
 			persist();
 		},
 

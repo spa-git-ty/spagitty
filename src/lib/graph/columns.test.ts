@@ -103,7 +103,7 @@ describe('the graph column', () => {
 	it('clamps to a width lanes can still be drawn in', () => {
 		columns.reset();
 		columns.resize('graph', 5);
-		expect(columns.width('graph')).toBe(48);
+		expect(columns.width('graph')).toBe(40);
 	});
 
 	it('goes back to sizing itself on unsize', () => {
@@ -111,6 +111,55 @@ describe('the graph column', () => {
 		columns.resize('graph', 220);
 		columns.unsize('graph');
 		expect(columns.width('graph')).toBe(0);
+	});
+
+	/**
+	 * FEAT-081. A drag is sixty width changes a second; writing the layout on
+	 * each of them was a synchronous `localStorage` write inside the frame
+	 * budget. The width moves live and is saved once, when the drag settles.
+	 */
+	it('moves live while dragged and writes the layout only when it settles', () => {
+		const key = `/repo/drag-${Math.random()}`;
+		columns.open(key);
+		const stored = () => localStorage.getItem(`spagitty.graph.columns:${key}`);
+		expect(stored()).toBeNull();
+
+		for (let width = 300; width >= 60; width -= 7) columns.drag('graph', width);
+		expect(columns.width('graph')).toBe(62);
+		expect(stored()).toBeNull();
+
+		columns.settle();
+		expect(JSON.parse(stored() ?? '{}').widths.graph).toBe(62);
+	});
+
+	it('clamps and rounds a live drag exactly as a resize does', () => {
+		columns.drag('graph', 5);
+		expect(columns.width('graph')).toBe(40);
+		columns.drag('graph', 120.6);
+		expect(columns.width('graph')).toBe(121);
+	});
+
+	it('does not notify readers for a drag that lands on the same width', () => {
+		columns.drag('graph', 200);
+		const before = columns.shown;
+		columns.drag('graph', 200.2);
+		// Same array identity would be too strong for a getter; the width is
+		// what readers see, and it did not change.
+		expect(columns.width('graph')).toBe(200);
+		expect(columns.shown).toEqual(before);
+	});
+
+	it('still saves at once for every other column action', () => {
+		const key = `/repo/other-${Math.random()}`;
+		columns.open(key);
+		const stored = () => JSON.parse(localStorage.getItem(`spagitty.graph.columns:${key}`) ?? '{}');
+
+		columns.resize('graph', 180);
+		expect(stored().widths.graph).toBe(180);
+		columns.unsize('graph');
+		expect(stored().widths.graph).toBeUndefined();
+		columns.toggle('sha');
+		expect(stored().order).toContain('sha');
 	});
 
 	it('is still required, so it cannot be hidden away', () => {
@@ -217,8 +266,14 @@ describe('BUG-009b — a divider sizes the column on its left', () => {
 
 	/** The gap in the report came from inverting; nothing may invert again. */
 	it('never inverts the drag', () => {
-		expect(header).toMatch(/resizing\.startWidth \+ \(event\.clientX - resizing\.startX\)/);
+		// The arithmetic moved into the drag's own lifecycle (FEAT-081); the
+		// header only hands it the pointer and the measured width.
+		const lifecycle = readFileSync('src/lib/ui/resize-drag.ts', 'utf8');
+		expect(lifecycle).toMatch(/startWidth \+ \(clientX - startX\)/);
+		expect(header).toMatch(/drag\.start\(event\.clientX, startWidth\)/);
+		expect(header).toMatch(/drag\.move\(event\.clientX\)/);
 		expect(header).not.toMatch(/invert/);
+		expect(lifecycle).not.toMatch(/invert/);
 	});
 
 	it('measures the column it is about to size, by id', () => {

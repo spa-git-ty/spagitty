@@ -54,8 +54,28 @@
 	 * counts changes to the palette's *values*, which is the question a cache
 	 * actually has.
 	 */
-	function resolveColors(el: HTMLElement): { lanes: string[]; nodeRing: string } {
-		void theme.revision;
+	type Resolved = { lanes: string[]; nodeRing: string };
+
+	/**
+	 * The last resolution, and the palette revision it was read at (FEAT-081).
+	 *
+	 * `getComputedStyle` forces style to be current, and the draw effect runs
+	 * on every frame of a column drag — so resolving there asked the browser to
+	 * recalculate style once per frame for six values that had not changed.
+	 * The revision is exactly the question "could they have changed", which is
+	 * why it is the key rather than a timer or a mutation observer.
+	 */
+	let resolved: { revision: number; colors: Resolved } | null = null;
+
+	function colorsFor(el: HTMLElement): Resolved {
+		const revision = theme.revision;
+		if (resolved === null || resolved.revision !== revision) {
+			resolved = { revision, colors: resolveColors(el) };
+		}
+		return resolved.colors;
+	}
+
+	function resolveColors(el: HTMLElement): Resolved {
 		const styles = getComputedStyle(el);
 		const lanes: string[] = [];
 		for (let i = 0; i < LANE_COLOR_COUNT; i++) {
@@ -119,7 +139,7 @@
 
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-		const { lanes, nodeRing } = resolveColors(el);
+		const { lanes, nodeRing } = colorsFor(el);
 		drawLanes({
 			ctx,
 			width,

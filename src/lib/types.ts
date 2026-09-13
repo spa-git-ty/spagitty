@@ -1097,6 +1097,11 @@ export interface AvatarAnswer {
 	handle: string | null;
 	/** A `data:` URL, ready to draw. */
 	picture: string | null;
+	/**
+	 * No answer yet, for a reason that may pass — offline, rate limited. The
+	 * store asks again later instead of settling for the session (FEAT-081).
+	 */
+	retry: boolean;
 }
 
 /** Mirrors `settings::Personality`. */

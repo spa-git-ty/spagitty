@@ -17,9 +17,9 @@ import {
 	LANE_SPAN,
 	LANE_STROKE,
 	MERGE_R,
+	NODE_HALO,
 	ROW_PITCH,
 	laneNodeRadius,
-	laneSpanOf,
 	laneX,
 	rowCenterY,
 	type Density
@@ -51,10 +51,11 @@ export interface LaneDrawOptions {
 	/** Lane columns the canvas is currently sized for. */
 	columns: number;
 	/**
-	 * Horizontal room the lanes share.
+	 * Horizontal room the lanes have inside the column as it is now.
 	 *
 	 * `LANE_SPAN` until the graph column is dragged; after that it is whatever
-	 * the chosen width leaves, and the lanes compress into it (FEAT-039).
+	 * the chosen width leaves. Lanes that fit do not move; lanes the boundary
+	 * has reached fold onto it, track and node together (FEAT-081). See `laneX`.
 	 */
 	span?: number;
 	/** Row height in effect. `scale.pitch`, not the design constant. */
@@ -144,6 +145,10 @@ export function drawLanes(options: LaneDrawOptions): void {
 	// tighter rather than keeping a corner too big for the space.
 	const corner = (ELBOW_RADIUS / ROW_PITCH) * pitch;
 
+	// No clip (FEAT-081). A lane that no longer fits is folded onto the boundary
+	// by `laneX`, so its track is still drawn — under the same x as its node —
+	// and there is nothing past the column's edge to cut off. A clip here is what
+	// once left nodes standing beside the edge without the lines they belong to.
 	for (let i = first; i <= last + 1; i++) {
 		const commit = row(i);
 		if (!commit) continue;
@@ -190,20 +195,14 @@ export function drawLanes(options: LaneDrawOptions): void {
 	}
 	ctx.globalAlpha = 1;
 
-	// The node follows the *depth*, not the drag (FEAT-046).
+	// The node follows the density and nothing else (FEAT-046, FEAT-081).
 	//
-	// Measured against the design span rather than the one in effect, so a
-	// column someone dragged narrower keeps full-size portraits and the lanes
-	// fold behind them — which is what the reference does, and what dragging a
-	// column is asking for: less of the window for the graph, not smaller
-	// faces. A history deeper than the design span can hold still shrinks, and
-	// there the shrink is what keeps the column readable rather than something
-	// anyone chose.
-	//
-	// This reverses FEAT-035's decision in the case the user caused. Its
-	// argument — that portraits at full size redraw over the compression they
-	// were meant to make room for — is true, and is now the intended picture.
-	const radius = laneNodeRadius(columns, laneSpanOf(density), density) * zoom;
+	// Not the drag: dragging a column narrower asks for less of the window for
+	// the graph, not for smaller faces, so the lanes fold behind full-size
+	// portraits. And no longer the depth either: depth is measured over the rows
+	// on screen, so a radius that followed it changed size as history scrolled
+	// past. Where folded lanes put heads on top of each other the heads win.
+	const radius = laneNodeRadius(density) * zoom;
 	const ratio = devicePixelRatio();
 	const tileSize = Math.max(8, Math.round(radius * 2 * ratio));
 
@@ -211,6 +210,8 @@ export function drawLanes(options: LaneDrawOptions): void {
 		const commit = row(i);
 		if (!commit) continue;
 
+		// The same x its edges were drawn at: a node is never somewhere its lane
+		// is not.
 		const x = laneX(commit.lane, columns, zoom, span, density);
 		const y = rowCenterY(i, pitch) - scrollTop;
 		if (y < -radius || y > height + radius) continue;
@@ -303,7 +304,7 @@ function drawHead(
 	// vertically adjacent heads.
 	ctx.fillStyle = ring;
 	ctx.beginPath();
-	ctx.arc(x, y, radius + 2, 0, TAU);
+	ctx.arc(x, y, radius + NODE_HALO, 0, TAU);
 	ctx.fill();
 
 	if (tile) {
@@ -365,6 +366,7 @@ function drawGhost(
 	for (const index of path) {
 		const commit = row(index);
 		if (!commit) continue;
+		// The folded x, like every other thing drawn on a lane.
 		const x = laneX(commit.lane, columns, zoom, span, density);
 		const y = rowCenterY(index, pitch) - scrollTop;
 		if (started) ctx.lineTo(x, y);

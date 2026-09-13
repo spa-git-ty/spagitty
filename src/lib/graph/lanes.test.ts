@@ -11,6 +11,7 @@ import {
 	MERGE_R,
 	NODE_R,
 	ROW_PITCH,
+	NODE_HALO,
 	laneNodeRadius,
 	laneSpanFor,
 	laneX,
@@ -134,6 +135,8 @@ function fakeContext() {
 		save: record('save'),
 		restore: record('restore'),
 		clip: record('clip'),
+		// Recorded so a test can prove the lanes are never clipped (FEAT-081).
+		rect: record('rect'),
 		drawImage: vi.fn(),
 		lineWidth: 0,
 		lineCap: '',
@@ -189,7 +192,7 @@ describe('the face on a node', () => {
 	it('draws the picture it is handed, at the node', () => {
 		const { ctx } = draw([row(0)], 0, 0, { picture: () => face });
 
-		const radius = laneNodeRadius(LANE_COLUMNS_MIN);
+		const radius = laneNodeRadius();
 		expect(ctx.drawImage).toHaveBeenCalledWith(
 			face,
 			laneX(0, LANE_COLUMNS_MIN) - radius,
@@ -402,68 +405,100 @@ describe('squeezing the column keeps the portraits', () => {
 		}
 	});
 
-	it('still shrinks the node when the history itself is deeper than the span', () => {
-		// Not something anyone asked for: past the design span the shrink is
-		// what keeps the column readable at all.
-		const deep = Array.from({ length: 30 }, (_, i) => row(i, i));
-		const drawn = radii(deep, 30, 331);
-
-		expect(drawn).not.toContain(NODE_R);
-		expect(drawn).toContain(laneNodeRadius(30));
-	});
-
-	it('shrinks by depth alone, so the drag cannot change it', () => {
-		// Fourteen lanes: past the cap, so the node is smaller than NODE_R, but
-		// well clear of the MERGE_R floor where every width would agree anyway.
-		const deep = Array.from({ length: 14 }, (_, i) => row(i, i));
-		expect(radii(deep, 14, 200)).toEqual(radii(deep, 14, 331));
-		expect(radii(deep, 14, 331)).toContain(laneNodeRadius(14));
+	it('keeps the full portrait however deep the history in view is', () => {
+		// FEAT-081: depth is counted over the rows on screen, so a radius that
+		// followed it changed size as history scrolled past. Fourteen lanes and
+		// thirty draw the same head as three; only merges are smaller.
+		for (const lanes of [3, 14, 30]) {
+			const deep = Array.from({ length: lanes }, (_, i) => row(i, i));
+			for (const width of [331, 200, 60, 40]) {
+				expect(radii(deep, lanes, width), `${lanes} lanes, ${width}px`).toEqual([NODE_R + NODE_HALO, NODE_R]);
+			}
+		}
 	});
 
 	it('keeps the node inside the column it was given', () => {
-		// BUG-003's invariant, now with a node that does not follow the drag:
-		// `laneSpanFor` reserves a whole NODE_R past the last lane, so a
-		// full-size portrait on the deepest lane still lands inside the width.
-		for (const width of [60, 90, 150, 220, 331]) {
+		// BUG-003's invariant, with the lanes folding onto the edge (FEAT-081).
+		for (const width of [40, 60, 90, 150, 220, 331]) {
 			const span = laneSpanFor(width);
 			for (const lanes of [1, 2, 3, 5, 8, LANE_COLUMNS_MAX]) {
-				const deepest = laneX(lanes - 1, lanes, 1, span) + laneNodeRadius(lanes);
+				const deepest = laneX(lanes - 1, lanes, 1, span) + laneNodeRadius() + NODE_HALO;
 				expect(deepest, `${lanes} lanes in a ${width}px column`).toBeLessThanOrEqual(width);
 			}
 		}
 	});
 
-	it('folds the lanes behind the faces rather than moving the faces', () => {
-		// The lanes still compress into a narrow column — that part of FEAT-039
-		// is untouched — which at this width puts three lanes closer together
-		// than one portrait is wide.
-		const narrow = laneSpanFor(80);
-		const gap = laneX(1, 3, 1, narrow) - laneX(0, 3, 1, narrow);
+	/** Draws three lanes' worth of history — a node on each, a track through each. */
+	function folded(width: number) {
+		const rows = [
+			row(0, 0),
+			row(1, 1, [
+				{ from: 0, to: 0, color: 0 },
+				{ from: 1, to: 1, color: 1 },
+				{ from: 0, to: 2, color: 2 }
+			]),
+			row(2, 2, [
+				{ from: 0, to: 0, color: 0 },
+				{ from: 1, to: 1, color: 1 },
+				{ from: 2, to: 2, color: 2 }
+			])
+		];
+		const { ctx, calls } = fakeContext();
+		drawLanes({
+			ctx: ctx as unknown as CanvasRenderingContext2D,
+			width,
+			height: 400,
+			scrollTop: 0,
+			first: 0,
+			last: 2,
+			row: lookup(rows),
+			colors: ['red', 'green', 'blue'],
+			nodeRing: '#101010',
+			columns: 3,
+			span: laneSpanFor(width)
+		});
+		const strokeXs = new Set(
+			calls.filter((c) => c.op === 'moveTo' || c.op === 'lineTo').map((c) => c.args[0])
+		);
+		const nodeXs = new Set(calls.filter((c) => c.op === 'arc').map((c) => c.args[0]));
+		return { calls, strokeXs, nodeXs };
+	}
 
-		expect(gap).toBeLessThan(2 * NODE_R);
-		expect(gap).toBeGreaterThan(0);
-		expect(laneX(2, 3, 1, narrow)).toBeLessThanOrEqual(LANE_X0 + narrow);
+	it('draws a folded lane’s track and node at the same x — no node without its lane', () => {
+		// 80px leaves 35px of span: lane 1 (26) fits, lane 2 (52) folds onto 51.
+		for (const width of [331, 120, 80, 60, 40]) {
+			const { calls, strokeXs, nodeXs } = folded(width);
+			for (const x of nodeXs) {
+				expect(strokeXs.has(x), `a node at ${x} has no lane under it at ${width}px`).toBe(true);
+			}
+			// Nothing is clipped away: the fold is the whole mechanism.
+			// Nothing clips the lanes: the fold is the whole mechanism. (A face is
+			// clipped into its own circle, which only happens once nodes are drawn.)
+			const firstNode = calls.findIndex((c) => c.op === 'arc');
+			expect(calls.some((c) => c.op === 'rect')).toBe(false);
+			expect(calls.slice(0, firstNode).some((c) => c.op === 'clip')).toBe(false);
+		}
+	});
+
+	it('leaves a fitting lane still and carries the reached one onto the edge', () => {
+		const { strokeXs, nodeXs } = folded(80);
+		const edge = LANE_X0 + laneSpanFor(80);
+		expect([...nodeXs].sort((p, q) => p - q)).toEqual([LANE_X0, LANE_X0 + LANE_PITCH, edge]);
+		expect(strokeXs.has(LANE_X0 + 2 * LANE_PITCH)).toBe(false);
+	});
+
+	it('merges the whole graph into lane 0 at the minimum width', () => {
+		const { strokeXs, nodeXs } = folded(40);
+		expect([...nodeXs]).toEqual([LANE_X0]);
+		expect([...strokeXs]).toEqual([LANE_X0]);
 	});
 
 	it('does not squeeze a two-lane repository as though five lanes had to fit', () => {
-		// The phantom floor. Room for exactly two lanes at the design pitch has
-		// to lay two lanes out at the design pitch — while five lanes in the
-		// same room still compress, because five lanes in it genuinely touch.
-		const span = LANE_PITCH;
-
-		expect(laneX(1, 2, 1, span) - laneX(0, 2, 1, span)).toBe(LANE_PITCH);
-		expect(laneX(1, 5, 1, span) - laneX(0, 5, 1, span)).toBeLessThan(LANE_PITCH);
+		// The phantom floor (FEAT-046), and now no squeeze at all: lanes that fit
+		// keep the design pitch at every lane count up to the cap.
+		expect(laneX(1, 2) - laneX(0, 2)).toBe(LANE_PITCH);
+		expect(laneX(1, 5) - laneX(0, 5)).toBe(LANE_PITCH);
 		expect(radii([row(0, 0), row(1, 1)], 2, 80)).toContain(NODE_R);
-	});
-
-	it('starts compressing exactly where the lanes actually meet', () => {
-		// One pixel narrower than the lanes need, and the pitch gives.
-		const needed = 4;
-		const roomy = (needed - 1) * LANE_PITCH;
-		const tight = roomy - 1;
-
-		expect(laneX(1, needed, 1, roomy) - laneX(0, needed, 1, roomy)).toBe(LANE_PITCH);
-		expect(laneX(1, needed, 1, tight) - laneX(0, needed, 1, tight)).toBeLessThan(LANE_PITCH);
 	});
 
 	it('leaves the design span drawing what it always drew', () => {

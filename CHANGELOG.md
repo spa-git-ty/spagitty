@@ -16,6 +16,14 @@ stays backward-compatible.
 
 ### Added
 
+- **Hover a commit subject for its whole message.** After a short rest the
+  graph shows the full commit message — body, paragraph breaks and trailers —
+  without selecting the commit or changing the detail panel. Hovering a commit
+  that carries no branch label also names the branch it belongs to, faintly, in
+  the Branch/Tag column.
+- At its narrowest the Graph column's header shows the graph icon instead of a
+  clipped word.
+
 - **Follow Omarchy.** On a machine running Omarchy, Settings → Appearance
   offers to take Spagitty's colours from the desktop's own theme and to keep
   following it: change the desktop theme and the window repaints, graph
@@ -38,6 +46,22 @@ stays backward-compatible.
 
 ### Fixed
 
+- **Dragging the Graph column narrower folds the graph instead of squeezing
+  it.** The lanes used to crowd towards the left as the column narrowed, and at
+  certain widths a whole lane snapped sideways. Now the lanes that fit stay
+  exactly where they are, and each lane the Commit Message column reaches folds
+  onto its edge — line and commits together — until, at the narrowest, the
+  whole graph is one lane. Widening puts every lane back. The drag also updates
+  once per frame and saves the width once, when you let go, instead of on every
+  mouse movement.
+- **Author pictures are the same size everywhere, and show up for more
+  people.** Commit circles no longer shrink and grow as you scroll between
+  simple and busy parts of history, and the author pictures in the Author
+  column and the commit detail are the same size as the graph's. For a
+  repository on GitHub, an author whose email has no Gravatar now gets their
+  GitHub picture, found from one of their commits. A dropped connection or a
+  rate limit no longer hides pictures for three months; Spagitty tries again
+  later. Pictures cached by earlier versions are fetched once more.
 - Spagitty opens in the theme you chose, on the first frame. It used to paint
   the default light palette and then change its mind once the application had
   loaded — a flash on any machine, and several frames on Linux, where the

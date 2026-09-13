@@ -50,7 +50,9 @@
 			// FEAT-079. The label says what is gained; the hover says what is
 			// sent, because that is the part somebody turning this off is
 			// deciding about.
-			what: 'Fetches each author\'s picture once, from the address in their commits. Off draws the generated face instead and empties the cache.',
+			// FEAT-081 widened what is sent: for a repository on GitHub, one of
+			// each author's commits is looked up there to find their account.
+			what: 'Fetches each author\'s picture once, from the address in their commits — or, for a repository on GitHub, from the account GitHub has for one of their commits. Off draws the generated face instead and empties the cache.',
 			pending: null
 		},
 		{

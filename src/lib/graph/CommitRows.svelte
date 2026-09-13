@@ -4,8 +4,10 @@
 	import LaneCanvas from '$lib/graph/LaneCanvas.svelte';
 	import GraphHeader from '$lib/graph/GraphHeader.svelte';
 	import { lanesNeeded, visibleRange } from '$lib/graph/lanes';
-	import { byAuthor } from '$lib/graph/highlight';
-	import { portraitBackground, seedOf } from '$lib/graph/portrait';
+	import { branchOf, byAuthor } from '$lib/graph/highlight';
+	import { createPeek } from '$lib/graph/peek.svelte';
+	import * as api from '$lib/api';
+	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
 	import { columns } from '$lib/graph/columns.svelte';
 	import { freezeAt, frozenLeft } from '$lib/graph/freeze';
 	import { overlay } from '$lib/graph/overlay.svelte';
@@ -19,7 +21,6 @@
 		laneColumnWidth,
 		laneNodeRadius,
 		laneSpanFor,
-		laneSpanOf,
 		laneX
 	} from '$lib/metrics';
 	import { density } from './density.svelte';
@@ -141,9 +142,12 @@
 	 * The graph column's width, and the room the lanes get inside it.
 	 *
 	 * Until someone drags it the column sizes itself to the lanes on screen, and
-	 * `laneColumnWidth` is that size. Once dragged, the chosen width wins and the
-	 * lanes compress into it (FEAT-039) — which is the same machinery FEAT-035
-	 * built for a history deeper than the cap, now reachable by hand.
+	 * `laneColumnWidth` is that size. Once dragged, the chosen width wins
+	 * (FEAT-039) — but it no longer squeezes the lanes. Lanes that fit keep their
+	 * resting x, and the ones the edge reaches fold onto it, track and node
+	 * together, until at the narrowest the whole graph shares lane 0 (FEAT-081).
+	 * `laneSpan` is what tells the painter and the hover targets where that edge
+	 * is.
 	 */
 	const laneWidth = $derived(
 		columns.width('graph') || laneColumnWidth(laneCount, scale.zoom, density.current)
@@ -276,6 +280,60 @@
 		return byAuthor(columns.author, (i) => graph.row(i), range.first, range.last + 1);
 	});
 
+	// --- Hover (FEAT-081) -------------------------------------------------
+
+	/**
+	 * The row under the pointer, for the one thing hovering says in the gutter.
+	 *
+	 * `:hover` already tints the row; this is state rather than CSS only because
+	 * the contextual branch name has to be *computed* for the hovered row, and
+	 * computing it for every visible row to reveal one would read the history
+	 * forty times on each scroll.
+	 */
+	let hovered = $state<number | null>(null);
+
+	/**
+	 * The branch a hovered bare commit is on, drawn faintly in its gutter.
+	 *
+	 * Not a chip. A chip is a ref that exists *at this commit*, and the gutter's
+	 * chips are what a person reads to find where branches are; a hover that
+	 * put a chip-shaped thing there would lie about that for as long as the
+	 * pointer rested. So it is plain, muted text — a caption, not a label — on
+	 * the hovered row only, and nothing else on screen changes. See `branchOf`
+	 * for how the branch is chosen.
+	 */
+	const contextBranch = $derived.by(() => {
+		if (hovered === null || !columns.isShown('refs')) return null;
+		void graph.version;
+		return branchOf(hovered, (i) => graph.row(i));
+	});
+
+	/** The full message, after the pointer rests on a subject. See `peek.svelte.ts`. */
+	const peek = createPeek({ lookup: api.commitDetail, loaded: () => graph.detail });
+
+	$effect(() => () => peek.leave());
+
+	/**
+	 * Where the tooltip goes: below-right of the pointer, kept on screen.
+	 *
+	 * Measured after it renders, because a message's length decides its size
+	 * and there is no knowing that from here without laying it out.
+	 */
+	let peekWidth = $state(0);
+	let peekHeight = $state(0);
+	const peekPosition = $derived.by(() => {
+		const showing = peek.current;
+		if (!showing || typeof window === 'undefined') return null;
+		const gap = 14;
+		const left = Math.max(8, Math.min(showing.x + gap, window.innerWidth - peekWidth - 8));
+		const below = showing.y + gap + 6;
+		const top =
+			below + peekHeight + 8 > window.innerHeight
+				? Math.max(8, showing.y - gap - peekHeight)
+				: below;
+		return { left, top };
+	});
+
 	// --- Who a node belongs to (FEAT-079) --------------------------------
 
 	/**
@@ -296,24 +354,24 @@
 
 		for (let i = range.first; i <= range.last; i++) {
 			const row = graph.row(i);
-			if (row) avatars.lookup(row.authorEmail ?? '', row.authorName);
+			if (row) avatars.lookup(row.authorEmail ?? '', row.authorName, row.id);
 		}
 	});
 
 	/**
 	 * How far into the lane column a row's node sits, and how wide it is.
 	 *
-	 * The same three functions the canvas draws with, so the hover target and
+	 * The same two functions the canvas draws with, so the hover target and
 	 * the circle it is over cannot land in different places — a target computed
 	 * a second way would drift the first time a column was dragged.
 	 */
 	function nodeAt(row: GraphRow): { x: number; r: number } {
 		return {
 			x: laneX(row.lane, laneCount, scale.zoom, laneSpan, density.current),
-			// The node's size follows the *history's* depth rather than the
-			// dragged width (FEAT-039), so it is measured against the density's
-			// own resting span rather than against the column on screen.
-			r: laneNodeRadius(laneCount, laneSpanOf(density.current), density.current) * scale.zoom
+			// The node's size is the density's alone — not the drag, not the
+			// depth in view — so a hover target cannot change size as history
+			// scrolls past it any more than the circle under it can (FEAT-081).
+			r: laneNodeRadius(density.current) * scale.zoom
 		};
 	}
 
@@ -703,6 +761,9 @@
 			bind:clientHeight={viewportHeight}
 			bind:clientWidth={scrollerWidth}
 			onscroll={(event) => {
+				// Scrolling moves a different row under a pointer that has not
+				// moved, so whatever the tooltip was describing has gone.
+				peek.leave();
 				scrollTop = event.currentTarget.scrollTop;
 				scrollLeft = event.currentTarget.scrollLeft;
 				measure(event.currentTarget);
@@ -749,6 +810,10 @@
 						onclick={(event) => click(event, row.index)}
 						ondblclick={() => onopen?.(row.id)}
 						oncontextmenu={(event) => openMenu(event, 'Commit', commitMenu(row))}
+						onpointerenter={() => (hovered = row.index)}
+						onpointerleave={() => {
+							if (hovered === row.index) hovered = null;
+						}}
 					>
 						{#each shown as column, index (column.id)}
 							{#if column.id === 'refs'}
@@ -787,6 +852,11 @@
 									{#if extra > 0}
 										<span class="more" title={row.refs.map((r) => r.name).join(', ')}>
 											+{extra}
+										</span>
+									{/if}
+									{#if row.refs.length === 0 && hovered === row.index && contextBranch}
+										<span class="context-branch" title={`On ${contextBranch}`}>
+											{contextBranch}
 										</span>
 									{/if}
 									{#if row.refs.length > 0}
@@ -832,9 +902,15 @@
 									{/if}
 								</div>
 							{:else if column.id === 'message'}
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<div
 									class="cell message frozen"
 									style={freezeStyle(index)}
+									onpointerenter={(event) =>
+										peek.enter(row.index, row.id, event.clientX, event.clientY)}
+									onpointermove={(event) => peek.move(event.clientX, event.clientY)}
+									onpointerleave={() => peek.leave()}
+									onpointerdown={() => peek.leave()}
 								>
 									{#if row.signed}
 										<!--
@@ -854,11 +930,15 @@
 											aria-label="signed">S</span
 										>
 									{/if}
-									<span class="summary" title={row.summary}>{row.summary}</span>
+									<!--
+										No `title`: it repeated the subject, which is already on
+										screen, and would stack a native tooltip on the full
+										message (FEAT-081).
+									-->
+									<span class="summary">{row.summary}</span>
 									{#if time}<span class="mono muted when">{time}</span>{/if}
 								</div>
 							{:else if column.id === 'author'}
-								{@const face = avatars.drawable(row.authorEmail, row.authorName)}
 								<div
 									class="cell text author frozen"
 									style="width: {column.width}px; {freezeStyle(index)}"
@@ -870,15 +950,12 @@
 										picture when one has arrived, and initials on a
 										stable colour until then (FEAT-079).
 									-->
-									<span
-										class="avatar"
-										class:photo={face !== null}
-										style="background: {face
-											? `url(${face.src}) center / cover no-repeat`
-											: portraitBackground(seedOf(row.authorEmail, row.authorName))}"
+									<AuthorAvatar
+										email={row.authorEmail}
+										name={row.authorName}
+										letters={row.initials}
 										title={describeAuthor(row)}
-										aria-hidden="true"
-									>{#if !face}<span class="letters">{row.initials}</span>{/if}</span>
+									/>
 									<span class="ellipsis" title={describeAuthor(row)}>{row.authorName}</span>
 								</div>
 							{:else if column.id === 'time'}
@@ -958,6 +1035,22 @@
 		<div class="edge right" class:showing={moreRight} aria-hidden="true"></div>
 	</div>
 </div>
+
+{#if peek.current && peekPosition}
+	<!--
+		Fixed to the viewport rather than placed inside the scroller, so the frozen
+		pane, the edge shadows and the detail panel cannot clip it. It takes no
+		pointer events: it describes the row under the pointer and must never
+		become the thing under the pointer.
+	-->
+	<div
+		class="peek"
+		role="tooltip"
+		bind:clientWidth={peekWidth}
+		bind:clientHeight={peekHeight}
+		style="left: {peekPosition.left}px; top: {peekPosition.top}px"
+	>{peek.current.text}</div>
+{/if}
 
 {#if menu}
 	<Menu
@@ -1265,6 +1358,42 @@
 		transform: translateY(-50%);
 	}
 
+	/*
+	 * The hovered bare commit's branch (FEAT-081). Text at the chip's size and
+	 * nothing else — no border, no fill, no lead — and muted, so it cannot be
+	 * mistaken for a ref that is actually at this commit.
+	 */
+	.context-branch {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: var(--fs-secondary);
+		color: var(--muted);
+		opacity: 0.8;
+		pointer-events: none;
+	}
+
+	.peek {
+		position: fixed;
+		z-index: 60;
+		max-width: min(520px, calc(100vw - 16px));
+		max-height: min(360px, calc(100vh - 16px));
+		overflow: hidden;
+		padding: 8px 10px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-floating);
+		background: var(--surface);
+		color: var(--ink);
+		box-shadow: 0 6px 18px color-mix(in srgb, var(--umbra) 28%, transparent);
+		font-size: var(--fs-secondary);
+		line-height: 1.45;
+		/* Paragraph breaks and trailers are part of the message. */
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		pointer-events: none;
+	}
+
 	.chip-slot {
 		display: inline-flex;
 		border-radius: var(--r-pill);
@@ -1330,36 +1459,6 @@
 
 	.author {
 		gap: 6px;
-	}
-
-	/*
-		Sized in `em` so the disc tracks the text-size dial rather than staying a
-		fixed dot beside text that grew around it.
-
-		Initials on a lane colour, matching the node, until a fetched picture
-		covers the disc. `--bg` is the letter colour: it is the theme's ground,
-		so it reads on a filled lane in both light and dark.
-	*/
-	.avatar {
-		flex: none;
-		width: 2em;
-		height: 2em;
-		border-radius: 50%;
-		display: grid;
-		place-items: center;
-		line-height: 1;
-		color: var(--bg);
-		user-select: none;
-		box-shadow: 0 0 0 1px var(--line);
-	}
-
-	.avatar .letters {
-		font-size: 0.7em;
-		font-weight: 600;
-	}
-
-	.avatar.photo {
-		color: transparent;
 	}
 
 	.wip {
