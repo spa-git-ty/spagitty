@@ -14,6 +14,16 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-13
+
+### Fixed
+
+- Scrolling the graph no longer re-spaces the lanes or moves the message
+  column: the lane column is sized to the whole history, not to the rows on
+  screen.
+- A branch label's lead line no longer steps by a pixel where the Branch/Tag
+  and Graph columns meet.
+
 ## [0.8.0] - 2026-09-13
 
 ### Added

@@ -4378,7 +4378,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "notify",
  "serde",
@@ -4393,7 +4393,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-core"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "gix",
  "keyring",
@@ -4406,7 +4406,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-farm"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "libc",
  "serde",
