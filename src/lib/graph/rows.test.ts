@@ -301,6 +301,21 @@ describe('CommitRows', () => {
 		view.destroy();
 	});
 
+	it('puts both halves of the lead on the same pixel row', () => {
+		// Centred two different ways, a half-pixel centre rounded differently in
+		// each column and the line stepped where the columns meet.
+		control.setRows([row(0, { refs: [chip('main', 'branch', true)] })]);
+		const view = render(CommitRows, {});
+		flushSync();
+
+		const [refLead, graphLead] = view.get('#commit-0').querySelectorAll<HTMLElement>('.ref-lead');
+		expect(refLead.style.marginTop).not.toBe('');
+		expect(refLead.style.marginTop).toBe(graphLead.style.top);
+		expect(componentSource).not.toMatch(/\.graph-lead \{[^}]*transform/);
+
+		view.destroy();
+	});
+
 	it('does not rule the graph column into a table', () => {
 		expect(componentSource).not.toMatch(/--graph-line/);
 		expect(componentSource).toMatch(/\.lane-band \{[^}]*background: var\(--graph-bg\)/);
@@ -400,25 +415,40 @@ describe('CommitRows', () => {
 		}
 	});
 
-	it('does not narrow the lane column the instant the history does', () => {
-		// Shrinking on sight would make the message column jump left and right
-		// under the reader's eyes while scrolling.
-		vi.useFakeTimers();
-		control.setRows([row(0, { lane: 8, edges: [{ from: 0, to: 8, color: 1 }] })]);
+	it('sizes the lane column to the whole history, so scrolling never resizes it', () => {
+		// Measured over the rows on screen, scrolling from shallow history into
+		// deep re-spaced every lane and moved the message column under the
+		// reader. The deep row here starts far below the viewport.
+		const rows = Array.from({ length: 200 }, (_, i) => row(i));
+		rows[180] = row(180, { lane: 8, edges: [{ from: 0, to: 8, color: 1 }] });
+		control.setRows(rows);
 		const view = render(CommitRows, {});
-		const wide = view.get('.lane-space').style.width;
-		expect(wide).toBe(`${laneColumnWidth(9)}px`);
+		const scroller = view.get('.scroller');
+		Object.defineProperty(scroller, 'clientHeight', { value: 10 * ROW_PITCH });
 
-		control.setRows([row(0)]);
-		flushSync();
+		const wide = `${laneColumnWidth(9)}px`;
 		expect(view.get('.lane-space').style.width).toBe(wide);
 
-		vi.advanceTimersByTime(500);
+		for (const top of [175 * ROW_PITCH, 0]) {
+			scroller.scrollTop = top;
+			scroller.dispatchEvent(new Event('scroll'));
+			flushSync();
+			expect(view.get('.lane-space').style.width, `scrolled to ${top}`).toBe(wide);
+		}
+
+		view.destroy();
+	});
+
+	it('narrows the lane column when the history itself is replaced', () => {
+		control.setRows([row(0, { lane: 8, edges: [{ from: 0, to: 8, color: 1 }] })]);
+		const view = render(CommitRows, {});
+		expect(view.get('.lane-space').style.width).toBe(`${laneColumnWidth(9)}px`);
+
+		control.setRows([row(0)]);
 		flushSync();
 		expect(view.get('.lane-space').style.width).toBe(`${laneColumnWidth(LANE_COLUMNS_MIN)}px`);
 
 		view.destroy();
-		vi.useRealTimers();
 	});
 });
 

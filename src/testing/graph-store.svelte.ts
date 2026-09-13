@@ -12,6 +12,7 @@
  * Amendment 10.
  */
 
+import { lanesNeeded } from '$lib/graph/lanes';
 import type { CommitDetail, GraphRow } from '$lib/types';
 
 let rows = $state<GraphRow[]>([]);
@@ -73,6 +74,10 @@ export const graph = {
 	},
 	get count() {
 		return rows.length;
+	},
+	/** The real store's figure: lanes over every row, not the rows on screen. */
+	get lanes() {
+		return lanesNeeded(0, rows.length - 1, (i) => rows[i]);
 	},
 	get complete() {
 		return complete;

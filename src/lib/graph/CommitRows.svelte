@@ -3,7 +3,7 @@
 	import { graph } from '$lib/graph/store.svelte';
 	import LaneCanvas from '$lib/graph/LaneCanvas.svelte';
 	import GraphHeader from '$lib/graph/GraphHeader.svelte';
-	import { lanesNeeded, visibleRange } from '$lib/graph/lanes';
+	import { visibleRange } from '$lib/graph/lanes';
 	import { branchOf, byAuthor } from '$lib/graph/highlight';
 	import { createPeek } from '$lib/graph/peek.svelte';
 	import * as api from '$lib/api';
@@ -80,63 +80,19 @@
 	});
 
 	/*
-	 * Adaptive lane column.
+	 * Lane column sized to the history, not to the viewport.
 	 *
-	 * Five lanes is the design's width and covers ordinary repositories. Real
-	 * histories go wider — git/git needs 11 lanes in a typical viewport — so the
-	 * column grows to fit what is actually on screen, up to LANE_COLUMNS_MAX.
+	 * `graph.lanes` is the true lane count over every loaded row and is clamped
+	 * at neither end (FEAT-035, FEAT-046); `laneColumnWidth` clamps the width it
+	 * produces, and past the cap it is the pitch that gives.
 	 *
-	 * It grows immediately but shrinks only after the narrower window has held
-	 * for a moment. Without that, scrolling through varying history would make
-	 * the message column jump left and right under the reader's eyes.
-	 *
-	 * `laneCount` is the *true* number of lanes on screen and is clamped at
-	 * neither end (FEAT-035, FEAT-046). The width it produces is clamped at
-	 * both — `laneColumnWidth` runs it through `laneColumns`, so the column is
-	 * never narrower than five lanes' worth nor wider than the cap — but the
-	 * geometry needs the real figure.
-	 *
-	 * Past the cap it is the pitch that gives rather than the column, and
-	 * clamping high is what used to draw the thirteenth lane on top of the
-	 * twelfth. Below five it decides when compression *starts*: floored at five,
-	 * a two-lane repository was squeezed as though five lanes had to fit, and
-	 * the squeeze began long before any two lanes were touching (FEAT-046).
+	 * It used to be measured over the rows on screen, with a delay before
+	 * shrinking. That still re-spaced every lane and resized the column whenever
+	 * a scroll crossed from shallow history into deep, so the graph shifted under
+	 * the reader. A figure taken over the whole history only changes while the
+	 * walk streams in.
 	 */
-	const SHRINK_DELAY = 400;
-
-	/*
-	 * One lane before the first measurement, not five: an assumed five would
-	 * compress a two-lane repository for the length of the shrink delay every
-	 * time the screen is opened, and then relax — a visible pop at exactly the
-	 * moment there is nothing to compress. The effect below runs on mount and
-	 * grows immediately, so the true count arrives in the first frame.
-	 */
-	let laneCount = $state(1);
-	/** Untracked mirror, so the effect below doesn't depend on what it writes. */
-	let currentColumns = 1;
-	let shrinkTimer: ReturnType<typeof setTimeout> | null = null;
-
-	$effect(() => {
-		void graph.version;
-		const needed = lanesNeeded(range.first, range.last, (i) => graph.row(i));
-
-		if (needed > currentColumns) {
-			if (shrinkTimer) clearTimeout(shrinkTimer);
-			shrinkTimer = null;
-			currentColumns = needed;
-			laneCount = needed;
-		} else if (needed < currentColumns && shrinkTimer === null) {
-			shrinkTimer = setTimeout(() => {
-				shrinkTimer = null;
-				currentColumns = needed;
-				laneCount = needed;
-			}, SHRINK_DELAY);
-		}
-	});
-
-	$effect(() => () => {
-		if (shrinkTimer) clearTimeout(shrinkTimer);
-	});
+	const laneCount = $derived(graph.lanes);
 
 	/**
 	 * The graph column's width, and the room the lanes get inside it.
@@ -790,6 +746,7 @@
 					{@const node = nodeAt(row)}
 					{@const laneColor = `var(${laneColorVar(row.color)})`}
 					{@const lead = LANE_STROKE * scale.zoom}
+					{@const leadTop = (pitch - lead) / 2}
 					<!--
 						Keyboard handling lives on the listbox, not on each option —
 						that is the ARIA pattern, and it is also the only workable
@@ -866,7 +823,7 @@
 										-->
 										<span
 											class="ref-lead"
-											style="height: {lead}px; background: {laneColor}"
+											style="height: {lead}px; margin-top: {leadTop}px; background: {laneColor}"
 											aria-hidden="true"
 										></span>
 									{/if}
@@ -888,7 +845,7 @@
 									{#if row.refs.length > 0}
 										<span
 											class="ref-lead graph-lead"
-											style="width: {Math.max(0, node.x)}px; height: {lead}px; background: {laneColor}"
+											style="width: {Math.max(0, node.x)}px; height: {lead}px; top: {leadTop}px; background: {laneColor}"
 											aria-hidden="true"
 										></span>
 									{/if}
@@ -1342,11 +1299,17 @@
 	 * cell it runs from the column's left edge to the node's centre — the
 	 * canvas paints the node on top, so the lead disappears into the head
 	 * rather than stopping short of it.
+	 *
+	 * Both halves take the same explicit offset from the row's top. They used
+	 * to be centred two ways — flex centring on one side, `top: 50%` and a
+	 * `translateY(-50%)` on the other — and with a 2.5px stroke or a zoomed
+	 * pitch the centre falls on a half pixel, which the two rounded to
+	 * different rows: a one-pixel step in the line where the columns meet.
 	 */
 	.ref-lead {
 		flex: 1;
 		min-width: 8px;
-		align-self: center;
+		align-self: flex-start;
 		pointer-events: none;
 	}
 
@@ -1354,8 +1317,6 @@
 		position: absolute;
 		flex: none;
 		left: 0;
-		top: 50%;
-		transform: translateY(-50%);
 	}
 
 	/*

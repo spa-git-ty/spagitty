@@ -37,6 +37,15 @@ let buffer: GraphRow[] = [];
 
 let version = $state(0);
 let count = $state(0);
+/**
+ * Lanes the loaded history needs, over every row rather than the rows on screen.
+ *
+ * The lane pitch and the undragged column width follow this figure. Measured
+ * over the viewport, scrolling from a shallow stretch of history into a deep one
+ * re-spaced every lane and resized the column under the reader's hand; measured
+ * over the history it only grows while the walk streams, and holds still after.
+ */
+let lanes = $state(1);
 let requested = $state(0);
 let complete = $state(false);
 /**
@@ -71,6 +80,7 @@ function reset() {
 	buffer = [];
 	version += 1;
 	count = 0;
+	lanes = 1;
 	requested = 0;
 	complete = false;
 	refreshedAt = null;
@@ -91,6 +101,10 @@ export const graph = {
 	/** Number of rows loaded so far. Grows as the walk streams. */
 	get count(): number {
 		return count;
+	},
+	/** Lanes the whole loaded history needs. See `lanes` above. */
+	get lanes(): number {
+		return lanes;
 	},
 	/** True once the walk reached the end of history. */
 	get complete(): boolean {
@@ -136,19 +150,27 @@ export const graph = {
 				if (pendingReset) {
 					buffer = [];
 					count = 0;
+					lanes = 1;
 					complete = false;
 					pendingReset = false;
 				}
 
+				let deepest = lanes;
+
 				for (const row of payload.rows) {
 					buffer[row.index] = row;
 					if (row.index + 1 > count) count = row.index + 1;
+					deepest = Math.max(deepest, row.lane + 1);
+					for (const edge of row.edges) {
+						deepest = Math.max(deepest, edge.from + 1, edge.to + 1);
+					}
 					// Follow the selected commit to wherever it landed.
 					if (selectionUnverified && row.id === selectedId) {
 						selectedIndex = row.index;
 						selectionUnverified = false;
 					}
 				}
+				if (deepest !== lanes) lanes = deepest;
 				version += 1;
 				repo.setCommitCount(count);
 			})
@@ -164,6 +186,7 @@ export const graph = {
 				if (pendingReset) {
 					buffer = [];
 					count = 0;
+					lanes = 1;
 					pendingReset = false;
 					version += 1;
 				}
