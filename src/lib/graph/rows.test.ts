@@ -282,6 +282,31 @@ describe('CommitRows', () => {
 		view.destroy();
 	});
 
+	it('joins a labelled row to its node, and only a labelled one', () => {
+		control.setRows([row(0, { refs: [chip('main', 'branch', true)] }), row(1)]);
+		const view = render(CommitRows, {});
+		flushSync();
+
+		const labelled = view.get('#commit-0');
+		const bare = view.get('#commit-1');
+		expect(labelled.querySelectorAll('.ref-lead')).toHaveLength(2);
+		expect(bare.querySelector('.ref-lead')).toBeNull();
+
+		const graphLead = labelled.querySelector('.graph-lead') as HTMLElement;
+		expect(graphLead.style.width).not.toBe('');
+		expect(graphLead.style.width).not.toBe('0px');
+
+		expect(componentSource).toMatch(/\.refs \{[^}]*justify-content: flex-start/);
+
+		view.destroy();
+	});
+
+	it('does not rule the graph column into a table', () => {
+		expect(componentSource).not.toMatch(/--graph-line/);
+		expect(componentSource).toMatch(/\.lane-band \{[^}]*background: var\(--graph-bg\)/);
+		expect(componentSource).not.toMatch(/\.lane-band \{[^}]*box-shadow/);
+	});
+
 	it('labels only the first row of each day', () => {
 		const day = 86_400;
 		const base = 1_700_000_000;
@@ -398,23 +423,22 @@ describe('CommitRows', () => {
 });
 
 describe('the column bed', () => {
-	// BUG-016: the graph's band and its two rules were painted by a cell inside
-	// a row, so on a repository shorter than the window they stopped at the last
-	// commit and the table looked cut off. The bed paints them for the whole
-	// height, under the rows.
+	// BUG-016: the graph's band was painted by a cell inside a row, so on a
+	// repository shorter than the window it stopped at the last commit and the
+	// table looked cut off. The bed paints it for the whole height, under the
+	// rows.
 
 	it('gives every shown column a slot, in the same order as a row', () => {
 		control.setRows([row(0), row(1), row(2)]);
 		const view = render(CommitRows, {});
 		flushSync();
 
-		const slots = [...view.get('.bed').children];
+		const slots = [...view.get('.bed-scroll').children];
 
-		expect(slots).toHaveLength(columns.shown.length);
-		// Default order is refs, graph, message.
+		expect(slots).toHaveLength(2);
+		// Default order is refs, graph, then the pinned list pane.
 		expect((slots[0] as HTMLElement).style.width).toBe(`${columns.shown[0].width}px`);
 		expect((slots[1] as HTMLElement).classList.contains('lane-band')).toBe(true);
-		expect((slots[2] as HTMLElement).classList.contains('fill')).toBe(true);
 
 		view.destroy();
 	});
@@ -440,7 +464,7 @@ describe('the column bed', () => {
 		columns.resize('refs', 120);
 		flushSync();
 
-		expect((view.get('.bed').children[0] as HTMLElement).style.width).toBe('120px');
+		expect((view.get('.bed-scroll').children[0] as HTMLElement).style.width).toBe('120px');
 
 		view.destroy();
 	});
@@ -453,7 +477,7 @@ describe('the column bed', () => {
 		columns.reorder(1, 0);
 		flushSync();
 
-		const slots = [...view.get('.bed').children];
+		const slots = [...view.get('.bed-scroll').children];
 		expect((slots[0] as HTMLElement).classList.contains('lane-band')).toBe(true);
 
 		view.destroy();
@@ -465,7 +489,8 @@ describe('the column bed', () => {
 		const view = render(CommitRows, {});
 		flushSync();
 
-		expect(view.get('.bed').children).toHaveLength(columns.shown.length);
+		expect(view.get('.bed-scroll').children).toHaveLength(2);
+		expect(view.get('.bed-frozen')).toBeTruthy();
 		expect(view.all('.lane-space')).toHaveLength(0);
 
 		view.destroy();
@@ -501,11 +526,12 @@ describe('the lane canvas layer', () => {
 		const slots = [...layer.children];
 		const graphSlot = view.get('.lane-slot');
 
-		// Default order is refs, graph, message: one spacer, then the canvas,
-		// then the filling gap for the message column.
+		// Default order is refs, graph, then the pinned list pane: one spacer,
+		// then the canvas. The message column is no longer a gap in this layer
+		// — the graph slides under it instead.
 		expect(slots.indexOf(graphSlot)).toBe(1);
+		expect(slots).toHaveLength(2);
 		expect((slots[0] as HTMLElement).style.width).toBe(`${columns.shown[0].width}px`);
-		expect((slots[2] as HTMLElement).classList.contains('fill')).toBe(true);
 
 		view.destroy();
 	});
@@ -539,6 +565,20 @@ describe('the lane canvas layer', () => {
 		view.destroy();
 	});
 
+	it('does not stripe alternate rows', () => {
+		control.setRows([row(0), row(1), row(2)]);
+		const view = render(CommitRows, {});
+		flushSync();
+
+		for (const option of view.all('[role="option"]')) {
+			expect(option.classList.contains('stripe')).toBe(false);
+		}
+		expect(componentSource).not.toMatch(/class:stripe/);
+		expect(componentSource).not.toMatch(/\.row\.stripe/);
+
+		view.destroy();
+	});
+
 	it('clips the canvas to its own column, so a wrong size cannot reach a neighbour', () => {
 		control.setRows([row(0), row(1), row(2)]);
 		const view = render(CommitRows, {});
@@ -551,6 +591,28 @@ describe('the lane canvas layer', () => {
 		// computed, the same way the Btn regression does.
 		expect(componentSource).toContain('.lane-slot');
 		expect(componentSource).toMatch(/\.lane-slot \{[^}]*overflow: hidden/);
+
+		view.destroy();
+	});
+});
+
+describe('the pinned commit list', () => {
+	/**
+	 * Sideways scrolling used to translate the whole table, so the subject
+	 * line ran away under the eye whenever somebody panned to see more of the
+	 * graph. The list pane stays; the graph slides under it.
+	 */
+	it('keeps the message column sticky, with a seam shadow', () => {
+		control.setRows([row(0), row(1), row(2)]);
+		const view = render(CommitRows, {});
+		flushSync();
+
+		const message = view.get('.message');
+		expect(message.classList.contains('frozen')).toBe(true);
+		expect(message.style.position).toBe('sticky');
+		expect(view.get('.header-frozen')).toBeTruthy();
+		expect(view.get('.list-shadow')).toBeTruthy();
+		expect(view.get('.bed-frozen')).toBeTruthy();
 
 		view.destroy();
 	});

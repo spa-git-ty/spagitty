@@ -347,7 +347,7 @@
 		justify-content: center;
 		width: 1.6em;
 		height: 1.6em;
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 		color: var(--accent);
 		background-color: var(--accent-soft);
 		font-size: var(--fs-secondary);
@@ -392,7 +392,7 @@
 		flex: none;
 		width: 7px;
 		height: 7px;
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 		background-color: var(--muted);
 	}
 

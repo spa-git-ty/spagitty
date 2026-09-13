@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import CommitDetail from '$lib/graph/CommitDetail.svelte';
 	import CommitRows from '$lib/graph/CommitRows.svelte';
+	import { graphOrder, ORDERS } from '$lib/graph/order.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { visibility, type Mode } from '$lib/graph/visibility.svelte';
 	import { repo } from '$lib/repo.svelte';
@@ -42,6 +43,17 @@
 				<span class="title">Graph</span>
 				{#if branch}<Chip active>{branch}</Chip>{/if}
 				<Chip active={visibility.filtered} title={scope.title}>{scope.label}</Chip>
+				<div class="orders" role="group" aria-label="Commit order">
+					{#each ORDERS as option (option.id)}
+						<Chip
+							active={graphOrder.id === option.id}
+							title={option.title}
+							onclick={() => void graphOrder.set(option.id)}
+						>
+							{option.label}
+						</Chip>
+					{/each}
+				</div>
 			</div>
 			<div class="right">
 				<!--
@@ -138,6 +150,12 @@
 
 	.left {
 		gap: 8px;
+	}
+
+	.orders {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 	}
 
 	.title {

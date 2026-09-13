@@ -253,11 +253,14 @@ describe('BUG-009b — a divider sizes the column on its left', () => {
  * BUG-003's structural guard, written before FEAT-047 moved this store.
  *
  * The lane canvas does not know where the graph column starts. It is placed by
- * a layer that mirrors the row — one spacer per column ahead of it, at the
- * widths the cells use — so the browser does the arithmetic and the two cannot
- * disagree. BUG-003 was that arrangement not existing: the canvas sat at a
- * constant offset, and dragging, reordering or hiding the Branch/Tag column
- * left the lanes drawn over the messages.
+ * a layer that mirrors the **panning** half of the row — one spacer per column
+ * ahead of the graph, at the widths the cells use — so the browser does the
+ * arithmetic and the two cannot disagree. The commit-list pane is not part of
+ * that layer: the graph slides under it rather than being padded out to it.
+ *
+ * BUG-003 was that arrangement not existing: the canvas sat at a constant
+ * offset, and dragging, reordering or hiding the Branch/Tag column left the
+ * lanes drawn over the messages.
  *
  * Asserted against the source because happy-dom does no layout, so there are no
  * real widths to measure. What can be checked is that the mirror is still built
@@ -274,18 +277,19 @@ describe('the lane layer still mirrors the row (BUG-003)', () => {
 		return rows.slice(start, end);
 	}
 
-	it('draws one spacer per shown column, in the order they are drawn', () => {
-		expect(laneLayer()).toMatch(/\{#each shown as column \(column\.id\)\}/);
+	it('draws one spacer per panning column, in the order they are drawn', () => {
+		expect(laneLayer()).toMatch(/\{#each shown\.slice\(0, freezeIndex\) as column \(column\.id\)\}/);
 	});
 
 	it('gives every fixed column a spacer of that column’s own width', () => {
 		expect(laneLayer()).toMatch(/class="lane-gap" style="width: \{column\.width\}px"/);
 	});
 
-	it('lets the filling column fill on the layer too', () => {
-		// A fixed width here would put the canvas one gap out of step the moment
-		// the message column was left to fill.
-		expect(laneLayer()).toMatch(/class="lane-gap fill"/);
+	it('does not pad the layer out to the message column', () => {
+		// A fill gap here would keep the canvas in step with a table that
+		// translated as one piece. The list pane is pinned now, so that gap
+		// would be a hole the graph slid into without the pane covering it.
+		expect(laneLayer()).not.toMatch(/lane-gap fill/);
 	});
 
 	it('puts the canvas in the graph column’s own slot', () => {

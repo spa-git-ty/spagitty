@@ -28,6 +28,7 @@
 	import Toolbar from '$lib/chrome/Toolbar.svelte';
 	import { avatars } from '$lib/graph/avatars.svelte';
 	import { density } from '$lib/graph/density.svelte';
+	import { graphOrder } from '$lib/graph/order.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { ROW_PITCH } from '$lib/metrics';
 	import Palette from '$lib/palette/Palette.svelte';
@@ -69,6 +70,9 @@
 		// The graph's column density, before the Graph screen lays itself out
 		// (TASK-041).
 		density.init();
+		// How the graph sequences commits, before a walk can start with the
+		// other order and then have to be thrown away.
+		graphOrder.init();
 		// The tab strip, before anything can open a repository into it.
 		workspace.init();
 		registerCommands();

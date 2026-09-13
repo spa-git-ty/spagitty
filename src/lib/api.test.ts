@@ -27,7 +27,7 @@ afterEach(() => {
 describe('command names and arguments', () => {
 	it('sends the path when opening a repository', async () => {
 		await api.openRepo('/repos/fixture');
-		expect(invoked).toHaveBeenCalledWith('open_repo', { path: '/repos/fixture' });
+		expect(invoked).toHaveBeenCalledWith('open_repo', { path: '/repos/fixture', order: 'date' });
 	});
 
 	it('closes without arguments', async () => {
@@ -43,6 +43,11 @@ describe('command names and arguments', () => {
 	it('restarts the walk without arguments', async () => {
 		await api.graphRestart();
 		expect(invoked).toHaveBeenCalledWith('graph_restart');
+	});
+
+	it('sends the order when changing how the graph is sequenced', async () => {
+		await api.graphOrder('branch');
+		expect(invoked).toHaveBeenCalledWith('graph_order', { order: 'branch' });
 	});
 
 	it('takes a snapshot without arguments', async () => {

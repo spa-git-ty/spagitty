@@ -203,7 +203,9 @@ export const changes = {
 
 	/** Open a file's hunks. `force` re-fetches a selection that is already open. */
 	open(next: Selection, force = false): void {
-		if (!force && sameSelection(selection, next)) return;
+		// A selected file with no hunks and no fetch in flight is a blank pane,
+		// not a reason to skip the round trip — clicking it again has to retry.
+		if (!force && sameSelection(selection, next) && (file !== null || fileLoading)) return;
 
 		selection = next;
 		file = null;

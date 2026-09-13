@@ -238,7 +238,7 @@
 	 * colour says it at a glance and reads as deliberate.
 	 */
 	.ref.tag {
-		border-radius: 3px 9px 9px 3px;
+		border-radius: 2px 5px 5px 2px;
 		border-color: color-mix(in srgb, var(--warn) 50%, transparent);
 		color: var(--warn);
 		background: color-mix(in srgb, var(--warn) 14%, var(--surface));

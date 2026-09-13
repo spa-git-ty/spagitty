@@ -67,6 +67,7 @@ pub fn run() {
             commands::rebase_skip,
             commands::rebase_abort,
             commands::graph_visibility,
+            commands::graph_order,
             commands::reset,
             commands::revert,
             commands::cherry_pick,

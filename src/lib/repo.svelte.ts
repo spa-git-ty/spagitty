@@ -9,6 +9,7 @@
 
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import * as api from './api';
+import { graphOrder } from './graph/order.svelte';
 import { workspace } from './workspace.svelte';
 import type { RepoCounts, RepoInfo } from './types';
 
@@ -61,7 +62,7 @@ export const repo = {
 		busy = true;
 		error = null;
 		try {
-			const result = await api.openRepo(path);
+			const result = await api.openRepo(path, graphOrder.id);
 			info = result.info;
 			counts = result.counts;
 			token = result.token;

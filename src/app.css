@@ -65,42 +65,35 @@
 	 * Radii.
 	 *
 	 * Boot values only, like the colours above: `applyMetrics()` rewrites every
-	 * one of these except `--r-pill` as an inline custom property at zoom time,
-	 * so a zoomed interface rounds proportionally instead of keeping 4px
-	 * corners on a box twice the size. `--r-pill` is exempt because a radius
-	 * past half the box is already clamped by the browser.
+	 * one of these as an inline custom property at zoom time, so a zoomed
+	 * interface rounds proportionally instead of keeping 4px corners on a box
+	 * twice the size.
 	 *
-	 * The scale is deliberately gentle at the small end and generous at the
-	 * large: a 4px field beside a 999px chip reads as one system, where 4px
-	 * beside 6px reads as an accident. FEAT-042 tightened every step and kept
-	 * those relationships — controls rounder than surfaces, the window rounder
-	 * than a panel — because the ratios are the scale, not the numbers.
+	 * Kept tight on purpose. A 14–18px corner on a card, plus chips that were
+	 * full capsules (`999px`), made the whole chrome read as soap. Controls,
+	 * surfaces and the window still step up together; none of them is a pill.
+	 * True circles (avatars, status dots) use `50%`, not this scale.
 	 */
-	--r-field: 8px;
-	--r-pill: 999px;
-	--r-button: 11px;
+	--r-field: 4px;
+	--r-pill: 5px;
+	--r-button: 5px;
 	/** A commit row's hover and selection fill. */
-	--r-row: 8px;
+	--r-row: 4px;
 	/**
 	 * Panels, cards, modals — anything that is a surface rather than a control.
 	 *
-	 * Settled at the window alongside the glass material (TASK-020). At 14px a
-	 * menu read as a rounded card sitting on the application; at 8px it reads as
-	 * a pane cut from it, which is the same corner a field already has and is
-	 * what the quieter glass wanted. The lens follows this without being told —
-	 * `geometry()` measures the pane's computed radius, so the refraction ring
-	 * changes shape with the corner.
+	 * The lens follows this without being told — `geometry()` measures the
+	 * pane's computed radius, so the refraction ring changes shape with the
+	 * corner.
 	 */
-	--r-panel: 14px;
-	/* Transient surfaces sit above the workspace and use the softest geometry. */
-	--r-floating: 18px;
+	--r-panel: 6px;
+	/* Transient surfaces sit above the workspace. */
+	--r-floating: 8px;
 	/*
-	 * The window's own corner. Larger than a panel's, because it is read against
-	 * the whole screen rather than against the surface beside it — the same
-	 * radius that reads as soft on a 6px chip reads as square on a 1280px
-	 * window (FEAT-037).
+	 * The window's own corner. A step above a panel, because it is read against
+	 * the whole screen rather than against the surface beside it (FEAT-037).
 	 */
-	--r-window: 16px;
+	--r-window: 8px;
 
 	/*
 	 * The window's own depth (FEAT-037). Tuned for a light ground: the shadow

@@ -288,7 +288,7 @@
 		width: 6px;
 		height: 6px;
 		flex: none;
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 		background: var(--ok);
 	}
 

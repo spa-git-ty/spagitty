@@ -372,7 +372,7 @@ describe('applyMetrics', () => {
 
 		applyMetrics(root as unknown as HTMLElement);
 
-		for (const name of ['r-field', 'r-button', 'r-row', 'r-panel']) {
+		for (const name of ['r-field', 'r-pill', 'r-button', 'r-row', 'r-panel', 'r-floating']) {
 			const declared = new RegExp(`--${name}:\\s*([0-9.]+)px`).exec(css);
 			expect(declared, `--${name} is missing from app.css`).not.toBeNull();
 			expect(published.get(`--${name}`), `--${name} at zoom 1`).toBe(`${declared?.[1]}px`);

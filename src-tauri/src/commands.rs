@@ -17,7 +17,7 @@ use spagitty_core::conflicts::{self, ConflictSides, ConflictState};
 use spagitty_core::diff::{self, CommitDetail, CommitDiff, FileDiff, Side};
 use spagitty_core::forge::review::ReviewVerdict;
 use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
-use spagitty_core::graph::ROW_PITCH;
+use spagitty_core::graph::{GraphOrder, ROW_PITCH};
 use spagitty_core::identity::{self, Identity, Key, Scope};
 use spagitty_core::ops::{self, Integration, ResetMode, StashAction};
 use spagitty_core::rebase::{self, Edit, Preview, Todo};
@@ -68,6 +68,8 @@ struct Session {
     visible: Vec<String>,
     /// The refs whose lanes are held open on the left — "pin to left".
     pinned: Vec<String>,
+    /// How the walk sequences the same DAG: date order or branch (topo) order.
+    order: GraphOrder,
     _watcher: Option<RepoWatcher>,
 }
 
@@ -158,11 +160,15 @@ pub struct Metrics {
 ///
 /// Opening does not walk anything. The worker waits for the first
 /// [`graph_request`] before it touches history.
+///
+/// `order` is how that walk will sequence commits once it starts. Omitted, it
+/// is date order, which is what every release before this drew.
 #[tauri::command]
 pub fn open_repo<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
     path: PathBuf,
+    order: Option<GraphOrder>,
 ) -> Result<OpenResult> {
     let sync = repo::open_sync(&path)?;
     let local = sync.to_thread_local();
@@ -171,6 +177,7 @@ pub fn open_repo<R: Runtime>(
     let refs = RefIndex::build(&local)?;
     let counts = status::counts(&local, &refs)?;
     let git_dir = local.git_dir().to_path_buf();
+    let order = order.unwrap_or_default();
 
     let token = state.next_token.fetch_add(1, Ordering::Relaxed);
     let graph = graph_worker::spawn(
@@ -179,6 +186,7 @@ pub fn open_repo<R: Runtime>(
         token,
         Vec::new(),
         Vec::new(),
+        order,
     );
     let watcher = watch::watch(app.clone(), &git_dir);
 
@@ -194,6 +202,7 @@ pub fn open_repo<R: Runtime>(
         graph,
         visible: Vec::new(),
         pinned: Vec::new(),
+        order,
         _watcher: watcher,
     });
 
@@ -226,8 +235,7 @@ pub fn graph_restart<R: Runtime>(app: AppHandle<R>, state: State<'_, AppState>) 
     let session = guard.as_mut().ok_or(Error::NoRepository)?;
 
     let token = state.next_token.fetch_add(1, Ordering::Relaxed);
-    let (visible, pinned) = (session.visible.clone(), session.pinned.clone());
-    session.graph = graph_worker::spawn(app, session.path.clone(), token, visible, pinned);
+    restart_walk(app, session, token);
     Ok(token)
 }
 
@@ -250,9 +258,41 @@ pub fn graph_visibility<R: Runtime>(
     session.visible = refs;
     session.pinned = pinned;
     let token = state.next_token.fetch_add(1, Ordering::Relaxed);
-    let (visible, pinned) = (session.visible.clone(), session.pinned.clone());
-    session.graph = graph_worker::spawn(app, session.path.clone(), token, visible, pinned);
+    restart_walk(app, session, token);
     Ok(token)
+}
+
+/// Choose how the graph sequences commits, and restart the walk.
+///
+/// Date order is `git log`: newest first, parallel histories interleaved.
+/// Branch order is `git log --topo-order`: a line of history stays together.
+/// Lanes are assigned as the walk runs, so changing the order cannot reuse the
+/// current drawing.
+#[tauri::command]
+pub fn graph_order<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    order: GraphOrder,
+) -> Result<u64> {
+    let mut guard = state.session.lock().expect("session lock");
+    let session = guard.as_mut().ok_or(Error::NoRepository)?;
+
+    session.order = order;
+    let token = state.next_token.fetch_add(1, Ordering::Relaxed);
+    restart_walk(app, session, token);
+    Ok(token)
+}
+
+/// Replace the session's walker, keeping the refs and order it is already on.
+fn restart_walk<R: Runtime>(app: AppHandle<R>, session: &mut Session, token: u64) {
+    session.graph = graph_worker::spawn(
+        app,
+        session.path.clone(),
+        token,
+        session.visible.clone(),
+        session.pinned.clone(),
+        session.order,
+    );
 }
 
 /// HEAD and the rail counts, re-read. Called after `repo-changed`.
@@ -1841,6 +1881,7 @@ mod tests {
             app.handle().clone(),
             app.state::<AppState>(),
             at.to_path_buf(),
+            None,
         )
     }
 
@@ -1860,7 +1901,11 @@ mod tests {
             Err(Error::NoRepository)
         ));
         assert!(matches!(
-            graph_request(state, 0, 10),
+            graph_request(state.clone(), 0, 10),
+            Err(Error::NoRepository)
+        ));
+        assert!(matches!(
+            graph_order(app.handle().clone(), state, GraphOrder::Branch),
             Err(Error::NoRepository)
         ));
     }
@@ -1899,7 +1944,7 @@ mod tests {
 
         testing::finishes_promptly("replacing the open repository", move || {
             let app = handle;
-            let two = open_repo(app.clone(), app.state::<AppState>(), paths.0)
+            let two = open_repo(app.clone(), app.state::<AppState>(), paths.0, None)
                 .expect("opening the second");
             *out.lock().expect("result") = Some(two.token);
         });
@@ -1943,6 +1988,23 @@ mod tests {
 
         assert_ne!(restarted, opened.token);
         // The old token now names nothing, which is not an error.
+        assert!(graph_request(app.state::<AppState>(), opened.token, 5).is_ok());
+    }
+
+    #[test]
+    fn changing_the_graph_order_produces_a_new_token() {
+        let fixture = Fixture::woven();
+        let app = app();
+
+        let opened = open(&app, fixture.path()).expect("opening the fixture");
+        let reordered = graph_order(
+            app.handle().clone(),
+            app.state::<AppState>(),
+            GraphOrder::Branch,
+        )
+        .expect("changing the order");
+
+        assert_ne!(reordered, opened.token);
         assert!(graph_request(app.state::<AppState>(), opened.token, 5).is_ok());
     }
 

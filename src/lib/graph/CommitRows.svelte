@@ -7,12 +7,21 @@
 	import { byAuthor } from '$lib/graph/highlight';
 	import { portraitBackground, seedOf } from '$lib/graph/portrait';
 	import { columns } from '$lib/graph/columns.svelte';
+	import { freezeAt, frozenLeft } from '$lib/graph/freeze';
 	import { overlay } from '$lib/graph/overlay.svelte';
 	import { visibility } from '$lib/graph/visibility.svelte';
 	import { selection } from '$lib/graph/selection.svelte';
 	import * as act from '$lib/graph/actions';
 	import { clockTime, fullDate, isNotable, relativeTime } from '$lib/format';
-	import { laneColumnWidth, laneNodeRadius, laneSpanFor, laneSpanOf, laneX } from '$lib/metrics';
+	import {
+		LANE_STROKE,
+		laneColorVar,
+		laneColumnWidth,
+		laneNodeRadius,
+		laneSpanFor,
+		laneSpanOf,
+		laneX
+	} from '$lib/metrics';
 	import { density } from './density.svelte';
 	import { avatars } from '$lib/graph/avatars.svelte';
 	import { scale } from '$lib/scale.svelte';
@@ -177,6 +186,56 @@
 	 */
 	let scrollWidth = $state(0);
 	let scrollerWidth = $state(0);
+
+	/**
+	 * The commit-list pane starts at the message column.
+	 *
+	 * Columns before it — Branch/Tag and Graph — pan sideways. The pane stays
+	 * put, the graph slides under it, and a shadow on the seam is what says
+	 * so. That is GitKraken's model, and it is why sideways scrolling used to
+	 * drag the subject line around under the eye.
+	 */
+	const freezeIndex = $derived(freezeAt(shown));
+
+	function columnWidth(column: (typeof shown)[number]): number {
+		return column.id === 'graph' ? laneWidth : column.width;
+	}
+
+	const scrollingWidth = $derived.by(() => {
+		let width = 0;
+		for (let i = 0; i < freezeIndex; i++) width += columnWidth(shown[i]);
+		return width;
+	});
+
+	const frozenPackWidth = $derived.by(() => {
+		if (tableWidth === null) return Math.max(0, scrollerWidth - scrollingWidth);
+		let width = 0;
+		for (let i = freezeIndex; i < shown.length; i++) width += columnWidth(shown[i]);
+		return width;
+	});
+
+	const paneLeft = $derived(frozenLeft(scrollingWidth, frozenPackWidth, scrollLeft, scrollerWidth));
+
+	/** Sticky `right` for each frozen column, last column at 0. */
+	const frozenRight = $derived.by(() => {
+		let fixed = 0;
+		for (let i = freezeIndex; i < shown.length; i++) {
+			if (!shown[i].fills) fixed += columnWidth(shown[i]);
+		}
+		const fillWidth = Math.max(0, frozenPackWidth - fixed);
+		const rights: number[] = [];
+		let acc = 0;
+		for (let i = shown.length - 1; i >= freezeIndex; i--) {
+			rights[i] = acc;
+			acc += shown[i].fills ? fillWidth : columnWidth(shown[i]);
+		}
+		return rights;
+	});
+
+	function freezeStyle(index: number): string {
+		if (index < freezeIndex) return '';
+		return `position: sticky; right: ${frozenRight[index] ?? 0}px; z-index: 3;`;
+	}
 
 	const moreLeft = $derived(scrollLeft > 0);
 	// A pixel of slack: fractional scroll positions at non-integer zoom levels
@@ -580,7 +639,13 @@
 </script>
 
 <div class="body">
-	<GraphHeader {laneWidth} {scrollLeft} tableWidth={tableWidth} />
+	<GraphHeader
+		{laneWidth}
+		{scrollLeft}
+		freezeAt={freezeIndex}
+		frozenLeft={paneLeft}
+		{scrollingWidth}
+	/>
 
 	{#if overlay.wip}
 		<!--
@@ -602,11 +667,10 @@
 		<!--
 			The bed the columns stand on (BUG-016).
 
-			The graph's band and the two rules either side of it used to be
-			painted by `.lane-space`, which is a cell inside a row — so on a
-			repository with fewer commits than the window is tall, the columns
-			stopped where the commits stopped and the table read as though it had
-			been cut off halfway down.
+			The graph's band used to be painted by `.lane-space`, which is a
+			cell inside a row — so on a repository with fewer commits than the
+			window is tall, the columns stopped where the commits stopped and
+			the table read as though it had been cut off halfway down.
 
 			This layer is the same column arithmetic as a row and as the canvas
 			above it, laid out once at the full height of the scroller. It is
@@ -618,20 +682,19 @@
 		-->
 		<div
 			class="bed"
-			style="transform: translateX({-scrollLeft}px); {tableWidth === null
-				? ''
-				: `width: ${tableWidth}px`}"
+			style={tableWidth === null ? '' : `width: ${tableWidth}px`}
 			aria-hidden="true"
 		>
-			{#each shown as column (column.id)}
-				{#if column.id === 'graph'}
-					<div class="bed-slot lane-band" style="width: {laneWidth}px"></div>
-				{:else if column.fills}
-					<div class="bed-slot fill"></div>
-				{:else}
-					<div class="bed-slot" style="width: {column.width}px"></div>
-				{/if}
-			{/each}
+			<div class="bed-scroll" style="width: {scrollingWidth}px; transform: translateX({-scrollLeft}px)">
+				{#each shown.slice(0, freezeIndex) as column (column.id)}
+					{#if column.id === 'graph'}
+						<div class="bed-slot lane-band" style="width: {laneWidth}px"></div>
+					{:else}
+						<div class="bed-slot" style="width: {column.width}px"></div>
+					{/if}
+				{/each}
+			</div>
+			<div class="bed-frozen" style="left: {paneLeft}px"></div>
 		</div>
 
 		<div
@@ -663,6 +726,9 @@
 					{@const time = notableTime(row.index, row.time)}
 					{@const extra = row.refs.length - MAX_CHIPS}
 					{@const dim = highlight !== null && !highlight.has(row.index)}
+					{@const node = nodeAt(row)}
+					{@const laneColor = `var(${laneColorVar(row.color)})`}
+					{@const lead = LANE_STROKE * scale.zoom}
 					<!--
 						Keyboard handling lives on the listbox, not on each option —
 						that is the ARIA pattern, and it is also the only workable
@@ -673,7 +739,6 @@
 					<div
 						id="commit-{row.index}"
 						class="row"
-						class:stripe={row.index % 2 === 1}
 						class:selected={selection.has(row.index)}
 						class:focused={graph.selectedIndex === row.index}
 						class:dim
@@ -685,7 +750,7 @@
 						ondblclick={() => onopen?.(row.id)}
 						oncontextmenu={(event) => openMenu(event, 'Commit', commitMenu(row))}
 					>
-						{#each shown as column (column.id)}
+						{#each shown as column, index (column.id)}
 							{#if column.id === 'refs'}
 								<div class="cell refs" style="width: {column.width}px">
 									{#each row.refs.slice(0, MAX_CHIPS) as chip (chip.kind + chip.name)}
@@ -724,6 +789,17 @@
 											+{extra}
 										</span>
 									{/if}
+									{#if row.refs.length > 0}
+										<!--
+											Grows from the last chip to the graph column,
+											where `.graph-lead` continues it into the node.
+										-->
+										<span
+											class="ref-lead"
+											style="height: {lead}px; background: {laneColor}"
+											aria-hidden="true"
+										></span>
+									{/if}
 								</div>
 							{:else if column.id === 'graph'}
 								<!--
@@ -739,8 +815,14 @@
 									functions the canvas drew it with.
 								-->
 								<div class="cell lane-space lane-band" style="width: {laneWidth}px">
+									{#if row.refs.length > 0}
+										<span
+											class="ref-lead graph-lead"
+											style="width: {Math.max(0, node.x)}px; height: {lead}px; background: {laneColor}"
+											aria-hidden="true"
+										></span>
+									{/if}
 									{#if row.parents.length <= 1}
-										{@const node = nodeAt(row)}
 										<span
 											class="node-hit"
 											style="left: {node.x - node.r}px; width: {node.r * 2}px; height: {node.r *
@@ -750,7 +832,10 @@
 									{/if}
 								</div>
 							{:else if column.id === 'message'}
-								<div class="cell message">
+								<div
+									class="cell message frozen"
+									style={freezeStyle(index)}
+								>
 									{#if row.signed}
 										<!--
 											FEAT-019. `S`, not a tick: the tick already means
@@ -774,30 +859,40 @@
 								</div>
 							{:else if column.id === 'author'}
 								{@const face = avatars.drawable(row.authorEmail, row.authorName)}
-								<div class="cell text author" style="width: {column.width}px">
+								<div
+									class="cell text author frozen"
+									style="width: {column.width}px; {freezeStyle(index)}"
+								>
 									<!--
-										The same face the node carries, resolved the same way
+										The same mark the node carries, resolved the same way
 										— one face per person on the screen, so the author
 										column and the graph agree about who is who. The real
-										picture when one has arrived, and the generated
-										portrait until then (FEAT-079).
+										picture when one has arrived, and initials on a
+										stable colour until then (FEAT-079).
 									-->
 									<span
 										class="avatar"
+										class:photo={face !== null}
 										style="background: {face
 											? `url(${face.src}) center / cover no-repeat`
 											: portraitBackground(seedOf(row.authorEmail, row.authorName))}"
 										title={describeAuthor(row)}
 										aria-hidden="true"
-									></span>
+									>{#if !face}<span class="letters">{row.initials}</span>{/if}</span>
 									<span class="ellipsis" title={describeAuthor(row)}>{row.authorName}</span>
 								</div>
 							{:else if column.id === 'time'}
-								<div class="cell text" style="width: {column.width}px">
+								<div
+									class="cell text frozen"
+									style="width: {column.width}px; {freezeStyle(index)}"
+								>
 									<span class="mono muted ellipsis">{fullDate(row.time)} {clockTime(row.time)}</span>
 								</div>
 							{:else if column.id === 'sha'}
-								<div class="cell text" style="width: {column.width}px">
+								<div
+									class="cell text frozen"
+									style="width: {column.width}px; {freezeStyle(index)}"
+								>
 									<span class="mono muted">{row.short}</span>
 								</div>
 							{/if}
@@ -823,12 +918,10 @@
 		-->
 		<div
 			class="lane-layer"
-			style="transform: translateX({-scrollLeft}px); {tableWidth === null
-				? ''
-				: `width: ${tableWidth}px`}"
+			style="width: {scrollingWidth}px; transform: translateX({-scrollLeft}px)"
 			aria-hidden="true"
 		>
-			{#each shown as column (column.id)}
+			{#each shown.slice(0, freezeIndex) as column (column.id)}
 				{#if column.id === 'graph'}
 					<div class="lane-slot" style="width: {laneWidth}px">
 						<LaneCanvas
@@ -843,13 +936,19 @@
 							stashes={stashRows}
 						/>
 					</div>
-				{:else if column.fills}
-					<div class="lane-gap fill"></div>
 				{:else}
 					<div class="lane-gap" style="width: {column.width}px"></div>
 				{/if}
 			{/each}
 		</div>
+
+		<!--
+			The list pane's shadow. One strip for the whole height, not per row,
+			or every commit would cast its own — a stack of seams. The pane
+			itself is the sticky cells; this only says the graph continues
+			underneath.
+		-->
+		<div class="list-shadow" style="left: {paneLeft}px" aria-hidden="true"></div>
 
 		<!--
 			The edges. Purely an affordance: they say there is table under them
@@ -894,18 +993,27 @@
 	.bed {
 		position: absolute;
 		inset: 0;
-		display: flex;
 		pointer-events: none;
 		z-index: 0;
 	}
 
-	.bed-slot {
-		flex: none;
+	.bed-scroll {
+		display: flex;
+		height: 100%;
 	}
 
-	.bed-slot.fill {
-		flex: 1;
-		min-width: 0;
+	.bed-slot {
+		flex: none;
+		height: 100%;
+	}
+
+	.bed-frozen {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background: var(--bg);
+		pointer-events: none;
 	}
 
 	/*
@@ -934,10 +1042,14 @@
 		background: none;
 	}
 
-	.edge.right {
-		right: 0;
-		border-left: 1px solid var(--line);
-		background: none;
+	.list-shadow {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 1px;
+		pointer-events: none;
+		z-index: 4;
+		box-shadow: -8px 0 14px -4px color-mix(in srgb, var(--umbra) 32%, transparent);
 	}
 
 	.scroller {
@@ -969,11 +1081,7 @@
 		display: flex;
 		align-items: center;
 		cursor: pointer;
-		contain: layout paint;
-	}
-
-	.row.stripe {
-		background: var(--stripe);
+		contain: style;
 	}
 
 	/*
@@ -1003,11 +1111,6 @@
 
 	.lane-gap {
 		flex: none;
-	}
-
-	.lane-gap.fill {
-		flex: 1;
-		min-width: 0;
 	}
 
 	.lane-slot {
@@ -1042,17 +1145,16 @@
 	}
 
 	/*
-	 * The graph's surface and the rule down each side of it.
+	 * The graph's surface.
 	 *
 	 * One declaration, worn by both the per-row cell and the bed beneath it, so
 	 * the band cannot come out one colour where there are commits and another
-	 * where there are none.
+	 * where there are none. No vertical rules: a line down each side of the
+	 * column boxed the history into a table. The labels join their nodes with a
+	 * lead instead, which is what says they belong together.
 	 */
 	.lane-band {
 		background: var(--graph-bg);
-		box-shadow:
-			inset 1px 0 0 var(--graph-line),
-			inset -1px 0 0 var(--graph-line);
 	}
 
 	/*
@@ -1082,7 +1184,7 @@
 		position: absolute;
 		top: 50%;
 		transform: translateY(-50%);
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 		/* The row owns the click; this only wants the pointer. */
 		cursor: default;
 	}
@@ -1129,20 +1231,38 @@
 	   Chips start at the column's own left edge, so every row's first chip is at
 	   the same x and the eye reads a column.
 
-	   They used to be `flex-end`, tucked against the graph. The idea was to sit
-	   them near the lane they label, but the lane they label moves and the chips
-	   do not all have the same width — so what it produced was a ragged left
-	   edge on every row, which is what a wall of refs looks like on a busy
-	   repository. A fixed start is the thing that reads as a column.
-
-	   `+n` stays last and is what the overflow clips, which is the right one to
-	   lose: it is already the summary.
+	   The lead after them takes whatever is left, so a label on the left is
+	   still joined to the node it names. Tucking the chips against the graph
+	   would shorten that line and scatter the names; the names stay a column.
 	*/
 	.refs {
 		justify-content: flex-start;
 		gap: 4px;
-		padding: 0 8px;
+		padding: 0 0 0 8px;
 		overflow: hidden;
+	}
+
+	/*
+	 * The line from a label to its node.
+	 *
+	 * In the refs cell it grows from the last chip to the graph. In the graph
+	 * cell it runs from the column's left edge to the node's centre — the
+	 * canvas paints the node on top, so the lead disappears into the head
+	 * rather than stopping short of it.
+	 */
+	.ref-lead {
+		flex: 1;
+		min-width: 8px;
+		align-self: center;
+		pointer-events: none;
+	}
+
+	.graph-lead {
+		position: absolute;
+		flex: none;
+		left: 0;
+		top: 50%;
+		transform: translateY(-50%);
 	}
 
 	.chip-slot {
@@ -1165,6 +1285,21 @@
 		background: var(--surface);
 		box-shadow: var(--sheen);
 		flex: none;
+	}
+
+	.cell.frozen {
+		background-color: var(--bg);
+	}
+
+	.row:hover .cell.frozen {
+		background-color: color-mix(in srgb, var(--ink) 7%, var(--bg));
+	}
+
+	.row.selected .cell.frozen {
+		/* `--selection` is a tint, not a fill — paint it over the pane or the
+		   graph shows through the subject line. */
+		background-color: var(--bg);
+		background-image: linear-gradient(var(--selection), var(--selection));
 	}
 
 	.message {
@@ -1200,23 +1335,31 @@
 	/*
 		Sized in `em` so the disc tracks the text-size dial rather than staying a
 		fixed dot beside text that grew around it.
+
+		Initials on a lane colour, matching the node, until a fetched picture
+		covers the disc. `--bg` is the letter colour: it is the theme's ground,
+		so it reads on a filled lane in both light and dark.
 	*/
-	/*
-	 * A portrait, not initials: the background is a set of radial gradients from
-	 * `portrait.ts`, so there is nothing to centre inside it and nothing to
-	 * read. The ring is the row's own colour, which keeps a light portrait from
-	 * bleeding into a light row.
-	 */
 	.avatar {
 		flex: none;
 		width: 2em;
 		height: 2em;
 		border-radius: 50%;
-		/* A ring in the row's own colour, and a shadow under it so the disc sits
-		   on the row rather than being printed on it. */
-		/* A ring in the row's own colour. Zero offset and zero blur: a border
-		   drawn with `box-shadow`, so it does not resize the disc. */
+		display: grid;
+		place-items: center;
+		line-height: 1;
+		color: var(--bg);
+		user-select: none;
 		box-shadow: 0 0 0 1px var(--line);
+	}
+
+	.avatar .letters {
+		font-size: 0.7em;
+		font-weight: 600;
+	}
+
+	.avatar.photo {
+		color: transparent;
 	}
 
 	.wip {
@@ -1242,7 +1385,7 @@
 		height: 12px;
 		flex: none;
 		border: 2px dashed var(--accent);
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 	}
 
 	.wip-text {

@@ -24,18 +24,27 @@
 		 * How far the rows are scrolled sideways.
 		 *
 		 * The header is not inside the rows' scroller — it must stay visible
-		 * while they scroll vertically — so it is moved by the same amount
-		 * instead. One number, passed down, rather than two scrollers kept in
-		 * step by listening to each other.
+		 * while they scroll vertically — so the graph half is moved by the same
+		 * amount. The commit-list half is pinned, so it does not come along.
 		 */
 		scrollLeft?: number;
-		/** Total width of the columns, or null while one of them fills. */
-		tableWidth?: number | null;
 		/** Width of the lane column right now, which the store cannot know. */
 		laneWidth: number;
+		/** First column that belongs to the pinned commit-list pane. */
+		freezeAt: number;
+		/** Left edge of that pane, matching the rows. */
+		frozenLeft: number;
+		/** Combined width of the columns that pan with the graph. */
+		scrollingWidth: number;
 	}
 
-	let { laneWidth, scrollLeft = 0, tableWidth = null }: Props = $props();
+	let {
+		laneWidth,
+		scrollLeft = 0,
+		freezeAt,
+		frozenLeft,
+		scrollingWidth
+	}: Props = $props();
 
 	const shown = $derived(columns.shown);
 
@@ -103,7 +112,7 @@
 		// is 0 until it is dragged, and starting a drag from 0 would snap it to
 		// its minimum before the pointer had moved a pixel.
 		const handle = event.currentTarget as HTMLElement;
-		const cell = handle.closest('.header')?.querySelector<HTMLElement>(`[data-column="${id}"]`);
+		const cell = handle.closest('.header-clip')?.querySelector<HTMLElement>(`[data-column="${id}"]`);
 		const startWidth = cell ? cell.getBoundingClientRect().width : columns.width(id);
 
 		resizing = { id, startX: event.clientX, startWidth };
@@ -129,98 +138,125 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="header-clip">
 <div
-	class="header"
-	style="transform: translateX({-scrollLeft}px); {tableWidth === null
-		? ''
-		: `width: ${tableWidth}px`}"
+	class="header-clip"
 	oncontextmenu={openMenu}
 	role="row"
 	tabindex="-1"
 	aria-label="Graph columns"
 >
-	{#each shown as column, index (column.id)}
-		{@const target = resizeTarget(index)}
-		{@const sized = shown.find((c) => c.id === target)?.label}
-		<div
-			class="cell"
-			data-column={column.id}
-			class:fills={column.fills}
-			class:dragging={dragging === index}
-			class:over={over === index && dragging !== index}
-			style={column.fills ? '' : `width: ${widthOf(column.id)}px`}
-			role="columnheader"
-			tabindex="-1"
-			draggable="true"
-			ondragstart={() => (dragging = index)}
-			ondragend={() => {
-				dragging = null;
-				over = null;
-			}}
-			ondragover={(event) => {
-				event.preventDefault();
-				over = index;
-			}}
-			ondrop={(event) => {
-				event.preventDefault();
-				drop(index);
-			}}
-		>
-			<span class="label note">{column.label}</span>
-
-			{#if column.id === 'author'}
-				<!--
-					The filter lives in the Author column because that is what it
-					filters, and it opens on click rather than always showing a
-					field: a permanently open input in a header reads as a search
-					box for the whole screen.
-				-->
-				{#if filtering || columns.author !== ''}
-					<input
-						class="filter"
-						type="text"
-						placeholder="filter…"
-						spellcheck="false"
-						aria-label="Filter by author"
-						value={columns.author}
-						oninput={(event) => columns.setAuthor(event.currentTarget.value)}
-						onblur={() => (filtering = false)}
-					/>
-				{:else}
-					<button
-						class="filter-open"
-						title="Filter by author"
-						aria-label="Filter by author"
-						onclick={() => (filtering = true)}
-					>
-						⌕
-					</button>
-				{/if}
-			{/if}
-
+	<div
+		class="header-scroll"
+		style="width: {scrollingWidth}px; transform: translateX({-scrollLeft}px)"
+	>
+		{#each shown.slice(0, freezeAt) as column, index (column.id)}
+			{@render heading(column, index)}
+		{/each}
+	</div>
+	<div class="header-frozen" style="left: {frozenLeft}px">
+		{#if freezeAt > 0}
 			<!--
-				Every column gets a divider, including the one that fills.
-				Dragging the filling column is how it stops filling — before this
-				it was the one column with no handle at all, which read as "this
-				one is not resizable" rather than "this one takes what is left".
-				Double-click hands the fill back.
+				The seam handle lives on the pane, not on the graph column: the
+				graph slides under this edge, and a divider that travelled with
+				it would disappear the moment somebody panned.
 			-->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="divider"
-				class:last={index === shown.length - 1}
-				title={`Resize ${sized} — double-click to reset`}
-				onpointerdown={(event) => startResize(event, index)}
+				class="divider seam"
+				title={`Resize ${shown[freezeAt - 1]?.label} — double-click to reset`}
+				onpointerdown={(event) => startResize(event, freezeAt - 1)}
 				onpointermove={moveResize}
 				onpointerup={endResize}
 				onpointercancel={endResize}
-				ondblclick={() => columns.unsize(target)}
+				ondblclick={() => columns.unsize(resizeTarget(freezeAt - 1))}
 			></div>
-		</div>
-	{/each}
+		{/if}
+		{#each shown.slice(freezeAt) as column, offset (column.id)}
+			{@render heading(column, freezeAt + offset)}
+		{/each}
+	</div>
 </div>
-</div>
+
+{#snippet heading(column: (typeof shown)[0], index: number)}
+	{@const target = resizeTarget(index)}
+	{@const sized = shown.find((c) => c.id === target)?.label}
+	<div
+		class="cell"
+		data-column={column.id}
+		class:fills={column.fills}
+		class:dragging={dragging === index}
+		class:over={over === index && dragging !== index}
+		style={column.fills ? '' : `width: ${widthOf(column.id)}px`}
+		role="columnheader"
+		tabindex="-1"
+		draggable="true"
+		ondragstart={() => (dragging = index)}
+		ondragend={() => {
+			dragging = null;
+			over = null;
+		}}
+		ondragover={(event) => {
+			event.preventDefault();
+			over = index;
+		}}
+		ondrop={(event) => {
+			event.preventDefault();
+			drop(index);
+		}}
+	>
+		<span class="label note">{column.label}</span>
+
+		{#if column.id === 'author'}
+			<!--
+				The filter lives in the Author column because that is what it
+				filters, and it opens on click rather than always showing a
+				field: a permanently open input in a header reads as a search
+				box for the whole screen.
+			-->
+			{#if filtering || columns.author !== ''}
+				<input
+					class="filter"
+					type="text"
+					placeholder="filter…"
+					spellcheck="false"
+					aria-label="Filter by author"
+					value={columns.author}
+					oninput={(event) => columns.setAuthor(event.currentTarget.value)}
+					onblur={() => (filtering = false)}
+				/>
+			{:else}
+				<button
+					class="filter-open"
+					title="Filter by author"
+					aria-label="Filter by author"
+					onclick={() => (filtering = true)}
+				>
+					⌕
+				</button>
+			{/if}
+		{/if}
+
+		<!--
+			Every column gets a divider, including the one that fills.
+			Dragging the filling column is how it stops filling — before this
+			it was the one column with no handle at all, which read as "this
+			one is not resizable" rather than "this one takes what is left".
+			Double-click hands the fill back.
+		-->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="divider"
+			class:last={index === shown.length - 1}
+			class:silent={column.id === 'refs'}
+			title={`Resize ${sized} — double-click to reset`}
+			onpointerdown={(event) => startResize(event, index)}
+			onpointermove={moveResize}
+			onpointerup={endResize}
+			onpointercancel={endResize}
+			ondblclick={() => columns.unsize(target)}
+		></div>
+	</div>
+{/snippet}
 
 {#if menu}
 	<Menu
@@ -233,28 +269,44 @@
 {/if}
 
 <style>
-	/* The header is clipped rather than scrolled: it is moved by the rows'
-	   scroll offset, so anything past the right edge must not paint outside. */
 	.header-clip {
+		position: relative;
 		overflow: hidden;
 		flex: none;
-	}
-
-	.header {
-		display: flex;
-		align-items: stretch;
 		height: calc(var(--row-pitch) + 2px);
 		border-bottom: 1px solid var(--line);
-		/* Chrome, so it is glass too — and it casts onto the rows under it,
-		   which is what keeps a column heading readable while a hundred commits
-		   scroll beneath it. */
 		background-color: var(--chrome-veil);
-		box-shadow: none;
+	}
+
+	.header-scroll,
+	.header-frozen {
+		display: flex;
+		align-items: stretch;
+		height: 100%;
 		font-size: var(--fs-secondary);
 		font-weight: 550;
 		letter-spacing: 0.02em;
-		flex: none;
 		user-select: none;
+	}
+
+	.header-scroll {
+		flex: none;
+	}
+
+	.header-frozen {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 3;
+		background-color: var(--chrome-veil);
+		box-shadow: -8px 0 14px -4px color-mix(in srgb, var(--umbra) 32%, transparent);
+	}
+
+	.divider.seam {
+		left: -3px;
+		right: auto;
+		z-index: 4;
 	}
 
 	.cell {
@@ -330,6 +382,19 @@
 	/* A hover hint, not an announcement: the divider is a handle, and lighting
 	   it in the accent read as something breaking along the header's edge. */
 	.divider:hover::after {
+		background: var(--line);
+	}
+
+	/*
+	 * Between Branch/Tag and Graph there is no rule. The labels join their
+	 * nodes with a lead; a column line there would cut that join at the header.
+	 * The handle still exists — hover lights the line so the resize is not lost.
+	 */
+	.divider.silent::after {
+		background: none;
+	}
+
+	.divider.silent:hover::after {
 		background: var(--line);
 	}
 

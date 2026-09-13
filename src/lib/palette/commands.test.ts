@@ -107,6 +107,11 @@ describe('registerCommands', () => {
 		expect(columns.author).toBe('');
 	});
 
+	it('offers both graph orders', () => {
+		expect(find('view.order.date').title).toBe('Order graph by date');
+		expect(find('view.order.branch').title).toBe('Order graph by branch');
+	});
+
 	it('moves the zoom, and resets both dials', () => {
 		scale.setZoom(1);
 		find('appearance.zoom.in').run();

@@ -5,6 +5,8 @@ import { LANE_COLOR_COUNT } from '$lib/metrics';
 import {
 	drawPortrait,
 	forgetPortraits,
+	letterColor,
+	lettersOf,
 	portrait,
 	portraitBackground,
 	portraitCacheSize,
@@ -33,12 +35,22 @@ describe('the seed a portrait is generated from', () => {
 	});
 });
 
+describe('the letters on the disc', () => {
+	it('are the initials of the name', () => {
+		expect(lettersOf('Ada Lovelace', 'ada@example.com')).toBe('AL');
+	});
+
+	it('fall back to the address when git recorded no name', () => {
+		expect(lettersOf('', 'ada.lovelace@example.com')).toBe('AL');
+	});
+});
+
 describe('a portrait', () => {
-	it('is the same face for the same address, every time', () => {
+	it('is the same colour for the same address, every time', () => {
 		expect(portrait('ada@example.com')).toEqual(portrait('ada@example.com'));
 	});
 
-	it('is a different face for a different address', () => {
+	it('is a different colour for a different address', () => {
 		const ada = portrait('ada@example.com');
 		const charles = portrait('charles@example.com');
 		expect(ada).not.toEqual(charles);
@@ -47,58 +59,38 @@ describe('a portrait', () => {
 	it('stays inside the theme’s lane palette, so it introduces no new hue', () => {
 		for (const seed of ['ada@example.com', 'charles@example.com', 'x', '', 'a@b.c']) {
 			const face = portrait(seed);
-			expect(face.base).toBeGreaterThanOrEqual(0);
-			expect(face.base).toBeLessThan(LANE_COLOR_COUNT);
-			for (const blob of face.blobs) {
-				expect(blob.color).toBeGreaterThanOrEqual(0);
-				expect(blob.color).toBeLessThan(LANE_COLOR_COUNT);
-			}
+			expect(face.color).toBeGreaterThanOrEqual(0);
+			expect(face.color).toBeLessThan(LANE_COLOR_COUNT);
 		}
 	});
 
-	it('has three blobs, spread rather than stacked on the centre', () => {
-		// A blob at the middle of every face makes every face the same face.
-		for (const seed of ['ada@example.com', 'grace@example.com', 'linus@example.com']) {
-			const { blobs } = portrait(seed);
-			expect(blobs).toHaveLength(3);
-			for (const blob of blobs) {
-				const distance = Math.hypot(blob.x, blob.y);
-				expect(distance).toBeGreaterThanOrEqual(0.24);
-				expect(distance).toBeLessThanOrEqual(0.71);
-				expect(blob.r).toBeGreaterThanOrEqual(0.7);
-			}
-		}
-	});
-
-	it('spreads similar addresses apart rather than giving them near-identical faces', () => {
-		// One character apart is the case that matters: two colleagues on the
-		// same domain must not be told apart only by squinting.
-		const first = portrait('ada.l@example.com');
-		const second = portrait('ada.m@example.com');
-		const moved = first.blobs.some(
-			(blob, index) =>
-				Math.abs(blob.x - second.blobs[index].x) > 0.1 ||
-				Math.abs(blob.y - second.blobs[index].y) > 0.1
+	it('spreads similar addresses apart rather than giving them the same disc', () => {
+		const colours = new Set(
+			['ada.l@example.com', 'ada.m@example.com', 'ada.n@example.com', 'ada.o@example.com'].map(
+				(seed) => portrait(seed).color
+			)
 		);
-		expect(moved || first.base !== second.base).toBe(true);
+		expect(colours.size).toBeGreaterThan(1);
 	});
 });
 
 describe('the CSS form', () => {
-	it('paints with the lane variables, so a theme change repaints it', () => {
+	it('paints with a lane variable, so a theme change repaints it', () => {
 		const css = portraitBackground('ada@example.com');
-		expect(css).toContain('var(--lane-');
+		expect(css).toMatch(/^var\(--lane-[1-5]\)$/);
 		expect(css).not.toMatch(/#[0-9a-f]{3,6}/i);
+		expect(css).not.toContain('radial-gradient');
+	});
+});
+
+describe('letter colour', () => {
+	it('is white on a dark fill and dark on a light one', () => {
+		expect(letterColor('#1e66f5')).toBe('#ffffff');
+		expect(letterColor('#a6e3a1')).toBe('#1a1a1a');
 	});
 
-	it('is three gradients over a base fill', () => {
-		const css = portraitBackground('ada@example.com');
-		expect(css.match(/radial-gradient/g)).toHaveLength(3);
-		expect(css.endsWith(')')).toBe(true);
-	});
-
-	it('fades every blob out at its edge, so it is a blob and not a disc', () => {
-		expect(portraitBackground('ada@example.com')).toContain('transparent');
+	it('falls back to white when the fill cannot be parsed', () => {
+		expect(letterColor('color-mix(in srgb, red, blue)')).toBe('#ffffff');
 	});
 });
 
@@ -110,47 +102,44 @@ describe('drawing', () => {
 
 	function fakeContext() {
 		const calls: Call[] = [];
-		const gradient = { addColorStop: (...args: unknown[]) => calls.push({ op: 'stop', args }) };
 		const ctx = {
 			fillStyle: '' as unknown,
-			globalAlpha: 1,
-			save: () => calls.push({ op: 'save', args: [] }),
-			restore: () => calls.push({ op: 'restore', args: [] }),
+			font: '',
+			textAlign: '',
+			textBaseline: '',
 			fillRect: (...args: unknown[]) => calls.push({ op: 'fillRect', args }),
-			createRadialGradient: (...args: unknown[]) => {
-				calls.push({ op: 'gradient', args });
-				return gradient;
-			},
-			beginPath: () => calls.push({ op: 'beginPath', args: [] }),
-			arc: (...args: unknown[]) => calls.push({ op: 'arc', args }),
-			fill: () => calls.push({ op: 'fill', args: [] })
+			fillText: (...args: unknown[]) => calls.push({ op: 'fillText', args })
 		};
 		return { ctx, calls };
 	}
 
-	it('fills the square and then lays the blobs over it', () => {
+	it('fills the square and writes the initials on it', () => {
 		const { ctx, calls } = fakeContext();
-		drawPortrait(ctx as unknown as CanvasRenderingContext2D, 'ada@example.com', 18, [
-			'#111',
-			'#222',
-			'#333',
-			'#444',
-			'#555'
-		]);
+		drawPortrait(
+			ctx as unknown as CanvasRenderingContext2D,
+			'ada@example.com',
+			18,
+			['#111', '#222', '#333', '#444', '#555'],
+			'AL'
+		);
 
 		expect(calls[0].op).toBe('fillRect');
-		// Each blob is drawn inside its own save/restore, so the alpha it needs
-		// cannot leak into whatever the caller draws next.
-		expect(calls.filter((c) => c.op === 'save')).toHaveLength(3);
-		expect(calls.filter((c) => c.op === 'restore')).toHaveLength(3);
-		expect(calls.filter((c) => c.op === 'gradient')).toHaveLength(3);
-		expect(calls.filter((c) => c.op === 'arc')).toHaveLength(3);
+		expect(calls[0].args).toEqual([0, 0, 18, 18]);
+		const text = calls.find((c) => c.op === 'fillText');
+		expect(text?.args[0]).toBe('AL');
+		expect(text?.args[1]).toBe(9);
 	});
 
 	it('cycles the palette rather than running off the end of a short one', () => {
 		const { ctx } = fakeContext();
 		expect(() =>
-			drawPortrait(ctx as unknown as CanvasRenderingContext2D, 'ada@example.com', 18, ['#111'])
+			drawPortrait(
+				ctx as unknown as CanvasRenderingContext2D,
+				'ada@example.com',
+				18,
+				['#111'],
+				'AL'
+			)
 		).not.toThrow();
 	});
 });
@@ -159,8 +148,8 @@ describe('the tile cache', () => {
 	const palette = ['#111', '#222', '#333', '#444', '#555'];
 
 	it('renders an author once and hands the same tile back', () => {
-		const first = portraitTile('ada@example.com', 18, palette);
-		const second = portraitTile('ada@example.com', 18, palette);
+		const first = portraitTile('ada@example.com', 18, palette, 'AL');
+		const second = portraitTile('ada@example.com', 18, palette, 'AL');
 
 		// happy-dom gives no 2d context, so a null here is the environment
 		// rather than a failure — what matters is that both answers agree.
@@ -168,9 +157,15 @@ describe('the tile cache', () => {
 		if (first) expect(portraitCacheSize()).toBe(1);
 	});
 
+	it('treats different letters as a different tile', () => {
+		const ada = portraitTile('ada@example.com', 18, palette, 'AL');
+		const other = portraitTile('ada@example.com', 18, palette, 'A');
+		if (ada && other) expect(other).not.toBe(ada);
+	});
+
 	it('treats a different palette as a different tile, so a theme change is not stale', () => {
-		const light = portraitTile('ada@example.com', 18, palette);
-		const dark = portraitTile('ada@example.com', 18, ['#eee', '#ddd', '#ccc', '#bbb', '#aaa']);
+		const light = portraitTile('ada@example.com', 18, palette, 'AL');
+		const dark = portraitTile('ada@example.com', 18, ['#eee', '#ddd', '#ccc', '#bbb', '#aaa'], 'AL');
 
 		if (light && dark) {
 			expect(dark).not.toBe(light);
@@ -179,7 +174,7 @@ describe('the tile cache', () => {
 	});
 
 	it('is emptied when the theme changes', () => {
-		portraitTile('ada@example.com', 18, palette);
+		portraitTile('ada@example.com', 18, palette, 'AL');
 		forgetPortraits();
 		expect(portraitCacheSize()).toBe(0);
 	});

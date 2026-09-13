@@ -63,6 +63,7 @@
 
 	<textarea
 		class="body"
+		rows="3"
 		placeholder="Why, if the summary is not enough"
 		value={changes.body}
 		oninput={(event) => changes.setBody(event.currentTarget.value)}
@@ -92,9 +93,17 @@
 	 * The commit message is what this screen is for, so it is a well rather
 	 * than a strip: a sunken surface the two fields sit inside, which is what
 	 * says "type here" without a label saying it.
+	 *
+	 * It must not eat the hunks. `flex: none` plus WebKitGTK's default
+	 * textarea height sized this well to the whole column at 100% zoom, and
+	 * the diff only appeared after a zoom change forced leftover space. Cap
+	 * it, and let it shrink, so the pane below always has a height.
 	 */
 	.message {
-		flex: none;
+		flex: 0 1 auto;
+		min-height: 0;
+		max-height: 40%;
+		overflow: auto;
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
@@ -147,7 +156,8 @@
 	}
 
 	.body {
-		min-height: 52px;
+		min-height: 3.2em;
+		max-height: 12em;
 		resize: vertical;
 		font-size: var(--fs-secondary);
 		line-height: var(--lh-ui);

@@ -36,7 +36,7 @@
 	{:else if changes.selection === null}
 		<div class="pad note">Select a file to see what changed in it.</div>
 	{:else if file === null}
-		<div class="pad note">{changes.fileLoading ? 'Reading…' : ''}</div>
+		<div class="pad note">{changes.fileLoading ? 'Reading…' : 'Could not read this diff.'}</div>
 	{:else if file.binary}
 		<div class="pad note">Binary file. There are no hunks to stage individually.</div>
 	{:else if file.tooLarge}
@@ -88,9 +88,17 @@
 		gap: 6px;
 	}
 
+	/*
+	 * Nested column flex. `flex-basis: 0` is what claims the leftover height
+	 * even when the commit-message well has a large intrinsic size — WebKitGTK
+	 * otherwise sizes this pane to zero at 100% zoom, and the hunks only appear
+	 * after a zoom change forces a relayout. `min-height: 0` is what then lets
+	 * the pane scroll inside that leftover rather than overflow it.
+	 */
 	.pane {
-		flex: 1;
+		flex: 1 1 0;
 		min-width: 0;
+		min-height: 0;
 		overflow: auto;
 		font-family: var(--font-mono);
 		font-size: var(--fs-code);
@@ -104,12 +112,17 @@
 		color: var(--danger);
 	}
 
+	/*
+	 * Same fill as the lines, not `--panel`. The file list is `--panel` with a
+	 * right rule; a panel-coloured header sits on that rule and the `@@` row
+	 * looks unframed while the code below it does not.
+	 */
 	.hunk-head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		background: var(--panel);
+		background: var(--bg);
 		border-top: 1px solid var(--soft);
 		border-bottom: 1px solid var(--soft);
 		padding: 2px 8px;

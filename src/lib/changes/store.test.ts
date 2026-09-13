@@ -202,6 +202,23 @@ describe('open', () => {
 		expect(workingDiff).not.toHaveBeenCalled();
 	});
 
+	it('retries a selected file whose last fetch left nothing to show', async () => {
+		await changes.load();
+		await settle();
+
+		workingDiff.mockRejectedValueOnce('no file b.txt');
+		changes.open({ path: 'b.txt', side: 'unstaged' }, true);
+		await settle();
+		expect(changes.file).toBeNull();
+
+		workingDiff.mockClear();
+		changes.open({ path: 'b.txt', side: 'unstaged' });
+		await settle();
+
+		expect(workingDiff).toHaveBeenCalledWith('b.txt', 'unstaged');
+		expect(changes.file?.path).toBe('b.txt');
+	});
+
 	it('records a file error without disturbing the lists', async () => {
 		await changes.load();
 		await settle();

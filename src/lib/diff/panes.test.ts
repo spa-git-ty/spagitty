@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, flushSync, press, render } from '../../testing/mount';
 import type { DiffView } from './store.svelte';
@@ -290,6 +291,14 @@ describe('DiffPane', () => {
 		const view = render(DiffPane, pane());
 		expect(view.text()).toContain('Select a file');
 		view.destroy();
+	});
+
+	it('paints the @@ header on the same surface as the lines, so the left rule continues through it', () => {
+		const source = readFileSync('src/lib/diff/DiffPane.svelte', 'utf8');
+		const style = source.slice(source.indexOf('<style>'));
+		const head = style.match(/\.hunk-head \{[^}]+\}/)?.[0] ?? '';
+		expect(head).toMatch(/background:\s*var\(--bg\)/);
+		expect(head).not.toMatch(/var\(--panel\)/);
 	});
 
 	it('brings the focused hunk into view', () => {

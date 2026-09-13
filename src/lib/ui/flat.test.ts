@@ -298,7 +298,7 @@ describe('the soft spatial interface', () => {
 	});
 
 	it('gives floating layers their own geometry and restrained depth', () => {
-		expect(css).toContain('--r-floating: 18px');
+		expect(css).toContain('--r-floating: 8px');
 		expect(css).toMatch(/--shadow-3:\s*[\s\S]*?30px/);
 		expect(css).toMatch(/\.floating\s*{[^}]*border-radius:\s*var\(--r-floating\)/s);
 	});

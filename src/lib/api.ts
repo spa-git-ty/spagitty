@@ -55,6 +55,7 @@ import type {
 	ForgeAccount,
 	ForgeKind,
 	ForgeRepo,
+	GraphOrder,
 	ReviewVerdict,
 	Settings,
 	Signing,
@@ -66,8 +67,8 @@ import type {
 	WorkingCopy
 } from './types';
 
-export function openRepo(path: string): Promise<OpenResult> {
-	return invoke('open_repo', { path });
+export function openRepo(path: string, order: GraphOrder = 'date'): Promise<OpenResult> {
+	return invoke('open_repo', { path, order });
 }
 
 export function closeRepo(): Promise<void> {
@@ -93,6 +94,16 @@ export function graphRestart(): Promise<number> {
  */
 export function graphVisibility(refs: string[], pinned: string[] = []): Promise<number> {
 	return invoke('graph_visibility', { refs, pinned });
+}
+
+/**
+ * Choose how the graph sequences commits, and restart the walk.
+ *
+ * Resolves to the new token. Lanes are assigned as the walk runs, so the
+ * drawing cannot be edited after the fact.
+ */
+export function graphOrder(order: GraphOrder): Promise<number> {
+	return invoke('graph_order', { order });
 }
 
 export function snapshot(): Promise<Snapshot> {

@@ -52,6 +52,14 @@ export interface RefChip {
 // --- Graph ----------------------------------------------------------------
 
 /**
+ * How the graph sequences the same DAG.
+ *
+ * `date` is `git log` (newest first, parallel histories interleaved). `branch`
+ * is `git log --topo-order` (a line of history stays together).
+ */
+export type GraphOrder = 'date' | 'branch';
+
+/**
  * A lane segment in the band *above* a row, running from the previous row's
  * center to this row's. `from === to` is a straight vertical; otherwise it is a
  * cubic elbow spanning exactly one row.

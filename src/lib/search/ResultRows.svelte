@@ -102,7 +102,7 @@
 		width: 20px;
 		height: 20px;
 		border: 1px solid var(--line);
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;

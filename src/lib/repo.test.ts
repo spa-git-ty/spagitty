@@ -104,7 +104,7 @@ describe('choose', () => {
 	it('opens the directory the user picked', async () => {
 		dialog.mockResolvedValueOnce('/repos/picked');
 		expect(await repo.choose()).toBe(true);
-		expect(openRepo).toHaveBeenCalledWith('/repos/picked');
+		expect(openRepo).toHaveBeenCalledWith('/repos/picked', 'date');
 	});
 
 	it('does nothing when the dialog is cancelled', async () => {

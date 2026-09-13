@@ -20,6 +20,7 @@ import { shortcut } from '$lib/platform';
 import { commandLog } from '$lib/commandlog/store.svelte';
 import { fetchAll, pushCurrent } from '$lib/graph/actions';
 import { columns, type ColumnId } from '$lib/graph/columns.svelte';
+import { graphOrder } from '$lib/graph/order.svelte';
 import { visibility } from '$lib/graph/visibility.svelte';
 import { palette, type Command } from '$lib/palette/store.svelte';
 import { repo } from '$lib/repo.svelte';
@@ -101,6 +102,20 @@ function view(): Command[] {
 			keywords: ['focus', 'checked out', 'upstream'],
 			run: () => visibility.setMode('smart')
 		}),
+		{
+			id: 'view.order.date',
+			title: 'Order graph by date',
+			group: 'View',
+			keywords: ['log', 'time', 'newest', 'interleave'],
+			run: () => void graphOrder.set('date')
+		},
+		{
+			id: 'view.order.branch',
+			title: 'Order graph by branch',
+			group: 'View',
+			keywords: ['topo', 'together', 'gitkraken'],
+			run: () => void graphOrder.set('branch')
+		},
 		...TOGGLEABLE.map((column) => ({
 			id: `view.column.${column.id}`,
 			title: `Toggle ${column.title} column`,

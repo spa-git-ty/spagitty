@@ -61,7 +61,7 @@ pub mod fixture;
 pub use gix;
 
 pub use error::{Error, Result};
-pub use graph::{GraphRow, LaneEdge, LaneState, ROW_PITCH};
+pub use graph::{GraphOrder, GraphRow, LaneEdge, LaneState, ROW_PITCH};
 pub use refs::{RefChip, RefIndex, RefKind};
 pub use repo::{HeadInfo, RepoInfo};
 pub use status::{StatusEntry, WorkingCopy};

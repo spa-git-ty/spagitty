@@ -90,7 +90,7 @@
 		flex: none;
 		width: 7px;
 		height: 7px;
-		border-radius: var(--r-pill);
+		border-radius: 50%;
 		background-color: var(--accent);
 		animation: breathe 2.4s var(--ease) infinite;
 	}

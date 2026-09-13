@@ -29,7 +29,7 @@
 use std::collections::{HashMap, HashSet};
 
 use gix::ObjectId;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::refs::{RefChip, RefIndex};
@@ -289,9 +289,30 @@ impl LaneState {
 }
 
 /// What the sink wants the walk to do next.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Flow {
     Continue,
     Stop,
+}
+
+/// How the walk orders commits, which is what makes two drawings of the same
+/// DAG look like different trees.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GraphOrder {
+    /// Newest first by commit timestamp, like `git log`.
+    ///
+    /// Parallel histories interleave: a commit on `main` can sit between two
+    /// commits of a feature branch if the clocks say so. Lanes are packed into
+    /// the lowest free column.
+    #[default]
+    Date,
+    /// `git log --topo-order`.
+    ///
+    /// No parent is shown before its children, and commits on one line of
+    /// history stay together rather than mixing with another. That is the
+    /// drawing GitKraken uses for the same DAG.
+    Branch,
 }
 
 /// Walk history from `tips`, newest first, assigning lanes as we go.
@@ -310,7 +331,7 @@ pub fn walk<F>(
 where
     F: FnMut(GraphRow) -> Flow,
 {
-    walk_pinned(repo, tips, refs, &[], sink)
+    walk_pinned(repo, tips, refs, &[], GraphOrder::Date, sink)
 }
 
 /// [`walk`], with lanes held open on the left for `pinned`.
@@ -319,11 +340,15 @@ where
 /// the first row, in the order given, so those branches occupy the leftmost
 /// columns for the whole walk instead of drifting as history interleaves. An id
 /// the walk never reaches costs one empty column and nothing else.
+///
+/// `order` is how the same DAG is sequenced: date order interleaves parallel
+/// histories; branch order keeps a line of work together.
 pub fn walk_pinned<F>(
     repo: &gix::Repository,
     tips: Vec<ObjectId>,
     refs: &RefIndex,
     pinned: &[ObjectId],
+    order: GraphOrder,
     mut sink: F,
 ) -> Result<usize>
 where
@@ -333,83 +358,148 @@ where
         return Err(Error::EmptyRepository);
     }
 
-    // Newest first, by commit time. This is what `git log` shows by default and
-    // what the graph's row order means: down the screen is back in time.
-    let walk = repo
-        .rev_walk(tips)
-        .sorting(gix::revision::walk::Sorting::ByCommitTime(
-            gix::traverse::commit::simple::CommitTimeOrder::NewestFirst,
-        ))
-        .all()
-        .map_err(|e| Error::Walk(e.to_string()))?;
-
     let mut lanes = LaneState::new();
     for id in pinned {
         lanes.reserve(*id);
     }
     let mut index = 0usize;
-    // Author-name -> initials. Repositories repeat a handful of authors
-    // thousands of times; this keeps it to one computation each.
     let mut initials_cache: HashMap<String, String> = HashMap::new();
 
-    for info in walk {
-        let info = info.map_err(|e| Error::Walk(e.to_string()))?;
-        let id = info.id;
-        let parents: Vec<ObjectId> = info.parent_ids.iter().copied().collect();
+    match order {
+        GraphOrder::Date => {
+            // Newest first, by commit time. This is what `git log` shows by
+            // default and what the graph's row order means: down the screen is
+            // back in time.
+            let walk = repo
+                .rev_walk(tips)
+                .sorting(gix::revision::walk::Sorting::ByCommitTime(
+                    gix::traverse::commit::simple::CommitTimeOrder::NewestFirst,
+                ))
+                .all()
+                .map_err(|e| Error::Walk(e.to_string()))?;
 
-        let commit = repo
-            .find_commit(id)
+            for info in walk {
+                let info = info.map_err(|e| Error::Walk(e.to_string()))?;
+                let parents: Vec<ObjectId> = info.parent_ids.iter().copied().collect();
+                if emit_row(
+                    repo,
+                    refs,
+                    &mut lanes,
+                    &mut initials_cache,
+                    &mut index,
+                    info.id,
+                    &parents,
+                    info.commit_time.unwrap_or(0),
+                    &mut sink,
+                )? == Flow::Stop
+                {
+                    break;
+                }
+            }
+        }
+        GraphOrder::Branch => {
+            // Building the walker explores enough of the DAG to know indegrees,
+            // which is the cost of not interleaving lines of history. Rows
+            // still stream after that, so a large history does not have to sit
+            // in memory before the first paint.
+            let walk = gix::traverse::commit::topo::Builder::from_iters(
+                repo.objects.clone(),
+                tips,
+                None::<std::iter::Empty<ObjectId>>,
+            )
+            .sorting(gix::traverse::commit::topo::Sorting::TopoOrder)
+            .build()
             .map_err(|e| Error::Walk(e.to_string()))?;
 
-        // An unparseable signature is not worth dropping a commit over; fall
-        // back to the walk's own commit time, which is already known.
-        let (author_name, author_email, time) = match commit.author() {
-            Ok(sig) => (
-                sig.name.to_string(),
-                sig.email.to_string().to_lowercase(),
-                sig.time()
-                    .map(|t| t.seconds)
-                    .unwrap_or_else(|_| info.commit_time.unwrap_or(0)),
-            ),
-            Err(_) => (String::new(), String::new(), info.commit_time.unwrap_or(0)),
-        };
-
-        let summary = commit
-            .message()
-            .map(|m| m.summary().to_string())
-            .unwrap_or_default();
-
-        let initials = initials_cache
-            .entry(author_name.clone())
-            .or_insert_with(|| initials(&author_name))
-            .clone();
-
-        let RowLanes { lane, color, edges } = lanes.step(id, &parents);
-
-        let row = GraphRow {
-            index,
-            id: id.to_string(),
-            short: short_id(&id),
-            summary,
-            author_name,
-            author_email,
-            initials,
-            time,
-            lane,
-            color,
-            signed: crate::signing::signed(&commit),
-            parents: parents.iter().map(ObjectId::to_string).collect(),
-            refs: refs.chips_for(&id),
-            edges,
-        };
-
-        index += 1;
-        if let Flow::Stop = sink(row) {
-            break;
+            for info in walk {
+                let info = info.map_err(|e| Error::Walk(e.to_string()))?;
+                let parents: Vec<ObjectId> = info.parent_ids.iter().copied().collect();
+                if emit_row(
+                    repo,
+                    refs,
+                    &mut lanes,
+                    &mut initials_cache,
+                    &mut index,
+                    info.id,
+                    &parents,
+                    info.commit_time.unwrap_or(0),
+                    &mut sink,
+                )? == Flow::Stop
+                {
+                    break;
+                }
+            }
         }
     }
 
     Ok(index)
+}
+
+/// One commit of the walk, painted into a row and handed to the sink.
+///
+/// The arguments are the walk's own locals. A context struct would exist only
+/// to keep this helper under clippy's argument cap.
+#[allow(clippy::too_many_arguments)]
+fn emit_row<F>(
+    repo: &gix::Repository,
+    refs: &RefIndex,
+    lanes: &mut LaneState,
+    initials_cache: &mut HashMap<String, String>,
+    index: &mut usize,
+    id: ObjectId,
+    parents: &[ObjectId],
+    fallback_time: i64,
+    sink: &mut F,
+) -> Result<Flow>
+where
+    F: FnMut(GraphRow) -> Flow,
+{
+    let commit = repo
+        .find_commit(id)
+        .map_err(|e| Error::Walk(e.to_string()))?;
+
+    // An unparseable signature is not worth dropping a commit over; fall
+    // back to the walk's own commit time, which is already known.
+    let (author_name, author_email, time) = match commit.author() {
+        Ok(sig) => (
+            sig.name.to_string(),
+            sig.email.to_string().to_lowercase(),
+            sig.time().map(|t| t.seconds).unwrap_or(fallback_time),
+        ),
+        Err(_) => (String::new(), String::new(), fallback_time),
+    };
+
+    let summary = commit
+        .message()
+        .map(|m| m.summary().to_string())
+        .unwrap_or_default();
+
+    let initials = initials_cache
+        .entry(author_name.clone())
+        .or_insert_with(|| initials(&author_name))
+        .clone();
+
+    let RowLanes { lane, color, edges } = lanes.step(id, parents);
+
+    let row = GraphRow {
+        index: *index,
+        id: id.to_string(),
+        short: short_id(&id),
+        summary,
+        author_name,
+        author_email,
+        initials,
+        time,
+        lane,
+        color,
+        signed: crate::signing::signed(&commit),
+        parents: parents.iter().map(ObjectId::to_string).collect(),
+        refs: refs.chips_for(&id),
+        edges,
+    };
+
+    *index += 1;
+    Ok(sink(row))
 }
 
 /// The tips to walk from: every local and remote branch, plus HEAD.
@@ -786,6 +876,69 @@ mod walk_tests {
 
         assert_eq!(rows[0].summary, "Merge feature/split-view");
         assert_eq!(rows.last().expect("a last row").summary, "Initial import");
+    }
+
+    #[test]
+    fn date_order_interleaves_parallel_histories() {
+        // Commit time, not topology: `Rewrite line 38` landed on main around
+        // the same moment as the feature's commits, so it sits *between* them
+        // rather than after the feature has been drawn in full.
+        let fixture = Fixture::woven();
+        let walked = rows(&fixture);
+        let summaries: Vec<&str> = walked.iter().map(|r| r.summary.as_str()).collect();
+        let start = summaries
+            .iter()
+            .position(|s| *s == "Start the split view")
+            .expect("the feature tip");
+        let on_main = summaries
+            .iter()
+            .position(|s| *s == "Rewrite line 38")
+            .expect("the main-line rewrite");
+        let parent = summaries
+            .iter()
+            .position(|s| *s == "Rewrite line 3")
+            .expect("the feature's parent");
+        assert!(
+            start < on_main && on_main < parent,
+            "date order mixes the main-line commit into the feature: {summaries:?}"
+        );
+    }
+
+    #[test]
+    fn branch_order_keeps_a_line_of_history_together() {
+        let fixture = Fixture::woven();
+        let repo = fixture.open();
+        let refs = RefIndex::build(&repo).expect("index");
+        let tips = all_tips(&repo).expect("tips");
+
+        let mut out = Vec::new();
+        walk_pinned(&repo, tips, &refs, &[], GraphOrder::Branch, |row| {
+            out.push(row);
+            Flow::Continue
+        })
+        .expect("walk");
+
+        let summaries: Vec<&str> = out.iter().map(|r| r.summary.as_str()).collect();
+        assert_eq!(summaries[0], "Merge feature/split-view");
+
+        let start = summaries
+            .iter()
+            .position(|s| *s == "Start the split view")
+            .expect("the feature tip");
+        let rewrite = summaries
+            .iter()
+            .position(|s| *s == "Rewrite line 3")
+            .expect("the feature's parent");
+        assert_eq!(
+            rewrite,
+            start + 1,
+            "the feature's commits stay adjacent rather than mixing with main: {summaries:?}"
+        );
+        assert_eq!(
+            out.len(),
+            rows(&fixture).len(),
+            "both orders walk the same commits"
+        );
     }
 
     #[test]

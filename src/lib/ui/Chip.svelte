@@ -42,11 +42,10 @@
 	/*
 	 * A chip is a small raised surface, not an outlined word.
 	 *
-	 * The wireframe drew it as a pill with a hairline around it, which is what
-	 * every filter, every tag and every inline action in the application ended
-	 * up looking like — a rectangle with text in it. It has a fill and a
-	 * hairline of its own now, so a row of them reads as a row of *objects*,
-	 * and the ones that act lift under the pointer.
+	 * It used to be a capsule (`--r-pill` at `999px`), which is what every
+	 * filter, tag and inline action ended up looking like — a sausage with
+	 * text in it. The radius is the same family as a button now, so a row of
+	 * them still reads as objects without rounding the whole chrome.
 	 */
 	.chip {
 		border: 1px solid var(--soft);

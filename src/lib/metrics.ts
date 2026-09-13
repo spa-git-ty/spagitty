@@ -507,21 +507,21 @@ export function laneColorVar(colorIndex: number): string {
 /**
  * Radii, in CSS pixels, keyed by their token name without the `--`.
  *
- * `r-pill` is deliberately absent: a pill is `999px` at every zoom, because a
- * radius larger than half the box is already clamped by the browser and scaling
- * it would be arithmetic with no effect on any pixel.
- *
  * These are a copy of `app.css`'s `--r-*` declarations, which is what the first
  * paint uses before any of this runs. The two must agree, and `metrics.test.ts`
  * reads the stylesheet rather than trusting them to — the same arrangement
  * `TYPE_BASE` has in `scale.svelte.ts` (FEAT-042).
+ *
+ * `r-window` is not here: the window chrome is not zoomed with the rest of the
+ * interface, so its token stays the stylesheet's own value.
  */
 const RADII: Record<string, number> = {
-	'r-field': 8,
-	'r-button': 11,
-	'r-row': 8,
-	'r-panel': 14,
-	'r-floating': 18
+	'r-field': 4,
+	'r-pill': 5,
+	'r-button': 5,
+	'r-row': 4,
+	'r-panel': 6,
+	'r-floating': 8
 };
 
 /**

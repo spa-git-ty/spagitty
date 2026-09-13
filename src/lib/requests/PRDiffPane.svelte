@@ -283,9 +283,14 @@
 		color: var(--danger);
 	}
 
+	/*
+	 * Same fill as the lines, not `--panel`. The file list is `--panel` with a
+	 * right rule; a panel-coloured header sits on that rule and the `@@` row
+	 * looks unframed while the code below it does not.
+	 */
 	.hunk-head {
 		color: var(--muted);
-		background: var(--panel);
+		background: var(--bg);
 		border-top: 1px solid var(--line);
 		border-bottom: 1px solid var(--line);
 		padding: 3px 8px;

@@ -269,10 +269,10 @@ export function drawLanes(options: LaneDrawOptions): void {
  *
  * 1. the **real picture**, when one has been fetched for this address
  *    (FEAT-079). It identifies;
- * 2. the **generated portrait** from `portrait.ts`, pre-rendered at device
- *    resolution and cached because this runs for every visible node on every
- *    scroll frame. It disambiguates — the same person is the same face — which
- *    is most of the value and needs no network;
+ * 2. the **generated avatar** from `portrait.ts` — initials on a stable
+ *    colour, pre-rendered at device resolution and cached because this runs
+ *    for every visible node on every scroll frame. It identifies the way a
+ *    person's avatar does when no picture has arrived;
  * 3. a **filled disc** in the lane colour, when no portrait can be produced —
  *    no 2d context, which happens in tests and in a webview that has run out of
  *    canvases. The graph never loses its shape over a decoration.
@@ -290,7 +290,13 @@ function drawHead(
 	real: CanvasImageSource | null
 ): void {
 	const tile =
-		real ?? portraitTile(seedOf(commit.authorEmail ?? '', commit.authorName), tileSize, colors);
+		real ??
+		portraitTile(
+			seedOf(commit.authorEmail ?? '', commit.authorName),
+			tileSize,
+			colors,
+			commit.initials
+		);
 
 	// The gap that separates a head from the line running behind it. Two pixels,
 	// not the lane's own stroke width — a thicker halo eats the daylight between

@@ -28,7 +28,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 
 use serde::Serialize;
-use spagitty_core::graph::{self, Flow, GraphRow, BATCH};
+use spagitty_core::graph::{self, Flow, GraphOrder, GraphRow, BATCH};
 use spagitty_core::refs::RefIndex;
 use spagitty_core::repo;
 use tauri::{AppHandle, Emitter, Runtime};
@@ -98,20 +98,22 @@ impl Drop for GraphWorker {
 ///
 /// `visible` is the refs the graph is rooted at — empty for every branch, which
 /// is the default. `pinned` is the refs whose lanes are held open on the left.
-/// Both are fixed for the lifetime of the worker: changing either restarts the
-/// walk, because lanes are assigned as the walk goes and a lane layout cannot
-/// be edited after the fact.
+/// `order` is how those commits are sequenced. All three are fixed for the
+/// lifetime of the worker: changing any of them restarts the walk, because
+/// lanes are assigned as the walk goes and a lane layout cannot be edited after
+/// the fact.
 pub fn spawn<R: Runtime>(
     app: AppHandle<R>,
     path: PathBuf,
     token: u64,
     visible: Vec<String>,
     pinned: Vec<String>,
+    order: GraphOrder,
 ) -> GraphWorker {
     let (tx, rx) = std::sync::mpsc::channel();
     let handle = std::thread::Builder::new()
         .name(format!("spagitty-graph-{token}"))
-        .spawn(move || run(app, path, token, visible, pinned, rx))
+        .spawn(move || run(app, path, token, visible, pinned, order, rx))
         .expect("spawning the graph worker");
 
     GraphWorker {
@@ -127,6 +129,7 @@ fn run<R: Runtime>(
     token: u64,
     visible: Vec<String>,
     pinned: Vec<String>,
+    order: GraphOrder,
     rx: Receiver<GraphCmd>,
 ) {
     // Wait for the first request before touching the repository at all, so
@@ -151,7 +154,7 @@ fn run<R: Runtime>(
         let tips = graph::tips_for(&repo, &visible)?;
         let held = graph::ids_for(&repo, &pinned);
 
-        graph::walk_pinned(&repo, tips, &refs, &held, |row| {
+        graph::walk_pinned(&repo, tips, &refs, &held, order, |row| {
             batch.push(row);
             total += 1;
 
@@ -258,6 +261,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
         worker.request(3);
 
@@ -280,6 +284,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
 
         worker.request(2);
@@ -306,6 +311,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
         worker.request(BATCH + extra);
 
@@ -328,6 +334,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
         worker.request(2);
         rows.at_least(1);
@@ -358,6 +365,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
         worker.request(0);
 
@@ -381,6 +389,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
         // More than there are: the walk ends rather than blocking.
         worker.request(100);
@@ -405,6 +414,7 @@ mod tests {
             TOKEN,
             Vec::new(),
             Vec::new(),
+            GraphOrder::Date,
         );
         worker.request(1);
 

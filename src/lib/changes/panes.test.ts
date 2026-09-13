@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { click, flushSync, render } from '../../testing/mount';
 import type { FileDiff, Signing, StatusEntry, WorkingCopy } from '$lib/types';
@@ -309,6 +310,27 @@ describe('HunkPane', () => {
 		view.destroy();
 	});
 
+	it('says so when a selected file has nothing to show', () => {
+		control.setSelection({ path: 'core.txt', side: 'unstaged' });
+		const view = render(HunkPane, {});
+		expect(view.text()).toContain('Could not read this diff');
+		view.destroy();
+	});
+
+	it('can shrink, so the hunks have a pane to paint in', () => {
+		const source = readFileSync('src/lib/changes/HunkPane.svelte', 'utf8');
+		expect(source).toMatch(/\.pane \{[^}]*flex: 1 1 0/);
+		expect(source).toMatch(/\.pane \{[^}]*min-height: 0/);
+	});
+
+	it('paints the @@ header on the same surface as the lines, so the left rule continues through it', () => {
+		const source = readFileSync('src/lib/changes/HunkPane.svelte', 'utf8');
+		const style = source.slice(source.indexOf('<style>'));
+		const head = style.match(/\.hunk-head \{[^}]+\}/)?.[0] ?? '';
+		expect(head).toMatch(/background:\s*var\(--bg\)/);
+		expect(head).not.toMatch(/var\(--panel\)/);
+	});
+
 	it('says a binary file has no hunks to stage individually', () => {
 		control.setSelection({ path: 'logo.bin', side: 'unstaged' });
 		control.setFile(diff({ path: 'logo.bin', binary: true, hunks: [] }));
@@ -358,6 +380,15 @@ describe('MessageBox', () => {
 
 		expect(view.get('.subject').getAttribute('aria-label')).toBe('Commit subject');
 		expect(body.getAttribute('aria-label')).toBe('Commit body');
+	});
+
+	it('gives the body a height WebKit will honour, so it cannot eat the hunks', () => {
+		const view = render(MessageBox, {});
+		expect(Number((view.get('.body') as HTMLTextAreaElement).rows)).toBe(3);
+		view.destroy();
+
+		const source = readFileSync('src/lib/changes/MessageBox.svelte', 'utf8');
+		expect(source).toMatch(/\.message \{[^}]*max-height: 40%/);
 	});
 
 	it('shows a character count only once the subject is long', () => {
