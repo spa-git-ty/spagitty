@@ -86,6 +86,20 @@ jobs:
             esac
           done
 
+          # A version whose tag already exists has been released. Gate 6
+          # refuses to move that tag (Amendment 14), so running gates 5 and 6
+          # here only builds four platforms and then fails. Code merged
+          # without a version bump goes out with the next release, the same
+          # way documentation does. Gate 6 still refuses the tag in case this
+          # check is ever bypassed.
+          if [ "$ship" = true ] && [ "${{ github.event_name }}" = "push" ]; then
+            version=$(node -p "require('./package.json').version")
+            if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+              echo "v$version is already released — gates 5 and 6 stay off until the version is bumped"
+              ship=false
+            fi
+          fi
+
           echo "ship=$ship" >> "$GITHUB_OUTPUT"
           if [ "$ship" = true ]; then
             echo "shipping change — gates 5 and 6 will run on main"
