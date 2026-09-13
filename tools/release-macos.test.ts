@@ -75,6 +75,20 @@ describe('both Mac architectures are built, on runners that exist', () => {
 	});
 
 	/**
+	 * Gate 5 builds no macOS until there is a Developer ID. Its production
+	 * policy refuses an unsigned build, so a Mac entry there fails every `main`
+	 * push and takes the Linux and Windows release down with it. The targets
+	 * above survive only in the comment that says how to turn it back on. This
+	 * test is the one to delete when the Apple secrets exist.
+	 */
+	it('gate 5 runs no macOS runner until a Developer ID exists', () => {
+		// `runners` only matches uncommented `os:` lines, so the re-enable
+		// instructions in the comment do not count.
+		const lane = runners(read('.github/workflows/gates.yml'));
+		expect(lane).toEqual(['ubuntu-latest', 'windows-latest']);
+	});
+
+	/**
 	 * Two runners, one product name, one version — so two identically named
 	 * `.dmg` files. A GitHub release asset is keyed by its basename, and
 	 * discovering that from a 422 after the tag has been pushed is how v0.2.0

@@ -278,17 +278,28 @@ jobs:
         # on two runners now (TASK-040) and `os` stopped being unique. This lane
         # built one `macos-latest` job, which is Apple silicon, so a `main`
         # release has never carried an Intel download at all.
+        #
+        # **macOS is off in this lane until an Apple Developer ID exists.** The
+        # production signing policy refuses to build without a certificate, and
+        # that refusal is correct, but it failed every `main` push. That blocked
+        # the Linux and Windows release along with it. The draft and alpha lanes
+        # still build ad-hoc-signed Mac downloads and say so. Turning macOS back
+        # on means re-adding these two entries once the secrets are in place:
+        #
+        #   - name: macos-arm64
+        #     os: macos-latest
+        #     target: aarch64-apple-darwin
+        #     arch: arm64
+        #   - name: macos-x86_64
+        #     os: macos-15-intel
+        #     target: x86_64-apple-darwin
+        #     arch: x86_64
+        #
+        # The signing and verify steps below stay, guarded by `runner.os`, so
+        # that is the whole edit.
         include:
           - name: linux
             os: ubuntu-latest
-          - name: macos-arm64
-            os: macos-latest
-            target: aarch64-apple-darwin
-            arch: arm64
-          - name: macos-x86_64
-            os: macos-15-intel
-            target: x86_64-apple-darwin
-            arch: x86_64
           - name: windows
             os: windows-latest
     runs-on: ${{ matrix.os }}
