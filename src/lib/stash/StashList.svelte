@@ -3,7 +3,6 @@
 	import { relativeTime } from '$lib/format';
 	import { ELBOW_RADIUS, LANE_PITCH, LANE_X0, NODE_R, ROW_PITCH } from '$lib/metrics';
 	import { stash } from '$lib/stash/store.svelte';
-	import RefChip from '$lib/ui/RefChip.svelte';
 
 	/**
 	 * Stash entries, each drawn hanging off the commit it was made on.
@@ -18,6 +17,21 @@
 	 */
 
 	const entries = $derived(stash.entries);
+
+	/**
+	 * What you wrote, without the prefix git puts on every stash (TASK-046).
+	 *
+	 * git stores `On <branch>: <message>`, or `WIP on <branch>: <sha> <subject>`
+	 * when there was no message. Shown whole, every row began with the same
+	 * branch name and the part that tells entries apart was cut off.
+	 */
+	function note(message: string): string {
+		const on = /^On [^:]+: (.*)$/s.exec(message);
+		const written = on ? on[1] : message;
+		// git's own "WIP on <branch>: …", and the same words when they were
+		// given as the message — the default Spagitty's Stash button writes.
+		return /^WIP on /.test(written) ? 'Work in progress' : written;
+	}
 
 	/** The lane column is two lanes wide plus the node's own radius. */
 	const width = LANE_X0 + LANE_PITCH + NODE_R * 2;
@@ -58,23 +72,19 @@
 				<circle cx={baseX} cy={baseY} r={NODE_R - 2} fill="var(--lane-1)" />
 			</svg>
 
+			<!--
+				Three quiet lines rather than one crowded one (TASK-046): what you
+				wrote, then which entry and when, then the commit it hangs off.
+			-->
 			<div class="text">
-				<div class="top">
-					<RefChip chip={{
-						name: entry.name,
-						kind: 'branch',
-						current: false,
-						local: true,
-						remotes: [],
-						// A stash's branch name is a label, not a live ref to compare.
-						divergence: null
-					}} />
-					<span class="message" title={entry.message}>{entry.message}</span>
-				</div>
-				<div class="note base" title={entry.parentSummary}>
+				<span class="message" title={entry.message}>{note(entry.message)}</span>
+				<span class="meta">
+					<span class="mono">{entry.name}</span> · {relativeTime(entry.time)}
+				</span>
+				<span class="base" title={entry.parentSummary}>
 					on <span class="mono">{entry.parentShort}</span>
-					{entry.parentSummary} · {relativeTime(entry.time)}
-				</div>
+					{entry.parentSummary}
+				</span>
 			</div>
 		</button>
 	{/each}
@@ -101,16 +111,20 @@
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
+		gap: 2px;
+		padding: 8px 6px;
 	}
 
+	/* A rounded row, not a band ruled off from the next (TASK-046). */
 	.entry {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 4px 12px;
+		gap: 10px;
+		padding: 8px 10px;
+		border-radius: var(--r-button);
 		text-align: left;
 		width: 100%;
-		border-bottom: 1px solid var(--soft);
+		transition: background var(--t-fast) var(--ease);
 	}
 
 	.entry:hover {
@@ -128,22 +142,28 @@
 	.text {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-
-	.top {
-		display: flex;
-		align-items: center;
-		gap: 6px;
+		gap: 1px;
 		min-width: 0;
 	}
 
 	.message,
+	.meta,
 	.base {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.message {
+		font-size: var(--fs-secondary);
+		font-weight: 600;
+		color: var(--ink);
+	}
+
+	.meta,
+	.base {
+		font-size: var(--fs-mono);
+		color: var(--muted);
 	}
 
 	.empty {

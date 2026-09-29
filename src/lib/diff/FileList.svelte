@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
-	import { statusGlyph } from '$lib/format';
 	import type { FileChange } from '$lib/types';
+	import FileName from '$lib/ui/FileName.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import type { MenuItem } from '$lib/ui/menu';
 	import * as api from '$lib/api';
@@ -95,17 +95,6 @@
 
 		event.preventDefault();
 	}
-
-	/**
-	 * Left-to-right mark.
-	 *
-	 * The path column elides its *head* (see the CSS), which needs
-	 * `direction: rtl`. That makes the leading `.` of a dotfile a neutral
-	 * character at the edge of an RTL paragraph, so it is reordered to the end
-	 * and `.gitignore` renders as `gitignore.`. A strong LTR character in front
-	 * of it settles the direction without changing what is displayed.
-	 */
-	const LRM = '\u200e';
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -118,10 +107,7 @@
 			oncontextmenu={(e) => oncontextmenu(e, file.path)}
 			title={file.path}
 		>
-			<span class="mono glyph" class:added={file.status === 'added'}>
-				{statusGlyph(file.status)}
-			</span>
-			<span class="path">{LRM + file.path}</span>
+			<FileName path={file.path} status={file.status} />
 			{#if file.binary}
 				<span class="mono muted counts">bin</span>
 			{:else if file.tooLarge}
@@ -152,26 +138,32 @@
 {/if}
 
 <style>
+	/*
+	 * On the pane, not a panel beside it (TASK-046): no fill and no rule, and
+	 * each file is a line with a rounded highlight rather than a band.
+	 */
 	.files {
 		width: var(--diff-files-w);
 		flex: none;
-		background: var(--panel);
-		border-right: 1px solid var(--line);
 		display: flex;
 		flex-direction: column;
+		gap: 1px;
 		overflow-y: auto;
-		padding: 4px 0;
+		padding: 8px 6px;
 	}
 
 	.file {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding: 2px 8px;
+		gap: 8px;
+		min-height: 34px;
+		padding: 0 10px 0 8px;
+		border-radius: var(--r-button);
 		text-align: left;
 		width: 100%;
 		min-width: 0;
 		flex: none;
+		transition: background var(--t-fast) var(--ease);
 	}
 
 	.file:hover {
@@ -180,30 +172,6 @@
 
 	.file.selected {
 		background: var(--selection);
-	}
-
-	.glyph {
-		color: var(--muted);
-		flex: none;
-		width: 8px;
-	}
-
-	.glyph.added {
-		color: var(--accent);
-	}
-
-	/* The tail of a path identifies the file, so the head gets the ellipsis.
-	   `direction: rtl` puts it there; the LRM in the markup keeps the text
-	   itself running left to right. */
-	.path {
-		font-size: var(--fs-secondary);
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		direction: rtl;
-		text-align: left;
 	}
 
 	.counts {

@@ -34,6 +34,14 @@
 
 	const counts = $derived(repo.counts);
 
+	/**
+	 * Ready once there is history to work with (TASK-046). The graph walks in
+	 * windows and fetches more as it is scrolled, so on a long history the walk
+	 * is never "complete" while you work — and the strip said "Loading history…"
+	 * for the whole session, as if something were stuck.
+	 */
+	const ready = $derived(graph.complete || graph.count > 0);
+
 	const identity = $derived(settings.identity);
 	const name = $derived(identity?.name.effective ?? null);
 	const email = $derived(identity?.email.effective ?? null);
@@ -151,9 +159,9 @@
 		{#if repo.info}
 			<span class="repo note">
 				<span class="group state">
-					<span class="walk" class:running={!graph.complete}>
+					<span class="walk" class:running={!ready}>
 						<span class="pulse" aria-hidden="true"></span>
-						<span>{graph.complete ? 'Repository ready' : 'Loading history…'}</span>
+						<span>{ready ? 'Repository ready' : 'Loading history…'}</span>
 					</span>
 					<span class="sep working" aria-hidden="true">·</span>
 					<span class="fact working">{workingLabel}</span>
@@ -330,12 +338,27 @@
 	}
 
 	/* How far the walk has got. */
+	/* It may shrink, and says so with an ellipsis rather than being cut
+	   mid-word by the side's edge (TASK-046). */
 	.walk {
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
-		flex: none;
+		flex: 0 1 auto;
+		min-width: 0;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.walk > span:last-child {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.repo,
+	.state {
+		min-width: 0;
 	}
 
 	/*

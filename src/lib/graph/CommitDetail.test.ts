@@ -180,7 +180,10 @@ describe('a loaded commit', () => {
 		const view = open();
 
 		expect(view.all('.file')).toHaveLength(3);
-		expect(view.text()).toContain('src/deep/nested/main.rs');
+		// The name, then its folder (TASK-046); the whole path is the row's title.
+		const row = view.all('.file').find((f) => f.getAttribute('title') === 'src/deep/nested/main.rs');
+		expect(row?.querySelector('.path')?.textContent).toBe('main.rs');
+		expect(row?.querySelector('.folder')?.textContent).toBe('src/deep/nested');
 
 		const [, tree] = view.all('.toggle button');
 		click(tree);
@@ -202,7 +205,7 @@ describe('a loaded commit', () => {
 
 	it('keeps a dotfile reading as a dotfile', () => {
 		const view = open({ files: [file('.gitignore')] });
-		expect(view.get('.path').textContent).toBe('‎.gitignore');
+		expect(view.get('.path').textContent).toBe('.gitignore');
 		view.destroy();
 	});
 
@@ -226,9 +229,20 @@ describe('a loaded commit', () => {
 		view.destroy();
 	});
 
-	it('names the current branch in the merge action', () => {
+	/**
+	 * Every commit action works (TASK-046). "Merge into" and "Revert" were
+	 * chips titled "Not built yet" that did nothing.
+	 */
+	it('offers only commit actions that do something', () => {
 		const view = open();
-		expect(view.text()).toContain('Merge into main');
+		const labels = view.all('.actions .chip').map((c) => c.textContent?.trim());
+
+		expect(labels).toEqual(['Cherry-pick', 'Revert', 'Interactive rebase', 'Copy SHA']);
+		for (const chip of view.all('.actions .chip')) {
+			expect(chip.tagName).toBe('BUTTON');
+			expect(chip.getAttribute('title') ?? '').not.toMatch(/not built/i);
+		}
+		expect(view.all('.actions .chip')[0].getAttribute('title')).toContain('main');
 		view.destroy();
 	});
 

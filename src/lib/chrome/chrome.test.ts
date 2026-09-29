@@ -437,6 +437,34 @@ describe('StatusStrip', () => {
 		done.destroy();
 	});
 
+	/**
+	 * The walk streams in windows and fetches more on scroll, so a long history
+	 * is never "complete" while it is being worked in (TASK-046).
+	 */
+	it('is ready as soon as there is history on screen, complete or not', () => {
+		repoControl.setInfo(info());
+		graphControl.setComplete(false);
+		graphControl.setRows([
+			{
+				index: 0,
+				id: 'a'.repeat(40),
+				short: 'aaaaaaa',
+				summary: 'first',
+				author: 'Ada',
+				email: 'ada@example.com',
+				time: 0,
+				lane: 0,
+				color: 0,
+				edges: [],
+				refs: []
+			} as never
+		]);
+		const view = render(StatusStrip, {});
+		expect(view.get('.repo').textContent).toContain('Repository ready');
+		expect(view.get('.walk').classList.contains('running')).toBe(false);
+		view.destroy();
+	});
+
 	it('keeps the licence at the end, whatever the repository has to say', () => {
 		// The GPL notice is the one thing on this strip that is not optional
 		// (FEAT-043), so it is last and it does not shrink.

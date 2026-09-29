@@ -99,6 +99,26 @@ describe('StashList', () => {
 		view.destroy();
 	});
 
+	/** What was written leads the row, without git's prefix (TASK-046). */
+	it('leads with what was written, not with the branch git prefixes it with', async () => {
+		await show([
+			{ ...entry(0), message: 'On main: half of the login form' },
+			{ ...entry(1), message: 'WIP on main: 1234567 Add notes' },
+			{ ...entry(2), message: 'On main: WIP on main' }
+		]);
+		const view = render(StashList, {});
+
+		expect(view.all('.entry .message').map((m) => m.textContent)).toEqual([
+			'half of the login form',
+			'Work in progress',
+			'Work in progress'
+		]);
+		expect(view.all('.entry .message')[0].getAttribute('title')).toBe(
+			'On main: half of the login form'
+		);
+		view.destroy();
+	});
+
 	it('draws the entry hanging off its commit', async () => {
 		// A stash is a commit with a parent; the lane says so rather than the
 		// list being a flat set of rows.

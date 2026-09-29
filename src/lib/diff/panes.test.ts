@@ -176,11 +176,22 @@ describe('FileList', () => {
 	});
 
 	it('keeps a dotfile reading as a dotfile', () => {
-		// The column elides its head, which needs `direction: rtl`; without the
-		// left-to-right mark the leading dot is reordered to the end.
 		const view = render(FileList, list({ files: [change('.gitignore')] }));
 
-		expect(view.get('.path').textContent).toBe('‎.gitignore');
+		expect(view.get('.path').textContent).toBe('.gitignore');
+		view.destroy();
+	});
+
+	/**
+	 * The name first and whole, the folder after it (TASK-046). The list used to
+	 * cut a long path from its start, so rows began mid-word.
+	 */
+	it('names the file first and its folder after it', () => {
+		const view = render(FileList, list({ files: [change('src/services/cache.service.ts')] }));
+
+		expect(view.get('.path').textContent).toBe('cache.service.ts');
+		expect(view.get('.folder').textContent).toBe('src/services');
+		expect(view.get('.file').getAttribute('title')).toBe('src/services/cache.service.ts');
 		view.destroy();
 	});
 
