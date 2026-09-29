@@ -238,27 +238,32 @@
 		justify-content: flex-end;
 	}
 
-	/* The start side: freshness goes first, then the working copy, then the
-	   words beside the walk's dot. The dot stays. */
-	@container (max-width: 460px) {
+	/*
+	 * The start side, least urgent first: how fresh the walk is, then the
+	 * working copy, then the name beside the profile icon (it stays in the
+	 * icon's title), then the words beside the walk's dot. "Repository ready"
+	 * outlasts the name, because it is the one fact here that changes.
+	 */
+	@container (max-width: 540px) {
 		.side .fresh {
 			display: none;
 		}
 	}
 
-	@container (max-width: 300px) {
+	@container (max-width: 420px) {
 		.side .working {
 			display: none;
 		}
+	}
 
+	@container (max-width: 340px) {
 		.profile-text {
-			max-width: 120px;
+			display: none;
 		}
 	}
 
-	@container (max-width: 180px) {
-		.walk > span:last-child,
-		.profile-text {
+	@container (max-width: 150px) {
+		.walk > span:last-child {
 			display: none;
 		}
 	}
