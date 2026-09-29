@@ -336,8 +336,14 @@ mod tests {
 
         let staged = fixture.git(&["show", ":wide.txt"]);
         assert!(staged.contains("LINE TWO\n"));
-        assert!(staged.contains("line 38\n"), "the other hunk stays unstaged");
-        assert!(!staged.contains('\r'), "the index keeps the repository's endings");
+        assert!(
+            staged.contains("line 38\n"),
+            "the other hunk stays unstaged"
+        );
+        assert!(
+            !staged.contains('\r'),
+            "the index keeps the repository's endings"
+        );
     }
 
     #[test]
@@ -350,8 +356,14 @@ mod tests {
 
         let now = fixture.read("wide.txt");
         assert!(now.contains("line 2\r\n"), "the first hunk is gone");
-        assert!(now.contains("LINE THIRTY-EIGHT\r\n"), "the second is still there");
-        assert!(!now.replace("\r\n", "").contains('\n'), "every line keeps its CRLF");
+        assert!(
+            now.contains("LINE THIRTY-EIGHT\r\n"),
+            "the second is still there"
+        );
+        assert!(
+            !now.replace("\r\n", "").contains('\n'),
+            "every line keeps its CRLF"
+        );
     }
 
     #[test]

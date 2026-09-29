@@ -33,6 +33,20 @@ test work::tests::staging_one_hunk_of_a_crlf_file_stages_only_that_hunk ... ok
 The whole of `spagitty-core` on Windows: 527 passed, 10 failed — the same
 fixture-configuration failures as before the change, none new.
 
+The pipeline's gates, on Linux (WSL, Arch):
+
+```
+$ cargo fmt --all --check
+(clean)
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+(clean)
+
+$ cargo test --workspace --no-fail-fast
+spagitty-core: 537 passed; 0 failed
+all crates: 1017 passed; 0 failed
+```
+
 ## What is not covered automatically
 
 A clean filter configured in a real repository (LFS, for instance). The
