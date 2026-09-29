@@ -23,6 +23,12 @@ stays backward-compatible.
   tab into it. The toolbar is a pill centred below the pane, with the status on
   either side. Controls, menus and dialogs are rounder. Every screen's content,
   the graph above all, is unchanged.
+- **The screens inside it speak the same language.** Headers and the graph's
+  column no longer sit in filled bars; columns are separated by space instead
+  of lines; hovering or selecting a commit draws a rounded highlight; the
+  working copy and the commit detail are floating cards; branch labels are
+  capsules and tags keep a shape of their own. The lanes are drawn exactly as
+  before.
 - **A shorter sidebar.** It shows Farm, Graph, Working copy, Branches, Pull
   requests and Settings. Conflicts joins it while something is in conflict.
   Rebase, Log and All repositories are still one click away — the toolbar,

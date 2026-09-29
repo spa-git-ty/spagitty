@@ -198,7 +198,7 @@
 			{@render heading(column, index)}
 		{/each}
 	</div>
-	<div class="header-frozen" style="left: {frozenLeft}px">
+	<div class="header-frozen" class:scrolled={scrollLeft > 0} style="left: {frozenLeft}px">
 		{#if freezeAt > 0}
 			<!--
 				The seam handle lives on the pane, not on the graph column: the
@@ -336,7 +336,11 @@
 		overflow: hidden;
 		flex: none;
 		height: calc(var(--row-pitch) + 2px);
-		border-bottom: 1px solid var(--line);
+		/*
+		 * Labels over the columns, not a bar across them (FEAT-083): no fill, and
+		 * the faintest rule under them, so the history reads as one surface.
+		 */
+		border-bottom: 1px solid var(--soft);
 		background-color: var(--chrome-veil);
 	}
 
@@ -346,8 +350,9 @@
 		align-items: stretch;
 		height: 100%;
 		font-size: var(--fs-secondary);
-		font-weight: 550;
+		font-weight: 500;
 		letter-spacing: 0.02em;
+		color: var(--muted);
 		user-select: none;
 	}
 
@@ -361,7 +366,12 @@
 		right: 0;
 		bottom: 0;
 		z-index: 3;
-		background-color: var(--chrome-veil);
+		background-color: var(--bg);
+		transition: box-shadow 0.12s ease;
+	}
+
+	/* The seam, only while the graph is under it — as the rows do. */
+	.header-frozen.scrolled {
 		box-shadow: -8px 0 14px -4px color-mix(in srgb, var(--umbra) 32%, transparent);
 	}
 
@@ -442,7 +452,11 @@
 		top: 0;
 		width: 1px;
 		height: 100%;
-		background: var(--soft);
+		/*
+		 * No rule at rest (FEAT-083): the columns are separated by space, as the
+		 * rows are. The handle is still there, and hovering it draws the line.
+		 */
+		background: none;
 	}
 
 	/* Its line stays on the column's own edge rather than moving in with it. */

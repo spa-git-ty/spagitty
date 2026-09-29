@@ -136,6 +136,7 @@ rather than an audit.
 | [FEAT-080](items/FEAT-080-follow-omarchy.md) | Follow Omarchy | Settings, all | Done |
 | [FEAT-081](items/FEAT-081-the-graph-resizes-like-a-hand-moves.md) | The graph resizes like a hand moves | Graph | Open |
 | [FEAT-082](items/FEAT-082-a-spatial-shell.md) | A spatial shell | chrome | Open |
+| [FEAT-083](items/FEAT-083-the-content-in-the-spatial-language.md) | The content in the spatial language | Graph, all | Open |
 
 ## Bugs
 

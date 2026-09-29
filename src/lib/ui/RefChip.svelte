@@ -146,8 +146,9 @@
 		align-items: center;
 		gap: 4px;
 		border: 1px solid var(--soft);
-		border-radius: var(--r-field);
-		padding: 0 6px;
+		/* A capsule, like every other chip in the spatial content (FEAT-083). */
+		border-radius: var(--r-pill);
+		padding: 0 8px;
 		font-family: var(--font-mono);
 		font-size: var(--fs-mono);
 		/* A label is a small raised object sitting on the row, so it gets the
@@ -238,7 +239,9 @@
 	 * colour says it at a glance and reads as deliberate.
 	 */
 	.ref.tag {
-		border-radius: 2px 5px 5px 2px;
+		/* Square at the start, round at the end: still a tag's shape beside the
+		   branches' capsules (FEAT-083). */
+		border-radius: 3px var(--r-pill) var(--r-pill) 3px;
 		border-color: color-mix(in srgb, var(--warn) 50%, transparent);
 		color: var(--warn);
 		background: color-mix(in srgb, var(--warn) 14%, var(--surface));
