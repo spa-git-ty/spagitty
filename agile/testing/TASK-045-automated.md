@@ -33,12 +33,20 @@ COMPLETED 1164 FILES 0 ERRORS 0 WARNINGS 0 FILES_WITH_PROBLEMS
 $ bun run test
 Test Files  137 passed (137)
      Tests  2936 passed (2936)
+```
 
-$ cargo test -p spagitty --lib settings
-Not run. On this machine Windows Application Control blocks the build
-scripts cargo compiles (os error 4551), so no Rust test could execute. The
-change to settings.rs and its two tests are unverified until they run in the
-pipeline or on another machine.
+The Rust side cannot build on Windows here: Application Control blocks the
+build scripts cargo compiles (os error 4551). It was run in WSL (Arch Linux),
+on a clone of this branch:
+
+```
+$ cargo fmt --all --check
+(clean)
+
+$ cargo test --workspace --no-fail-fast
+1015 passed, 0 failed
+test settings::tests::the_delight_layer_is_off_and_silent_until_it_is_asked_otherwise ... ok
+test settings::tests::a_file_that_already_names_a_personality_keeps_it ... ok
 ```
 
 ## What is not covered automatically
