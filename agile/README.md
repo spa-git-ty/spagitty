@@ -176,6 +176,7 @@ rather than an audit.
 | [BUG-031](items/BUG-031-the-window-opens-in-the-wrong-theme.md) | The window opens in the wrong theme, then changes its mind | All | Fixed |
 | [BUG-032](items/BUG-032-a-path-test-that-only-passes-on-unix.md) | A path test that only passes on Unix | none | Fixed |
 | [BUG-034](items/BUG-034-a-transparent-band-round-the-window-on-windows.md) | A transparent band round the window on Windows | All | Fixed |
+| [BUG-035](items/BUG-035-native-scrollbars-and-a-smudged-tab.md) | Native scrollbars, and a smudged tab | All | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

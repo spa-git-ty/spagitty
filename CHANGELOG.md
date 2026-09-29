@@ -55,6 +55,9 @@ stays backward-compatible.
 
 ### Fixed
 
+- **Scrollbars on Windows are the theme's**: thin and rounded, with no arrow
+  buttons and no square corner where two meet. The open repository tab no
+  longer has a smudged shadow.
 - **No transparent band round the window on Windows.** The application drew
   its own corner and shadow inside the ones Windows 11 already gives it, and
   the desktop showed through the gap between them. The window now fills to its
