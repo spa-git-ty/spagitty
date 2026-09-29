@@ -34,6 +34,24 @@ Test Files  137 passed (137)
      Tests  2943 passed (2943)
 ```
 
+## Run in the application
+
+- **Linux, through WSLg** (Arch, WebKitGTK 2.52): `cargo test --workspace`
+  1015 passed; `cargo fmt --check` clean. The debug build run on this
+  repository showed two sizing defects — the title row too short for the tab
+  pills, and the status row cutting its text mid-word — fixed in the commits
+  that follow the feature.
+- **Windows 11, natively**, release build at 125% scaling: sampled every
+  500ms for 40s from launch, never unresponsive, 0.3 CPU-seconds in all. The
+  status row cut "Repository ready" at that scale; the name now gives way
+  first. (A debug build spends about 55 CPU-seconds at startup and hangs the
+  window while it does. Unoptimised, not a release defect.)
+- On Windows, 11 `spagitty-core` tests fail before and after this change: the
+  fixture repositories are made with the system `git`, and Git for Windows'
+  `core.autocrlf` turns their `
+` into `
+`. Unrelated to this item.
+
 ## What is not covered automatically
 
 What it looks like. Screenshots in both themes, closed and open rail, were
