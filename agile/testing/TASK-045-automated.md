@@ -35,7 +35,10 @@ Test Files  137 passed (137)
      Tests  2936 passed (2936)
 
 $ cargo test -p spagitty --lib settings
-(pending: the Rust toolchain was still installing)
+Not run. On this machine Windows Application Control blocks the build
+scripts cargo compiles (os error 4551), so no Rust test could execute. The
+change to settings.rs and its two tests are unverified until they run in the
+pipeline or on another machine.
 ```
 
 ## What is not covered automatically
