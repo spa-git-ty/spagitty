@@ -14,6 +14,12 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- The test suite passes on Windows. One test compared file paths written with
+  `/` against the paths Windows produces with `\`, so it had only ever passed on
+  Linux and macOS.
+
 ## [0.8.1] - 2026-09-13
 
 ### Fixed
