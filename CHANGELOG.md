@@ -55,6 +55,8 @@ stays backward-compatible.
 
 ### Fixed
 
+- **Commit messages in the graph are the size of everything else.** They were a
+  step larger than every other list, so the history looked out of place.
 - **Scrollbars on Windows are the theme's**: thin and rounded, with no arrow
   buttons and no square corner where two meet. The open repository tab no
   longer has a smudged shadow.

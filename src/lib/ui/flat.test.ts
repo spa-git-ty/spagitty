@@ -344,6 +344,16 @@ describe('the soft spatial interface', () => {
 		expect(css).toMatch(/::-webkit-scrollbar-button\s*{[^}]*display:\s*none/s);
 	});
 
+	/** BUG-036: the history is a list, and takes the lists' type size. */
+	it('sets the commit list in the same size as every other list', () => {
+		const rows = readFileSync('src/lib/graph/CommitRows.svelte', 'utf8');
+		expect(rows).toMatch(/\n\t\.message \{[^}]*font-size: var\(--fs-secondary\)/);
+		expect(rows).toMatch(/\n\t\.text \{[^}]*font-size: var\(--fs-secondary\)/);
+
+		const files = readFileSync('src/lib/ui/FileName.svelte', 'utf8');
+		expect(files).toMatch(/\.path \{[^}]*font-size: var\(--fs-secondary\)/);
+	});
+
 	it('gives the open tab no drop shadow, only its surface and edge', () => {
 		const tabs = readFileSync('src/lib/chrome/RepoTabs.svelte', 'utf8');
 		expect(tabs).not.toMatch(/\.tab\.active\s*{[^}]*box-shadow/s);
