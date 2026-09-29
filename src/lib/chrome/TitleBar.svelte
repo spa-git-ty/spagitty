@@ -2,6 +2,8 @@
 <script lang="ts">
 
 	import { appWindow } from '$lib/chrome/window';
+	import RepoTabs from '$lib/chrome/RepoTabs.svelte';
+	import { workspace } from '$lib/workspace.svelte';
 	import { isMac } from '$lib/platform';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
@@ -44,6 +46,7 @@
      title bar is expected to. Controls stop the event so they don't drag. -->
 <div
 	class="titlebar"
+	class:tabbed={workspace.tabs.length > 0}
 	data-tauri-drag-region
 	ondblclick={() => appWindow.toggleMaximize()}
 	role="toolbar"
@@ -51,37 +54,25 @@
 	aria-label="Window"
 >
 	<!--
-		The empty side that makes the middle the middle (TASK-021). The bar is a
-		three-column grid whose outer columns are equal, so the name sits in the
-		centre of the *window* rather than in the centre of whatever the window
-		controls left over. Without this the name would be centred in a space
-		that is short by the width of three buttons, and land visibly left.
+		One row above the pane (FEAT-082). The tabs were a row of their own
+		(FEAT-044), under a title bar that held nothing but the program's name and
+		three window controls: two full-width bands for one row's worth of
+		content. They are pills on the left of this row now, and the name shows
+		only when there is no tab to say what is open.
+
+		Still three columns with equal outer tracks (TASK-021), so the name, when
+		it shows, is centred in the window rather than in what the controls leave.
 	-->
-	<span class="side" class:traffic={mac} aria-hidden="true"></span>
+	<div class="lead" data-tauri-drag-region>
+		<span class="side" class:traffic={mac} aria-hidden="true"></span>
+		<RepoTabs />
+	</div>
 
-	<span class="name">Spagitty</span>
-
-	<!--
-		The tabs and the way back to every repository were both here. The tabs
-		have a row of their own now (FEAT-044) — they are a workspace control,
-		and this row is window controls — and `All repositories` went with them
-		rather than staying as a button that read like a tab which is always
-		open. It is screen 1J on the rail, which is where the way back belongs.
-	-->
-
-	<!--
-		What the title bar says is what it knows: which repository, and the ones
-		open right now. The theme belongs to Settings → Appearance, which is the
-		one place it is set; a second control here would be a second thing to keep
-		in step. There was also a `⌘K` chip that opened Log search — the shortcut
-		is `⌘F`, and writing a macOS key name on every platform for a combination
-		that does nothing is worse than no hint at all.
-
-		The build identity — licence and version — used to sit here too. It is the
-		least changing fact in the application and it was in the most contested
-		row, which also has to give way to tabs as repositories are opened; it is
-		on the status strip along the bottom now (FEAT-043).
-	-->
+	{#if workspace.tabs.length === 0}
+		<span class="name">Spagitty</span>
+	{:else}
+		<span class="gap" data-tauri-drag-region aria-hidden="true"></span>
+	{/if}
 
 	<div class="controls">
 		{#each mac ? [] : CONTROLS as control (control.kind)}
@@ -122,17 +113,32 @@
 		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
 		gap: 8px;
-		padding: 0 10px;
+		padding: 0 12px;
 		/*
-		 * Glass. The bar takes its colour from the ambient light behind the
-		 * window rather than being painted a shade of the panel, which is what
-		 * makes it look like a pane laid over the application instead of a strip
-		 * cut out of it.
+		 * Nothing of its own (FEAT-082). The row sits on the environment like
+		 * everything else around the pane: no fill, no rule under it. What it
+		 * holds are objects — the tab pills and the controls — and a bar behind
+		 * them would make it a strip again.
 		 */
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-		box-shadow: var(--glass-rim);
+		background: none;
 		font-size: var(--fs-secondary);
+	}
+
+	/* With tabs open the middle column is empty, and the tabs take the room. */
+	.titlebar.tabbed {
+		grid-template-columns: minmax(0, 1fr) 0 auto;
+	}
+
+	.lead {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+		height: 100%;
+	}
+
+	.gap {
+		min-width: 0;
 	}
 
 	/* Hard against the right edge, whatever its column has been given. */
@@ -146,9 +152,9 @@
 	}
 
 	.control {
-		width: 24px;
-		height: 22px;
-		border-radius: var(--r-field);
+		width: 28px;
+		height: 26px;
+		border-radius: var(--r-pill);
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;

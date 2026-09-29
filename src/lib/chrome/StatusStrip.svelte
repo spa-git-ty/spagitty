@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { version } from '$lib/version';
 	import { relativeTime } from '$lib/format';
 	import { graph } from '$lib/graph/store.svelte';
@@ -25,6 +25,13 @@
 	 * has open. That is exactly what these are, so they are one row here,
 	 * between the identity and the licence, and the rail is navigation again.
 	 */
+	/**
+	 * What sits in the middle of the row — the toolbar, as an ornament under the
+	 * pane (FEAT-082). The strip is the row; the toolbar is centred in it, with
+	 * the state to its left and the inventory and the licence to its right.
+	 */
+	let { children }: { children?: Snippet } = $props();
+
 	const counts = $derived(repo.counts);
 
 	const identity = $derived(settings.identity);
@@ -114,7 +121,7 @@
 </script>
 
 <div class="strip" role="contentinfo" aria-label="Application status">
-	<span class="left">
+	<div class="side start">
 		{#if name || email}
 			<button
 				type="button"
@@ -132,52 +139,47 @@
 				</span>
 			</button>
 		{/if}
-	</span>
 
-	{#if repo.info}
 		<!--
-			Two groups, not one run of dots.
-
-			They answer different questions. **State** is what is happening and
-			how current it is — the walk, the working copy, the last fetch — and
+			Two groups, not one run of dots, and now on either side of the toolbar
+			(FEAT-082). **State** is what is happening and how current it is, and
 			every part of it can change while you look at it. **Counts** is
-			inventory: how many commits, tags and submodules this repository has.
-			Strung together with the same `·` between all of them, the eye had no
-			way to tell "1 changed file" (something to do) from "Tags 42"
-			(something that is merely true), and the freshness pair got read as
-			part of the tally.
-
-			So: the state group, a rule, the counts group. The rule is a real
-			divider rather than a wider gap, because a gap in a row of dot-
-			separated text reads as a typo.
+			inventory. They answer different questions, and the toolbar between
+			them is a clearer rule than the hairline that used to be.
 		-->
-		<span class="repo note">
-			<span class="group state">
-				<span class="walk" class:running={!graph.complete}>
-					<span class="pulse" aria-hidden="true"></span>
-					<span>{graph.complete ? 'Repository ready' : 'Loading history…'}</span>
+		{#if repo.info}
+			<span class="repo note">
+				<span class="group state">
+					<span class="walk" class:running={!graph.complete}>
+						<span class="pulse" aria-hidden="true"></span>
+						<span>{graph.complete ? 'Repository ready' : 'Loading history…'}</span>
+					</span>
+					<span class="sep" aria-hidden="true">·</span>
+					<span class="fact">{workingLabel}</span>
+					<span class="sep" aria-hidden="true">·</span>
+					<span class="fact">{refreshed}{fetched ? ` · ${fetched}` : ''}</span>
 				</span>
-				<span class="sep" aria-hidden="true">·</span>
-				<span class="fact">{workingLabel}</span>
-				<span class="sep" aria-hidden="true">·</span>
-				<span class="fact">{refreshed}{fetched ? ` · ${fetched}` : ''}</span>
 			</span>
+		{/if}
+	</div>
 
-			<span class="divider tail" aria-hidden="true"></span>
+	{@render children?.()}
 
-			<span class="group counts tail">
+	<div class="side end">
+		{#if repo.info}
+			<span class="group counts tail note">
 				<span class="fact">{graph.count} commits</span>
 				<span class="sep" aria-hidden="true">·</span>
 				<span class="fact">Tags {tagsLabel}</span>
 				<span class="sep" aria-hidden="true">·</span>
 				<span class="fact">Submodules {submodulesLabel}</span>
 			</span>
-		</span>
-	{/if}
+		{/if}
 
-	<span class="note mono license" title={version.license}>
-		{version.licenseShort} · v{version.number}
-	</span>
+		<span class="note mono license" title={version.license}>
+			{version.licenseShort} · v{version.number}
+		</span>
+	</div>
 </div>
 
 {#if menu}
@@ -192,20 +194,32 @@
 {/if}
 
 <style>
+	/*
+	 * The row under the pane (FEAT-082). No fill and no rule: it sits on the
+	 * environment, and the only object in it is the toolbar ornament in the
+	 * middle track. The outer tracks are equal so the ornament is centred under
+	 * the window, and `minmax(0, 1fr)` lets them give way before it does.
+	 */
 	.strip {
 		flex: none;
-		display: flex;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		padding: 0 10px;
-		height: var(--strip-h);
-		border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-		background-color: var(--chrome-veil);
+		gap: 14px;
+		padding: 8px 16px 10px 14px;
+		min-height: var(--strip-h);
 	}
 
-	.left {
+	.side {
+		display: flex;
+		align-items: center;
+		gap: 10px;
 		min-width: 0;
+		overflow: hidden;
+	}
+
+	.side.end {
+		justify-content: flex-end;
 	}
 
 	.note {
@@ -246,15 +260,6 @@
 		flex: none;
 		opacity: 0.85;
 		font-variant-numeric: tabular-nums;
-	}
-
-	/* The rule between the groups. Short, and the same ink as the strip's own
-	   border, so it separates without becoming a third thing to read. */
-	.divider {
-		flex: none;
-		width: 1px;
-		height: 12px;
-		background: color-mix(in srgb, var(--line) 70%, transparent);
 	}
 
 	.fact {

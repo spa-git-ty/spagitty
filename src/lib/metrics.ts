@@ -543,12 +543,14 @@ export function laneColorVar(colorIndex: number): string {
  * interface, so its token stays the stylesheet's own value.
  */
 const RADII: Record<string, number> = {
-	'r-field': 4,
-	'r-pill': 5,
-	'r-button': 5,
+	'r-field': 7,
+	'r-pill': 999,
+	'r-button': 9,
 	'r-row': 4,
-	'r-panel': 6,
-	'r-floating': 8
+	'r-panel': 10,
+	'r-floating': 16,
+	'r-pane': 18,
+	'r-ornament': 24
 };
 
 /**

@@ -108,17 +108,20 @@ describe('TitleBar', () => {
 		view.destroy();
 	});
 
-	it('no longer carries the tabs or the way back (FEAT-044)', () => {
-		// Both were passengers in the row that has to survive a narrow window,
-		// and neither is a window control. The tabs have a row of their own; the
-		// way back is screen 1J on the rail.
+	/**
+	 * FEAT-044 gave the tabs a row of their own, under a title bar holding only
+	 * the name and three controls. FEAT-082 puts them back in the one row above
+	 * the pane, as pills, and the name gives way to them.
+	 */
+	it('carries the tabs as pills, and the name only when there are none (FEAT-082)', () => {
 		workspace.clear();
 		workspace.opened('/repos/fixture');
 
 		const view = render(TitleBar, {});
 
-		expect(view.all('.tab').length).toBe(0);
-		expect(view.text()).not.toContain('All repositories');
+		expect(view.all('.tab').map((tab) => tab.textContent?.trim())).toEqual(['fixture']);
+		expect(view.find('.name')).toBeNull();
+		expect(view.get('.titlebar').classList.contains('tabbed')).toBe(true);
 
 		workspace.clear();
 		view.destroy();
@@ -360,7 +363,7 @@ describe('StatusStrip', () => {
 		repoControl.setCounts(counts({ working: 1, tags: 2, submodules: 0 }));
 		const view = render(StatusStrip, {});
 
-		const strip = view.get('.repo').textContent ?? '';
+		const strip = view.get('.strip').textContent ?? '';
 		expect(strip).toContain('1 changed file');
 		expect(strip).toContain('not refreshed yet');
 		// `lastFetched` is null on this fixture, and inventing a time for a
@@ -399,8 +402,9 @@ describe('StatusStrip', () => {
 		expect(tally).not.toContain('changed file');
 		expect(tally).not.toContain('fetched');
 
-		// With a rule between them, not a fourth dot.
-		expect(view.all('.divider')).toHaveLength(1);
+		// On either side of the toolbar, not a fourth dot (FEAT-082).
+		expect(view.get('.side.start').contains(view.get('.state'))).toBe(true);
+		expect(view.get('.side.end').contains(view.get('.counts'))).toBe(true);
 
 		view.destroy();
 	});
@@ -439,8 +443,10 @@ describe('StatusStrip', () => {
 		repoControl.setInfo(info());
 		const view = render(StatusStrip, {});
 
-		const children = [...view.get('.strip').children];
+		const children = [...view.get('.side.end').children];
 		expect(children[children.length - 1].classList.contains('license')).toBe(true);
+		const outer = [...view.get('.strip').children];
+		expect(outer[outer.length - 1].classList.contains('end')).toBe(true);
 
 		view.destroy();
 	});
@@ -450,6 +456,7 @@ describe('TitleBar', () => {
 	it('puts the name in the middle of the window, not the middle of the gap', () => {
 		// TASK-021: three columns with equal outer ones. Centring the name in
 		// the space the window controls leave over would land it visibly left.
+		workspace.clear();
 		const view = render(TitleBar, {});
 		const bar = view.get('.titlebar');
 		const children = [...bar.children];
@@ -457,9 +464,10 @@ describe('TitleBar', () => {
 		expect(children).toHaveLength(3);
 		expect(children[1].classList.contains('name')).toBe(true);
 		expect(children[1].textContent).toBe('Spagitty');
-		// The leading column is empty and says nothing to a screen reader.
-		expect(children[0].textContent).toBe('');
-		expect(children[0].getAttribute('aria-hidden')).toBe('true');
+		// The leading column holds the tabs, and with none open it says
+		// nothing to a screen reader.
+		expect(children[0].classList.contains('lead')).toBe(true);
+		expect(children[0].textContent?.trim()).toBe('');
 
 		view.destroy();
 	});
@@ -479,12 +487,21 @@ describe('Toolbar', () => {
 		repoControl.setInfo(info('main'));
 		const view = render(Toolbar, {});
 
-		// The name is a name, not a control: nothing to click, nothing to
-		// navigate. All repositories is on the rail and in the tabs row.
-		expect(view.get('.repo').textContent).toBe('fixture');
-		expect(view.get('.repo').tagName).toBe('SPAN');
-		expect(view.text()).toContain('›');
+		// The branch is the location. The repository's name left the toolbar
+		// with the bar it was on: the active tab says it (FEAT-082).
+		expect(view.find('.repo')).toBeNull();
 		expect(view.get('.field .value').textContent).toBe('main');
+		view.destroy();
+	});
+
+	/** An ornament, not a bar (FEAT-082). */
+	it('is a floating pill with no Settings gear of its own', () => {
+		repoControl.setInfo(info('main'));
+		const view = render(Toolbar, {});
+
+		expect(view.get('.toolbar').classList.contains('ornament')).toBe(true);
+		expect(view.get('.toolbar').getAttribute('role')).toBe('toolbar');
+		expect(view.find('[aria-label="Settings"]')).toBeNull();
 		view.destroy();
 	});
 

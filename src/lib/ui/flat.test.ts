@@ -298,7 +298,7 @@ describe('the soft spatial interface', () => {
 	});
 
 	it('gives floating layers their own geometry and restrained depth', () => {
-		expect(css).toContain('--r-floating: 8px');
+		expect(css).toContain('--r-floating: 16px');
 		expect(css).toMatch(/--shadow-3:\s*[\s\S]*?30px/);
 		expect(css).toMatch(/\.floating\s*{[^}]*border-radius:\s*var\(--r-floating\)/s);
 	});
@@ -311,6 +311,23 @@ describe('the soft spatial interface', () => {
 		expect(blurred.length).toBeGreaterThanOrEqual(5);
 		expect(blurred.length).toBeLessThanOrEqual(12);
 		for (const path of blurred) expect(path).not.toMatch(/(CommitRows|DiffPane|FileList|NavRail)/);
+	});
+
+	/**
+	 * FEAT-082: glass is spent on what floats. The two ornaments — the rail and
+	 * the toolbar — take the thick material through one class, and the pane and
+	 * the environment behind it never blur: the pane holds the graph, and a
+	 * blurred pane would re-blur on every scroll.
+	 */
+	it('gives the ornaments glass, and never the pane or the environment', () => {
+		expect(css).toMatch(/\.ornament\s*{[^}]*backdrop-filter:\s*var\(--blur-thick\)/s);
+		expect(css).not.toMatch(/\.pane\s*{[^}]*backdrop-filter/s);
+		expect(css).not.toMatch(/--environment:[^;]*blur/s);
+
+		for (const path of ['src/lib/chrome/NavRail.svelte', 'src/lib/chrome/Toolbar.svelte']) {
+			expect(readFileSync(path, 'utf8'), path).toMatch(/class="[^"]*\bornament\b/);
+		}
+		expect(readFileSync('src/routes/+layout.svelte', 'utf8')).toMatch(/<main class="pane">/);
 	});
 
 	it('removes motion when the platform requests it', () => {
