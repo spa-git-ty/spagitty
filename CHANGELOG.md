@@ -14,6 +14,14 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A one-line change on Windows no longer shows as the whole file rewritten.**
+  Files checked out with Windows line endings were compared with the
+  repository's copy byte for byte, so every line differed. The working file is
+  now read the way git reads it before a diff, and staging or discarding a
+  single hunk touches only that hunk again.
+
 ## [0.8.1] - 2026-09-13
 
 ### Fixed

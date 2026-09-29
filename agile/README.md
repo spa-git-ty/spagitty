@@ -172,6 +172,7 @@ rather than an audit.
 | [BUG-029](items/BUG-029-the-window-is-ringed-with-blurred-desktop.md) | The packaged Linux window is ringed with blurred desktop | All | Fixed |
 | [BUG-030](items/BUG-030-the-toolbar-offers-what-it-cannot-do.md) | The toolbar offers what it cannot do, and hides what it can | chrome | Fixed |
 | [BUG-031](items/BUG-031-the-window-opens-in-the-wrong-theme.md) | The window opens in the wrong theme, then changes its mind | All | Fixed |
+| [BUG-033](items/BUG-033-a-crlf-file-diffs-as-a-rewrite.md) | A CRLF file diffs as a rewrite | Working copy (1C) | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
