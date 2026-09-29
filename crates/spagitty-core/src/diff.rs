@@ -481,10 +481,20 @@ fn index_bytes(repo: &gix::Repository, path: &str) -> Result<Option<Vec<u8>>> {
     blob_bytes(repo, Some(entry.id))
 }
 
-/// The file on disk at `path`, read as bytes.
+/// The file on disk at `path`, as git would store it.
 ///
 /// A path that is not there reads as `None` — a deletion, not an error — and so
 /// does a directory, since a directory has no line diff.
+///
+/// **Converted, not raw** (BUG-033). The other side of every unstaged diff is
+/// a blob, and a blob holds what `git add` would have written: line endings
+/// normalised by `core.autocrlf` and `.gitattributes`, and any clean filter
+/// applied. Git runs the same conversion on the working file before it diffs.
+/// Compared raw, a CRLF checkout — the default on Windows — differs from its
+/// blob on every line, and one changed line showed as the whole file deleted
+/// and written again. The hunks built from this diff are applied by
+/// `git apply`, which reads the working file through the same conversion, so
+/// staging and discarding a hunk agree with what is shown.
 fn worktree_bytes(repo: &gix::Repository, path: &str) -> Result<Option<Vec<u8>>> {
     let Some(workdir) = repo.workdir() else {
         return Ok(None);
@@ -497,10 +507,34 @@ fn worktree_bytes(repo: &gix::Repository, path: &str) -> Result<Option<Vec<u8>>>
     }
 
     match std::fs::read(&full) {
-        Ok(bytes) => Ok(Some(bytes)),
+        Ok(bytes) => to_git(repo, path, bytes).map(Some),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(Error::Io(e)),
     }
+}
+
+/// `bytes`, read from the working file at `path`, converted to what the
+/// repository would store for it.
+fn to_git(repo: &gix::Repository, path: &str, bytes: Vec<u8>) -> Result<Vec<u8>> {
+    use gix::filter::plumbing::pipeline::convert::ToGitOutcome;
+    use std::io::Read;
+
+    let (mut pipeline, index) = repo
+        .filter_pipeline(None)
+        .map_err(|e| Error::Diff(e.to_string()))?;
+    let converted = match pipeline
+        .convert_to_git(&bytes[..], std::path::Path::new(path), &index)
+        .map_err(|e| Error::Diff(e.to_string()))?
+    {
+        ToGitOutcome::Unchanged(_) => None,
+        ToGitOutcome::Buffer(buffer) => Some(buffer.to_vec()),
+        ToGitOutcome::Process(mut stream) => {
+            let mut out = Vec::new();
+            stream.read_to_end(&mut out).map_err(Error::Io)?;
+            Some(out)
+        }
+    };
+    Ok(converted.unwrap_or(bytes))
 }
 
 // --- Tree walking ---------------------------------------------------------
