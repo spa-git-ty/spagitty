@@ -98,7 +98,9 @@
 	const menuItems = $derived.by((): MenuItem[] => {
 		const items: MenuItem[] = [
 			{ id: 'open', label: 'Open repository…', run: () => void repo.choose() },
-			{ id: 'clone', label: 'Clone…', run: () => clone.show() }
+			{ id: 'clone', label: 'Clone…', run: () => clone.show() },
+			// Off the rail since TASK-045; this is where it is reached from.
+			{ id: 'all', label: 'All repositories', run: () => void goto('/repos') }
 		];
 
 		if (repo.info) {

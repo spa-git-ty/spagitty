@@ -9,7 +9,7 @@
 | Suite | Cases |
 | --- | --- |
 | `src/lib/nav.test.ts` | The new order; the divider before Settings; the group boundaries; `isShown` on a quiet day, with conflicts, on an off-rail screen, and for Badges with the layer off and on; `navRows` filters; `isItemActive` for the four refs routes and not elsewhere. |
-| `src/lib/chrome/chrome.test.ts` | The rail draws six rows; Conflicts after Working copy when conflicted; Log, Rebase and All repositories shown and active while open; Branches active on all four refs routes; no Badges while the layer is off. The page store is now settable per test. |
+| `src/lib/chrome/chrome.test.ts` | The tab strip's `+` menu offers All repositories and navigates there. The rail draws six rows; Conflicts after Working copy when conflicted; Log, Rebase and All repositories shown and active while open; Branches active on all four refs routes; no Badges while the layer is off. The page store is now settable per test. |
 | `src/lib/delight/store.test.ts` | Off: no queue, no notice, no pulse, the badge still earned; shame stays quiet. |
 | `src/routes/settings/page.test.ts` | No God mode chip by default; every other section still reachable. |
 | `src/routes/stash/page.test.ts` | Finds the Stash action rather than the Stash tab. |

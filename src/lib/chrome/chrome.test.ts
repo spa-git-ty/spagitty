@@ -302,6 +302,24 @@ describe('RepoTabs', () => {
 		workspace.clear();
 		view.destroy();
 	});
+
+	/** All repositories left the rail (TASK-045); `+` is where it is reached. */
+	it('offers All repositories from the add menu', async () => {
+		workspace.clear();
+		workspace.opened('/repos/fixture');
+		const view = render(RepoTabs, {});
+
+		click(view.get('.add'));
+		await vi.waitFor(() => expect(document.body.textContent).toContain('All repositories'));
+		const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
+			el.textContent?.includes('All repositories')
+		);
+		click(item!);
+		expect(goto).toHaveBeenCalledWith('/repos');
+
+		workspace.clear();
+		view.destroy();
+	});
 });
 
 describe('StatusStrip', () => {
