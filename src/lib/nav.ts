@@ -115,18 +115,41 @@ export interface NavItem {
 	 * and every rail, menu and toolbar draws the same shape at the same weight.
 	 */
 	icon: IconName;
+	/** When the row is on the rail. Absent means `always`. */
+	shows?: NavShows;
+	/**
+	 * Other routes this row stands for (TASK-045). Tags, Stash and Reflog are
+	 * views of the refs the Branches screen lists, so the Branches row is where
+	 * you are on any of them.
+	 */
+	also?: string[];
+	/** Only offered while the delight layer is on (TASK-045). */
+	delight?: boolean;
 }
 
 /**
- * The order is unchanged, and that is deliberate: grouping the rows must not
- * move them. Whatever somebody's hand has learned about which position is which
- * screen still holds, and the only new thing on screen is a heading saying what
- * the run of rows below it has in common.
+ * When a destination is on the rail (TASK-045).
  *
- * Rebase moves into `tools` and it is the one judgement call here. It is git
- * work, but it is not *routine* git work — it is a thing done deliberately,
- * occasionally, with the screen open in front of you, which is exactly what the
- * group is for.
+ * - `always` — where a day is spent, and Settings.
+ * - `conflicts` — only while there is something to resolve. A Conflicts row
+ *   with a zero beside it says nothing, all day.
+ * - `open` — only while it is the screen you are on. These are still screens,
+ *   reached from the toolbar, the tab strip, a shortcut or the palette; the
+ *   rail shows one while it is open so "where am I" always has an answer, and
+ *   lets it go when you leave.
+ */
+export type NavShows = 'always' | 'conflicts' | 'open';
+
+/** The routes Branches stands for, in the order its tabs name them. */
+export const REF_SCREENS = ['/branches', '/tags', '/stash', '/reflog'] as const;
+
+/**
+ * Six rows where there were fourteen (TASK-045).
+ *
+ * Grouping (TASK-041) made fourteen rows readable; it did not make them fewer,
+ * and half of them were somewhere a person goes to look one thing up. The order
+ * of what is left is unchanged, so nothing a hand has learned has moved further
+ * than the rows that left from above it.
  */
 export const NAV_ITEMS: NavItem[] = [
 	{ code: '1Q', label: 'Farm', href: '/farm', group: 'farm', icon: 'farm' },
@@ -145,7 +168,8 @@ export const NAV_ITEMS: NavItem[] = [
 		href: '/conflicts',
 		count: 'conflicts',
 		group: 'work',
-		icon: 'conflict'
+		icon: 'conflict',
+		shows: 'conflicts'
 	},
 	{
 		code: '1F',
@@ -153,29 +177,66 @@ export const NAV_ITEMS: NavItem[] = [
 		href: '/branches',
 		count: 'branches',
 		group: 'work',
-		icon: 'branch'
+		icon: 'branch',
+		also: ['/tags', '/stash', '/reflog']
 	},
-	{ code: '1N', label: 'Tags', href: '/tags', count: 'tags', group: 'work', icon: 'tag' },
-	{ code: '1G', label: 'Stash', href: '/stash', count: 'stashes', group: 'work', icon: 'stash' },
 	{ code: '1H', label: 'Pull requests', href: '/requests', group: 'work', icon: 'request' },
-	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase' },
-	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search' },
-	{ code: '1M', label: 'Reflog', href: '/reflog', group: 'tools', icon: 'history' },
-	{ code: '1P', label: 'Badges', href: '/badges', group: 'tools', icon: 'badge' },
+	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase', shows: 'open' },
+	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search', shows: 'open' },
+	{
+		code: '1P',
+		label: 'Badges',
+		href: '/badges',
+		group: 'tools',
+		icon: 'badge',
+		shows: 'open',
+		delight: true
+	},
 	{
 		code: '1J',
 		label: 'All repositories',
 		href: '/repos',
-		group: 'app',
-		// Kept, and now redundant: the group boundary draws the same rule. It
-		// stays because `nav.test.ts` has asserted this divider since FEAT-040
-		// and the assertion is about a *boundary existing here*, which is still
-		// true and is now true for a better reason.
-		dividerBefore: true,
-		icon: 'folder'
+		group: 'tools',
+		icon: 'folder',
+		shows: 'open'
 	},
-	{ code: '1K', label: 'Settings', href: '/settings', group: 'app', icon: 'settings' }
+	{
+		code: '1K',
+		label: 'Settings',
+		href: '/settings',
+		group: 'app',
+		dividerBefore: true,
+		icon: 'settings'
+	}
 ];
+
+/** What decides which rows are on the rail right now. */
+export interface NavContext {
+	pathname: string;
+	/** Paths in conflict, or `null` before anything has been counted. */
+	conflicts: number | null;
+	/** Whether the delight layer is on. */
+	delight: boolean;
+}
+
+/** True when `item` is where you are on `pathname`, counting what it stands for. */
+export function isItemActive(item: NavItem, pathname: string): boolean {
+	return [item.href, ...(item.also ?? [])].some((href) => isActive(href, pathname));
+}
+
+/** Whether `item` is on the rail in `context`. */
+export function isShown(item: NavItem, context: NavContext): boolean {
+	if (item.delight && !context.delight) return false;
+	if (isItemActive(item, context.pathname)) return true;
+	switch (item.shows ?? 'always') {
+		case 'always':
+			return true;
+		case 'conflicts':
+			return (context.conflicts ?? 0) > 0;
+		case 'open':
+			return false;
+	}
+}
 
 /**
  * The rows, with the group each one starts, in one pass.
@@ -194,10 +255,11 @@ export interface NavRow {
 	heading: string | null;
 }
 
-export function navRows(items: NavItem[] = NAV_ITEMS): NavRow[] {
+export function navRows(items: NavItem[] = NAV_ITEMS, context?: NavContext): NavRow[] {
 	let previous: NavGroup | null = null;
+	const shown = context ? items.filter((item) => isShown(item, context)) : items;
 
-	return items.map((item) => {
+	return shown.map((item) => {
 		const startsGroup = item.group !== previous;
 		previous = item.group;
 		return {

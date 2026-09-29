@@ -70,7 +70,7 @@ const DEFAULTS: Settings = {
 	showGitCommands: false,
 	pruneOnFetch: false,
 	fetchAvatars: true,
-	personality: 'balanced',
+	personality: 'off',
 	sound: 'off'
 };
 

@@ -7,7 +7,13 @@ import type { RepoCounts, RepoInfo } from '$lib/types';
 const goto = vi.fn();
 vi.mock('$app/navigation', () => ({ goto: (path: string) => goto(path) }));
 
-vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/') } }));
+/** Where the window is. The rail's rows depend on it (TASK-045). */
+const { page } = vi.hoisted(() => ({ page: { url: new URL('http://localhost/') } }));
+vi.mock('$app/state', () => ({ page }));
+
+function at(pathname: string): void {
+	page.url = new URL(`http://localhost${pathname}`);
+}
 
 vi.mock('$lib/graph/store.svelte', async () => await import('../../testing/graph-store.svelte'));
 
@@ -77,6 +83,7 @@ function counts(overrides: Partial<RepoCounts> = {}): RepoCounts {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	at('/');
 	repoControl.reset();
 	graphControl.reset();
 	branchControl.reset();
@@ -793,9 +800,11 @@ describe('NavRail', () => {
 		// It said `Ctrl+F` on every platform, in a column of counts. The
 		// shortcut is real and unchanged; the palette is where it is listed,
 		// with the notation the platform actually uses.
+		at('/search');
 		const view = render(NavRail, {});
 
 		const log = view.all('.item').find((i) => i.textContent?.includes('Log'));
+		expect(log).toBeDefined();
 		expect(log?.textContent).not.toMatch(/ctrl|cmd|⌘/i);
 
 		view.destroy();
@@ -806,6 +815,7 @@ describe('NavRail', () => {
 		// waiting for one, so its dot claimed a number that was never coming —
 		// while Pull requests and Rebase, in the same position, showed nothing.
 		repoControl.setCounts(counts({ branches: 4 }));
+		at('/rebase');
 		const view = render(NavRail, {});
 
 		for (const label of ['Settings', 'Pull requests', 'Rebase']) {
@@ -817,15 +827,75 @@ describe('NavRail', () => {
 	});
 
 	it('shows real counts where they exist', () => {
-		repoControl.setCounts(counts({ branches: 4, stashes: 2 }));
+		repoControl.setCounts(counts({ branches: 4, working: 3 }));
 		const view = render(NavRail, {});
 
 		const branches = view.all('.item').find((i) => i.textContent?.includes('Branches'));
 		expect(branches?.textContent).toContain('4');
 
-		const stash = view.all('.item').find((i) => i.textContent?.includes('Stash'));
-		expect(stash?.textContent).toContain('2');
+		const working = view.all('.item').find((i) => i.textContent?.includes('Working copy'));
+		expect(working?.textContent).toContain('3');
 
+		view.destroy();
+	});
+
+	/** Six rows where there were fourteen (TASK-045). */
+	it('shows the everyday screens and Settings, and nothing else', () => {
+		repoControl.setInfo(info());
+		repoControl.setCounts(counts({ conflicts: 0 }));
+		const view = render(NavRail, {});
+
+		expect(view.all('.item').map((i) => i.getAttribute('aria-label'))).toEqual([
+			'Farm',
+			'Graph',
+			'Working copy',
+			'Branches',
+			'Pull requests',
+			'Settings'
+		]);
+
+		view.destroy();
+	});
+
+	it('shows Conflicts while there is something to resolve', () => {
+		repoControl.setInfo(info());
+		repoControl.setCounts(counts({ conflicts: 2 }));
+		const view = render(NavRail, {});
+
+		const labels = view.all('.item').map((i) => i.getAttribute('aria-label'));
+		expect(labels.indexOf('Conflicts')).toBe(labels.indexOf('Working copy') + 1);
+
+		view.destroy();
+	});
+
+	it('shows a screen that is not on the rail while it is the one open', () => {
+		for (const [path, label] of [
+			['/search', 'Log'],
+			['/rebase', 'Rebase'],
+			['/repos', 'All repositories']
+		]) {
+			at(path);
+			const view = render(NavRail, {});
+			const active = view.all('.item').filter((i) => i.dataset.active === 'true');
+			expect(active.map((i) => i.getAttribute('aria-label'))).toEqual([label]);
+			view.destroy();
+		}
+	});
+
+	it('is on Branches for Tags, Stash and Reflog too', () => {
+		for (const path of ['/branches', '/tags', '/stash', '/reflog']) {
+			at(path);
+			const view = render(NavRail, {});
+			const active = view.all('.item').filter((i) => i.dataset.active === 'true');
+			expect(active.map((i) => i.getAttribute('aria-label'))).toEqual(['Branches']);
+			view.destroy();
+		}
+	});
+
+	it('offers Badges only while the delight layer is on', () => {
+		at('/badges');
+		const view = render(NavRail, {});
+		expect(view.all('.item').some((i) => i.getAttribute('aria-label') === 'Badges')).toBe(false);
 		view.destroy();
 	});
 
@@ -907,7 +977,9 @@ describe('NavRail', () => {
 		expect(view.all('.open')).toHaveLength(0);
 		expect(view.text()).not.toContain('Open repository');
 		// The screens are all still there, starting with the farm.
-		expect(view.all('.item').length).toBe(NAV_ITEMS.length);
+		expect(view.all('.item').length).toBe(
+			NAV_ITEMS.filter((item) => (item.shows ?? 'always') === 'always').length
+		);
 
 		view.destroy();
 	});

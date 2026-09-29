@@ -1104,8 +1104,8 @@ export interface AvatarAnswer {
 	retry: boolean;
 }
 
-/** Mirrors `settings::Personality`. */
-export type Personality = 'professional' | 'balanced' | 'fullSpagitty';
+/** Mirrors `settings::Personality`. `off` is the default (TASK-045). */
+export type Personality = 'off' | 'professional' | 'balanced' | 'fullSpagitty';
 
 /** Mirrors `settings::SoundLevel`. */
 export type SoundLevel = 'off' | 'subtle' | 'full';

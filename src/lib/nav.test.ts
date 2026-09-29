@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { DIFF_ROUTE, isActive, NAV_ITEMS, navRows, OFF_RAIL } from './nav';
+import {
+	DIFF_ROUTE,
+	isActive,
+	isItemActive,
+	isShown,
+	NAV_ITEMS,
+	navRows,
+	OFF_RAIL,
+	REF_SCREENS,
+	type NavContext
+} from './nav';
 
 describe('isActive', () => {
 	it('matches the graph only on the root path', () => {
@@ -83,22 +93,13 @@ describe('NAV_ITEMS', () => {
 			'/changes',
 			'/conflicts',
 			'/branches',
-			// FEAT-051. Beside Branches because they are the same kind of
-			// thing — named positions in history — and the rail already
-			// counted tags with nowhere to send anyone.
-			'/tags',
-			'/stash',
 			'/requests',
+			// TASK-045. On the rail only while open: each is started from
+			// somewhere else — the toolbar, Ctrl+F, the tab strip's `+` — and the
+			// rail shows it while it is where you are. Tags, Stash and Reflog are
+			// not rows at all any more: they are tabs of Branches.
 			'/rebase',
 			'/search',
-			// FEAT-050. After Log because they answer neighbouring questions —
-			// what is in history, and what was just done to it — and before the
-			// divider because both are about the open repository.
-			'/reflog',
-			// FEAT-072. Last of the repository screens, because it is the only
-			// one that is not about the repository's state — it is about what
-			// has been done in it, which is a question people ask after the
-			// ones above rather than instead of them.
 			'/badges',
 			'/repos',
 			'/settings'
@@ -110,9 +111,9 @@ describe('NAV_ITEMS', () => {
 		expect(hrefs.indexOf('/search')).toBe(hrefs.indexOf('/rebase') + 1);
 	});
 
-	it('keeps the divider before All repositories', () => {
-		const repos = NAV_ITEMS.find((item) => item.href === '/repos');
-		expect(repos?.dividerBefore).toBe(true);
+	it('keeps a divider before Settings, the one row not about this repository', () => {
+		const settings = NAV_ITEMS.find((item) => item.href === '/settings');
+		expect(settings?.dividerBefore).toBe(true);
 	});
 });
 
@@ -145,7 +146,7 @@ describe('grouping', () => {
 
 	it('starts a group exactly at each boundary', () => {
 		const starts = rows.filter((row) => row.startsGroup).map((row) => row.item.href);
-		expect(starts).toEqual(['/farm', '/', '/rebase', '/repos']);
+		expect(starts).toEqual(['/farm', '/', '/rebase', '/settings']);
 	});
 
 	it('heads every group but the first', () => {
@@ -176,10 +177,57 @@ describe('grouping', () => {
 		}
 	});
 
-	it('puts the two screens that are not about this repository together', () => {
+	it('ends with Settings, on its own', () => {
 		expect(NAV_ITEMS.filter((item) => item.group === 'app').map((item) => item.href)).toEqual([
-			'/repos',
 			'/settings'
 		]);
+	});
+});
+
+/** Which rows are on the rail right now (TASK-045). */
+describe('isShown', () => {
+	const quiet: NavContext = { pathname: '/', conflicts: 0, delight: false };
+	const shown = (context: NavContext) =>
+		NAV_ITEMS.filter((item) => isShown(item, context)).map((item) => item.href);
+
+	it('shows the everyday rows and Settings on a quiet day', () => {
+		expect(shown(quiet)).toEqual(['/farm', '/', '/changes', '/branches', '/requests', '/settings']);
+	});
+
+	it('adds Conflicts while there is something to resolve, and only then', () => {
+		expect(shown({ ...quiet, conflicts: 1 })).toContain('/conflicts');
+		expect(shown({ ...quiet, conflicts: null })).not.toContain('/conflicts');
+	});
+
+	it('keeps Conflicts while it is open, even once it is empty', () => {
+		expect(shown({ ...quiet, pathname: '/conflicts' })).toContain('/conflicts');
+	});
+
+	it('adds a screen that is not on the rail while it is open', () => {
+		for (const href of ['/rebase', '/search', '/repos']) {
+			expect(shown({ ...quiet, pathname: href })).toContain(href);
+		}
+	});
+
+	it('never offers Badges while the delight layer is off, even on its own screen', () => {
+		expect(shown({ ...quiet, pathname: '/badges' })).not.toContain('/badges');
+		expect(shown({ ...quiet, pathname: '/badges', delight: true })).toContain('/badges');
+	});
+
+	it('filters the rows the rail draws', () => {
+		expect(navRows(NAV_ITEMS, quiet).map((row) => row.item.href)).toEqual(shown(quiet));
+	});
+});
+
+describe('isItemActive', () => {
+	const branches = NAV_ITEMS.find((item) => item.href === '/branches')!;
+
+	it('puts Branches where you are on each of the refs screens', () => {
+		for (const href of REF_SCREENS) expect(isItemActive(branches, href)).toBe(true);
+	});
+
+	it('does not put Branches where you are anywhere else', () => {
+		expect(isItemActive(branches, '/')).toBe(false);
+		expect(isItemActive(branches, '/requests')).toBe(false);
 	});
 });

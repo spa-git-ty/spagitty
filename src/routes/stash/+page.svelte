@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { onMount, untrack } from 'svelte';
 	import DiffPane from '$lib/diff/DiffPane.svelte';
 	import FileList from '$lib/diff/FileList.svelte';
@@ -92,7 +93,7 @@
 <div class="screen">
 	<header class="head">
 		<div class="left">
-			<span class="title">Stash</span>
+			<RefTabs />
 			{#if stash.loaded}<span class="note">{count}</span>{/if}
 		</div>
 		<div class="right">
@@ -217,10 +218,6 @@
 		min-width: 0;
 	}
 
-	.title {
-		font-size: var(--fs-title);
-		white-space: nowrap;
-	}
 
 	.body {
 		flex: 1;

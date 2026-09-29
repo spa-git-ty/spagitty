@@ -2,7 +2,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { isActive, navRows } from '$lib/nav';
+	import { delight } from '$lib/delight/store.svelte';
+	import { isItemActive, navRows } from '$lib/nav';
 	import { panels } from '$lib/panels.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -15,6 +16,19 @@
 	const collapsed = $derived(panels.railCollapsed);
 
 	const counts = $derived(repo.counts);
+
+	/**
+	 * The rows that are on the rail right now (TASK-045): the everyday five and
+	 * Settings, Conflicts while there is something to resolve, and whichever
+	 * other screen is open, for as long as it is.
+	 */
+	const rows = $derived(
+		navRows(undefined, {
+			pathname: page.url.pathname,
+			conflicts: counts.conflicts,
+			delight: delight.on
+		})
+	);
 
 	/**
 	 * A count of `null` means "not computed yet" and renders as a dot. Only the
@@ -100,7 +114,7 @@
 		rail does not have room for one. The order of the rows is unchanged, so
 		nothing anybody's hand has learned has moved.
 	-->
-	{#each navRows() as row (row.item.href)}
+	{#each rows as row (row.item.href)}
 		{#if row.startsGroup && row.heading}
 			{#if collapsed}
 				<div class="hr"></div>
@@ -110,7 +124,7 @@
 		{/if}
 		<button
 			class="item"
-			data-active={isActive(row.item.href, page.url.pathname)}
+			data-active={isItemActive(row.item, page.url.pathname)}
 			title={row.item.label}
 			aria-label={row.item.label}
 			onclick={() => goto(row.item.href)}

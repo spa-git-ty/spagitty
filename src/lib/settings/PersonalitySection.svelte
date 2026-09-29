@@ -23,6 +23,11 @@
 	 */
 	const LEVELS: { id: Personality; label: string; what: string }[] = [
 		{
+			id: 'off',
+			label: 'Off',
+			what: 'Nothing shown, nothing played. Badges are still recorded. The default.'
+		},
+		{
 			id: 'professional',
 			label: 'Professional',
 			what: 'No reward moments, no jokes, no sound. Badges are still earned.'
@@ -30,7 +35,7 @@
 		{
 			id: 'balanced',
 			label: 'Balanced',
-			what: 'A short card when something is earned. The default.'
+			what: 'A short card when something is earned.'
 		},
 		{
 			id: 'fullSpagitty',
@@ -47,9 +52,11 @@
 
 	const personality = $derived(settings.settings.personality);
 	const sound = $derived(settings.settings.sound);
+	/** Off and Professional are both silent (TASK-045). */
+	const silent = $derived(personality === 'off' || personality === 'professional');
 
 	async function choosePersonality(next: Personality): Promise<void> {
-		if (next === 'professional') {
+		if (next === 'off' || next === 'professional') {
 			// One write, both keys. See the note in the header.
 			await settings.write({ ...settings.settings, personality: next, sound: 'off' });
 			return;
@@ -98,10 +105,10 @@
 			<div class="row">
 				<Chip
 					active={sound === level.id}
-					disabled={personality === 'professional' && level.id !== 'off'}
+					disabled={silent && level.id !== 'off'}
 					onclick={() => chooseSound(level.id)}
 					title={personality === 'professional'
-						? 'Professional is silent. Choose Balanced or Full Spagitty to enable sound.'
+						? 'Off and Professional are silent. Choose Balanced or Full Spagitty to enable sound.'
 						: level.what}
 				>
 					{level.label}

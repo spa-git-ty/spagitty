@@ -37,7 +37,7 @@ const COMMIT: DelightEvent = {
 };
 
 /** Put the personality where a test needs it, without touching the backend. */
-function personality(level: 'professional' | 'balanced' | 'fullSpagitty'): void {
+function personality(level: 'off' | 'professional' | 'balanced' | 'fullSpagitty'): void {
 	settings.settings.personality = level;
 }
 
@@ -150,6 +150,27 @@ describe('identity', () => {
 });
 
 describe('personality', () => {
+	/** The default (TASK-045). */
+	it('shows nothing at all at Off, and still earns the badge', () => {
+		personality('off');
+		const pulse = delight.pulse;
+		delight.record(COMMIT);
+
+		expect(delight.on).toBe(false);
+		expect(delight.waiting).toBe(0);
+		expect(notice.current).toBeNull();
+		expect(delight.pulse).toBe(pulse);
+		expect(delight.me.earned.map((entry) => entry.id)).toContain('cook');
+	});
+
+	it('keeps a shame badge quiet at Off too', () => {
+		personality('off');
+		delight.record({ ...COMMIT, onDefaultBranch: true });
+
+		expect(delight.showsShame).toBe(false);
+		expect(notice.current).toBeNull();
+	});
+
 	it('queues a reward moment at Balanced', () => {
 		delight.record(COMMIT);
 

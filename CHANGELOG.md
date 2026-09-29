@@ -14,6 +14,21 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Changed
+
+- **A shorter sidebar.** It shows Farm, Graph, Working copy, Branches, Pull
+  requests and Settings. Conflicts joins it while something is in conflict.
+  Rebase, Log and All repositories are still one click away — the toolbar,
+  `Ctrl+F`, the tab strip's `+` or the command palette — and show in the
+  sidebar while they are open.
+- **Branches, Tags, Stash and Reflog are one place.** Each opens with tabs for
+  all four, with their counts.
+- **Badges and reward moments are off by default.** A new *Off* personality
+  records badges without showing anything; choose Professional, Balanced or
+  Full Spagitty in Settings → Personality to see them. An existing settings
+  file keeps the personality it names. God mode and the Badges screen are
+  offered only while the layer is on.
+
 ### Fixed
 
 - The test suite passes on Windows. One test compared file paths written with
