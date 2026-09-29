@@ -44,6 +44,10 @@ stays backward-compatible.
 
 ### Fixed
 
+- **No transparent band round the window on Windows.** The application drew
+  its own corner and shadow inside the ones Windows 11 already gives it, and
+  the desktop showed through the gap between them. The window now fills to its
+  edge and the corner and shadow are the system's.
 - The test suite passes on Windows. One test compared file paths written with
   `/` against the paths Windows produces with `\`, so it had only ever passed on
   Linux and macOS.

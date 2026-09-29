@@ -175,6 +175,7 @@ rather than an audit.
 | [BUG-030](items/BUG-030-the-toolbar-offers-what-it-cannot-do.md) | The toolbar offers what it cannot do, and hides what it can | chrome | Fixed |
 | [BUG-031](items/BUG-031-the-window-opens-in-the-wrong-theme.md) | The window opens in the wrong theme, then changes its mind | All | Fixed |
 | [BUG-032](items/BUG-032-a-path-test-that-only-passes-on-unix.md) | A path test that only passes on Unix | none | Fixed |
+| [BUG-034](items/BUG-034-a-transparent-band-round-the-window-on-windows.md) | A transparent band round the window on Windows | All | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

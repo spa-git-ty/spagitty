@@ -62,11 +62,14 @@ export type ShellState = 'floating' | 'maximized' | 'flush';
  * traffic lights. The same second-card argument applies, and a card drawn
  * inside a real macOS frame would be the more obviously wrong of the two.
  *
- * Windows keeps `decorations: false` and keeps drawing its own, because that is
- * where an undecorated window is still what ships.
+ * **Windows joined them** (BUG-034). It keeps `decorations: false`, but
+ * Windows 11 gives an undecorated window with `shadow: true` its own rounded
+ * corner and shadow. The card inside that was a second one, and the 10px margin
+ * it needed for its shadow was transparent: the desktop showed through a band
+ * round the whole window, which is BUG-029 again on the third platform.
  *
- * Written as "not one of the two platforms that decorate" rather than "is
- * Windows", deliberately: an unrecognised host — a plain browser during
+ * Written as "not one of the platforms that decorate" rather than as a list
+ * of the ones that do not, deliberately: an unrecognised host — a plain browser during
  * frontend work, or a webview whose agent says something new — gets the card,
  * which is the honest picture for something that may have no frame at all. The
  * other way round, a new host would come up as a hard-cornered rectangle with
@@ -79,7 +82,11 @@ export type ShellState = 'floating' | 'maximized' | 'flush';
  * Windows says `Windows NT`.
  */
 export function decoratesItself(userAgent: string): boolean {
-	return !/\bLinux\b/.test(userAgent) && !/\bMacintosh\b/.test(userAgent);
+	return (
+		!/\bLinux\b/.test(userAgent) &&
+		!/\bMacintosh\b/.test(userAgent) &&
+		!/\bWindows NT\b/.test(userAgent)
+	);
 }
 
 /** The `data-window` value for a host, given whether the window is maximized. */

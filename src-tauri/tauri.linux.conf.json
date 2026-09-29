@@ -9,7 +9,8 @@
 				"resizable": true,
 				"fullscreen": false,
 				"decorations": false,
-				"transparent": false
+				"transparent": false,
+				"shadow": true
 			}
 		]
 	}

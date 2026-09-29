@@ -85,25 +85,25 @@ describe('inside Tauri', () => {
  * and the 10px between them was transparent.
  */
 describe('which edge the window draws', () => {
-	it('draws its own card on the host that decorates nothing', () => {
-		// Windows alone, now. macOS joined Linux in TASK-042: it has real
-		// decorations there, so a card drawn inside a real macOS frame would be
-		// the same second-card mistake BUG-029 was about, more obviously.
-		expect(shellState(false, AGENTS.windows)).toBe('floating');
+	it('draws its own card only on a host it does not recognise', () => {
+		// A plain browser during frontend work. macOS joined Linux in TASK-042,
+		// and Windows joined both in BUG-034.
+		expect(shellState(false, 'Mozilla/5.0 (SomeOS) Gecko/20100101')).toBe('floating');
 	});
 
-	it('squares itself against the screen when maximized', () => {
-		expect(shellState(true, AGENTS.windows)).toBe('maximized');
+	it('squares itself against the screen when maximized there', () => {
+		expect(shellState(true, 'Mozilla/5.0 (SomeOS) Gecko/20100101')).toBe('maximized');
 	});
 
 	it.each([
 		['Linux, where the compositor drew one', 'linux'],
-		['macOS, where the system draws the frame', 'mac']
+		['macOS, where the system draws the frame', 'mac'],
+		['Windows, where the system rounds and shadows the window (BUG-034)', 'windows']
 	] as const)('draws no card at all on %s', (_label, agent) => {
 		expect(shellState(false, AGENTS[agent])).toBe('flush');
 	});
 
-	it.each(['linux', 'mac'] as const)('stays flush on %s when the window is restored', (agent) => {
+	it.each(['linux', 'mac', 'windows'] as const)('stays flush on %s when the window is restored', (agent) => {
 		// The reason is the platform, not the size, so restoring must not hand
 		// the transparent margin back.
 		expect(shellState(true, AGENTS[agent])).toBe('flush');
@@ -112,9 +112,9 @@ describe('which edge the window draws', () => {
 	it('reads the platform off the agent string, and only whole words', () => {
 		expect(decoratesItself(AGENTS.linux)).toBe(false);
 		expect(decoratesItself(AGENTS.mac)).toBe(false);
-		expect(decoratesItself(AGENTS.windows)).toBe(true);
+		expect(decoratesItself(AGENTS.windows)).toBe(false);
 		// "Linux" inside a longer token is a product name, not a platform.
-		expect(decoratesItself('Mozilla/5.0 (Windows NT 10.0) Linuxish/1.0')).toBe(true);
+		expect(decoratesItself('Mozilla/5.0 (SomeOS) Linuxish/1.0')).toBe(true);
 	});
 
 	it('falls back to a drawn card when nothing says what the host is', () => {
