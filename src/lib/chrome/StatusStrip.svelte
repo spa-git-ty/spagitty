@@ -241,13 +241,13 @@
 	/* The start side: freshness goes first, then the working copy, then the
 	   words beside the walk's dot. The dot stays. */
 	@container (max-width: 460px) {
-		.fresh {
+		.side .fresh {
 			display: none;
 		}
 	}
 
 	@container (max-width: 300px) {
-		.working {
+		.side .working {
 			display: none;
 		}
 
@@ -265,7 +265,8 @@
 
 	/* The end side: the inventory goes; the licence never does (FEAT-043). */
 	@container (max-width: 330px) {
-		.counts {
+		/* `.side` for weight: `.group` below sets `display` too. */
+		.side .counts {
 			display: none;
 		}
 	}
