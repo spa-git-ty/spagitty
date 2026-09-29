@@ -1,36 +1,49 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { changes } from '$lib/changes/store.svelte';
 	import { describeSigningProblem as signingProblem } from '$lib/settings/describe';
 	import Chip from '$lib/ui/Chip.svelte';
 
 	/**
-	 * Subject, a divider, then the body — the shape of a commit message rather
-	 * than a single box people are expected to remember the convention for.
+	 * The commit bar, along the bottom of the screen (TASK-047).
+	 *
+	 * It was a well across the top of the diff — subject, divider, a three-line
+	 * body, the amend chip — and it took up to 40% of the column whether or not
+	 * anybody was typing in it, so the hunks being committed were pushed into
+	 * the lower half. Most commits are a summary line and nothing else. So the
+	 * bar is one line: the summary, a way to add a description, amend, and the
+	 * Commit button, which the page hands in as `action`. The description opens
+	 * under the summary when asked for, and stays open while it holds anything.
 	 *
 	 * The subject counter appears only once the line is long: git's own
 	 * convention is 50 characters, and a number that is always on screen reads
 	 * as a limit rather than as a warning.
 	 *
 	 * Signing is said here, before the button, rather than reported after a
-	 * failure (FEAT-019). "commit failed" is a bad way to learn that gpg was
-	 * never installed, and both of the things that stop a signature happening
-	 * are knowable now.
+	 * failure (FEAT-019).
 	 */
+	interface Props {
+		/** The Commit button, owned by the page. */
+		action?: Snippet;
+	}
+
+	let { action }: Props = $props();
 
 	const SUBJECT_HINT = 50;
 
 	const subject = $derived(changes.subject);
 	const over = $derived(subject.length > SUBJECT_HINT);
 
+	/** Asked for, or already written in: either way it is on screen. */
+	let asked = $state(false);
+	const describing = $derived(asked || changes.body.length > 0);
+
 	const signing = $derived(changes.signing);
 
 	/**
 	 * What this commit will do about a signature, or null to say nothing.
-	 *
-	 * Silent when signing is off, which is the ordinary case: a note saying
-	 * "this will not be signed" on every commit in a repository that never signs
-	 * is noise on every commit.
+	 * Silent when signing is off, which is the ordinary case.
 	 */
 	const willSign = $derived.by(() => {
 		if (signing === null || !signing.enabled) return null;
@@ -40,111 +53,127 @@
 			text: `This commit will be signed with ${signing.program}.`
 		};
 	});
+
+	let bodyField = $state<HTMLTextAreaElement | null>(null);
+
+	function describe() {
+		asked = true;
+		// After the field exists, so the focus lands in it.
+		queueMicrotask(() => bodyField?.focus());
+	}
 </script>
 
 <div class="message">
-	<div class="subject-row">
-		<input
-			class="subject"
-			type="text"
-			placeholder="Summary of this commit"
-			value={subject}
-			oninput={(event) => changes.setSubject(event.currentTarget.value)}
-			aria-label="Commit subject"
-		/>
-		{#if over}
-			<span class="mono muted count" title="git's convention is {SUBJECT_HINT} characters">
-				{subject.length}
-			</span>
-		{/if}
-	</div>
-
-	<div class="hr"></div>
-
-	<textarea
-		class="body"
-		rows="3"
-		placeholder="Why, if the summary is not enough"
-		value={changes.body}
-		oninput={(event) => changes.setBody(event.currentTarget.value)}
-		aria-label="Commit body"
-	></textarea>
-
-	{#if willSign}
-		<div class="note signing" class:warn={willSign.tone === 'warn'}>{willSign.text}</div>
+	{#if willSign || changes.amend}
+		<div class="notes">
+			{#if willSign}
+				<span class="note signing" class:warn={willSign.tone === 'warn'}>{willSign.text}</span>
+			{/if}
+			{#if changes.amend}
+				<span class="note">This rewrites the last commit rather than adding to history.</span>
+			{/if}
+		</div>
 	{/if}
 
-	<div class="row">
+	<div class="bar">
+		<div class="field">
+			<input
+				class="subject"
+				type="text"
+				placeholder="Summary of this commit"
+				value={subject}
+				oninput={(event) => changes.setSubject(event.currentTarget.value)}
+				aria-label="Commit subject"
+			/>
+			{#if over}
+				<span class="mono muted count" title="git's convention is {SUBJECT_HINT} characters">
+					{subject.length}
+				</span>
+			{/if}
+		</div>
+
+		{#if !describing}
+			<button class="text-action" onclick={describe}>Add description</button>
+		{/if}
+
 		<Chip
 			active={changes.amend}
 			onclick={() => changes.setAmend(!changes.amend)}
 			title="Replace the previous commit instead of adding one"
 		>
-			amend the previous commit
+			amend
 		</Chip>
-		{#if changes.amend}
-			<span class="note">This rewrites the last commit rather than adding to history.</span>
-		{/if}
+
+		{@render action?.()}
 	</div>
+
+	{#if describing}
+		<textarea
+			class="body"
+			rows="3"
+			placeholder="Why, if the summary is not enough"
+			value={changes.body}
+			bind:this={bodyField}
+			oninput={(event) => changes.setBody(event.currentTarget.value)}
+			aria-label="Commit body"
+		></textarea>
+	{/if}
 </div>
 
 <style>
 	/*
-	 * The commit message is what this screen is for, so it is a well rather
-	 * than a strip: a sunken surface the two fields sit inside, which is what
-	 * says "type here" without a label saying it.
-	 *
-	 * It must not eat the hunks. `flex: none` plus WebKitGTK's default
-	 * textarea height sized this well to the whole column at 100% zoom, and
-	 * the diff only appeared after a zoom change forced leftover space. Cap
-	 * it, and let it shrink, so the pane below always has a height.
+	 * A bar, not a well: it takes the height of what is in it — one line, until
+	 * a description is asked for — so the diff above it keeps the screen.
 	 */
 	.message {
-		flex: 0 1 auto;
-		min-height: 0;
-		max-height: 40%;
-		overflow: auto;
+		flex: none;
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
-		margin: 8px;
-		padding: 8px 10px;
-		background: var(--sunken);
-		border: 1px solid var(--soft);
-		border-radius: var(--r-panel);
-		box-shadow: none;
-		transition: border-color var(--t-fast) var(--ease);
+		gap: 8px;
+		padding: 10px 12px 12px;
 	}
 
-	/* The whole well takes the focus ring when either field inside it has
-	   focus, because the well is what a person is aiming at. */
-	.message:focus-within {
-		border-color: color-mix(in srgb, var(--accent) 55%, var(--soft));
+	.bar {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
 	}
 
-	.subject-row {
+	/* The summary is the one field here, so it is the one filled well. */
+	.field {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		align-items: center;
 		gap: 6px;
+		height: 38px;
+		padding: 0 14px;
+		background: var(--sunken);
+		border: 1px solid var(--soft);
+		border-radius: var(--r-pill);
+		transition: border-color var(--t-fast) var(--ease);
 	}
 
-	/* The fields themselves are invisible: the well around them is the control.
+	.field:focus-within {
+		border-color: color-mix(in srgb, var(--accent) 55%, var(--soft));
+	}
+
+	/* The inputs themselves are invisible: the well around them is the control.
 	   `app.css` gives every input a border and a fill, so both come back off. */
-	.subject,
-	.body {
-		width: 100%;
+	.subject {
+		flex: 1;
+		min-width: 0;
 		background: transparent;
 		border: none;
 		box-shadow: none;
-		padding-inline: 0;
+		padding: 0;
 		color: var(--ink);
 		font-family: var(--font-ui);
 		font-size: var(--fs-ui);
-		padding: 2px 0;
 	}
 
-	.subject:focus,
-	.body:focus {
+	.subject:focus {
 		outline: none;
 		background: transparent;
 		box-shadow: none;
@@ -155,12 +184,28 @@
 		color: var(--placeholder);
 	}
 
+	/* Opens under the summary when asked for — the order a commit message is
+	   read in. Capped, so a long description scrolls inside itself instead of
+	   pushing the diff away. */
 	.body {
-		min-height: 3.2em;
+		width: 100%;
+		min-height: 4.2em;
 		max-height: 12em;
 		resize: vertical;
+		padding: 10px 14px;
+		color: var(--ink);
+		font-family: var(--font-ui);
 		font-size: var(--fs-secondary);
 		line-height: var(--lh-ui);
+		background: var(--sunken);
+		border: 1px solid var(--soft);
+		border-radius: var(--r-panel);
+	}
+
+	.body:focus {
+		outline: none;
+		border-color: color-mix(in srgb, var(--accent) 55%, var(--soft));
+		box-shadow: none;
 	}
 
 	.count {
@@ -168,24 +213,32 @@
 		color: var(--accent);
 	}
 
-	.row {
+	.text-action {
+		flex: none;
+		padding: 4px 10px;
+		border-radius: var(--r-pill);
+		font-size: var(--fs-secondary);
+		font-weight: 600;
+		color: var(--accent);
+		white-space: nowrap;
+		transition: background var(--t-fast) var(--ease);
+	}
+
+	.text-action:hover {
+		background: var(--accent-soft);
+	}
+
+	.notes {
 		display: flex;
-		align-items: center;
-		gap: 8px;
+		flex-wrap: wrap;
+		gap: 4px 14px;
+		padding: 0 4px;
 	}
 
 	/* A statement, not an alarm: signing being on is the ordinary case for
 	   anyone who signs. The warning colour is kept for the case where it is on
 	   and cannot work, which is the one worth interrupting for. */
-	.signing {
-		border-left: 1px solid var(--line);
-		padding-left: 6px;
-	}
-
-	/* On and unable to work. The palette's amber, which is what the rest of the
-	   application now uses for "this needs looking at but nothing is broken". */
 	.signing.warn {
-		border-left-color: var(--warn);
 		color: var(--warn);
 	}
 </style>
