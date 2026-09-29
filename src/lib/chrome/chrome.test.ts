@@ -443,7 +443,7 @@ describe('StatusStrip', () => {
 		repoControl.setInfo(info());
 		const view = render(StatusStrip, {});
 
-		const children = [...view.get('.side.end').children];
+		const children = [...view.get('.side.end .row').children];
 		expect(children[children.length - 1].classList.contains('license')).toBe(true);
 		const outer = [...view.get('.strip').children];
 		expect(outer[outer.length - 1].classList.contains('end')).toBe(true);

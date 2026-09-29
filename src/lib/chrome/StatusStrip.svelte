@@ -122,6 +122,7 @@
 
 <div class="strip" role="contentinfo" aria-label="Application status">
 	<div class="side start">
+		<div class="row">
 		{#if name || email}
 			<button
 				type="button"
@@ -154,18 +155,20 @@
 						<span class="pulse" aria-hidden="true"></span>
 						<span>{graph.complete ? 'Repository ready' : 'Loading history…'}</span>
 					</span>
-					<span class="sep" aria-hidden="true">·</span>
-					<span class="fact">{workingLabel}</span>
-					<span class="sep" aria-hidden="true">·</span>
-					<span class="fact">{refreshed}{fetched ? ` · ${fetched}` : ''}</span>
+					<span class="sep working" aria-hidden="true">·</span>
+					<span class="fact working">{workingLabel}</span>
+					<span class="sep fresh" aria-hidden="true">·</span>
+					<span class="fact fresh">{refreshed}{fetched ? ` · ${fetched}` : ''}</span>
 				</span>
 			</span>
 		{/if}
+		</div>
 	</div>
 
 	{@render children?.()}
 
 	<div class="side end">
+		<div class="row">
 		{#if repo.info}
 			<span class="group counts tail note">
 				<span class="fact">{graph.count} commits</span>
@@ -179,6 +182,7 @@
 		<span class="note mono license" title={version.license}>
 			{version.licenseShort} · v{version.number}
 		</span>
+		</div>
 	</div>
 </div>
 
@@ -210,16 +214,60 @@
 		min-height: var(--strip-h);
 	}
 
+	/*
+	 * Each side measures itself (FEAT-082). How much room a side has depends on
+	 * how wide the toolbar in the middle is, not only on the window, so a media
+	 * query on the window cannot know when to give way. A container query can:
+	 * each side drops whole facts, least urgent first, and never cuts one in
+	 * half.
+	 */
 	.side {
-		display: flex;
-		align-items: center;
-		gap: 10px;
+		container-type: inline-size;
 		min-width: 0;
 		overflow: hidden;
 	}
 
-	.side.end {
+	.side > .row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+	}
+
+	.side.end > .row {
 		justify-content: flex-end;
+	}
+
+	/* The start side: freshness goes first, then the working copy, then the
+	   words beside the walk's dot. The dot stays. */
+	@container (max-width: 460px) {
+		.fresh {
+			display: none;
+		}
+	}
+
+	@container (max-width: 300px) {
+		.working {
+			display: none;
+		}
+
+		.profile-text {
+			max-width: 120px;
+		}
+	}
+
+	@container (max-width: 180px) {
+		.walk > span:last-child,
+		.profile-text {
+			display: none;
+		}
+	}
+
+	/* The end side: the inventory goes; the licence never does (FEAT-043). */
+	@container (max-width: 330px) {
+		.counts {
+			display: none;
+		}
 	}
 
 	.note {
@@ -311,17 +359,6 @@
 		50% {
 			opacity: 1;
 			transform: scale(1.1);
-		}
-	}
-
-	/*
-	 * The counts group is what the rail's own rows already carry as badges, so
-	 * it — and the rule in front of it — is the first thing to go when the strip
-	 * runs out of room. What is left is the half that changes.
-	 */
-	@media (max-width: 1100px) {
-		.tail {
-			display: none;
 		}
 	}
 

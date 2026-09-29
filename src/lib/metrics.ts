@@ -320,7 +320,14 @@ export const LANE_COLOR_COUNT = 5;
 
 // --- Chrome ---------------------------------------------------------------
 
-export const TITLEBAR_H = 30;
+/**
+ * The one row above the pane (FEAT-082): the tab pills and the window controls.
+ * Forty, because a 28px pill needs room above and below it to read as an
+ * object on the environment rather than as something pressed against the
+ * window's edge. It is also the only row above the pane now — the title bar,
+ * tab strip and toolbar together were 100.
+ */
+export const TITLEBAR_H = 40;
 
 /**
  * The action bar under the tabs.

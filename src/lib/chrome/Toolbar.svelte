@@ -507,7 +507,7 @@
 		border-radius: var(--r-pill);
 		background: color-mix(in srgb, var(--sunken) 70%, transparent);
 		min-width: 0;
-		max-width: 220px;
+		max-width: 170px;
 		transition:
 			border-color var(--t-fast) var(--ease),
 			background var(--t-fast) var(--ease);

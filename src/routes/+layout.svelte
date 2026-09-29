@@ -503,7 +503,7 @@
 		min-height: 0;
 		display: flex;
 		gap: 12px;
-		padding: 2px 14px 0 12px;
+		padding: 4px 14px 0 12px;
 		/* Above the ground layer. The rail's open state sits above the pane. */
 		position: relative;
 		z-index: 1;
