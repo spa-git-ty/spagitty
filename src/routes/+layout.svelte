@@ -355,7 +355,7 @@
 		<TitleBar />
 		<div class="stage">
 			<NavRail />
-			<main class="pane">
+			<main class="window-pane">
 				<!--
 					Screens arrive rather than appear (FEAT-053).
 
@@ -514,7 +514,7 @@
 	 * `isolation` keeps a screen's own stacking inside it — nothing a screen
 	 * raises can climb over the rail.
 	 */
-	.pane {
+	.window-pane {
 		flex: 1;
 		min-width: 0;
 		min-height: 0;
