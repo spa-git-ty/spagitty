@@ -56,132 +56,146 @@ A complex Git repository without clear visual lane graphs, branch divergence tra
 
 ## 2. The Mark
 
-The core symbol of Spagitty is the **author's original hand-drawn mark**.
+Three cream strands on a tomato plate. They start side by side at the top,
+cross — one passes over the other two — and then run straight and parallel,
+each ending in a commit. Tangled, then untangled: the name, drawn.
 
 ```
-       ┌────────────────────────┐
-       │   /\  /\  __  /\       │  <- Tangle at top (unorganized commits / branches)
-       │   │ \/  \/  \/  \      │
-       │   │  │   │   │   │     │
-       │   │  │   │   │   │     │  <- Straight strands (untangled, clean Git history)
-       │   │  │   │   │   │     │
-       └────────────────────────┘
-            Amber Plate (#EEB04D)
-            Dark Strands (#454447)
+       ┌──────────────────┐
+       │   \ \  /          │  <- the strands cross (the tangle)
+       │    \ \/           │
+       │     /\ \          │
+       │    │  │  │        │  <- then run straight (the lanes)
+       │    ●  ●  ●        │  <- each ends in a commit
+       └──────────────────┘
+          Tomato plate #CC3B2C · cream strands #FFF3E4
 ```
 
-### Anatomy & Geometry
-1. **The Amber Plate (`#EEB04D`):** A warm, welcoming rounded ground plate symbolizing the plate/canvas.
-2. **The Four Dark Strands (`#454447`):** Four pasta strands that begin tangled and overlapping at the top and resolve into straight, parallel paths flowing downward.
-3. **Master Vector Source:** `assets/brand/mark.svg` (and its identical twin `src-tauri/icons/mark.svg`) on a `912 × 953` viewBox.
+### Anatomy
+1. **The plate:** a rounded square in tomato, `#CC3B2C`, corner radius about a
+   quarter of its side.
+2. **Three strands:** cream, `#FFF3E4`, with round caps. The crossing strand
+   carries a plate-coloured halo so it reads as passing *over* the others;
+   on the plate-less tray marks the halo is a cut, not a colour.
+3. **Three commits:** a dot at the foot of each strand.
+4. **Source:** `assets/brand/mark.svg`, a 100 × 100 viewBox, and its identical
+   twin `src-tauri/icons/mark.svg`. The file uses a deliberately small subset of
+   SVG — one `<rect>`, stroked `<path>`s marked `data-part="strand"` or
+   `data-part="gap"`, and `<circle>`s — so `tools/make-icons.py` can render it
+   without an SVG library, byte-for-byte the same on every machine.
 
-### Flat Design Mandate
-- **Strictly Flat:** The mark contains zero linear gradients, radial gradients, drop shadows, inner bevels, or outlines.
-- **Non-destructive:** The vector path data in `assets/brand/mark.svg` is permanent and is never manually redrawn or replaced by an algorithmic approximation.
+### Why tomato and not Git's orange
+Git's own logo is an orange-red, `#F05133`, and a Git client must not look like
+it. The brand tomato is deeper and redder; keep it that way.
+
+### Flat
+The mark has no gradients, shadows, bevels or outlines. Depth, where the
+interface wants it, comes from the glass around the mark, never from the mark.
 
 ---
 
-## 3. Color Palette & Design Tokens
+## 3. Colour
 
-### 3.1 Primary Brand Colors
+### 3.1 Brand colours
 
-| Token | Hex | RGB | Description / Role |
-| --- | --- | --- | --- |
-| `--brand-amber` | `#EEB04D` | `rgb(238, 176, 77)` | The core plate color of the brand mark. |
-| `--brand-ink` | `#454447` | `rgb(69, 68, 71)` | The dark charcoal of the pasta strands and light-theme wordmark. |
-| `--brand-ink-dark` | `#CDD6F4` | `rgb(205, 214, 244)` | The soft white/light ink used for wordmarks and text on dark surfaces. |
-
-### 3.2 Interactive UI Accent Tokens
-
-Spagitty adapts its interactive accent color based on theme tone to preserve strict WCAG accessibility contrast:
-
-| Theme Surface | CSS Token | Hex Value | Contrast Ratio | Usage |
-| --- | --- | --- | --- | --- |
-| **Dark Themes** (Mocha, Dracula, Tokyo Night, Gruvbox Dark) | `var(--accent)` | `#EEB04D` | **> 7.2:1 (AAA)** | Focus rings, primary buttons, active tabs, selected branch chips |
-| **Light Themes** (Latte, Alucard, Tokyo Day, Gruvbox Light) | `var(--accent)` | `#976317` | **4.6:1 (AA)** | Darkened amber for readable links, active states, and borders |
-
-### 3.3 Semantic & Graph Lane Colors
-
-The application utilizes a complementary set of vibrant, distinguished lane hues for the commit graph and status feedback:
-
-| CSS Variable | Default Hex | Semantic Usage |
+| Token | Hex | Role |
 | --- | --- | --- |
-| `--lane-1` | `#89B4FA` | Graph branch lane 1 (Blue) |
-| `--lane-2` | `#A6E3A1` | Graph branch lane 2 (Green) / Added status |
-| `--lane-3` | `#F9E2AF` | Graph branch lane 3 (Yellow) |
-| `--lane-4` | `#CBA6F7` | Graph branch lane 4 (Mauve / Purple) |
-| `--lane-5` | `#F38BA8` | Graph branch lane 5 (Pink / Danger / Deleted) |
-| `--warn` | `#F38BA8` | Warnings and uncommitted alerts |
-| `--danger` | `#F38BA8` | Destructive actions (discard, delete, force) |
+| Tomato | `#CC3B2C` | The plate. |
+| Cream | `#FFF3E4` | The strands and commits. |
+| `--brand` on light | `#B8321F` | The wordmark's "git" on light surfaces. |
+| `--brand` on dark | `#F2715A` | The wordmark's "git" on dark surfaces. |
+| Ink on light | `#2A1F1A` | The wordmark on light surfaces. |
+| Ink on dark | `#F3E9DD` | The wordmark on dark surfaces. |
+
+`--brand` is the brand's, not the theme's: it stays tomato whichever theme
+family is chosen. `--accent` is the theme's.
+
+### 3.2 The Pomodoro theme
+
+The default theme family is built from the brand palette: tomato accent,
+basil, saffron, aubergine and sky for the lanes, on warm cream or warm
+charcoal. Its values live in `src/lib/themes.ts` and are shown, with the lane
+cycle, in `assets/brand/preview.html`.
+
+| Token | Light | Dark |
+| --- | --- | --- |
+| `bg` | `#FBF7F1` | `#1C1613` |
+| `panel` | `#F3ECE2` | `#161110` |
+| `ink` | `#2A1F1A` | `#F3E9DD` |
+| `accent` | `#B8321F` | `#F2715A` |
+| `danger` | `#B3124A` | `#FF5C7C` |
+| `warn` | `#9A5B00` | `#F0B54A` |
+| `ok` | `#2F7D45` | `#7CC68D` |
+| lanes | `#C23B22 #2F8A52 #A86A00 #6C4FA3 #2F6FB0` | `#F2715A #7CC68D #F0B54A #A58BD8 #6AA7E0` |
+
+Danger is crimson rather than red, so a destructive button is never mistaken
+for the accent.
 
 ---
 
-## 4. Typography & Wordmark
+## 4. Typography and Wordmark
 
-### 4.1 Wordmark Specification
-The wordmark consists of the lowercase text `spagitty` set in **Inter**:
-- **Typeface:** Inter (SIL Open Font License 1.1, bundled in `assets/brand/font/Inter.ttf`).
-- **Case:** Strictly lowercase (`spagitty`).
-- **Weight:** 660 (Semi-Bold / Bold optical blend).
-- **Tracking / Letterspacing:** `+45` units per 1000 em (`0.045em`).
+### 4.1 The wordmark
+`spagitty`, lowercase, set in **Sora SemiBold (600)**, tracking `-0.02em`, with
+the letters **git** in `--brand`.
 
-```
-    [ MARK ]   spagitty
-       ▲          ▲
-    Amber      Inter 660, lowercase
-    Plate      Tracking +0.045em
-```
+- **Typeface:** Sora (SIL Open Font License 1.1), bundled at
+  `assets/brand/font/Sora.ttf` with its licence in `assets/brand/font/OFL.txt`.
+- In the application it is `src/lib/ui/Wordmark.svelte`, the only component
+  that names Sora. The interface itself stays on the system font stack.
 
-### 4.2 The Lockup
-The **Lockup** combines the mark on the left and the wordmark on the right along a shared optical center horizontal baseline.
-- **Ratio / Gap:** The gap between the mark and the wordmark is equal to `1.1 × em` (approximately 20% of the mark's height).
-- **Variants:**
-  - `lockups/lockup-ink-light.png` & `lockups/lockup.svg`: Light wordmark text for dark backgrounds (`#181825`).
-  - `lockups/lockup-ink-dark.png`: Dark charcoal text (`#454447`) for light backgrounds (`#EFF1F5`).
+### 4.2 The lockup
+Mark on the left, wordmark on the right, on one optical centreline. The gap is
+0.42 em; the mark is 1.9 em tall.
+
+- `lockups/lockup-ink-light.png` and `lockups/lockup.svg`: for dark surfaces.
+- `lockups/lockup-ink-dark.png`: for light surfaces.
 
 ### 4.3 Clearspace
-A mandatory clearspace boundary of **1X** (where X = 15% of the mark's total height) must surround the mark and lockup on all four sides. No text, icons, borders, or secondary visual elements may intrude into this zone.
+Keep a margin of at least a quarter of the mark's height clear on every side of
+the mark and of the lockup.
 
 ---
 
-## 5. Iconography & Platform Asset Matrix
+## 5. Platform Asset Matrix
 
-All platform assets are generated automatically from `mark.svg` by `tools/make-icons.py` and `tools/make-brand.py`:
+Every asset is generated from `mark.svg` by `tools/make-icons.py` and
+`tools/make-brand.py`:
 
-| Output Target | File Path | Dimensions | Treatment |
+| Output | File | Size | Treatment |
 | --- | --- | --- | --- |
-| **Master Mark** | `assets/brand/brand-mark.png` | 512 × 512 | Standalone full-res amber plate + strands |
-| **README Banner** | `assets/brand/hero.png` | 1600 × 400 | Amber mark + wordmark on one centreline, approved tagline under |
-| **App Icon (PNG)** | `src-tauri/icons/{16,32,128,256,512}x{...}.png` | 16² to 1024² | High-DPI app icon set with `@2x` assets |
-| **Windows Icon** | `src-tauri/icons/icon.ico` | Multi-size ICO | Embedded 16, 32, 48, 64, 128, 256 px frames |
-| **macOS Icon** | `src-tauri/icons/icon.icns` | Multi-size ICNS | Apple standard icon bundle |
-| **macOS Menu Bar** | `src-tauri/icons/menubar-mono.png` | 18 × 18 (`@2x`: 36²) | Pure alpha monochrome template (strands only) |
-| **Dark System Tray** | `src-tauri/icons/tray-white.png` | 22 × 22 (`@2x`: 44²) | Pure white strands for dark taskbars |
-| **Light System Tray** | `src-tauri/icons/tray-black.png` | 22 × 22 (`@2x`: 44²) | Dark charcoal strands for light taskbars |
-| **Web Favicon** | `assets/brand/favicon/favicon.ico` | Multi-size ICO | Web browser tab icon |
+| Master mark | `assets/brand/brand-mark.png` | 512² | Plate and strands |
+| README banner | `assets/brand/hero.png` | 1600 × 400 | Mark, wordmark and tagline, inked for a dark page |
+| App icon (PNG) | `src-tauri/icons/{16,32,128,256,512}x….png` | 16² to 512² | With `@2x` |
+| Windows icon | `src-tauri/icons/icon.ico` | 16–256 | Multi-size |
+| macOS icon | `src-tauri/icons/icon.icns` | — | Apple bundle |
+| macOS menu bar | `src-tauri/icons/menubar-mono.png` | 18² (`@2x` 36²) | Alpha-only template, strands only |
+| Dark tray | `src-tauri/icons/tray-white.png` | 22² (`@2x` 44²) | White strands |
+| Light tray | `src-tauri/icons/tray-black.png` | 22² (`@2x` 44²) | Dark strands |
+| Favicon | `assets/brand/favicon/favicon.ico` and PNGs | 16–64 | Also the in-app `BrandMark` |
 
 ---
 
-## 6. Binding Directives for AI Agents & Developers
+## 6. Rules for contributors and agents
 
-When writing code, documentation, CSS, or adding visual components to Spagitty, AI agents and human contributors **MUST** follow these rules:
-
-1. **NEVER use the Git Logo or Git Orange:**
-   - Spagitty is an independent client. Never use the official Git diamond logo, Git badge, or Git orange (`#F05133`).
-2. **NEVER Redraw or Approximate the Mark:**
-   - Do not generate procedural noodles, bezier approximations, or CSS pseudo-element icons for Spagitty's mark. Always reference `assets/brand/mark.svg` or the generated PNGs in `src-tauri/icons/`.
-3. **NEVER Add Gradients or Drop Shadows to Brand Assets:**
-   - In accordance with TASK-023, TASK-026, and FEAT-060, all branding is strictly flat.
-4. **ALWAYS Use Theme-Aware CSS Variables:**
-   - In Svelte components and stylesheets, use `var(--accent)` or `var(--brand-amber)`. Never hardcode raw hex values like `#EEB04D` into component styles where light-mode adaptability is required.
-5. **Enforce Deterministic Asset Generation:**
-   - Whenever brand collateral is updated, run `python3 tools/make-brand.py` and `python3 tools/make-icons.py`. Gate 2 in CI (`gates.yml`) strictly rejects any PR with drifted asset bytes.
-6. **Preserve Menu Bar Template Rules:**
-   - Menubar/tray icons on macOS MUST only contain the four strands without the amber plate background to conform to macOS Human Interface Guidelines for menu bar items.
+1. **Never use the Git logo or Git's orange** (`#F05133`). Spagitty is an
+   independent client.
+2. **Never redraw or approximate the mark.** Reference `assets/brand/mark.svg`
+   or the generated images; change the mark only by changing that file and
+   regenerating.
+3. **Keep the brand flat.** No gradients or drop shadows on brand assets.
+4. **Use the tokens.** `var(--brand)` for the name, `var(--accent)` for the
+   interface. Never hard-code the tomato into a component.
+5. **Regenerate, then commit.** After any change to the mark or the brand
+   script, run `python3 tools/make-icons.py` and `python3 tools/make-brand.py`.
+   Gate 2 in CI rejects drifted bytes.
+6. **Menu bar and tray marks are strands only,** without the plate, as the
+   platforms' guidelines ask.
 
 ---
 
-## 7. Licensing & Attribution
+## 7. Licensing and Attribution
 
-- **Spagitty Brand Artwork & Code:** Licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
-- **Inter Typeface:** Licensed under the **SIL Open Font License 1.1 (OFL-1.1)**, bundled locally at `assets/brand/font/OFL.txt`.
+- **Spagitty's brand artwork and code:** GPL-3.0-or-later.
+- **Sora:** SIL Open Font License 1.1, © The Sora Project Authors, bundled at
+  `assets/brand/font/OFL.txt`.

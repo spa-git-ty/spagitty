@@ -16,6 +16,10 @@ stays backward-compatible.
 
 ### Changed
 
+- **A new face.** The icon is three cream strands on a tomato plate that cross
+  and then run straight, each ending in a commit — clear down to the smallest
+  taskbar size. The name is set in Sora with "git" in tomato, in the title row
+  and on the welcome screen, and every icon, tray mark and favicon is new.
 - **A spatial shell.** The window is one pane floating over a softly lit
   environment, with the controls around it as floating objects instead of bars
   across it. The open repositories are pills in the one row above the pane. The

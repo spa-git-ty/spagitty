@@ -15,7 +15,7 @@
 	src="/favicon-64.png"
 	alt=""
 	width={size}
-	height={Math.round((size * 953) / 912)}
+	height={size}
 	draggable="false"
 />
 

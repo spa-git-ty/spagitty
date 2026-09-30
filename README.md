@@ -262,6 +262,6 @@ branch (Amendment 14).
 
 **GPL-3.0-or-later.** See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-The wordmark typeface (Inter) is SIL Open Font License 1.1
+The wordmark typeface (Sora) is SIL Open Font License 1.1
 (`assets/brand/font/OFL.txt`). Spagitty is not affiliated with the Git project.
 Git and the Git logo are trademarks of Software Freedom Conservancy.

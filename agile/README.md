@@ -138,6 +138,7 @@ rather than an audit.
 | [FEAT-082](items/FEAT-082-a-spatial-shell.md) | A spatial shell | chrome | Open |
 | [FEAT-083](items/FEAT-083-the-content-in-the-spatial-language.md) | The content in the spatial language | Graph, all | Open |
 | [FEAT-084](items/FEAT-084-the-other-screens-in-the-spatial-language.md) | The other screens in the spatial language | 1F, 1K, 1M, 1N, 1O, 1Q, all | Open |
+| [FEAT-085](items/FEAT-085-a-new-mark-palette-and-wordmark.md) | A new mark, palette and wordmark | brand, chrome, 1J | Open |
 
 ## Bugs
 
