@@ -677,7 +677,7 @@
 		</button>
 	{/if}
 
-	<div class="rows">
+	<div class="rows" class:scrolled={moreLeft}>
 		<!--
 			The bed the columns stand on (BUG-016).
 
@@ -982,7 +982,12 @@
 			itself is the sticky cells; this only says the graph continues
 			underneath.
 		-->
-		<div class="list-shadow" style="left: {paneLeft}px" aria-hidden="true"></div>
+		<div
+			class="list-shadow"
+			class:showing={moreLeft}
+			style="left: {paneLeft}px"
+			aria-hidden="true"
+		></div>
 
 		<!--
 			The edges. Purely an affordance: they say there is table under them
@@ -1100,6 +1105,17 @@
 		pointer-events: none;
 		z-index: 4;
 		box-shadow: -8px 0 14px -4px color-mix(in srgb, var(--umbra) 32%, transparent);
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+
+	/*
+	 * Only while something is under the pinned pane (FEAT-083). At rest the
+	 * messages sit beside the graph on one surface, and a seam there would cut
+	 * the pane into a table.
+	 */
+	.list-shadow.showing {
+		opacity: 1;
 	}
 
 	.scroller {
@@ -1208,6 +1224,15 @@
 	}
 
 	/*
+	 * A row's slice of the band is clear (FEAT-083): the bed beneath already
+	 * paints the column, and an opaque slice would cut the row's highlight at
+	 * the graph's edges.
+	 */
+	.row .lane-band {
+		background: none;
+	}
+
+	/*
 	 * The node's hover target (FEAT-079).
 	 *
 	 * A cell that used to be a spacer now positions one thing, so it needs a
@@ -1239,16 +1264,35 @@
 		cursor: default;
 	}
 
-	.row:hover {
+	/*
+	 * Hover and selection are a capsule inside the row (FEAT-083), not a band
+	 * across it: spatial lists highlight an object, inset from the pane's edge.
+	 *
+	 * Drawn by a pseudo-element rather than by moving the row, because the lane
+	 * canvas is laid out against the rows' own geometry — the row does not move
+	 * a pixel. `z-index: -1` puts it under the cells and the lanes, inside the
+	 * scroller's stacking context, so the history stays legible through it.
+	 */
+	.row::before {
+		content: '';
+		position: absolute;
+		inset: 2px 6px;
+		z-index: -1;
+		border-radius: var(--r-button);
+		pointer-events: none;
+		transition: background var(--t-fast) var(--ease);
+	}
+
+	.row:hover::before {
 		background: var(--hover);
 	}
 
 	/*
-	 * A selected row is tinted across its width rather than filled flat, so the
-	 * lanes and the chips stay legible through it and the fill reads as a
-	 * highlight rather than as a coloured block laid over the history.
+	 * A selected row is tinted rather than filled flat, so the lanes and the
+	 * chips stay legible through it and the fill reads as a highlight rather
+	 * than as a coloured block laid over the history.
 	 */
-	.row.selected {
+	.row.selected::before {
 		background: var(--selection);
 	}
 
@@ -1261,8 +1305,8 @@
 	 * flat interface marks a row with a line. It still has to be tellable from
 	 * `.selected`, which tints the whole width — so this one takes the edge.
 	 */
-	.row.focused {
-		box-shadow: inset 2px 0 0 var(--accent);
+	.row.focused::before {
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
 	}
 
 	.row.dim {
@@ -1377,32 +1421,36 @@
 		flex: none;
 	}
 
-	.cell.frozen {
+	/*
+	 * The pinned cells paint the pane's own colour only while the graph is
+	 * scrolled under them (FEAT-083). At rest nothing is under them, and an
+	 * opaque cell would cut the row's capsule in two.
+	 */
+	.rows.scrolled .cell.frozen {
 		background-color: var(--bg);
 	}
 
-	.row:hover .cell.frozen {
+	.rows.scrolled .row:hover .cell.frozen {
 		background-color: color-mix(in srgb, var(--ink) 7%, var(--bg));
 	}
 
-	.row.selected .cell.frozen {
+	.rows.scrolled .row.selected .cell.frozen {
 		/* `--selection` is a tint, not a fill — paint it over the pane or the
 		   graph shows through the subject line. */
 		background-color: var(--bg);
 		background-image: linear-gradient(var(--selection), var(--selection));
 	}
 
+	/* No rules between the columns (FEAT-083): space separates them. */
 	.message {
 		flex: 1;
 		gap: 8px;
 		padding: 0 10px;
-		border-left: 1px solid var(--soft);
 	}
 
 	.text {
 		gap: 6px;
 		padding: 0 8px;
-		border-left: 1px solid var(--soft);
 	}
 
 	.summary,
@@ -1422,17 +1470,27 @@
 		gap: 6px;
 	}
 
+	/*
+	 * An object, not a band (FEAT-083): a card inset from the pane's edges, in
+	 * the ornaments' glass, so it reads as the one thing above the history that
+	 * has not happened yet.
+	 */
 	.wip {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		width: 100%;
-		padding: 6px 10px;
-		border-bottom: 1px solid var(--soft);
+		gap: 10px;
+		width: auto;
+		margin: 4px 8px 6px;
+		padding: 8px 12px;
+		border: 1px solid var(--pane-edge);
+		border-top-color: var(--glass-edge);
+		border-radius: var(--r-panel);
+		background: var(--glass-thick);
 		text-align: left;
 		flex: none;
 		/* It opens the working copy, so it has to look like it does something. */
 		cursor: pointer;
+		transition: background var(--t-fast) var(--ease);
 	}
 
 	.wip:hover {

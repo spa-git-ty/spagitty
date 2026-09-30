@@ -723,6 +723,16 @@ a {
 }
 
 .pane {
+	/*
+	 * Inside the pane a screen's own bands step back (FEAT-083). Every
+	 * screen's header, and the graph's column header, paint themselves in
+	 * `--chrome-veil`; the graph's column paints `--graph-bg`. Here both are
+	 * the pane itself, so a screen is one surface with its controls on it
+	 * rather than a stack of bars. `--graph-bg` is also the ring the lane
+	 * canvas cuts round each node, so it must stay the colour behind the lanes.
+	 */
+	--chrome-veil: transparent;
+	--graph-bg: var(--bg);
 	background-color: var(--bg);
 	border: 1px solid var(--pane-edge);
 	border-top-color: var(--glass-edge);

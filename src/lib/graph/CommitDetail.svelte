@@ -203,14 +203,21 @@
 </aside>
 
 <style>
-	/* The detail pane sits over the rows rather than beside them: chrome
-	   colour, a hairline, and a shadow cast leftward onto the history. */
+	/*
+	 * An inspector card floating in the pane (FEAT-083), not a strip cut off
+	 * by a rule: inset from the pane's edges, the glass edge, its own corner.
+	 * The margin sits inside the width the splitter sets, so resizing still
+	 * moves the card's edge with the pointer.
+	 */
 	.detail {
 		width: var(--detail-w);
 		flex: none;
-		background: var(--panel);
-		border-left: 1px solid var(--line);
-		box-shadow: none;
+		margin: 8px 8px 8px 0;
+		background: var(--surface);
+		border: 1px solid var(--pane-edge);
+		border-top-color: var(--glass-edge);
+		border-radius: var(--r-floating);
+		box-shadow: var(--ornament-shadow);
 		position: relative;
 		z-index: 1;
 		display: flex;
@@ -223,7 +230,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 8px;
-		padding: 8px;
+		padding: 10px 12px;
 		border-bottom: 1px solid var(--soft);
 		flex: none;
 	}
