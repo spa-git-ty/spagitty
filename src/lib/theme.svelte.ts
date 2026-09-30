@@ -73,8 +73,6 @@ import {
 /** Kept from before the family existed, so an upgrade keeps its light/dark. */
 const MODE_KEY = 'spagitty.theme';
 const FAMILY_KEY = 'spagitty.theme.family';
-/** Set once the old default has been moved to Pomodoro. See `init`. */
-const POMODORO_KEY = 'spagitty.theme.pomodoro';
 /** Where the mode comes from, as opposed to what it currently is. */
 const SOURCE_KEY = 'spagitty.theme.source';
 /** The resolved palette, for the boot script. Never read by this module. */
@@ -391,16 +389,9 @@ export const theme = {
 	 */
 	init(): void {
 		const storedFamily = stored(FAMILY_KEY);
+		// A family that no longer exists — one of the eight TASK-051 removed —
+		// is not one, and falls to the default like anything unreadable.
 		family = storedFamily && isFamily(storedFamily) ? storedFamily : DEFAULT_FAMILY;
-
-		// FEAT-086: Catppuccin was the default until Pomodoro, and the family is
-		// written on every mode change, so a stored `catppuccin` is nearly always
-		// the old default rather than a choice. Moved to the new default once;
-		// the marker keeps a later, deliberate Catppuccin where it is put.
-		if (family === 'catppuccin' && stored(POMODORO_KEY) === null) {
-			family = DEFAULT_FAMILY;
-		}
-		remember(POMODORO_KEY, '1');
 
 		const storedMode = stored(MODE_KEY);
 		const validMode = storedMode === 'light' || storedMode === 'dark' ? storedMode : null;

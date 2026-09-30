@@ -277,6 +277,16 @@ describe('BehaviourSection', () => {
 });
 
 describe('AppearanceSection', () => {
+	it('offers no family to choose, only light, dark or the system (TASK-051)', () => {
+		const mounted = render(AppearanceSection, {});
+
+		expect(mounted.all('.family')).toHaveLength(0);
+		expect(mounted.text()).toContain('Light');
+		expect(mounted.text()).toContain('Dark');
+
+		mounted.destroy();
+	});
+
 	it('marks the mode in use and switches to the other one', () => {
 		const mounted = render(AppearanceSection, {});
 
@@ -289,57 +299,6 @@ describe('AppearanceSection', () => {
 		mounted.destroy();
 	});
 
-	it('offers every family, marking the one in use', () => {
-		const mounted = render(AppearanceSection, {});
-
-		const families = mounted.all('.family');
-		expect(families).toHaveLength(FAMILIES.length);
-		expect(families[0].classList.contains('active')).toBe(true);
-		expect(mounted.text()).toContain('Gruvbox');
-
-		mounted.destroy();
-	});
-
-	it('applies a family when it is chosen', () => {
-		const mounted = render(AppearanceSection, {});
-
-		click(mounted.all('.family')[2]);
-
-		expect(theme.family).toBe('dracula');
-		expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
-			paletteOf('dracula', theme.mode).bg
-		);
-
-		mounted.destroy();
-	});
-
-	it('names each family the way that family names the variant in use', () => {
-		// "Mocha" says more to somebody who chose Catppuccin than "dark" does,
-		// and the name follows the mode: Latte and Alucard in light, Mocha and
-		// Dracula in dark.
-		const light = render(AppearanceSection, {});
-		expect(light.text()).toContain('Latte');
-		expect(light.text()).toContain('Alucard');
-		light.destroy();
-
-		theme.setMode('dark');
-		const dark = render(AppearanceSection, {});
-		expect(dark.text()).toContain('Mocha');
-		expect(dark.text()).not.toContain('Alucard');
-		dark.destroy();
-	});
-
-	it('shows each family in the mode that is on, not in the other one', () => {
-		// A light preview of a theme about to be used in the dark is a preview
-		// of something the user will never see.
-		theme.setMode('dark');
-		const mounted = render(AppearanceSection, {});
-
-		const first = mounted.all('.family')[0].querySelector('.chip-colour') as HTMLElement;
-		expect(first.style.background).toBe(paletteOf('pomodoro', 'dark').bg);
-
-		mounted.destroy();
-	});
 });
 
 describe('AccountsSection', () => {

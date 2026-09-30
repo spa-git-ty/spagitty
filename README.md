@@ -120,7 +120,7 @@ repository. Those stay outside.
 | **Agent farm** | A goal cut into tasks, worked in parallel by the agents on your machine — one branch and one worktree each, your verification commands in the path, and a review by a second agent before anything is yours to merge |
 | **Farm supervision** | Five autonomy levels, a dependency DAG, up to four agents at once, a live activity strip, per-repository standings, and `AGENTS.md` attached to every prompt |
 | **Delight layer** | Badges and titles for clean commits, survived rebases, recovered work and conflicts resolved — never for time spent in the app. Personality and Sound settings; God mode in Settings |
-| **Chrome** | Command palette, glass window chrome, and eight palette families — Catppuccin, Dracula, Tokyo Night, Gruvbox, Nord, Rosé Pine, Solarized, Everforest — each in light and dark, each accented in its **own** hue and each contrast-checked in tests rather than by eye |
+| **Chrome** | Command palette, a spatial shell, and one theme — Pomodoro, drawn from the brand, in light and dark and contrast-checked in tests rather than by eye — or the desktop's own palette under Omarchy |
 
 Every screen, by code: [`docs/screens.md`](docs/screens.md) (1A Graph … 1Q Farm).
 

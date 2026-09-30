@@ -244,6 +244,7 @@ of its own.
 | [TASK-048](items/TASK-048-commands-off-the-main-thread.md) | Commands off the main thread | all | Open |
 | [TASK-049](items/TASK-049-the-record-catches-up-with-what-merged.md) | The record catches up with what merged | — | Done |
 | [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Open |
+| [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
 
 ## Skipped identifiers
 

@@ -111,43 +111,13 @@ const TOKENS = [
 ] as const;
 
 describe('the set', () => {
-	it('is nine families, each with a light and a dark variant', () => {
-		expect(FAMILIES).toHaveLength(9);
-		expect(ALL).toHaveLength(18);
+	it('is one family, Pomodoro, with a light and a dark variant (TASK-051)', () => {
+		expect(FAMILIES).toHaveLength(1);
+		expect(ALL).toHaveLength(2);
 
 		for (const family of FAMILIES) {
 			expect(family.light.name).not.toBe('');
 			expect(family.dark.name).not.toBe('');
-		}
-	});
-
-	it('names each variant the way its family names it', () => {
-		// "Mocha" says more than "dark" to anyone who chose Catppuccin.
-		const names = FAMILIES.map((family) => `${family.light.name}/${family.dark.name}`);
-
-		expect(names).toEqual([
-			'Giorno/Notte',
-			'Latte/Mocha',
-			'Alucard/Dracula',
-			'Day/Night',
-			'Light/Dark',
-			'Snow Storm/Polar Night',
-			'Dawn/Moon',
-			'Light/Dark',
-			'Light/Dark'
-		]);
-	});
-
-	/**
-	 * The defect this catches is the one the set shipped with: every light
-	 * variant accented `#976317` and every dark one `#eeb04d`, so seven of the
-	 * eight families wore a hue from outside their own palette on the most
-	 * frequently painted colour in the interface.
-	 */
-	it('gives each family an accent of its own rather than one hue for all', () => {
-		for (const mode of ['light', 'dark'] as Mode[]) {
-			const accents = FAMILIES.map((family) => family[mode].palette.accent);
-			expect(new Set(accents).size, `${mode} accents repeat`).toBe(accents.length);
 		}
 	});
 
@@ -288,7 +258,7 @@ describe('readability', () => {
 
 describe('lookup', () => {
 	it('finds a family by id', () => {
-		expect(familyOf('gruvbox').name).toBe('Gruvbox');
+		expect(familyOf('pomodoro').name).toBe('Pomodoro');
 	});
 
 	it('falls back to the default rather than failing on an id it does not know', () => {
@@ -298,26 +268,26 @@ describe('lookup', () => {
 
 	it('recognises exactly the families in the list', () => {
 		for (const family of FAMILIES) expect(isFamily(family.id)).toBe(true);
-		for (const nonsense of ['', 'monokai', 'Catppuccin', 'dark']) {
+		for (const nonsense of ['', 'monokai', 'catppuccin', 'nord', 'dark']) {
 			expect(isFamily(nonsense), nonsense).toBe(false);
 		}
 	});
 
 	it('returns the variant for the mode asked for', () => {
-		expect(variantOf('dracula', 'light').name).toBe('Alucard');
-		expect(variantOf('dracula', 'dark').name).toBe('Dracula');
-		expect(paletteOf('dracula', 'dark').bg).toBe('#282a36');
+		expect(variantOf('pomodoro', 'light').name).toBe('Giorno');
+		expect(variantOf('pomodoro', 'dark').name).toBe('Notte');
+		expect(paletteOf('pomodoro', 'dark').bg).toBe('#1c1613');
 	});
 });
 
 describe('properties', () => {
 	it('names every token the way the stylesheet names it', () => {
-		const tokens = properties(paletteOf('catppuccin', 'light'));
+		const tokens = properties(paletteOf('pomodoro', 'light'));
 
-		expect(tokens['--bg']).toBe('#eff1f5');
+		expect(tokens['--bg']).toBe('#fbf7f1');
 		expect(tokens['--on-accent']).toBe('#ffffff');
-		expect(tokens['--lane-1']).toBe('#1e66f5');
-		expect(tokens['--lane-5']).toBe('#2e7d1f');
+		expect(tokens['--lane-1']).toBe('#c23b22');
+		expect(tokens['--lane-5']).toBe('#2f6fb0');
 	});
 
 	it('produces one property per token, and no others', () => {

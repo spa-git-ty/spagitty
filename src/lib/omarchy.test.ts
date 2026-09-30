@@ -293,7 +293,7 @@ describe('telling two palettes apart', () => {
 	});
 
 	it('tells a built-in family from a desktop palette', () => {
-		expect(fingerprint(paletteOf('catppuccin', 'dark'))).not.toBe(
+		expect(fingerprint(paletteOf('pomodoro', 'dark'))).not.toBe(
 			fingerprint(paletteFrom(SUSHI))
 		);
 	});

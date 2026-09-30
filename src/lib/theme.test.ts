@@ -56,28 +56,20 @@ describe('applying', () => {
 	it('writes every token of the chosen palette', () => {
 		// A token left unset would keep whatever the previous theme put there,
 		// which is how half a theme ends up on screen.
-		theme.setFamily('gruvbox');
+		theme.setFamily('pomodoro');
 		theme.setMode('dark');
 
-		for (const [name, value] of Object.entries(properties(paletteOf('gruvbox', 'dark')))) {
+		for (const [name, value] of Object.entries(properties(paletteOf('pomodoro', 'dark')))) {
 			expect(property(name), name).toBe(value);
 		}
 	});
 
-	it('replaces every token when the family changes', () => {
-		theme.setFamily('dracula');
-		theme.setFamily('tokyo-night');
-
-		expect(property('--bg')).toBe(paletteOf('tokyo-night', 'light').bg);
-		expect(property('--lane-1')).toBe(paletteOf('tokyo-night', 'light').lanes[0]);
-	});
-
 	it('toggles the mode and leaves the family alone', () => {
-		theme.setFamily('gruvbox');
+		theme.setFamily('pomodoro');
 
 		theme.toggle();
 		expect(theme.mode).toBe('dark');
-		expect(theme.family).toBe('gruvbox');
+		expect(theme.family).toBe('pomodoro');
 
 		theme.toggle();
 		expect(theme.mode).toBe('light');
@@ -86,47 +78,44 @@ describe('applying', () => {
 	it('names what is on, family and mode, because both repaint the lane canvas', () => {
 		// The canvas resolves its colours from the stylesheet and repaints when
 		// this changes. A boolean could not say the family moved.
-		theme.setFamily('dracula');
+		theme.setFamily('pomodoro');
 		theme.setMode('dark');
-		expect(theme.id).toBe('dracula-dark');
-
-		theme.setFamily('gruvbox');
-		expect(theme.id).toBe('gruvbox-dark');
+		expect(theme.id).toBe('pomodoro-dark');
 	});
 
 	it('says what the family calls the variant, not just light or dark', () => {
-		theme.setFamily('catppuccin');
+		theme.setFamily('pomodoro');
 		theme.setMode('dark');
-		expect(theme.variant.name).toBe('Mocha');
+		expect(theme.variant.name).toBe('Notte');
 
 		theme.setMode('light');
-		expect(theme.variant.name).toBe('Latte');
+		expect(theme.variant.name).toBe('Giorno');
 	});
 
 	it('persists both halves of the choice', () => {
 		const store = stubStorage();
 
-		theme.setFamily('tokyo-night');
+		theme.setFamily('pomodoro');
 		theme.setMode('dark');
 
-		expect(store.get(FAMILY_KEY)).toBe('tokyo-night');
+		expect(store.get(FAMILY_KEY)).toBe('pomodoro');
 		expect(store.get(MODE_KEY)).toBe('dark');
 	});
 });
 
 describe('init', () => {
 	it('restores a stored family and mode', () => {
-		stubStorage({ [FAMILY_KEY]: 'gruvbox', [MODE_KEY]: 'dark' });
+		stubStorage({ [FAMILY_KEY]: 'pomodoro', [MODE_KEY]: 'dark' });
 		stubPrefersDark(false);
 
 		theme.init();
 
-		expect(theme.family).toBe('gruvbox');
+		expect(theme.family).toBe('pomodoro');
 		expect(theme.mode).toBe('dark');
 	});
 
-	it('moves the old default, Catppuccin, to Pomodoro once (FEAT-086)', () => {
-		const store = stubStorage({ [FAMILY_KEY]: 'catppuccin', [MODE_KEY]: 'dark' });
+	it('falls back to Pomodoro for a family that no longer exists (TASK-051)', () => {
+		const store = stubStorage({ [FAMILY_KEY]: 'pomodoro', [MODE_KEY]: 'dark' });
 		stubPrefersDark(false);
 
 		theme.init();
@@ -134,24 +123,6 @@ describe('init', () => {
 		expect(theme.family).toBe('pomodoro');
 		expect(theme.mode).toBe('dark');
 		expect(store.get(FAMILY_KEY)).toBe('pomodoro');
-	});
-
-	it('keeps Catppuccin chosen after the move', () => {
-		stubStorage({ [FAMILY_KEY]: 'catppuccin', 'spagitty.theme.pomodoro': '1' });
-		stubPrefersDark(false);
-
-		theme.init();
-
-		expect(theme.family).toBe('catppuccin');
-	});
-
-	it('leaves every other stored family where it is', () => {
-		stubStorage({ [FAMILY_KEY]: 'nord' });
-		stubPrefersDark(false);
-
-		theme.init();
-
-		expect(theme.family).toBe('nord');
 	});
 
 	it('still honours a mode stored before families existed', () => {
@@ -186,7 +157,7 @@ describe('init', () => {
 	});
 
 	it('ignores a stored mode that is not a mode', () => {
-		stubStorage({ [MODE_KEY]: 'solarized' });
+		stubStorage({ [MODE_KEY]: 'pomodoro' });
 		stubPrefersDark(true);
 
 		theme.init();
@@ -286,12 +257,12 @@ describe('the source of the mode', () => {
 		stubStorage();
 		const system = stubLiveQuery(false);
 
-		theme.setFamily('nord');
+		theme.setFamily('pomodoro');
 		theme.followSystem();
 		system.change(true);
 
-		expect(theme.family).toBe('nord');
-		expect(property('--bg')).toBe(paletteOf('nord', 'dark').bg);
+		expect(theme.family).toBe('pomodoro');
+		expect(property('--bg')).toBe(paletteOf('pomodoro', 'dark').bg);
 	});
 
 	/** Picking a mode is the act of taking over. A control that changed the
@@ -414,12 +385,12 @@ describe('the cached palette', () => {
 	it('is written on every change, resolved rather than named', () => {
 		const store = stubStorage();
 
-		theme.setFamily('dracula');
+		theme.setFamily('pomodoro');
 		theme.setMode('dark');
 
 		const cached = JSON.parse(store.get(PALETTE_KEY) as string);
 		expect(cached.mode).toBe('dark');
-		expect(cached.tokens).toEqual(properties(paletteOf('dracula', 'dark')));
+		expect(cached.tokens).toEqual(properties(paletteOf('pomodoro', 'dark')));
 	});
 
 	it('follows a mode the desktop chose, not only one the user did', () => {
@@ -434,7 +405,7 @@ describe('the cached palette', () => {
 
 	it('carries every token the boot script would need', () => {
 		const store = stubStorage();
-		theme.setFamily('everforest');
+		theme.setFamily('pomodoro');
 
 		const cached = JSON.parse(store.get(PALETTE_KEY) as string);
 		// The names are the ones `app.css` declares, so the boot script can set
@@ -539,10 +510,10 @@ describe('following the desktop palette', () => {
 		theme.receiveDesktop(SUSHI);
 		theme.followDesktop();
 
-		theme.setFamily('nord');
+		theme.setFamily('pomodoro');
 
 		expect(theme.source).toBe('manual');
-		expect(property('--bg')).toBe(paletteOf('nord', 'dark').bg);
+		expect(property('--bg')).toBe(paletteOf('pomodoro', 'dark').bg);
 	});
 
 	/** Choosing a family is not an opt-out of following light/dark. */
@@ -551,7 +522,7 @@ describe('following the desktop palette', () => {
 		stubLiveQuery(false);
 		theme.followSystem();
 
-		theme.setFamily('nord');
+		theme.setFamily('pomodoro');
 
 		expect(theme.source).toBe('system');
 	});
@@ -563,8 +534,8 @@ describe('following the desktop palette', () => {
 
 		expect(theme.label).toBe('sushi-dark-palette');
 
-		theme.setFamily('catppuccin');
-		expect(theme.label).toBe('Mocha');
+		theme.setFamily('pomodoro');
+		expect(theme.label).toBe('Notte');
 	});
 });
 
@@ -600,16 +571,6 @@ describe('the palette revision', () => {
 			cyan: null,
 			ansi: Array(16).fill(null)
 		}
-	});
-
-	it('moves when the family changes', () => {
-		stubStorage();
-		theme.setFamily('catppuccin');
-		const before = theme.revision;
-
-		theme.setFamily('nord');
-
-		expect(theme.revision).toBeGreaterThan(before);
 	});
 
 	/** The case `id` cannot see: same source, same mode, different colours. */

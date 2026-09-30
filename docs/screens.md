@@ -633,24 +633,21 @@ grant/revoke writes live in `delight` rather than in the section that draws
 them, so they can be read against the code that awards the badges people
 earned.
 
-**Appearance is the only place the theme is set.** Four families — Catppuccin,
-Dracula, Tokyo Night, Gruvbox — each with a light and a dark variant, named the
-way the family names them. Each is shown as its own four colours in the mode
-that is currently on, because a light preview of a theme about to be used in the
-dark is a preview of something nobody will see. The title bar's toggle is gone;
-one preference with two controls is two things to keep in step.
+**Appearance is the only place the theme is set.** There is one theme,
+Pomodoro, built from the brand (FEAT-086), with a light variant, Giorno, and a
+dark one, Notte; Appearance chooses between them, follows the system, or — under
+Omarchy — follows the desktop's own palette. The eight published families that
+sat beside it were removed (TASK-051): none was drawn for the spatial shell, and
+together they read as nine applications. The title bar's toggle is gone; one
+preference with two controls is two things to keep in step.
 
 The palettes are **data**, in `src/lib/themes.ts`, applied to `<html>` as custom
-properties by `src/lib/theme.svelte.ts`. Eight blocks of CSS would be the same
-sixteen tokens written eight times with nothing able to check them; as data they
-are tested, and what is tested is the thing that matters about a colour —
-whether it can be read. `src/lib/themes.test.ts` computes WCAG contrast for all
-eight, compositing the translucent tokens over what shows through them, and
+properties by `src/lib/theme.svelte.ts`. As CSS they would be the same sixteen
+tokens written twice with nothing able to check them; as data they are tested, and what is tested is the thing that matters about a colour —
+whether it can be read. `src/lib/themes.test.ts` computes WCAG contrast for
+both, compositing the translucent tokens over what shows through them, and
 holds ordinary text to 4.5:1 and secondary text, the accent and every lane
-colour to 3:1. Three published values failed that and were adjusted rather than
-shipped: Latte's pink, peach and yellow are invisible as lanes on its own
-background, and Tokyo Night Day's blue cannot carry white text. Each departure
-is marked where it is made.
+colour to 3:1.
 
 `src/app.css` carries the default family's two palettes. They are the boot
 values — what paints before any JavaScript runs — and nothing else; editing a
