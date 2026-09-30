@@ -19,6 +19,10 @@ use std::process::Command;
 
 use tempfile::TempDir;
 
+/// When [`Fixture::woven`]'s history begins: 2023-11-14, before any clock a
+/// test runs under, so a commit a test makes on top is always the newest.
+const WOVEN: u64 = 1_700_000_000;
+
 pub struct Fixture {
     dir: TempDir,
 }
@@ -73,25 +77,28 @@ impl Fixture {
         fixture.write("src/deep/nested/main.rs", "fn main() {}\n");
         fixture.write_bytes("logo.bin", &[0x00, 0x01, 0x02, b'b', b'i', b'n', 0x00]);
         fixture.git(&["add", "-A"]);
-        fixture.commit("Initial import");
+        fixture.commit_at("Initial import", WOVEN);
 
         fixture.write("notes.md", "alpha\nbeta\nentry 1\n");
-        fixture.commit_all("Add notes");
+        fixture.commit_all_at("Add notes", WOVEN + 60);
         fixture.git(&["tag", "-a", "v0.1.0", "-m", "First tag"]);
 
         fixture.git(&["switch", "-q", "-c", "feature/split-view"]);
         fixture.write("core.txt", &lines.replace("line 3\n", "LINE THREE\n"));
-        fixture.commit_all("Rewrite line 3");
+        fixture.commit_all_at("Rewrite line 3", WOVEN + 120);
         fixture.write("split.txt", "split view work\n");
         fixture.git(&["add", "split.txt"]);
-        fixture.commit("Start the split view");
+        fixture.commit_at("Start the split view", WOVEN + 240);
 
         fixture.git(&["switch", "-q", "main"]);
         fixture.write(
             "core.txt",
             &lines.replace("line 38\n", "LINE THIRTY-EIGHT\n"),
         );
-        fixture.commit_all("Rewrite line 38");
+        // Made after the feature's two commits, dated between them: in date
+        // order the two lines of history interleave here, which is what the
+        // graph's date-order test is about.
+        fixture.commit_all_at("Rewrite line 38", WOVEN + 180);
         fixture.git(&[
             "merge",
             "-q",
@@ -294,12 +301,17 @@ impl Fixture {
     /// Run `git` in the fixture, returning stdout. Panics on failure, since a
     /// fixture that did not build is not a test result worth reporting.
     pub fn git(&self, args: &[&str]) -> String {
+        self.git_with(args, &[])
+    }
+
+    fn git_with(&self, args: &[&str], env: &[(&str, &str)]) -> String {
         let output = Command::new("git")
             .current_dir(self.dir.path())
             .args(args)
             .env("GIT_TERMINAL_PROMPT", "0")
             .env("GIT_CONFIG_NOSYSTEM", "1")
             .env("HOME", self.dir.path())
+            .envs(env.iter().copied())
             .output()
             .unwrap_or_else(|e| panic!("running git {args:?}: {e}"));
 
@@ -348,6 +360,32 @@ impl Fixture {
     /// Stage every tracked change and commit. Returns the new commit's full id.
     pub fn commit_all(&self, message: &str) -> String {
         self.git(&["commit", "-q", "-am", message]);
+        self.head()
+    }
+
+    /// [`Fixture::commit`] at a fixed time, in seconds since the epoch, for
+    /// the author and the committer both.
+    ///
+    /// A fixture built on the wall clock puts its commits in whatever seconds
+    /// the machine took to make them: all in one on a fast machine, spread
+    /// over several on a slow one, where every `git` is a new process. A test
+    /// that reads commit time then passes or fails by the machine's speed
+    /// (BUG-039).
+    pub fn commit_at(&self, message: &str, when: u64) -> String {
+        self.dated(&["commit", "-q", "-m", message], when)
+    }
+
+    /// [`Fixture::commit_all`] at a fixed time. See [`Fixture::commit_at`].
+    pub fn commit_all_at(&self, message: &str, when: u64) -> String {
+        self.dated(&["commit", "-q", "-am", message], when)
+    }
+
+    fn dated(&self, args: &[&str], when: u64) -> String {
+        let date = format!("@{when} +0000");
+        self.git_with(
+            args,
+            &[("GIT_AUTHOR_DATE", &date), ("GIT_COMMITTER_DATE", &date)],
+        );
         self.head()
     }
 
