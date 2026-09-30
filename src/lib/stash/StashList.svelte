@@ -92,10 +92,6 @@
 	{#if entries.length === 0}
 		<div class="empty note">
 			<p>Nothing is stashed.</p>
-			<p>
-				A stash puts your uncommitted work aside so you can do something else, and
-				keeps it until you bring it back.
-			</p>
 		</div>
 	{/if}
 </nav>

@@ -70,17 +70,25 @@
 			</Chip>
 			<div class="text">
 				<!-- The signer is the only part a person cannot infer from the
-				     switch, so it is what the line under it says. -->
+				     switch, so it is what the line under it says, with the key
+				     when one is set (TASK-050). -->
 				<div>Sign my commits</div>
-				<div class="note">Through {describeSigningFormat(signing.format)}.</div>
+				<div class="note">
+					{describeSigningFormat(signing.format)}{#if signing.key}
+						· <span class="mono">{signing.key}</span>{/if}
+				</div>
 			</div>
 		</div>
 
-		<p class="note under">
-			In effect: <span class="mono">commit.gpgsign = {signing.enabled}</span> — {describeOrigin(
-				signing.origin
-			)}
-		</p>
+		<!-- Where the value comes from, only when it is not the file being
+		     edited: an unset key is simply off, and says nothing. -->
+		{#if signing.origin !== settings.scope && signing.origin !== 'unset'}
+			<p class="note under">
+				In effect: <span class="mono">commit.gpgsign = {signing.enabled}</span> — {describeOrigin(
+					signing.origin
+				)}
+			</p>
+		{/if}
 
 		{#if overridden}
 			<p class="note under warn">{overridden}</p>
@@ -90,33 +98,21 @@
 			<p class="note under warn">{describeSigningProblem(signing.problem)}</p>
 		{/if}
 
-		{#if signing.key}
-			<p class="note under">
-				Key: <span class="mono">{signing.key}</span> (<span class="mono">user.signingkey</span>)
-			</p>
-		{:else if signing.format === 'openPgp'}
-			<p class="note under">
-				No <span class="mono">user.signingkey</span> — GPG will match your committer address.
-			</p>
-		{/if}
-
-		<div class="row">
-			<span class="note">
-				{settings.scope === 'local' ? 'This repository' : 'Global'} holds
-				{#if inScope === null}
-					nothing
-				{:else}
+		{#if inScope !== null}
+			<div class="row">
+				<span class="note">
+					{settings.scope === 'local' ? 'This repository' : 'Global'}:
 					<span class="mono">{inScope}</span>
-				{/if}
-			</span>
-			<Btn
-				disabled={settings.busy || inScope === null}
-				title="Remove commit.gpgsign from this file, letting the next one up decide"
-				onclick={() => settings.clearSigning()}
-			>
-				Clear
-			</Btn>
-		</div>
+				</span>
+				<Btn
+					disabled={settings.busy}
+					title="Remove commit.gpgsign from this file, letting the next one up decide"
+					onclick={() => settings.clearSigning()}
+				>
+					Clear
+				</Btn>
+			</div>
+		{/if}
 
 		<!--
 			Two paragraphs stood here (TASK-038). The first explained that the

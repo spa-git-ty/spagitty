@@ -49,15 +49,8 @@
 			{stored.checkForUpdates ? 'on' : 'off'}
 		</Chip>
 		<div class="text">
-			<div>Check for updates when Spagitty starts</div>
-			<!--
-				Trimmed to the two claims, and only the two (TASK-038). What
-				this line is for is answering "what does it send" and "does off
-				mean off" — everything else it used to say was an elaboration
-				of the first answer.
-			-->
-			<div class="note" title="One request to the project's releases page. Turning it off stops every request.">
-				No account, no identifier.
+			<div title="One request to the project's releases page. Turning it off stops every request.">
+				Check for updates when Spagitty starts
 			</div>
 		</div>
 	</div>
@@ -78,15 +71,13 @@
 
 	{#if settings.updateError}
 		<p class="note error">{settings.updateError}</p>
-	{:else if update === null}
-		<p class="note">Not checked yet.</p>
-	{:else if update.channel === 'development'}
+	{:else if update?.channel === 'development'}
 		<!--
 			A build somebody compiled has no tag to be behind, and is usually
 			ahead of every release. Telling them otherwise would be wrong.
 		-->
 		<p class="note">Development build. Latest release: <span class="mono">{update.latest}</span>.</p>
-	{:else if update.newer}
+	{:else if update?.newer}
 		<p class="note">
 			<span class="mono">{update.latest}</span> has been released.
 		</p>
@@ -94,7 +85,7 @@
 			<span class="mono url">{update.url}</span>
 			<Btn onclick={() => copy(update.url)}>{copied ? 'Copied' : 'Copy link'}</Btn>
 		</div>
-	{:else}
+	{:else if update}
 		<p class="note">
 			Up to date — <span class="mono">{update.latest}</span> is the latest release.
 		</p>

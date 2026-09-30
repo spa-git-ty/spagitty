@@ -60,7 +60,7 @@ describe('what the section says before it knows anything', () => {
 		externalToolsConfig.mockReturnValue(new Promise(() => {}));
 		const view = render(ExternalToolsSection, {});
 
-		expect(view.text()).toContain('Scanning for installed tools');
+		expect(view.text()).toContain('Reading');
 		expect(view.find('select')).toBeNull();
 
 		view.destroy();
@@ -69,7 +69,7 @@ describe('what the section says before it knows anything', () => {
 	it('offers a retry when the read fails', async () => {
 		externalToolsConfig.mockRejectedValue(new Error('no git here'));
 		const view = render(ExternalToolsSection, {});
-		await vi.waitFor(() => expect(view.text()).not.toContain('Scanning'));
+		await vi.waitFor(() => expect(view.text()).not.toContain('Reading'));
 
 		expect(view.find('select')).toBeNull();
 		expect(view.text()).toContain('Could not load external tools configuration');
@@ -83,16 +83,7 @@ describe('what is configured now', () => {
 	it('names the built-in when nothing is configured', async () => {
 		const view = await mounted();
 
-		expect(view.text()).toContain('none (built-in)');
-
-		view.destroy();
-	});
-
-	it('names the configured tool for each of the two settings', async () => {
-		const view = await mounted(aConfig({ diffTool: 'meld', mergeTool: 'bc' }));
-
-		const current = view.all('.current').map((element) => element.textContent?.trim());
-		expect(current).toEqual(['meld', 'bc']);
+		expect(view.text()).toContain('Built-in');
 
 		view.destroy();
 	});
@@ -125,8 +116,8 @@ describe('the pickers', () => {
 
 		const text = view.text();
 		expect(text).toContain('Beyond Compare');
-		expect(text).toContain('(not in PATH)');
-		expect(text).toContain('(detected)');
+		expect(text).toContain('(not installed)');
+		expect(text).not.toContain('(detected)');
 
 		view.destroy();
 	});
@@ -210,29 +201,6 @@ describe('which git config is written', () => {
 		await vi.waitFor(() => expect(setExternalTool).toHaveBeenCalled());
 
 		expect(setExternalTool).toHaveBeenCalledWith('diff', 'meld', true);
-
-		view.destroy();
-	});
-});
-
-describe('the catalogue of what is on $PATH', () => {
-	it('marks only the tools that were actually found', async () => {
-		const view = await mounted();
-
-		const pills = view.all('.tool-pill');
-		expect(pills).toHaveLength(2);
-		expect(pills[0].classList.contains('installed')).toBe(true);
-		expect(pills[1].classList.contains('installed')).toBe(false);
-
-		view.destroy();
-	});
-
-	it('shows the command each tool would be launched with', async () => {
-		// The answer to "what is it going to run", which is the question a
-		// person has before they pick one.
-		const view = await mounted();
-
-		expect(view.text()).toContain('meld $LOCAL $REMOTE');
 
 		view.destroy();
 	});

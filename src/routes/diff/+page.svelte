@@ -156,7 +156,6 @@
 			</Btn>
 			{#if position}<span class="note">{position}</span>{/if}
 		</div>
-		<span class="note">j / k jumps between hunks · Esc goes back to the graph</span>
 	</footer>
 </div>
 

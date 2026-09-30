@@ -185,11 +185,6 @@
 			<span class="note error">{tags.writeError}</span>
 		{:else if tags.hidden > 0}
 			<span class="note">{tags.hidden} hidden by the filter</span>
-		{:else}
-			<span class="note">
-				Newest first. A lightweight tag is dated by the commit it points at, which is
-				the only date it has.
-			</span>
 		{/if}
 	</footer>
 </div>

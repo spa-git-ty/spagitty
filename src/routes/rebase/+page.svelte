@@ -179,12 +179,7 @@
 		{:else if rebase.loading}
 			<p class="note pad">Reading…</p>
 		{:else if !rebase.loaded}
-			<div class="empty pad">
-				<p class="note">
-					Choose what to replay onto, and this screen shows the commits git would
-					offer you and what your history would look like afterwards.
-				</p>
-			</div>
+			<div class="empty pad"></div>
 		{:else if rebase.todo && rebase.todo.rows.length === 0}
 			<p class="note pad">
 				There is nothing to rebase: this branch has no commits the upstream does not
@@ -216,12 +211,6 @@
 			<span class="note">The rebase finished. The old commits are in the reflog for 30 days.</span>
 		{:else if rebase.outcome === 'failed' && rebase.runError}
 			<span class="note error">{rebase.runError}</span>
-		{:else}
-			<span class="note">
-				"May conflict" means two commits in the plan touch the same file — whether they
-				actually clash is only known once the merges are performed, which is what Apply
-				does. The reflog keeps the old history for 30 days.
-			</span>
 		{/if}
 	</footer>
 </div>

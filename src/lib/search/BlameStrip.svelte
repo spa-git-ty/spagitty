@@ -84,10 +84,6 @@
 					</ol>
 				</div>
 			{/each}
-		{:else}
-			<p class="note state">
-				Name a file to see who last touched each line, and at which revision.
-			</p>
 		{/if}
 	</div>
 </section>

@@ -99,13 +99,8 @@
 		<Btn disabled={isAdding} onclick={() => (isAdding = true)}>+ Add Profile</Btn>
 	</div>
 
-	<p class="desc">
-		Save author identity profiles (e.g. Work, Personal) to switch names, emails, and signing keys across repositories with one click.
-	</p>
-
 	{#if isAdding}
 		<div class="form-card">
-			<h3 class="form-title">New Identity Profile</h3>
 			<div class="form-grid">
 				<label class="field-col">
 					<span class="field-label">Profile Label</span>
@@ -159,9 +154,7 @@
 	{/if}
 
 	<div class="profiles-list">
-		{#if list.length === 0 && !isAdding}
-			<div class="empty-note">No saved profiles. Click "+ Add Profile" to create one.</div>
-		{:else}
+		{#if list.length > 0}
 			{#each list as p (p.id)}
 				<div class="profile-card">
 					<div class="card-info">
@@ -220,12 +213,6 @@
 		color: var(--ink);
 	}
 
-	.desc {
-		margin: 0;
-		font-size: var(--fs-secondary);
-		color: var(--muted);
-		line-height: 1.4;
-	}
 
 	.form-card {
 		background: var(--panel);
@@ -237,12 +224,6 @@
 		gap: 12px;
 	}
 
-	.form-title {
-		margin: 0;
-		font-size: var(--fs-secondary);
-		font-weight: 600;
-		color: var(--ink);
-	}
 
 	.form-grid {
 		display: grid;
@@ -358,12 +339,6 @@
 		border-color: var(--danger);
 	}
 
-	.empty-note {
-		text-align: center;
-		padding: 24px;
-		color: var(--muted);
-		font-size: var(--fs-secondary);
-	}
 
 	.error {
 		font-size: var(--fs-secondary);

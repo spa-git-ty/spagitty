@@ -117,9 +117,7 @@ describe('a loaded commit', () => {
 		// graph row has a letter and a tooltip (FEAT-019).
 		const view = open({ signed: true });
 
-		expect(view.text()).toContain('Signed');
-		expect(view.text()).toContain('does not verify');
-		expect(view.text()).toContain('git verify-commit');
+		expect(view.text()).toContain('Signed, not verified here.');
 
 		view.destroy();
 	});

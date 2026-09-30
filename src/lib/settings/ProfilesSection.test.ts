@@ -86,10 +86,11 @@ describe('a section with no profiles yet', () => {
 		view.destroy();
 	});
 
-	it('says there are none, and how to make one', () => {
+	it('shows no list and no instructions when there are none (TASK-050)', () => {
 		const view = render(ProfilesSection, {});
 
-		expect(view.text()).toContain('No saved profiles');
+		expect(view.text()).not.toContain('No saved profiles');
+		expect(view.all('.profile-card')).toHaveLength(0);
 
 		view.destroy();
 	});

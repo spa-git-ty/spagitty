@@ -75,7 +75,6 @@
 <section class="section">
 	<header>
 		<h2 class="heading">Personality</h2>
-		<span class="note">Badges are earned at every level.</span>
 	</header>
 
 	<div class="group" role="group" aria-label="Personality">
@@ -88,16 +87,12 @@
 				>
 					{level.label}
 				</Chip>
-				<div class="text">
-					<div class="note">{level.what}</div>
-				</div>
 			</div>
 		{/each}
 	</div>
 
 	<header>
 		<h2 class="heading">Sound</h2>
-		<span class="note">Selecting a level plays it.</span>
 	</header>
 
 	<div class="group" role="group" aria-label="Sound">
@@ -113,9 +108,6 @@
 				>
 					{level.label}
 				</Chip>
-				<div class="text">
-					<div class="note">{level.what}</div>
-				</div>
 			</div>
 		{/each}
 	</div>
@@ -135,9 +127,11 @@
 		font-weight: inherit;
 	}
 
+	/* One row of chips (TASK-050): each level's description is its title, so
+	   there is no sentence beside it to stack for. */
 	.group {
 		display: flex;
-		flex-direction: column;
+		flex-wrap: wrap;
 		gap: 8px;
 	}
 
@@ -154,7 +148,4 @@
 		justify-content: center;
 	}
 
-	.text {
-		min-width: 0;
-	}
 </style>

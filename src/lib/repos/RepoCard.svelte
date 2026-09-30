@@ -37,8 +37,7 @@
 
 	{#if !card.present}
 		<p class="note gone">
-			Not here any more. The path may have moved, or it may no longer be a
-			repository — Spagitty has not touched it either way.
+			Not here any more.
 		</p>
 		<div class="path mono muted" title={card.path}>{card.path}</div>
 	{:else}

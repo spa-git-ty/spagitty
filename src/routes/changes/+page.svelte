@@ -78,7 +78,7 @@
 		<div class="empty"><span class="note">Reading the working copy…</span></div>
 	{:else if clean}
 		<div class="empty">
-			<p class="note">Nothing to commit. The working copy matches the last commit.</p>
+			<p class="note">Nothing to commit.</p>
 		</div>
 	{:else}
 		<div class="body">

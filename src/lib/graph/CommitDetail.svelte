@@ -126,8 +126,7 @@
 				-->
 				{#if detail.signed}
 					<div class="note" title="Read from the commit's signature header">
-						Signed. Spagitty does not verify signatures — use
-						<span class="mono">git verify-commit {detail.short}</span> for that.
+						Signed, not verified here.
 					</div>
 				{/if}
 

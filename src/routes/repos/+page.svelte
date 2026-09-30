@@ -55,11 +55,7 @@
 					<BrandMark size={48} />
 					<Wordmark size={30} />
 				</div>
-				<p class="note">Spagitty has not been shown a repository yet.</p>
-				<p class="note">
-					It never goes looking for one. Open a directory and it will be remembered
-					here.
-				</p>
+				<p class="note">No repositories yet.</p>
 				<div class="row">
 					<Btn primary disabled={repos.busy} onclick={() => repos.choose()}>
 						Open repository…
@@ -95,11 +91,6 @@
 	<footer class="foot">
 		{#if repos.writeError}
 			<span class="note error">{repos.writeError}</span>
-		{:else}
-			<span class="note">
-				Repositories are read straight from disk, where they sit. Nothing is uploaded
-				anywhere, and forgetting one removes a card, not a directory.
-			</span>
 		{/if}
 	</footer>
 </div>

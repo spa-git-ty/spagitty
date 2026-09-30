@@ -72,7 +72,7 @@ describe('the starter page', () => {
 		// Four steps, because that is the whole loop: goal, tasks, parallel
 		// work, verify and merge.
 		expect(view.all('.step')).toHaveLength(4);
-		expect(view.text()).toContain('worktree');
+		expect(view.find('.lede')).toBeNull();
 
 		view.destroy();
 	});

@@ -36,6 +36,10 @@ stays backward-compatible.
   working copy and the commit detail are floating cards; branch labels are
   capsules and tags keep a shape of their own. The lanes are drawn exactly as
   before.
+- **Less to read.** Settings lost the labels and sentences that explained its
+  own controls: a value shows where it is set, the rest lives in the control's
+  tooltip. Screens no longer end in a paragraph about themselves, and keyboard
+  hints and teaching empty states are gone.
 - **Every screen in the same language.** Branches, Tags and Reflog are lists
   like the rest: no line under every row, the same text size, and their
   buttons appear on the row you point at instead of down every row. Screens no

@@ -94,10 +94,6 @@
 						Every file is resolved. Continue to finish the {conflicts.operationLabel}.
 					</p>
 				{/if}
-				<p class="note">
-					When git cannot merge two versions of a file it keeps all three — the common
-					ancestor, yours and theirs — and they appear here side by side.
-				</p>
 			</div>
 		{:else if conflicts.sidesError}
 			<p class="note error">{conflicts.sidesError}</p>

@@ -93,20 +93,10 @@
 				{:else if requests.repo === null}
 					<div class="empty">
 						<p class="note">This repository is not on a service Spagitty can read.</p>
-						<p class="note">
-							Pull requests are read from the host the <span class="mono">origin</span>
-							remote points at. This repository's remotes do not name one — which is not a
-							problem, only nothing to show here.
-						</p>
 					</div>
 				{:else if !requests.connected}
 					<div class="empty">
 						<p class="note">No account is connected.</p>
-						<p class="note">
-							Spagitty reads pull requests from whichever service hosts your
-							repository, and no service is connected yet. Connect one in Settings →
-							Accounts and they appear here.
-						</p>
 						<Btn primary onclick={() => goto('/settings#accounts')}>
 							Settings → Accounts
 						</Btn>

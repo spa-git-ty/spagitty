@@ -64,7 +64,6 @@
 					<Btn onclick={() => goto(`/diff?commit=${entry.id}`)}>Open full diff →</Btn>
 				</div>
 				{#if position}<span class="note">{position}</span>{/if}
-				<span class="note">↑ / ↓ walks the files · j / k jumps between hunks</span>
 			{/if}
 
 			<div class="hr"></div>

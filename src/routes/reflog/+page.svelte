@@ -169,11 +169,6 @@
 			</span>
 		{:else if reflog.hidden > 0}
 			<span class="note">{reflog.hidden} hidden by the filter</span>
-		{:else}
-			<span class="note">
-				Git expires unreachable entries after 30 days. Anything here is still reachable
-				until then, whatever the graph shows.
-			</span>
 		{/if}
 	</footer>
 </div>

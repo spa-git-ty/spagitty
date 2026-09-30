@@ -108,12 +108,6 @@
 	<header class="hero">
 		<span class="mark" aria-hidden="true"><Icon name="farm" size="1.9em" /></span>
 		<h1 class="title">Run an agent farm in this repository</h1>
-		<p class="lede">
-			A farm is a goal, the tasks it was broken into, and the coding agents working them —
-			each on its own branch, in its own worktree, side by side. Spagitty runs them and shows
-			you what they did in the history you already read here. It is not a model and it does
-			not contain one: the agents are the ones already installed on this machine.
-		</p>
 	</header>
 
 	<div class="goal">
@@ -140,7 +134,6 @@
 			<Btn primary disabled={!canStart} onclick={() => onstart(title.trim(), description.trim())}>
 				Start the farm
 			</Btn>
-			<span class="note">Nothing runs until you say so. All of this is editable later.</span>
 		</div>
 	</div>
 
@@ -150,7 +143,6 @@
 				<span class="ordinal" aria-hidden="true">{index + 1}</span>
 				<span class="step-body">
 					<span class="step-title">{step.title}</span>
-					<span class="note">{step.detail}</span>
 				</span>
 			</li>
 		{/each}
@@ -256,12 +248,6 @@
 		letter-spacing: -0.01em;
 	}
 
-	.lede {
-		margin: 0;
-		max-width: 62ch;
-		color: var(--muted);
-		line-height: 1.5;
-	}
 
 	/* The one thing to do on this screen, so it is a surface rather than two
 	   loose fields under a paragraph. */
