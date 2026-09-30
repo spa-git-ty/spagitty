@@ -5,6 +5,7 @@
 	import RepoCard from '$lib/repos/RepoCard.svelte';
 	import { repos } from '$lib/repos/store.svelte';
 	import BrandMark from '$lib/ui/BrandMark.svelte';
+	import Wordmark from '$lib/ui/Wordmark.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 
 	/**
@@ -52,7 +53,7 @@
 			<div class="empty">
 				<div class="brand-hero">
 					<BrandMark size={48} />
-					<span class="hero-name">spagitty</span>
+					<Wordmark size={30} />
 				</div>
 				<p class="note">Spagitty has not been shown a repository yet.</p>
 				<p class="note">
@@ -195,13 +196,7 @@
 		gap: 12px;
 		margin-bottom: 4px;
 	}
-
-	.hero-name {
-		font-size: calc(var(--fs-title) * 1.25);
-		font-weight: 700;
-		letter-spacing: 0.045em;
-	}
-	.empty p {
+	.empty p {
 		margin: 0;
 	}
 

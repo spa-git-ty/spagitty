@@ -93,7 +93,8 @@ beforeEach(() => {
 describe('TitleBar', () => {
 	it('falls back to the product name with no repository open', () => {
 		const view = render(TitleBar, {});
-		expect(view.get('.name').textContent).toBe('Spagitty');
+		expect(view.get('.name').getAttribute('aria-label')).toBe('Spagitty');
+		expect(view.get('.name').textContent).toBe('spagitty');
 		view.destroy();
 	});
 
@@ -104,7 +105,8 @@ describe('TitleBar', () => {
 		repoControl.setInfo(info('main'));
 		const view = render(TitleBar, {});
 
-		expect(view.get('.name').textContent).toBe('Spagitty');
+		expect(view.get('.name').getAttribute('aria-label')).toBe('Spagitty');
+		expect(view.get('.name').textContent).toBe('spagitty');
 		view.destroy();
 	});
 
@@ -491,7 +493,7 @@ describe('TitleBar', () => {
 
 		expect(children).toHaveLength(3);
 		expect(children[1].classList.contains('name')).toBe(true);
-		expect(children[1].textContent).toBe('Spagitty');
+		expect(children[1].getAttribute('aria-label')).toBe('Spagitty');
 		// The leading column holds the tabs, and with none open it says
 		// nothing to a screen reader.
 		expect(children[0].classList.contains('lead')).toBe(true);

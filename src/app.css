@@ -19,6 +19,19 @@
  * this stylesheet as --row-pitch, --rail-w, ... by applyMetrics() at boot.
  */
 
+/*
+ * The wordmark's face (FEAT-085). Sora is the brand's typeface and nothing
+ * else's: the interface stays on the system stack, and only `Wordmark.svelte`
+ * names this family. Bundled from the brand folder, so it is the same file
+ * `tools/make-brand.py` sets the lockups in.
+ */
+@font-face {
+	font-family: 'Sora';
+	src: url('../assets/brand/font/Sora.ttf') format('truetype');
+	font-weight: 100 800;
+	font-display: swap;
+}
+
 :root {
 	--bg: #eff1f5;
 	--panel: #e6e9ef;
@@ -705,6 +718,12 @@ a {
 	--ornament-shadow:
 		0 10px 28px color-mix(in srgb, var(--umbra) 16%, transparent),
 		0 1px 3px color-mix(in srgb, var(--umbra) 10%, transparent);
+	/*
+	 * The brand's tomato (FEAT-085), for the wordmark's "git". Not the accent:
+	 * the accent is the theme family's, and the name is the same in every
+	 * family. A shade darker on light surfaces, lighter on dark ones.
+	 */
+	--brand: #b8321f;
 }
 
 :root[data-theme='dark'] {
@@ -720,6 +739,7 @@ a {
 	--ornament-shadow:
 		0 10px 30px color-mix(in srgb, #000 45%, transparent),
 		0 1px 3px color-mix(in srgb, #000 30%, transparent);
+	--brand: #f2715a;
 }
 
 .window-pane {

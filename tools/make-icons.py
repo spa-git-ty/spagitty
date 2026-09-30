@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Generate Spagitty's application icon set from the author's vector mark.
+"""Generate Spagitty's application icon set from the vector mark.
 
-The source of the identity is the author's own hand-drawn mark,
-`assets/brand/mark.svg` — an amber plate (`#EEB04D`) on a 912x953 viewBox with
-four dark strands (`#454447`) that tangle at the top and straighten into
-commit lanes toward the bottom. That file is copied into the tree verbatim and
-is the only geometry this module reads; nothing here re-draws the mark, so the
-icon cannot drift from the drawing the author approved.
+The source of the identity is `assets/brand/mark.svg` (FEAT-085): a tomato
+plate on a 100x100 viewBox with three cream strands that cross at the top and
+run straight below it, each ending in a commit. That file is copied into the
+tree verbatim and is the only geometry this module reads; nothing here
+re-draws the mark, so the icon cannot drift from the drawing.
 
-The mark's plate is 912x953, i.e. almost square. On a square app-icon canvas
-the whole plate fits with `xMidYMid meet`, centered horizontally with a thin
-frame of transparent padding. The full mark (plate + strands) is the app icon;
-the strands alone (no plate) feed the tray/menubar marks in `tools/make-brand.py`.
+The SVG is kept to a small subset on purpose, so that this module can read it
+without an SVG library and render it byte-for-byte the same everywhere:
 
-Rendering is Pillow-only. The strand paths use the SVG default nonzero winding
-rule; Pillow's own `ImageDraw.polygon` fills even-odd and would punch holes
-where the hand-drawn outlines cross themselves, so a scanline fill that applies
-the winding rule directly is used instead. Output is supersampled then
-downscaled with LANCZOS, which makes regeneration byte-deterministic — the
-`--check` mode recomputes every committed file in memory and diffs the bytes.
+    <rect x y width height rx fill/>                  the plate
+    <path data-part="strand" d stroke stroke-width/>  a strand, round caps
+    <path data-part="gap" d stroke stroke-width/>     the plate-coloured
+                                                      halo that lets one
+                                                      strand pass over another
+    <circle cx cy r fill/>                            a commit
+
+`d` holds M, C and L commands in absolute coordinates. Elements are drawn in
+document order. For the plate-less marks (tray, menu bar) a gap erases what is
+under it rather than painting the plate's colour, so the strands still cross.
+
+Rendering is Pillow-only. Output is supersampled then downscaled with LANCZOS,
+which makes regeneration byte-deterministic — the `--check` mode recomputes
+every committed file in memory and diffs the bytes.
 
 Requires Pillow (gate 2 already installs it). Everything this writes lands in
 `src-tauri/icons/`.
@@ -28,7 +33,6 @@ Requires Pillow (gate 2 already installs it). Everything this writes lands in
 from __future__ import annotations
 
 import io
-import math
 import pathlib
 import re
 import sys
@@ -39,17 +43,11 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 ICON_DIR = REPO / "src-tauri" / "icons"
 MARK = REPO / "assets" / "brand" / "mark.svg"
 
-# Geometry of the mark's viewBox; drawing constants are read from the SVG, so
-# these only describe how the viewBox maps onto a square canvas.
-VIEW_W, VIEW_H = 912.0, 953.0
-STRAND_COLOUR = (69, 68, 71, 255)  # #454447 from the <g fill>
-PLATE_COLOUR = (238, 176, 77, 255)  # #EEB04D (fallback; preferred from the SVG)
-
 # Rasterising parameters. Supersample `ss` then LANCZOS-downscale; each cubic
-# is subdivided into `steps` straight segments. These settle the trade between
-# fidelity and determinism and are validated against librsvg at native size.
+# is subdivided into `steps` straight segments, joined round, which at the
+# supersampled size is finer than a pixel of the result.
 SS = 8
-STEPS = 8
+STEPS = 48
 
 SVG_CACHE = {"text": None}
 
@@ -60,160 +58,154 @@ def svg_text() -> str:
     return SVG_CACHE["text"]
 
 
-def parse_svg_paths(svg: str) -> list[list[tuple[str, list[float]]]]:
-    """Parse every @d=... attribute into a list of (command, [nums]) streams."""
-    out = []
-    for d in re.findall(r'd="([^"]+)"', svg):
-        tokens = re.findall(r'([A-Za-z])|([-+]?\d*\.?\d+)', d)
-        cmds, nums = [], []
-        for kind, val in tokens:
-            if kind:
-                nums = []
-                cmds.append((kind, nums))
-            else:
-                nums.append(float(val))
-        out.append(cmds)
-    return out
-
-
-def parse_svg_rect(svg: str) -> dict:
-    m = re.search(r'<rect\s([^>]+)/>', svg)
+def view_box(svg: str) -> tuple[float, float]:
+    """The viewBox's width and height."""
+    m = re.search(r'viewBox="\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*"', svg)
     if not m:
-        return {}
-    attrs = {}
-    for k, v in re.findall(r'(\w[\w-]*)="([^"]*)"', m.group(1)):
+        raise ValueError("mark.svg has no viewBox")
+    return float(m.group(1)), float(m.group(2))
+
+
+VIEW_W, VIEW_H = view_box(svg_text())
+
+
+def _attrs(text: str) -> dict:
+    out = {}
+    for key, value in re.findall(r'([\w:-]+)="([^"]*)"', text):
         try:
-            attrs[k] = float(v)
+            out[key] = float(value)
         except ValueError:
-            attrs[k] = v
-    return attrs
-
-
-def _cubic_flatten(points: list[tuple[float, float]], steps: int) -> list:
-    out = [points[0]]
-    i = 1
-    while i + 2 < len(points):
-        p0, p1, p2, p3 = points[i - 1], points[i], points[i + 1], points[i + 2]
-        for j in range(1, steps + 1):
-            t = j / steps
-            u = 1 - t
-            x = u**3 * p0[0] + 3 * u**2 * t * p1[0] + 3 * u * t**2 * p2[0] + t**3 * p3[0]
-            y = u**3 * p0[1] + 3 * u**2 * t * p1[1] + 3 * u * t**2 * p2[1] + t**3 * p3[1]
-            out.append((x, y))
-        i += 3
+            out[key] = value
     return out
 
 
-def flatten_cmds(cmds: list[tuple[str, list[float]]], steps: int) -> list[list[tuple[float, float]]]:
-    """Turn an M/C/Z command stream into closed polygons (one per subpath)."""
-    polygons = []
-    cur: list[tuple[float, float]] = []
-    cx, cy, sx, sy = 0.0, 0.0, 0.0, 0.0
-    for cmd, nums in cmds:
+def parse_elements(svg: str) -> list[tuple[str, dict]]:
+    """Every rect, path and circle, in document order, with its attributes."""
+    return [(tag, _attrs(body)) for tag, body in
+            re.findall(r'<(rect|path|circle)\s([^>]*?)/?>', svg)]
+
+
+def _cubic(p0, p1, p2, p3, steps: int) -> list[tuple[float, float]]:
+    out = []
+    for j in range(1, steps + 1):
+        t = j / steps
+        u = 1 - t
+        out.append((u**3 * p0[0] + 3 * u**2 * t * p1[0] + 3 * u * t**2 * p2[0] + t**3 * p3[0],
+                    u**3 * p0[1] + 3 * u**2 * t * p1[1] + 3 * u * t**2 * p2[1] + t**3 * p3[1]))
+    return out
+
+
+def flatten(d: str, steps: int) -> list[list[tuple[float, float]]]:
+    """An M/C/L path in absolute coordinates as polylines, one per subpath."""
+    tokens = re.findall(r'([A-Za-z])|([-+]?\d*\.?\d+)', d)
+    lines: list[list[tuple[float, float]]] = []
+
+    def run(cmd: str, nums: list[float]) -> None:
         if cmd == "M":
-            if cur:
-                polygons.append(cur)
-            cx, cy = nums[0], nums[1]
-            sx, sy = cx, cy
-            cur = [(cx, cy)]
+            lines.append([(nums[0], nums[1])])
+            for i in range(2, len(nums) - 1, 2):
+                lines[-1].append((nums[i], nums[i + 1]))
+        elif cmd == "L":
+            for i in range(0, len(nums) - 1, 2):
+                lines[-1].append((nums[i], nums[i + 1]))
         elif cmd == "C":
-            i = 0
-            while i + 5 < len(nums):
-                cp1 = (nums[i], nums[i + 1])
-                cp2 = (nums[i + 2], nums[i + 3])
-                end = (nums[i + 4], nums[i + 5])
-                seg = [(cx, cy), cp1, cp2, end]
-                cur.extend(_cubic_flatten(seg, steps)[1:])
-                cx, cy = end
-                i += 6
-        elif cmd == "Z":
-            if cur and cur[-1] != cur[0]:
-                cur.append(cur[0])
-            if cur:
-                polygons.append(cur)
-            cur = []
-            cx, cy = sx, sy
-    if cur:
-        polygons.append(cur)
-    return polygons
-
-
-def fill_polygon_nz(image: Image.Image, poly: list[tuple[float, float]],
-                    fill: tuple[int, int, int, int]) -> None:
-    """Scanline-fill `poly` with the SVG nonzero winding rule.
-
-    Pillow's `polygon` is even-odd. The author's strands self-cross, and on the
-    folds even-odd would cut holes where nonzero keeps the ink solid. This does
-    a per-row sweep over the polygon's edges, drawing a span whenever the
-    running winding number is nonzero — the same rule librsvg applies.
-    """
-    n = len(poly)
-    if n < 3:
-        return
-    draw = ImageDraw.Draw(image)
-    height = image.height
-    buckets: dict[int, list[tuple[float, int]]] = {}
-    for i in range(n):
-        x1, y1 = poly[i]
-        x2, y2 = poly[(i + 1) % n]
-        if y1 == y2:
-            continue
-        if y2 > y1:
-            y_lo, y_hi, wind = y1, y2, 1
+            for i in range(0, len(nums) - 5, 6):
+                p0 = lines[-1][-1]
+                lines[-1].extend(_cubic(p0, (nums[i], nums[i + 1]), (nums[i + 2], nums[i + 3]),
+                                        (nums[i + 4], nums[i + 5]), steps))
         else:
-            y_lo, y_hi, wind = y2, y1, -1
-        lo, hi = int(y_lo), int(y_hi)
-        if hi <= lo or hi < 0 or lo >= height:
-            continue
-        dx = (x2 - x1) / (y2 - y1)
-        for yy in range(max(lo, 0), min(hi, height)):
-            x = x1 + (yy + 0.5 - y1) * dx
-            buckets.setdefault(yy, []).append((x, wind))
-    for yy in range(height):
-        hits = buckets.get(yy)
-        if not hits:
-            continue
-        hits.sort(key=lambda t: t[0])
-        winding, prev_x = 0, None
-        for x, w in hits:
-            if winding != 0 and prev_x is not None:
-                x0, x1 = int(prev_x), int(x)
-                if x1 >= x0:
-                    draw.line((x0, yy, x1, yy), fill=fill)
-            winding += w
-            prev_x = x
+            raise ValueError(f"mark.svg: unsupported path command {cmd}")
+
+    cmd, nums = None, []
+    for kind, value in tokens:
+        if kind:
+            if cmd:
+                run(cmd, nums)
+            cmd, nums = kind, []
+        else:
+            nums.append(float(value))
+    if cmd:
+        run(cmd, nums)
+    return lines
 
 
-def _hex_fill(value) -> tuple[int, int, int, int]:
-    if isinstance(value, str) and value.startswith("#") and len(value) == 7:
+def _hex(value, fallback=(0, 0, 0, 255)) -> tuple[int, int, int, int]:
+    if isinstance(value, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
         return (int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16), 255)
-    return PLATE_COLOUR
+    return fallback
+
+
+CLEAR = (0, 0, 0, 0)
+
+
+def plate_colour() -> tuple[int, int, int, int]:
+    for tag, a in parse_elements(svg_text()):
+        if tag == "rect":
+            return _hex(a.get("fill"))
+    raise ValueError("mark.svg has no plate")
+
+
+def strand_colour() -> tuple[int, int, int, int]:
+    for tag, a in parse_elements(svg_text()):
+        if tag == "path" and a.get("data-part") == "strand":
+            return _hex(a.get("stroke"))
+    raise ValueError("mark.svg has no strand")
+
+
+PLATE_COLOUR = plate_colour()
+STRAND_COLOUR = strand_colour()
+
+
+def _stroke(draw: ImageDraw.ImageDraw, points: list, width: float, fill) -> None:
+    """A polyline with round joins and round caps.
+
+    A disc at every vertex, not only at the ends: Pillow draws each segment of
+    a wide line as its own quad, and the slivers left between two quads showed
+    as hairlines across the strand after the downscale.
+    """
+    draw.line(points, fill=fill, width=max(1, round(width)))
+    r = width / 2
+    for x, y in points:
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=fill)
 
 
 def _render_raw(px: int, strands_only: bool = False, colour: tuple = None,
                 ss: int = SS, steps: int = STEPS) -> Image.Image:
-    """Render the mark at px*ss, centered by xMidYMid meet on a square canvas."""
-    svg = svg_text()
-    rect = parse_svg_rect(svg)
+    """Render the mark at px*ss, centred by xMidYMid meet on a square canvas.
+
+    `strands_only` leaves the plate out, and a gap then erases rather than
+    paints; `colour` draws every strand and commit in one tone.
+    """
     canvas = max(VIEW_W, VIEW_H)
     scale = px * ss / canvas
     xoff = (canvas - VIEW_W) / 2 * scale
+    yoff = (canvas - VIEW_H) / 2 * scale
     size = px * ss
-    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    image = Image.new("RGBA", (size, size), CLEAR)
+    draw = ImageDraw.Draw(image)
 
-    if not strands_only:
-        draw = ImageDraw.Draw(image)
-        plate = _hex_fill(rect.get("fill")) if rect else PLATE_COLOUR
-        x, y = xoff + rect.get("x", 0) * scale, rect.get("y", 0) * scale
-        w, h = rect.get("width", 0) * scale, rect.get("height", 0) * scale
-        rad = rect.get("rx", 0) * scale
-        draw.rounded_rectangle([x, y, x + w, y + h], radius=rad, fill=plate)
+    def at(x: float, y: float) -> tuple[float, float]:
+        return (xoff + x * scale, yoff + y * scale)
 
-    strand_fill = colour if colour is not None else STRAND_COLOUR
-    for cmds in parse_svg_paths(svg):
-        for poly in flatten_cmds(cmds, steps=steps):
-            scaled = [(xoff + px_ * scale, py * scale) for px_, py in poly]
-            fill_polygon_nz(image, scaled, strand_fill)
+    for tag, a in parse_elements(svg_text()):
+        if tag == "rect":
+            if strands_only:
+                continue
+            x, y = at(a.get("x", 0), a.get("y", 0))
+            w, h = a.get("width", 0) * scale, a.get("height", 0) * scale
+            draw.rounded_rectangle([x, y, x + w, y + h], radius=a.get("rx", 0) * scale,
+                                   fill=_hex(a.get("fill")))
+        elif tag == "path":
+            if a.get("data-part") == "gap":
+                fill = CLEAR if strands_only else _hex(a.get("stroke"))
+            else:
+                fill = colour or _hex(a.get("stroke"))
+            for line in flatten(str(a["d"]), steps):
+                _stroke(draw, [at(x, y) for x, y in line], a.get("stroke-width", 1) * scale, fill)
+        elif tag == "circle":
+            cx, cy = at(a["cx"], a["cy"])
+            r = a["r"] * scale
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour or _hex(a.get("fill")))
     return image
 
 

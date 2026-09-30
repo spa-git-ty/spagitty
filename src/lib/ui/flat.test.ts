@@ -418,6 +418,27 @@ describe('the soft spatial interface', () => {
 		}
 	});
 
+	/**
+	 * FEAT-085: the name is the brand's, not the theme's. "git" is drawn in
+	 * `--brand`, which both modes define, and Sora — the brand's face — is
+	 * named by the wordmark and nothing else, so the interface stays on the
+	 * system stack.
+	 */
+	it('sets the wordmark in the brand colour and face, and only the wordmark', () => {
+		expect(css).toMatch(/:root \{[^}]*--brand: #b8321f/);
+		expect(css).toMatch(/:root\[data-theme='dark'\] \{[^}]*--brand: #f2715a/);
+		expect(css).toMatch(/@font-face \{[^}]*font-family: 'Sora'/);
+
+		const wordmark = readFileSync('src/lib/ui/Wordmark.svelte', 'utf8');
+		expect(wordmark).toMatch(/spa<span class="git">git<\/span>ty/);
+		expect(wordmark).toMatch(/\.git \{[^}]*color: var\(--brand\)/);
+
+		const naming = componentsUnder('src').filter((path) =>
+			/font-family:[^;]*Sora/.test(readFileSync(path, 'utf8'))
+		);
+		expect(naming.map((path) => path.replaceAll('\\', '/'))).toEqual(['src/lib/ui/Wordmark.svelte']);
+	});
+
 	it('gives the open tab no drop shadow, only its surface and edge', () => {
 		const tabs = readFileSync('src/lib/chrome/RepoTabs.svelte', 'utf8');
 		expect(tabs).not.toMatch(/\.tab\.active\s*{[^}]*box-shadow/s);

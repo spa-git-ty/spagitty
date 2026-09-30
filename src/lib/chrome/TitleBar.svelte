@@ -5,7 +5,9 @@
 	import RepoTabs from '$lib/chrome/RepoTabs.svelte';
 	import { workspace } from '$lib/workspace.svelte';
 	import { isMac } from '$lib/platform';
+	import BrandMark from '$lib/ui/BrandMark.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Wordmark from '$lib/ui/Wordmark.svelte';
 	import type { IconName } from '$lib/ui/icons';
 
 	/**
@@ -69,7 +71,7 @@
 	</div>
 
 	{#if workspace.tabs.length === 0}
-		<span class="name">Spagitty</span>
+		<span class="name" role="img" aria-label="Spagitty"><BrandMark size={18} /><Wordmark size={15} /></span>
 	{:else}
 		<span class="gap" data-tauri-drag-region aria-hidden="true"></span>
 	{/if}
