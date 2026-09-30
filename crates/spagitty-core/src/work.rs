@@ -283,6 +283,89 @@ mod tests {
             .hunks
     }
 
+    /// A repository that checks files out with CRLF, as Git for Windows does
+    /// by default, with `wide.txt` committed and two lines changed on disk.
+    ///
+    /// The repository stores LF; the file on disk has CRLF on *every* line,
+    /// changed or not. Read raw, every line differs by its `\r` (BUG-033).
+    fn two_hunks_with_crlf(fixture: &Fixture) {
+        fixture.git(&["config", "core.autocrlf", "true"]);
+        two_hunks(fixture);
+        let on_disk = fixture.read("wide.txt").replace('\n', "\r\n");
+        fixture.write("wide.txt", &on_disk);
+    }
+
+    fn changed_lines(hunks: &[crate::diff::Hunk]) -> Vec<(char, String)> {
+        hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .filter_map(|line| match line.origin {
+                crate::diff::LineOrigin::Added => Some(('+', line.text.clone())),
+                crate::diff::LineOrigin::Removed => Some(('-', line.text.clone())),
+                crate::diff::LineOrigin::Context => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_crlf_file_diffs_only_the_lines_that_changed() {
+        let fixture = Fixture::woven();
+        two_hunks_with_crlf(&fixture);
+
+        let hunks = unstaged_hunks(&fixture, "wide.txt");
+
+        assert_eq!(hunks.len(), 2, "two changes, not one whole-file rewrite");
+        assert_eq!(
+            changed_lines(&hunks),
+            vec![
+                ('-', "line 2".to_string()),
+                ('+', "LINE TWO".to_string()),
+                ('-', "line 38".to_string()),
+                ('+', "LINE THIRTY-EIGHT".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn staging_one_hunk_of_a_crlf_file_stages_only_that_hunk() {
+        let fixture = Fixture::woven();
+        two_hunks_with_crlf(&fixture);
+        let hunks = unstaged_hunks(&fixture, "wide.txt");
+
+        stage_hunk(&fixture.open(), "wide.txt", 0, &hunks[0].header).expect("stage hunk");
+
+        let staged = fixture.git(&["show", ":wide.txt"]);
+        assert!(staged.contains("LINE TWO\n"));
+        assert!(
+            staged.contains("line 38\n"),
+            "the other hunk stays unstaged"
+        );
+        assert!(
+            !staged.contains('\r'),
+            "the index keeps the repository's endings"
+        );
+    }
+
+    #[test]
+    fn discarding_one_hunk_of_a_crlf_file_keeps_its_endings() {
+        let fixture = Fixture::woven();
+        two_hunks_with_crlf(&fixture);
+        let hunks = unstaged_hunks(&fixture, "wide.txt");
+
+        discard_hunk(&fixture.open(), "wide.txt", 0, &hunks[0].header).expect("discard hunk");
+
+        let now = fixture.read("wide.txt");
+        assert!(now.contains("line 2\r\n"), "the first hunk is gone");
+        assert!(
+            now.contains("LINE THIRTY-EIGHT\r\n"),
+            "the second is still there"
+        );
+        assert!(
+            !now.replace("\r\n", "").contains('\n'),
+            "every line keeps its CRLF"
+        );
+    }
+
     #[test]
     fn staging_one_hunk_stages_only_that_hunk() {
         let fixture = Fixture::woven();

@@ -62,6 +62,11 @@ stays backward-compatible.
 
 ### Fixed
 
+- **A one-line change on Windows no longer shows as the whole file rewritten.**
+  Files checked out with Windows line endings were compared with the
+  repository's copy byte for byte, so every line differed. The working file is
+  now read the way git reads it before a diff, and staging or discarding a
+  single hunk touches only that hunk again.
 - **The window keeps drawing while Git works.** Reading a repository —
   opening it, its history, a diff, blame, status — used to run on the thread
   that paints the window, so on a large repository the window stopped
