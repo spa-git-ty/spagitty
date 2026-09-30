@@ -2,7 +2,7 @@
 
 # TASK-051 — One theme
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; only the Omarchy sweep (on Linux) is still owed.
 **Branch:** `task/TASK-051-one-theme`
 **Screens:** Settings → Appearance; every screen's colours.
 **Raised by:** the author, 2026-09-30. Asked whether the eight published
