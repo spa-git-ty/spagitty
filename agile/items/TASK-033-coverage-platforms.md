@@ -2,7 +2,7 @@
 
 # TASK-033 — Restore coverage and test supported process platforms
 
-**Status:** Open
+**Status:** Done — merged by pull request #38 on 2026-09-05. Its Windows process job (`execution::tree`, `verification::command`) also passes natively on Windows 11, 2026-09-30.
 **Branch:** `task/TASK-033-coverage-platforms`
 
 ## Scope and acceptance criteria

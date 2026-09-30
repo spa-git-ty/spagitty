@@ -2,7 +2,7 @@
 
 # TASK-032 — Restore the release baseline and record the reliability plan
 
-**Status:** Open
+**Status:** Done — merged by pull request #33 on 2026-09-05; 0.5.1 was released from it.
 **Branch:** `task/TASK-032-release-baseline`
 **Screens:** —.
 

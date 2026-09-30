@@ -2,7 +2,7 @@
 
 # FEAT-079 — A node that says who
 
-**Status:** Open — built and tested; awaiting the sweep and the merge.
+**Status:** Open — merged on 2026-09-07 and released in 0.7.0. Sweep run in part on 2026-09-30 in the Windows release build: SWEEP-005 and SWEEP-006 pass. The rows that watch the network (SWEEP-002 to -004, -009 to -011) need a packet capture and are still owed, as are -001, -007, -008 and -012 to -014.
 **Branch:** `feature/FEAT-079-avatars-and-quieter-settings`
 **Screens:** Graph.
 

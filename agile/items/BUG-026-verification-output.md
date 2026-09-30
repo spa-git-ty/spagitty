@@ -2,7 +2,7 @@
 
 # BUG-026 — Verification keeps draining and can be stopped
 
-**Status:** Open
+**Status:** Fixed — merged by pull request #36 on 2026-09-05; in every release since 0.5.1.
 **Branch:** `bugfix/BUG-026-verification-output`
 **Screens:** Farm (1Q).
 

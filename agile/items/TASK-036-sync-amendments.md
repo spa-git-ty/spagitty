@@ -2,7 +2,7 @@
 
 # TASK-036 — Use the current shared amendments book
 
-**Status:** Open — local update and validation complete; not yet submitted or merged.
+**Status:** Done — merged by pull request #32 on 2026-09-05.
 **Branch:** `task/TASK-036-sync-amendments`
 **Screens:** —.
 

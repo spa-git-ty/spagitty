@@ -2,7 +2,7 @@
 
 # BUG-024 — Stop a run while its waiter owns it
 
-**Status:** Open
+**Status:** Fixed — merged by pull request #34 on 2026-09-05; in every release since 0.5.1.
 **Branch:** `bugfix/BUG-024-cancellable-runs`
 **Screens:** Farm (1Q).
 
