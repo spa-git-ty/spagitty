@@ -4,7 +4,7 @@
 	import { mod } from '$lib/platform';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { theme } from '$lib/theme.svelte';
-	import { FAMILIES, paletteOf, type Mode } from '$lib/themes';
+	import type { Mode } from '$lib/themes';
 	import {
 		scale,
 		TEXT_MAX,
@@ -16,7 +16,7 @@
 	} from '$lib/scale.svelte';
 
 	/**
-	 * The palette: which family, and light or dark within it.
+	 * The palette: light or dark, or the desktop's own (TASK-051: one family).
 	 *
 	 * This is the one place either is set — the title bar used to carry a
 	 * toggle as well, which meant two controls for one preference.
@@ -51,23 +51,6 @@
 	 * which is the defect BUG-030 was about.
 	 */
 	const desktop = $derived(theme.source === 'omarchy');
-
-	/**
-	 * Each family is shown in the mode that is on, so the swatches are the
-	 * colours that would actually appear rather than a light preview of a theme
-	 * about to be used in the dark.
-	 */
-	const swatches = $derived(
-		FAMILIES.map((family) => {
-			const palette = paletteOf(family.id, theme.mode);
-			return {
-				id: family.id,
-				name: family.name,
-				variant: family[theme.mode].name,
-				colours: [palette.bg, palette.panel, palette.accent, palette.ink]
-			};
-		})
-	);
 </script>
 
 <section class="section">
@@ -120,28 +103,6 @@
 			{/if}
 		</div>
 	{/if}
-
-
-	<div class="families">
-		{#each swatches as family (family.id)}
-			<button
-				class="family"
-				class:active={!desktop && theme.family === family.id}
-				aria-pressed={!desktop && theme.family === family.id}
-				onclick={() => theme.setFamily(family.id)}
-			>
-				<span class="swatch" aria-hidden="true">
-					{#each family.colours as colour, index (index)}
-						<span class="chip-colour" style="background: {colour}"></span>
-					{/each}
-				</span>
-				<span class="names">
-					<span class="family-name">{family.name}</span>
-					<span class="note">{family.variant}</span>
-				</span>
-			</button>
-		{/each}
-	</div>
 
 	<div class="hr"></div>
 
@@ -226,57 +187,13 @@
 		flex: none;
 	}
 
-	.families {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-		gap: 8px;
-	}
 
-	.family {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 6px 8px;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-field);
-		text-align: left;
-		min-width: 0;
-	}
 
-	.family:hover {
-		border-color: var(--accent);
-	}
 
-	.family.active {
-		border-color: var(--accent);
-		background: var(--selection);
-	}
 
-	.swatch {
-		display: flex;
-		flex: none;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-field);
-		overflow: hidden;
-	}
 
-	.chip-colour {
-		width: 12px;
-		height: 24px;
-	}
 
-	.names {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
 
-	.family-name {
-		font-size: var(--fs-secondary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
 
 	.slider {
 		flex: 1;
