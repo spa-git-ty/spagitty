@@ -722,7 +722,7 @@ a {
 		0 1px 3px color-mix(in srgb, #000 30%, transparent);
 }
 
-.pane {
+.window-pane {
 	/*
 	 * Inside the pane a screen's own bands step back (FEAT-083). Every
 	 * screen's header, and the graph's column header, paint themselves in

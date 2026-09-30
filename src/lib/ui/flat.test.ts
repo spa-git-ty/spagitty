@@ -321,13 +321,32 @@ describe('the soft spatial interface', () => {
 	 */
 	it('gives the ornaments glass, and never the pane or the environment', () => {
 		expect(css).toMatch(/\.ornament\s*{[^}]*backdrop-filter:\s*var\(--blur-thick\)/s);
-		expect(css).not.toMatch(/\.pane\s*{[^}]*backdrop-filter/s);
+		expect(css).not.toMatch(/\.window-pane\s*{[^}]*backdrop-filter/s);
 		expect(css).not.toMatch(/--environment:[^;]*blur/s);
 
 		for (const path of ['src/lib/chrome/NavRail.svelte', 'src/lib/chrome/Toolbar.svelte']) {
 			expect(readFileSync(path, 'utf8'), path).toMatch(/class="[^"]*\bornament\b/);
 		}
-		expect(readFileSync('src/routes/+layout.svelte', 'utf8')).toMatch(/<main class="pane">/);
+		expect(readFileSync('src/routes/+layout.svelte', 'utf8')).toMatch(
+			/<main class="window-pane">/
+		);
+	});
+
+	/**
+	 * BUG-040. The shell's pane was styled by a global `.pane`, and five
+	 * components have a scoped `.pane` of their own — Working copy's hunks,
+	 * the diff, both conflict sides, the farm's sections and its log. Each one
+	 * took the shell's border, corner and shadow as well as its own, and drew as
+	 * a second pane inside the first. The global rule's class is the layout's
+	 * alone.
+	 */
+	it('keeps the window pane class to the layout', () => {
+		expect(css).not.toMatch(/(^|[\s,}])\.pane\s*[{,]/m);
+
+		const users = componentsUnder('src').filter((path) =>
+			/class="[^"]*\bwindow-pane\b/.test(readFileSync(path, 'utf8'))
+		);
+		expect(users.map((path) => path.replaceAll('\\', '/'))).toEqual(['src/routes/+layout.svelte']);
 	});
 
 	/**
