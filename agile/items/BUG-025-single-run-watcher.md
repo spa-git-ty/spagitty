@@ -2,7 +2,7 @@
 
 # BUG-025 — One completion watcher per run
 
-**Status:** Open
+**Status:** Fixed — merged by pull request #35 on 2026-09-05; in every release since 0.5.1.
 **Branch:** `bugfix/BUG-025-single-run-watcher`
 **Screens:** Farm (1Q).
 

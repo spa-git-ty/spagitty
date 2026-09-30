@@ -167,10 +167,10 @@ rather than an audit.
 | [BUG-021](items/BUG-021-a-run-says-nothing-until-it-ends.md) | A run says nothing until it ends | Farm (1Q) | Fixed |
 | [BUG-022](items/BUG-022-the-farm-subscribes-after-it-asks.md) | The farm subscribes after it asks, so the answer is lost | Farm (1Q) | Fixed |
 | [BUG-023](items/BUG-023-a-record-test-reads-another-tests-clone.md) | A record test reads another test's clone | none | Fixed |
-| [BUG-024](items/BUG-024-cancellable-runs.md) | Stop a run while its waiter owns it | Farm (1Q) | Open |
-| [BUG-025](items/BUG-025-single-run-watcher.md) | One completion watcher per run | Farm (1Q) | Open |
-| [BUG-026](items/BUG-026-verification-output.md) | Verification keeps draining and can be stopped | Farm (1Q) | Open |
-| [BUG-027](items/BUG-027-verified-merges.md) | Require current evidence before automatic merging | Farm (1Q) | Open |
+| [BUG-024](items/BUG-024-cancellable-runs.md) | Stop a run while its waiter owns it | Farm (1Q) | Fixed |
+| [BUG-025](items/BUG-025-single-run-watcher.md) | One completion watcher per run | Farm (1Q) | Fixed |
+| [BUG-026](items/BUG-026-verification-output.md) | Verification keeps draining and can be stopped | Farm (1Q) | Fixed |
+| [BUG-027](items/BUG-027-verified-merges.md) | Require current evidence before automatic merging | Farm (1Q) | Fixed |
 | [BUG-028](items/BUG-028-dev-styles.md) | Development styles depend on request order | All | Fixed |
 | [BUG-029](items/BUG-029-the-window-is-ringed-with-blurred-desktop.md) | The packaged Linux window is ringed with blurred desktop | All | Fixed |
 | [BUG-030](items/BUG-030-the-toolbar-offers-what-it-cannot-do.md) | The toolbar offers what it cannot do, and hides what it can | chrome | Fixed |
@@ -223,9 +223,9 @@ of its own.
 | [TASK-029](items/TASK-029-candidate-feature-backlog.md) | Candidate feature backlog items | — | Done |
 | [TASK-030](items/TASK-030-the-farm-refresh-stops-working-on-the-main-thread.md) | The farm's refresh stops working on the main thread | Farm (1Q) | Done |
 | [TASK-031](items/TASK-031-long-sessions-stay-fast.md) | A long session stays fast | Farm (1Q) | Done |
-| [TASK-032](items/TASK-032-release-baseline.md) | Restore the release baseline and record the reliability plan | — | Open |
-| [TASK-033](items/TASK-033-coverage-platforms.md) | Restore coverage and platform tests | All | Open |
-| [TASK-036](items/TASK-036-sync-amendments.md) | Use the current shared amendments book | — | Open |
+| [TASK-032](items/TASK-032-release-baseline.md) | Restore the release baseline and record the reliability plan | — | Done |
+| [TASK-033](items/TASK-033-coverage-platforms.md) | Restore coverage and platform tests | All | Done |
+| [TASK-036](items/TASK-036-sync-amendments.md) | Use the current shared amendments book | — | Done |
 | [TASK-037](items/TASK-037-updates-that-actually-arrive.md) | Updates that actually arrive | 1K | Done |
 | [TASK-038](items/TASK-038-settings-that-stop-lecturing.md) | Settings that stop lecturing | Settings | Done |
 | [TASK-039](items/TASK-039-one-colour-system-in-every-dialog.md) | One colour system in every dialog | all dialogs | Done |
@@ -238,6 +238,7 @@ of its own.
 | [TASK-046](items/TASK-046-lists-you-can-read.md) | Lists you can read | Working copy, Stash, Diff | Open |
 | [TASK-047](items/TASK-047-a-commit-bar.md) | A commit bar | Working copy (1C) | Open |
 | [TASK-048](items/TASK-048-commands-off-the-main-thread.md) | Commands off the main thread | all | Open |
+| [TASK-049](items/TASK-049-the-record-catches-up-with-what-merged.md) | The record catches up with what merged | — | Done |
 
 ## Skipped identifiers
 

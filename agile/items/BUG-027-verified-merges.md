@@ -2,7 +2,7 @@
 
 # BUG-027 — Require current evidence before automatic merging
 
-**Status:** Open
+**Status:** Fixed — merged by pull request #37 on 2026-09-05; in every release since 0.5.1.
 **Branch:** `bugfix/BUG-027-verified-merges`
 **Screens:** Farm (1Q).
 

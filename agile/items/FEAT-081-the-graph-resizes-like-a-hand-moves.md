@@ -2,7 +2,10 @@
 
 # FEAT-081 — The graph resizes like a hand moves
 
-**Status:** Open. Reopened twice on 2026-09-13. First by
+**Status:** Open. Released in 0.8.0 and corrected in 0.8.1. The sweep's
+pointer rows passed in the Windows release build on 2026-09-30 (SWEEP-001,
+-006, -007, -008; -004 in part); SWEEP-002, -003, -005, -009 and the Flea rows
+are still owed. Reopened twice on 2026-09-13. First by
 [`docs/analysis/graph-resize-review-2026-09-13.md`](../../docs/analysis/graph-resize-review-2026-09-13.md):
 the first pass squeezed the lanes instead of holding them still, and acceptance
 was claimed without the runtime sweep. Then by
