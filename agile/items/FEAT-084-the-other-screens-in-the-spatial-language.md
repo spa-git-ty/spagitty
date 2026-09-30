@@ -2,7 +2,7 @@
 
 # FEAT-084 — The other screens in the spatial language
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `feature/FEAT-084-the-other-screens-in-the-spatial-language`
 **Screens:** Branches (1F), Tags (1N), Reflog (1M), Farm (1Q), Settings (1K),
 File history (1O), and every screen's header and footer.

@@ -2,7 +2,7 @@
 
 # TASK-045 — A rail of five
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `task/TASK-045-a-rail-of-five`
 **Screens:** chrome (the rail); Branches (1F), Tags (1N), Stash (1G), Reflog
 (1M); Settings (1K), Personality; Badges (1P).

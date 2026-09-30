@@ -2,7 +2,7 @@
 
 # FEAT-082 — A spatial shell
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `feature/FEAT-082-a-spatial-shell`
 **Screens:** chrome — the title bar, the tabs, the toolbar, the rail and the
 status strip — and the floating layers: menus, dialogs, the palette, toasts.

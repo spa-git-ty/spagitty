@@ -2,7 +2,7 @@
 
 # TASK-047 — A commit bar
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `task/TASK-047-a-commit-bar`
 **Screens:** Working copy (1C).
 **Raised by:** the author: "on the working directory page, can the commit

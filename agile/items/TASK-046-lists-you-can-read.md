@@ -2,7 +2,7 @@
 
 # TASK-046 — Lists you can read
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `task/TASK-046-lists-you-can-read`
 **Screens:** Working copy (1C), Stash (1G), Diff (1B) and the commit detail
 panel — every list of changed files; the status strip.

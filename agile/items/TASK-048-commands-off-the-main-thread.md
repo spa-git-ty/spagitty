@@ -2,7 +2,7 @@
 
 # TASK-048 — Commands off the main thread
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `task/TASK-048-commands-off-the-main-thread`
 **Screens:** none directly — every screen that reads or writes the repository.
 **Raised by:** the author, on the revamp: the application "feels slow or

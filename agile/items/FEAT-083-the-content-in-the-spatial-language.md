@@ -2,7 +2,7 @@
 
 # FEAT-083 — The content in the spatial language
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the manual sweep is still owed.
 **Branch:** `feature/FEAT-083-the-content-in-the-spatial-language`
 **Screens:** every screen's header; the Graph (1A) above all — its column
 header, rows, working-copy row and detail panel; branch and tag chips.
