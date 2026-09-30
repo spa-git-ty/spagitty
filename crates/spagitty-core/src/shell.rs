@@ -799,27 +799,21 @@ impl SequenceScripts {
         let plan = dir.join("rebase-todo");
         std::fs::write(&plan, todo)?;
 
-        let (sequence, message) = if cfg!(windows) {
-            let sequence = dir.join("sequence-editor.bat");
-            std::fs::write(
-                &sequence,
-                format!("@echo off\r\ncopy /Y \"{}\" %1 >nul\r\n", plan.display()),
-            )?;
-            let message = dir.join("message-editor.bat");
-            std::fs::write(&message, "@echo off\r\nexit /b 0\r\n")?;
-            (sequence, message)
-        } else {
-            let sequence = dir.join("sequence-editor.sh");
-            std::fs::write(
-                &sequence,
-                format!("#!/bin/sh\ncat '{}' > \"$1\"\n", plan.display()),
-            )?;
-            let message = dir.join("message-editor.sh");
-            std::fs::write(&message, "#!/bin/sh\nexit 0\n")?;
-            make_executable(&sequence)?;
-            make_executable(&message)?;
-            (sequence, message)
-        };
+        // Shell scripts on every platform. git runs an editor through `sh`,
+        // and Git for Windows through the `sh.exe` it ships, which hands the
+        // script the todo's path as `C:/…`. A batch file's `copy` read that
+        // `/Users` as a switch and failed, so no interactive rebase could
+        // start on Windows (BUG-038). `sh` takes the same path with forward
+        // slashes, which is how the plan's own path is written into it.
+        let sequence = dir.join("sequence-editor.sh");
+        std::fs::write(
+            &sequence,
+            format!("#!/bin/sh\ncat '{}' > \"$1\"\n", forward(&plan)),
+        )?;
+        let message = dir.join("message-editor.sh");
+        std::fs::write(&message, "#!/bin/sh\nexit 0\n")?;
+        make_executable(&sequence)?;
+        make_executable(&message)?;
 
         Ok(Self { sequence, message })
     }
@@ -838,6 +832,13 @@ impl SequenceScripts {
 /// already quoted.
 fn quoted(path: &Path) -> String {
     format!("\"{}\"", path.display())
+}
+
+/// A path as `sh` reads it: `/` between the parts on every platform. Git for
+/// Windows' `sh` takes `C:/Users/…`; a `\` inside quotes is taken literally
+/// there, but `/` needs no such luck.
+fn forward(path: &Path) -> String {
+    path.display().to_string().replace('\\', "/")
 }
 
 #[cfg(unix)]
@@ -1267,6 +1268,42 @@ pub fn submodule_deinit(repo: &Path, path: &str, force: bool) -> Result<String> 
 mod tests {
     use super::*;
     use crate::fixture::Fixture;
+
+    #[test]
+    fn the_rebase_editors_are_shell_scripts_that_name_the_plan_with_forward_slashes() {
+        // BUG-038. git runs the editor through `sh` everywhere, Git for
+        // Windows included, and hands it a `C:/…` path; a batch file's `copy`
+        // took that for a switch. The scripts are `sh` on every platform, and
+        // the plan's path inside them is written the way `sh` reads it.
+        let fixture = Fixture::empty();
+        let scripts =
+            SequenceScripts::write(fixture.path(), "pick 1234567 one\n").expect("the scripts");
+
+        let sequence = std::fs::read_to_string(&scripts.sequence).expect("sequence editor");
+        assert!(sequence.starts_with("#!/bin/sh\n"), "{sequence}");
+        assert!(!sequence.contains('\\'), "a backslash in {sequence}");
+        assert!(
+            sequence.contains("/spagitty/rebase-todo' > \"$1\""),
+            "{sequence}"
+        );
+
+        let message = std::fs::read_to_string(&scripts.message).expect("message editor");
+        assert_eq!(message, "#!/bin/sh\nexit 0\n");
+
+        assert!(scripts.sequence_editor().ends_with("sequence-editor.sh\""));
+        assert!(scripts.message_editor().ends_with("message-editor.sh\""));
+    }
+
+    #[test]
+    fn a_windows_path_reaches_sh_with_forward_slashes() {
+        assert_eq!(
+            forward(Path::new(
+                r"C:\Users\Ada Lovelace\repo\.git\spagitty\rebase-todo"
+            )),
+            "C:/Users/Ada Lovelace/repo/.git/spagitty/rebase-todo"
+        );
+        assert_eq!(forward(Path::new("/home/ada/repo")), "/home/ada/repo");
+    }
 
     #[test]
     fn the_git_version_is_reported_from_the_binary_on_path() {

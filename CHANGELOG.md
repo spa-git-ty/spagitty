@@ -60,6 +60,9 @@ stays backward-compatible.
   that paints the window, so on a large repository the window stopped
   responding until it finished. It now runs beside it. Switching tabs quickly
   leaves the one you clicked last open.
+- **Interactive rebase works on Windows.** Starting a planned rebase failed
+  with "there was a problem with the editor" whatever the plan, because the
+  helper that hands git the plan could not read the path git gave it.
 - **Commit messages in the graph are the size of everything else.** They were a
   step larger than every other list, so the history looked out of place.
 - **Scrollbars on Windows are the theme's**: thin and rounded, with no arrow
