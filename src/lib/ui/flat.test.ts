@@ -330,6 +330,25 @@ describe('the soft spatial interface', () => {
 		expect(readFileSync('src/routes/+layout.svelte', 'utf8')).toMatch(/<main class="pane">/);
 	});
 
+	/**
+	 * BUG-035. Chromium lets `scrollbar-width` and `scrollbar-color` override
+	 * the `::-webkit-scrollbar` rules, so on Windows the platform's bar — arrow
+	 * buttons, square corner — was drawn instead of the theme's.
+	 */
+	it('styles scrollbars one way per engine, with no arrow buttons', () => {
+		const standard = css.indexOf('scrollbar-width: thin');
+		const guard = css.lastIndexOf('@supports not selector(::-webkit-scrollbar)', standard);
+		expect(standard).toBeGreaterThan(-1);
+		expect(guard).toBeGreaterThan(-1);
+		expect(css.slice(guard, standard)).not.toMatch(/\n}\n/);
+		expect(css).toMatch(/::-webkit-scrollbar-button\s*{[^}]*display:\s*none/s);
+	});
+
+	it('gives the open tab no drop shadow, only its surface and edge', () => {
+		const tabs = readFileSync('src/lib/chrome/RepoTabs.svelte', 'utf8');
+		expect(tabs).not.toMatch(/\.tab\.active\s*{[^}]*box-shadow/s);
+	});
+
 	it('removes motion when the platform requests it', () => {
 		expect(css).toMatch(
 			/@media \(prefers-reduced-motion: reduce\)[\s\S]*transition-duration:\s*0\.01ms !important/

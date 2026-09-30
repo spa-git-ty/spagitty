@@ -893,14 +893,31 @@ input[type='radio'] {
  * troughless, and they thicken under the pointer rather than appearing from
  * nowhere.
  */
-* {
-	scrollbar-width: thin;
-	scrollbar-color: color-mix(in srgb, var(--ink) 24%, transparent) transparent;
+/*
+ * The standard properties only where the pseudo-elements below do not work
+ * (BUG-035). Chromium — WebView2, on Windows — supports both, and when both
+ * are set the standard ones win: it drew the platform's thin scrollbar, with
+ * its arrow buttons and a square corner where two bars meet, instead of the
+ * rules below. WebKitGTK, where this was written, reads only the rules below,
+ * which is why it never showed there.
+ */
+@supports not selector(::-webkit-scrollbar) {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--ink) 24%, transparent) transparent;
+	}
 }
 
 ::-webkit-scrollbar {
 	width: 11px;
 	height: 11px;
+}
+
+/* No arrows at either end: the thumb is the control. */
+::-webkit-scrollbar-button {
+	display: none;
+	width: 0;
+	height: 0;
 }
 
 ::-webkit-scrollbar-track {

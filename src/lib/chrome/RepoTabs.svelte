@@ -247,13 +247,18 @@
 		color: var(--ink);
 	}
 
+	/*
+	 * No shadow (BUG-035). The ornaments' shadow is sized for an object that
+	 * floats over the pane; on a pill sitting in the title row it spread wider
+	 * than the pill and was cut off by the row, which read as a smudge. The
+	 * pill says "this one" with its surface and its edge.
+	 */
 	.tab.active {
-		background: var(--glass-thick);
+		background: var(--surface);
 		color: var(--ink);
 		font-weight: 550;
 		border-color: var(--pane-edge);
 		border-top-color: var(--glass-edge);
-		box-shadow: var(--ornament-shadow);
 	}
 
 	.label {
