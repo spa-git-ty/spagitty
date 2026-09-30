@@ -2,7 +2,7 @@
 
 # TASK-050 — The chatter goes
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the rest of the manual sweep is still owed.
 **Branch:** `task/TASK-050-the-chatter-goes`
 **Screens:** Settings (1K) above all; Rebase (1E), Tags (1N), Reflog (1M),
 All repositories (1J), Conflicts (1D), Log (1I), File history (1O), Diff (1B),

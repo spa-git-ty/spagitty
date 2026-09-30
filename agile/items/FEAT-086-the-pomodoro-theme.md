@@ -2,7 +2,7 @@
 
 # FEAT-086 — The Pomodoro theme
 
-**Status:** Open.
+**Status:** Done — merged into `main` on 2026-09-30; swept in the Windows release build.
 **Branch:** `feature/FEAT-086-the-pomodoro-theme`
 **Screens:** all.
 **Raised by:** the author, 2026-09-30, choosing the rebrand's scope: "also

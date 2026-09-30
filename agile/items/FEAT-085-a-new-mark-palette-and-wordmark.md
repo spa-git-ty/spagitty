@@ -2,7 +2,7 @@
 
 # FEAT-085 — A new mark, palette and wordmark
 
-**Status:** Open.
+**Status:** Open — merged into `main` on 2026-09-30; the rest of the manual sweep is still owed.
 **Branch:** `feature/FEAT-085-a-new-mark-palette-and-wordmark`
 **Screens:** the application icon on every platform, the tray and menu bar,
 the title row with nothing open, All repositories when empty, Settings → About,
