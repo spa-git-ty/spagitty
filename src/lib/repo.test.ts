@@ -100,6 +100,61 @@ describe('open', () => {
 	});
 });
 
+describe('overlapping requests (TASK-048)', () => {
+	/** An open whose answer arrives when the test says so. */
+	function held(): { answer: (r: OpenResult) => void; fail: (e: string) => void } {
+		let answer!: (r: OpenResult) => void;
+		let fail!: (e: string) => void;
+		openRepo.mockImplementationOnce(
+			() =>
+				new Promise<OpenResult>((resolve, reject) => {
+					answer = resolve;
+					fail = reject;
+				})
+		);
+		return { answer: (r) => answer(r), fail: (e) => fail(e) };
+	}
+
+	it('keeps the later of two opens when the earlier answers last', async () => {
+		const slow = held();
+		const first = repo.open('/repos/large');
+		// Answers at once, with the default result: /repos/fixture, token 3.
+		const second = repo.open('/repos/fixture');
+
+		expect(await second).toBe(true);
+		slow.answer(result({ info: info('/repos/large'), token: 7 }));
+
+		expect(await first).toBe(false);
+		expect(repo.info?.path).toBe('/repos/fixture');
+		expect(repo.token).toBe(3);
+	});
+
+	it('ignores the failure of an open that was overtaken', async () => {
+		const slow = held();
+		const first = repo.open('/repos/large');
+		await repo.open('/repos/fixture');
+
+		slow.fail('opening /repos/large was overtaken by a later request');
+
+		expect(await first).toBe(false);
+		expect(repo.error).toBeNull();
+		expect(repo.info?.path).toBe('/repos/fixture');
+		expect(repo.busy).toBe(false);
+	});
+
+	it('leaves nothing open when a close overtakes an open', async () => {
+		const slow = held();
+		const opening = repo.open('/repos/large');
+		await repo.close();
+
+		slow.answer(result({ info: info('/repos/large') }));
+
+		expect(await opening).toBe(false);
+		expect(repo.info).toBeNull();
+		expect(repo.busy).toBe(false);
+	});
+});
+
 describe('choose', () => {
 	it('opens the directory the user picked', async () => {
 		dialog.mockResolvedValueOnce('/repos/picked');

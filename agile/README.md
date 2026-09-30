@@ -232,6 +232,7 @@ of its own.
 | [TASK-045](items/TASK-045-a-rail-of-five.md) | A rail of five | chrome | Open |
 | [TASK-046](items/TASK-046-lists-you-can-read.md) | Lists you can read | Working copy, Stash, Diff | Open |
 | [TASK-047](items/TASK-047-a-commit-bar.md) | A commit bar | Working copy (1C) | Open |
+| [TASK-048](items/TASK-048-commands-off-the-main-thread.md) | Commands off the main thread | all | Open |
 
 ## Skipped identifiers
 

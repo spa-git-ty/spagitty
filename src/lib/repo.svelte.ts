@@ -33,6 +33,13 @@ let busy = $state(false);
 let generation = $state(0);
 let token = $state<number | null>(null);
 
+/**
+ * How many opens and closes have been asked for. Commands run off the main
+ * thread (TASK-048), so a slow open can answer after a quicker one asked for
+ * later; an answer is applied only if nothing was asked for since.
+ */
+let asked = 0;
+
 export const repo = {
 	get info(): RepoInfo | null {
 		return info;
@@ -59,10 +66,12 @@ export const repo = {
 	},
 
 	async open(path: string): Promise<boolean> {
+		const mine = ++asked;
 		busy = true;
 		error = null;
 		try {
 			const result = await api.openRepo(path, graphOrder.id);
+			if (mine !== asked) return false;
 			info = result.info;
 			counts = result.counts;
 			token = result.token;
@@ -73,13 +82,14 @@ export const repo = {
 			workspace.opened(result.info.path);
 			return true;
 		} catch (e) {
+			if (mine !== asked) return false;
 			error = String(e);
 			info = null;
 			token = null;
 			counts = NO_COUNTS;
 			return false;
 		} finally {
-			busy = false;
+			if (mine === asked) busy = false;
 		}
 	},
 
@@ -122,7 +132,10 @@ export const repo = {
 	 * token to walk with, which is exactly what closing should leave behind.
 	 */
 	async close(): Promise<void> {
+		const mine = ++asked;
+		busy = false;
 		await api.closeRepo();
+		if (mine !== asked) return;
 		info = null;
 		token = null;
 		counts = NO_COUNTS;
