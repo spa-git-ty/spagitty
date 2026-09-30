@@ -18,6 +18,11 @@ pub enum Error {
     #[error("no repository is open")]
     NoRepository,
 
+    /// An open that a later open or close overtook before it finished. What
+    /// the user asked for last wins; this one is dropped without being applied.
+    #[error("opening {0} was overtaken by a later request")]
+    Superseded(PathBuf),
+
     #[error("this repository has no commits yet")]
     EmptyRepository,
 

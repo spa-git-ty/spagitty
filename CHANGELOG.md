@@ -55,6 +55,11 @@ stays backward-compatible.
 
 ### Fixed
 
+- **The window keeps drawing while Git works.** Reading a repository —
+  opening it, its history, a diff, blame, status — used to run on the thread
+  that paints the window, so on a large repository the window stopped
+  responding until it finished. It now runs beside it. Switching tabs quickly
+  leaves the one you clicked last open.
 - **Commit messages in the graph are the size of everything else.** They were a
   step larger than every other list, so the history looked out of place.
 - **Scrollbars on Windows are the theme's**: thin and rounded, with no arrow
