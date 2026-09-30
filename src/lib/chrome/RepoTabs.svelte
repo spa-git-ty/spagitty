@@ -136,13 +136,8 @@
 </script>
 
 <!--
-	The tabs are a row of their own, below the title bar (FEAT-044). They were a
-	passenger in that bar, squeezed by the program name and the window controls
-	in the one row that has to survive a narrow window — and they are a workspace
-	control, not a window control.
-
-	The row is absent entirely when nothing is open: a band of chrome across the
-	window with nothing in it makes an empty application look broken.
+	Pills in the title bar's row (FEAT-082), and absent entirely when nothing is
+	open, which is when the row says the program's name instead.
 -->
 {#if tabs.length > 0}
 <div class="tabrow">
@@ -203,43 +198,45 @@
 
 <style>
 	/*
-		The row itself. Its tabs sit on its bottom edge, because a tab's shape —
-		rounded at the top, square at the bottom, an accent underline on the
-		active one — is drawn to sit *on* a boundary. That boundary used to be
-		the title bar's bottom border; now it is this row's.
-	*/
+	 * The tabs are pills in the one row above the pane (FEAT-082). They were a
+	 * row of their own, with the open tab drawn as a card standing on the row's
+	 * bottom edge — a shape that only makes sense on a boundary, and the
+	 * boundary has gone. A pill needs nothing to stand on.
+	 *
+	 * The open one is lifted: the pane's own material, its edge, and the
+	 * ornaments' shadow. No blur: what is behind it is the environment, which
+	 * is smooth, and blurring it would cost a pass and change nothing.
+	 */
 	.tabrow {
-		flex: none;
-		height: var(--tabs-h);
+		flex: 0 1 auto;
 		display: flex;
-		align-items: stretch;
-		padding: 4px 10px 0;
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+		align-items: center;
+		min-width: 0;
 	}
 
 	.tabs {
 		display: flex;
-		align-items: stretch;
-		gap: 2px;
+		align-items: center;
+		gap: 4px;
 		min-width: 0;
+		padding: 4px 2px;
 		overflow-x: auto;
 		scrollbar-width: none;
 	}
 
 	.tab {
+		flex: none;
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		max-width: 190px;
-		padding: 0 6px 0 10px;
-		border-radius: var(--r-field) var(--r-field) 0 0;
+		max-width: 200px;
+		height: 28px;
+		padding: 0 6px 0 12px;
+		border: 1px solid transparent;
+		border-radius: var(--r-pill);
 		color: var(--muted);
 		cursor: pointer;
 		user-select: none;
-	}
-
-	.tab {
 		transition:
 			background var(--t-fast) var(--ease),
 			color var(--t-fast) var(--ease);
@@ -250,20 +247,13 @@
 		color: var(--ink);
 	}
 
-	/*
-	 * The open one is a card standing on the row's bottom edge: the ground
-	 * colour so it reads as continuous with the screen below, a hairline up
-	 * each side, an accent bar along the bottom, and the light catching its top
-	 * edge. Before, it was the same rectangle with an underline.
-	 */
 	.tab.active {
-		background: var(--bg);
+		background: var(--glass-thick);
 		color: var(--ink);
 		font-weight: 550;
-		border: 1px solid var(--line);
-		border-bottom: none;
-		/* The accent underline is a line, not a shadow: it stays. */
-		box-shadow: inset 0 -2px 0 var(--accent);
+		border-color: var(--pane-edge);
+		border-top-color: var(--glass-edge);
+		box-shadow: var(--ornament-shadow);
 	}
 
 	.label {
@@ -282,8 +272,8 @@
 		justify-content: center;
 		line-height: 1;
 		color: var(--muted);
-		padding: 2px;
-		border-radius: var(--r-field);
+		padding: 3px;
+		border-radius: var(--r-pill);
 		opacity: 0;
 	}
 
@@ -300,13 +290,14 @@
 
 	.add {
 		flex: none;
-		width: 26px;
+		width: 28px;
+		height: 28px;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		color: var(--muted);
 		line-height: 1;
-		border-radius: var(--r-field);
+		border-radius: var(--r-pill);
 		transition:
 			background var(--t-fast) var(--ease),
 			color var(--t-fast) var(--ease),

@@ -320,7 +320,14 @@ export const LANE_COLOR_COUNT = 5;
 
 // --- Chrome ---------------------------------------------------------------
 
-export const TITLEBAR_H = 30;
+/**
+ * The one row above the pane (FEAT-082): the tab pills and the window controls.
+ * Forty, because a 28px pill needs room above and below it to read as an
+ * object on the environment rather than as something pressed against the
+ * window's edge. It is also the only row above the pane now — the title bar,
+ * tab strip and toolbar together were 100.
+ */
+export const TITLEBAR_H = 40;
 
 /**
  * The action bar under the tabs.
@@ -543,12 +550,14 @@ export function laneColorVar(colorIndex: number): string {
  * interface, so its token stays the stylesheet's own value.
  */
 const RADII: Record<string, number> = {
-	'r-field': 4,
-	'r-pill': 5,
-	'r-button': 5,
+	'r-field': 7,
+	'r-pill': 999,
+	'r-button': 9,
 	'r-row': 4,
-	'r-panel': 6,
-	'r-floating': 8
+	'r-panel': 10,
+	'r-floating': 16,
+	'r-pane': 18,
+	'r-ornament': 24
 };
 
 /**

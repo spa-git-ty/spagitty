@@ -16,6 +16,13 @@ stays backward-compatible.
 
 ### Changed
 
+- **A spatial shell.** The window is one pane floating over a softly lit
+  environment, with the controls around it as floating objects instead of bars
+  across it. The open repositories are pills in the one row above the pane. The
+  sidebar is a pill of icons beside it that shows its labels when you hover or
+  tab into it. The toolbar is a pill centred below the pane, with the status on
+  either side. Controls, menus and dialogs are rounder. Every screen's content,
+  the graph above all, is unchanged.
 - **A shorter sidebar.** It shows Farm, Graph, Working copy, Branches, Pull
   requests and Settings. Conflicts joins it while something is in conflict.
   Rebase, Log and All repositories are still one click away — the toolbar,

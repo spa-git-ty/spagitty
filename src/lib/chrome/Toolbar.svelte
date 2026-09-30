@@ -294,15 +294,17 @@
 	/>
 {/if}
 
-<div class="toolbar">
+<!--
+	An ornament: a floating pill under the pane, centred in the status row
+	(FEAT-082). It was a full-width bar across the top of the window.
+-->
+<div class="toolbar ornament" role="toolbar" aria-label="Repository actions">
 	<!--
-		Where you are: the repository, then the branch. The name is text and the
-		branch is a real list (FEAT-045).
+		Where you are: the branch, as a real list (FEAT-045). The repository's
+		name left with the bar — the active tab says it, one row up (FEAT-082).
 	-->
 	<div class="location">
 		{#if repo.info}
-			<span class="repo" title={repo.info.path}>{repo.info.name}</span>
-			<span class="sep" aria-hidden="true">›</span>
 			<button
 				class="field"
 				aria-haspopup="menu"
@@ -314,7 +316,7 @@
 				<span class="mono muted" aria-hidden="true">▾</span>
 			</button>
 		{:else}
-			<span class="repo none">no repository</span>
+			<span class="none">no repository</span>
 		{/if}
 
 		<!--
@@ -342,16 +344,12 @@
 		{/if}
 	</div>
 
-	<!--
-		The actions sit in the middle of the bar rather than packed against the
-		pickers: they belong to the repository as a whole, and on a wide window a
-		left-packed row leaves them stranded beside the branch name with an ocean
-		to their right.
-	-->
+	<span class="vr" aria-hidden="true"></span>
+
 	<div class="actions">
 		{#each GROUPS as group, index (index)}
 			{#if index > 0}
-				<span class="vr" style="height: 26px"></span>
+				<span class="vr"></span>
 			{/if}
 			{#each group as action (action.label)}
 				<!--
@@ -409,10 +407,12 @@
 	<!--
 		Only when the toggle is on. The feature is opt-in, and a button for it
 		sitting in the chrome of every session would be a second, quieter answer
-		to a question Settings already asks.
+		to a question Settings already asks. The Settings gear that sat beside it
+		is gone: Settings is on the rail (FEAT-082).
 	-->
-	<div class="trailing">
-		{#if settings.settings.showGitCommands}
+	{#if settings.settings.showGitCommands}
+		<div class="trailing">
+			<span class="vr" aria-hidden="true"></span>
 			<button
 				class="tool"
 				title="What Spagitty has run"
@@ -421,11 +421,8 @@
 			>
 				<span aria-hidden="true">≡</span><span>Commands</span>
 			</button>
-		{/if}
-		<button class="tool settings" title="Settings" aria-label="Settings" onclick={() => goto('/settings')}>
-			<Icon name="settings" size="1.25em" />
-		</button>
-	</div>
+		</div>
+	{/if}
 
 	<!--
 		No Commit button. Committing is the Working copy screen's job — it has the
@@ -437,38 +434,31 @@
 
 <style>
 	/*
-	 * Three tracks, and the outer two are equal.
-	 *
-	 * The actions used to be centred with `margin: 0 auto` inside a flex row
-	 * whose first child grows, which centres them in *what is left over* rather
-	 * than in the bar — so they sat right of centre by half the pickers' width.
-	 * Equal outer tracks put them in the middle of the window, which is where
-	 * they look aimed.
+	 * The pill (FEAT-082). `.ornament` in `app.css` is the material; this is
+	 * the shape. It sizes to what it holds and is centred by the status row, so
+	 * nothing here needs to know how wide the window is.
 	 */
 	.toolbar {
-		height: var(--toolbar-h);
-		flex: none;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-		align-items: center;
-		gap: 16px;
-		padding: 0 12px;
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-		/* The pane casts onto whatever screen is under it, which is what stops
-		   the toolbar and the content it sits above reading as one surface. */
-		box-shadow: none;
-		position: relative;
-		z-index: 2;
-		overflow: hidden;
-	}
-
-	/* The command log toggle rides in the third track, at its right edge. */
-	.trailing {
-		justify-self: end;
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 8px;
+		height: 46px;
+		padding: 0 7px;
+		border-radius: var(--r-ornament);
+		min-width: 0;
+		max-width: 100%;
+		position: relative;
+		z-index: 2;
+	}
+
+	.vr {
+		height: 22px;
+	}
+
+	.trailing {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 	}
 
 	.location {
@@ -479,61 +469,45 @@
 		overflow: hidden;
 	}
 
-	.repo {
-		font-weight: 650;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.none {
+		padding: 0 8px;
+		color: var(--muted);
+		font-size: var(--fs-secondary);
 		white-space: nowrap;
-		flex: none;
 	}
 
-	/* git's own progress line, which can be long. It gets whatever room is
-	   left rather than pushing the branch picker off the bar. */
-	.working {
+	/* git's own progress line, which can be long. It gets a bounded share of
+	   the pill rather than pushing the actions out of it. */
+	.location .note {
+		max-width: 220px;
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.repo.none {
-		font-weight: 400;
-		color: var(--muted);
-	}
-
-	.sep {
-		color: var(--muted);
-		flex: none;
-	}
-
-	/*
-	 * Long enough to say why, truncated rather than allowed to grow: the
-	 * actions sit in the middle track and a message that widened this one would
-	 * push them off centre.
-	 */
-	/* An error on the toolbar is the palette's red, which is what the rest of
-	   the application now uses to mean "this did not work". */
+	/* An error is the palette's red, which is what the rest of the application
+	   uses to mean "this did not work". */
 	.error {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 		color: var(--danger);
 	}
 
-	/* The branch and remote pickers. Wells, like every other field — they are
-	   read as "this is the current one, click to change it". */
+	/*
+	 * The branch picker: a capsule inside the capsule, filled a shade deeper
+	 * than the pill so it reads as the one thing here that holds a value.
+	 */
 	.field {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 6px;
-		padding: 4px 7px;
-		border: 1px solid var(--line);
-		border-radius: var(--r-field);
-		background: var(--sunken);
-		box-shadow: none;
+		height: 32px;
+		padding: 0 12px;
+		border: 1px solid var(--pane-edge);
+		border-radius: var(--r-pill);
+		background: color-mix(in srgb, var(--sunken) 70%, transparent);
 		min-width: 0;
-		max-width: 260px;
+		max-width: 170px;
 		transition:
 			border-color var(--t-fast) var(--ease),
 			background var(--t-fast) var(--ease);
@@ -541,7 +515,7 @@
 
 	.field:hover {
 		border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-		background: color-mix(in srgb, var(--sunken) 88%, var(--accent) 6%);
+		background: color-mix(in srgb, var(--sunken) 70%, var(--accent) 8%);
 	}
 
 	.value {
@@ -549,42 +523,52 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		font-size: var(--fs-secondary);
+		font-weight: 600;
 	}
 
 	/*
 	 * A button and, where there are alternatives, its caret.
 	 *
-	 * The two are one visual object with a hairline between them: separate
-	 * pills would read as two actions, and one control would leave the choices
-	 * reachable only by guessing which half to press. The group carries the
-	 * corner so the halves square up against each other.
+	 * The two are one visual object: separate pills would read as two actions,
+	 * and one control would leave the choices reachable only by guessing which
+	 * half to press. The group carries the capsule so the halves meet flush.
 	 */
 	.tool-group {
 		display: flex;
 		align-items: stretch;
-		border-radius: var(--r-button);
+		height: 32px;
+		border-radius: var(--r-pill);
 	}
 
 	.tool {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 1px;
-		padding: 3px 6px;
-		border-radius: inherit;
-		font-size: var(--fs-mono);
-		color: var(--muted);
-		min-width: 44px;
+		gap: 6px;
+		height: 32px;
+		padding: 0 11px;
+		border-radius: var(--r-pill);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
 		user-select: none;
+		white-space: nowrap;
 		transition:
 			background var(--t-fast) var(--ease),
 			color var(--t-fast) var(--ease);
 	}
 
+	.tool-group .tool {
+		border-radius: inherit;
+	}
+
+	.tool :global(svg) {
+		color: var(--muted);
+		transition: color var(--t-fast) var(--ease);
+	}
+
 	.split .tool {
 		border-start-end-radius: 0;
 		border-end-end-radius: 0;
-		padding-inline-end: 4px;
+		padding-inline-end: 6px;
 	}
 
 	.tool:hover {
@@ -592,31 +576,26 @@
 		background: var(--accent-soft);
 	}
 
+	.tool:hover :global(svg) {
+		color: var(--accent);
+	}
+
 	.tool:active {
 		background: var(--press);
 	}
 
 	/*
-	 * The caret.
-	 *
-	 * Deliberately its own button rather than a glyph inside the first one. It
-	 * is what makes the alternatives *visible* — the whole defect was that
-	 * "right-click for how" is a sentence in a tooltip — and a `<button>` is
-	 * what makes them reachable from the keyboard, which a `contextmenu`
-	 * handler never was.
-	 *
-	 * It stays put on hover. The rest of the toolbar lifts and this does not,
-	 * because a two-part control whose halves move independently reads as
-	 * coming apart.
+	 * The caret. Its own button rather than a glyph inside the first one: it is
+	 * what makes the alternatives visible, and a `<button>` is what makes them
+	 * reachable from the keyboard (BUG-030).
 	 */
 	.caret {
 		display: flex;
 		align-items: center;
-		padding: 0 5px;
+		padding: 0 10px 0 5px;
 		border-radius: inherit;
 		border-start-start-radius: 0;
 		border-end-start-radius: 0;
-		border-left: 1px solid var(--soft);
 		font-size: var(--fs-mono);
 		color: var(--muted);
 		user-select: none;
@@ -637,48 +616,36 @@
 
 	.actions {
 		display: flex;
-		flex-direction: row;
 		align-items: center;
-		gap: 16px;
-		flex-wrap: nowrap;
-		flex-shrink: 0;
-		min-width: max-content;
+		gap: 2px;
+		flex: none;
 	}
 
-	@media (max-width: 900px) {
-		.toolbar {
-			grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-			gap: 6px;
-			padding-inline: 8px;
-		}
+	.actions .vr {
+		margin: 0 6px;
+	}
 
-		.actions {
-			gap: 4px;
-		}
-
-		.actions .vr {
-			display: none;
-		}
-
-		.tool {
-			min-width: 30px;
-			padding-inline: 4px;
-		}
-
-		.split .tool {
-			padding-inline-end: 2px;
-		}
-
-		.caret {
-			padding-inline: 3px;
-		}
-
-		/* The label goes; the caret's glyph is not a label and must not. */
+	/*
+	 * Narrower than the pill's natural width, the labels go and the icons stay.
+	 * The caret's glyph is not a label and must not go with them.
+	 */
+	@media (max-width: 1180px) {
 		.tool > span:last-child {
 			display: none;
 		}
 
-		.trailing .tool:not(.settings) {
+		.tool {
+			padding: 0 9px;
+		}
+
+		.split .tool {
+			padding-inline-end: 4px;
+		}
+	}
+
+	@media (max-width: 760px) {
+		.trailing,
+		.location .note {
 			display: none;
 		}
 	}

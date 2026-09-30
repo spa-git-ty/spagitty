@@ -69,14 +69,16 @@
 	 * interface rounds proportionally instead of keeping 4px corners on a box
 	 * twice the size.
 	 *
-	 * Kept tight on purpose. A 14–18px corner on a card, plus chips that were
-	 * full capsules (`999px`), made the whole chrome read as soap. Controls,
-	 * surfaces and the window still step up together; none of them is a pill.
+	 * Rounder since FEAT-082. The spatial shell's controls are capsules and its
+	 * surfaces are soft, so chips are full pills again and every other step is
+	 * larger. The steps still rise together — field, button, panel, floating,
+	 * pane — so a control never looks rounder than what it sits on. Commit rows
+	 * keep their small corner: they tile, and a round tile leaves gaps.
 	 * True circles (avatars, status dots) use `50%`, not this scale.
 	 */
-	--r-field: 4px;
-	--r-pill: 5px;
-	--r-button: 5px;
+	--r-field: 7px;
+	--r-pill: 999px;
+	--r-button: 9px;
 	/** A commit row's hover and selection fill. */
 	--r-row: 4px;
 	/**
@@ -86,14 +88,17 @@
 	 * pane's computed radius, so the refraction ring changes shape with the
 	 * corner.
 	 */
-	--r-panel: 6px;
+	--r-panel: 10px;
 	/* Transient surfaces sit above the workspace. */
-	--r-floating: 8px;
+	--r-floating: 16px;
+	/* The pane a screen sits in, and the ornaments beside it (FEAT-082). */
+	--r-pane: 18px;
+	--r-ornament: 24px;
 	/*
 	 * The window's own corner. A step above a panel, because it is read against
 	 * the whole screen rather than against the surface beside it (FEAT-037).
 	 */
-	--r-window: 8px;
+	--r-window: 12px;
 
 	/*
 	 * The window's own depth (FEAT-037). Tuned for a light ground: the shadow
@@ -669,6 +674,75 @@ a {
 	border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
 	border-radius: var(--r-floating);
 	box-shadow: var(--glass-rim), var(--shadow-3);
+}
+
+/* --- Spatial shell (FEAT-082) ----------------------------------------------
+ *
+ * Content in one pane floating over an environment, and the controls around it
+ * as ornaments — small floating objects rather than bars across the window.
+ *
+ * - The **environment** is the window's ground, lit by soft washes of the
+ *   theme's own accent and first lane. It is static and it is painted once,
+ *   which is what makes the glass over it cheap: blurring a field this smooth
+ *   costs one pass and changes almost nothing, so only small things are
+ *   blurred and nothing large is.
+ * - The **pane** holds the screen. It is opaque — it holds the graph, and a
+ *   translucent pane would repaint whatever is behind it on every scroll.
+ *   Glass edge, soft shadow, generous corner.
+ * - An **ornament** is glass: the rail and the toolbar. Small, few, and never
+ *   over a list row except while the rail is open over the pane.
+ */
+:root {
+	--environment:
+		radial-gradient(120% 90% at 8% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+		radial-gradient(90% 80% at 100% 110%, color-mix(in srgb, var(--lane-1) 14%, transparent), transparent 62%),
+		radial-gradient(70% 60% at 60% 40%, color-mix(in srgb, var(--lane-2) 7%, transparent), transparent 70%),
+		var(--panel);
+	--pane-edge: color-mix(in srgb, var(--line) 55%, transparent);
+	--pane-shadow:
+		0 18px 40px color-mix(in srgb, var(--umbra) 12%, transparent),
+		0 2px 6px color-mix(in srgb, var(--umbra) 8%, transparent);
+	--ornament-shadow:
+		0 10px 28px color-mix(in srgb, var(--umbra) 16%, transparent),
+		0 1px 3px color-mix(in srgb, var(--umbra) 10%, transparent);
+}
+
+:root[data-theme='dark'] {
+	--environment:
+		radial-gradient(120% 90% at 8% -10%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+		radial-gradient(90% 80% at 100% 110%, color-mix(in srgb, var(--lane-1) 30%, transparent), transparent 62%),
+		radial-gradient(70% 60% at 60% 40%, color-mix(in srgb, var(--lane-2) 14%, transparent), transparent 70%),
+		color-mix(in srgb, var(--panel) 80%, #000);
+	--pane-edge: color-mix(in srgb, #fff 9%, transparent);
+	--pane-shadow:
+		0 18px 44px color-mix(in srgb, #000 42%, transparent),
+		0 2px 6px color-mix(in srgb, #000 30%, transparent);
+	--ornament-shadow:
+		0 10px 30px color-mix(in srgb, #000 45%, transparent),
+		0 1px 3px color-mix(in srgb, #000 30%, transparent);
+}
+
+.pane {
+	background-color: var(--bg);
+	border: 1px solid var(--pane-edge);
+	border-top-color: var(--glass-edge);
+	border-radius: var(--r-pane);
+	box-shadow: var(--pane-shadow);
+}
+
+.ornament {
+	background-color: var(--glass-thick);
+	backdrop-filter: var(--blur-thick);
+	-webkit-backdrop-filter: var(--blur-thick);
+	border: 1px solid var(--pane-edge);
+	border-top-color: var(--glass-edge);
+	box-shadow: var(--ornament-shadow);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+	.ornament {
+		background-color: var(--surface-2);
+	}
 }
 
 /*

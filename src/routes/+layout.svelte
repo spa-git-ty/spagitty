@@ -22,7 +22,6 @@
 	import NavRail from '$lib/chrome/NavRail.svelte';
 	import ResizeEdges from '$lib/chrome/ResizeEdges.svelte';
 	import { appWindow } from '$lib/chrome/window';
-	import RepoTabs from '$lib/chrome/RepoTabs.svelte';
 	import StatusStrip from '$lib/chrome/StatusStrip.svelte';
 	import TitleBar from '$lib/chrome/TitleBar.svelte';
 	import Toolbar from '$lib/chrome/Toolbar.svelte';
@@ -41,7 +40,6 @@
 	import DialogHost from '$lib/ui/DialogHost.svelte';
 	import NoticeToast from '$lib/ui/NoticeToast.svelte';
 	import { settings as settingsStore } from '$lib/settings/store.svelte';
-	import Splitter from '$lib/ui/Splitter.svelte';
 	import { theme } from '$lib/theme.svelte';
 	import { resumeSession } from '$lib/session';
 	import { workspace } from '$lib/workspace.svelte';
@@ -339,7 +337,7 @@
 	-->
 	<div class="lens">
 		<!--
-			The ground the window paints on: flat `--bg`, `aria-hidden` and
+			The ground the window paints on: the environment (FEAT-082), `aria-hidden` and
 			pointer-transparent, because it is a material property of the window
 			rather than content. It carried the ambient washes until those were
 			taken out, and it stays because FEAT-055 needs it — with the DMABuf
@@ -349,42 +347,33 @@
 		-->
 		<div class="ground" aria-hidden="true"></div>
 
-		<TitleBar />
-		<!-- Its own row, and absent when nothing is open (FEAT-044). -->
-		<RepoTabs />
-		<Toolbar />
-		<div class="main">
-			<NavRail />
-			<Splitter panel="rail" label="Resize the nav rail" />
-			<!--
-				Screens arrive rather than appear (FEAT-053).
-
-				Keyed on the path, so every navigation remounts the screen inside
-				a short upward slide — which is what a rail click already does
-				invisibly. The motion is 140ms and 6px: enough to say "this is a
-				different screen", not enough to wait for.
-
-				`gentleFly` rather than `fly`, and that is a fix rather than a
-				preference (TASK-041). This comment used to claim
-				`prefers-reduced-motion` turned it off in `app.css`. It did not
-				and could not: a Svelte transition is driven from JavaScript,
-				writing a new transform every frame, so there is no CSS
-				transition for the media query to shorten. Somebody who had
-				asked their machine to stop moving things got this slide on
-				every navigation, and a stylesheet rule that could not see it.
-			-->
-			{#key page.url.pathname}
-				<div class="screen-slot" in:gentleFly={{ y: 6, duration: 140 }}>
-					{@render children()}
-				</div>
-			{/key}
-		</div>
 		<!--
-			The window's own bottom edge (FEAT-043). Outside `.main`, so it spans
-			the rail as well as the screen, and after it, so nothing scrolls over
-			it.
+			The spatial shell (FEAT-082): one row above, the rail and the pane,
+			and one row below. The title bar carries the tabs; the status strip
+			carries the toolbar, centred, as an ornament under the pane.
 		-->
-		<StatusStrip />
+		<TitleBar />
+		<div class="stage">
+			<NavRail />
+			<main class="pane">
+				<!--
+					Screens arrive rather than appear (FEAT-053).
+
+					Keyed on the path, so every navigation remounts the screen inside
+					a short upward slide. `gentleFly` rather than `fly`, because a
+					Svelte transition is driven from JavaScript and no stylesheet rule
+					can honour `prefers-reduced-motion` for it (TASK-041).
+				-->
+				{#key page.url.pathname}
+					<div class="screen-slot" in:gentleFly={{ y: 6, duration: 140 }}>
+						{@render children()}
+					</div>
+				{/key}
+			</main>
+		</div>
+		<StatusStrip>
+			<Toolbar />
+		</StatusStrip>
 	</div>
 </div>
 
@@ -452,7 +441,7 @@
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
-		background: var(--bg);
+		background: var(--environment);
 		/* The lens is positioned against this. */
 		position: relative;
 		border-radius: var(--r-window);
@@ -504,14 +493,34 @@
 		outline: none;
 	}
 
-	.main {
+	/*
+	 * The rail and the pane, side by side on the environment (FEAT-082). The gap
+	 * is what makes each an object: with nothing between them they read as one
+	 * surface divided by a line, which is the shell this replaces.
+	 */
+	.stage {
 		flex: 1;
 		min-height: 0;
 		display: flex;
-		overflow: hidden;
-		/* Above the ground layer, below the chrome. */
+		gap: 12px;
+		padding: 4px 14px 0 12px;
+		/* Above the ground layer. The rail's open state sits above the pane. */
 		position: relative;
 		z-index: 1;
+	}
+
+	/*
+	 * The pane. `overflow: hidden` clips every screen to its corner, and
+	 * `isolation` keeps a screen's own stacking inside it — nothing a screen
+	 * raises can climb over the rail.
+	 */
+	.pane {
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		display: flex;
+		overflow: hidden;
+		isolation: isolate;
 	}
 
 	/*
@@ -528,7 +537,7 @@
 		inset: 0;
 		z-index: -1;
 		pointer-events: none;
-		background: var(--bg);
+		background: var(--environment);
 		transform: translateZ(0);
 	}
 
