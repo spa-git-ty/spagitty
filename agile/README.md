@@ -229,6 +229,7 @@ of its own.
 | [TASK-044](items/TASK-044-settings-stops-explaining-itself.md) | Settings stops explaining itself | Settings | Done |
 | [TASK-045](items/TASK-045-a-rail-of-five.md) | A rail of five | chrome | Open |
 | [TASK-046](items/TASK-046-lists-you-can-read.md) | Lists you can read | Working copy, Stash, Diff | Open |
+| [TASK-047](items/TASK-047-a-commit-bar.md) | A commit bar | Working copy (1C) | Open |
 
 ## Skipped identifiers
 

@@ -17,9 +17,10 @@ beforeEach(()=>{
  vi.mocked(api.workingDiff).mockImplementation(async path=>hunks(path));
 });
 afterEach(()=>{view?.destroy();changes.clear();control.reset();});
-it('shows a clean repository and disables an empty commit',async()=>{
+// Nothing to commit: no commit bar at all rather than a dead button (TASK-047).
+it('shows a clean repository and offers no commit',async()=>{
  view=render(Page,{});await vi.waitFor(()=>expect(changes.loaded).toBe(true));
- expect(view.text()).toContain('Nothing to commit');expect((button('Commit') as HTMLButtonElement).disabled).toBe(true);
+ expect(view.text()).toContain('Nothing to commit');expect(button('Commit')).toBeUndefined();expect(view.find('.subject')).toBeNull();
 });
 it('requires a subject before committing the staged file and reports write failures',async()=>{
  vi.mocked(api.workingCopy).mockResolvedValue({staged:[{path:'a.txt',status:'modified'}],unstaged:[],conflicted:[]});

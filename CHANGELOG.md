@@ -37,6 +37,9 @@ stays backward-compatible.
 - The commit detail's **Cherry-pick** and **Revert** work; they were labels
   that did nothing. The status line says the repository is ready once its
   history is on screen, rather than "Loading history…" for the whole session.
+- **A commit bar.** On Working copy, the commit message is one line along the
+  bottom — the summary, *Add description*, amend and Commit — instead of a box
+  over the top half of the diff. The description opens when you ask for it.
 - **A shorter sidebar.** It shows Farm, Graph, Working copy, Branches, Pull
   requests and Settings. Conflicts joins it while something is in conflict.
   Rebase, Log and All repositories are still one click away — the toolbar,

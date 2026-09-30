@@ -12,6 +12,7 @@ import { calls, control } from '../../testing/changes-store.svelte';
 import FileColumn from './FileColumn.svelte';
 import HunkPane from './HunkPane.svelte';
 import MessageBox from './MessageBox.svelte';
+import { changes as changesStore } from '$lib/changes/store.svelte';
 
 function entry(path: string, status: StatusEntry['status'] = 'modified'): StatusEntry {
 	return { path, status };
@@ -369,6 +370,7 @@ describe('HunkPane', () => {
 describe('MessageBox', () => {
 	it('writes the subject and the body into the store', () => {
 		const view = render(MessageBox, {});
+		click(view.get('.text-action'));
 
 		const subject = view.get('.subject') as HTMLInputElement;
 		subject.value = 'A subject';
@@ -386,11 +388,41 @@ describe('MessageBox', () => {
 
 	it('gives the body a height WebKit will honour, so it cannot eat the hunks', () => {
 		const view = render(MessageBox, {});
+		click(view.get('.text-action'));
 		expect(Number((view.get('.body') as HTMLTextAreaElement).rows)).toBe(3);
 		view.destroy();
 
+		// Capped, so a long description scrolls inside itself (TASK-047).
 		const source = readFileSync('src/lib/changes/MessageBox.svelte', 'utf8');
-		expect(source).toMatch(/\.message \{[^}]*max-height: 40%/);
+		expect(source).toMatch(/\.body \{[^}]*max-height: 12em/);
+	});
+
+	/**
+	 * The commit bar (TASK-047). The description used to be a three-line box
+	 * over the diff on every visit; most commits are a summary and nothing else.
+	 */
+	it('keeps the description away until it is asked for', () => {
+		const view = render(MessageBox, {});
+
+		expect(view.find('.body')).toBeNull();
+		expect(view.get('.subject')).not.toBeNull();
+		click(view.get('.text-action'));
+		expect(view.find('.body')).not.toBeNull();
+		// Once open, the way to open it has done its job.
+		expect(view.find('.text-action')).toBeNull();
+
+		view.destroy();
+	});
+
+	it('keeps the description open while it holds anything', () => {
+		changesStore.setBody('Because the cache went stale.');
+		const view = render(MessageBox, {});
+
+		expect((view.get('.body') as HTMLTextAreaElement).value).toBe('Because the cache went stale.');
+		expect(view.find('.text-action')).toBeNull();
+
+		view.destroy();
+		changesStore.setBody('');
 	});
 
 	it('shows a character count only once the subject is long', () => {

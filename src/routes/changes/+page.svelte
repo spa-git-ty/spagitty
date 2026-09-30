@@ -85,24 +85,36 @@
 			<FileColumn />
 			<Splitter panel="changesFiles" label="Resize the file list" />
 			<div class="right-pane">
-				<MessageBox />
 				<HunkPane />
 			</div>
 		</div>
 	{/if}
 
+	<!--
+		The commit bar (TASK-047): the message and the button in one line along
+		the bottom, instead of a message well over the top half of the diff and
+		a button in a strip of its own below it.
+	-->
+	{#if repo.info !== null && changes.loaded && !changes.error && !clean}
 	<footer class="foot">
-		<div class="left">
-			{#if changes.writeError}
-				<span class="note error">{changes.writeError}</span>
-			{:else if work.conflicted.length > 0}
-				<span class="note">Resolve the conflicts before committing.</span>
-			{/if}
-		</div>
-		<Btn primary disabled={!changes.canCommit} onclick={() => changes.commit()}>
-			{commitLabel()}
-		</Btn>
+		{#if changes.writeError}
+			<span class="note error problem">{changes.writeError}</span>
+		{:else if work.conflicted.length > 0}
+			<span class="note problem">Resolve the conflicts before committing.</span>
+		{/if}
+		<MessageBox>
+			{#snippet action()}
+				<Btn primary disabled={!changes.canCommit} onclick={() => changes.commit()}>
+					{commitLabel()}
+				</Btn>
+			{/snippet}
+		</MessageBox>
 	</footer>
+	{:else if changes.writeError}
+		<footer class="foot">
+			<span class="note error problem">{changes.writeError}</span>
+		</footer>
+	{/if}
 </div>
 
 <style>
@@ -114,8 +126,7 @@
 		overflow: hidden;
 	}
 
-	.head,
-	.foot {
+	.head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -132,13 +143,17 @@
 		z-index: 1;
 	}
 
+	/* The bar sits on the pane under the diff; the faintest rule says where
+	   the diff stops. */
 	.foot {
-		padding: 8px 12px;
-		background-color: var(--chrome-veil);
-		border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
-		box-shadow: none;
-		position: relative;
-		z-index: 1;
+		flex: none;
+		display: flex;
+		flex-direction: column;
+		border-top: 1px solid var(--soft);
+	}
+
+	.problem {
+		padding: 8px 16px 0;
 	}
 
 	.left,
