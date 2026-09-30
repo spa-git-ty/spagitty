@@ -216,7 +216,7 @@
 		justify-content: space-between;
 		padding: 10px 12px;
 		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
 		box-shadow: none;
 		position: relative;
 		z-index: 1;
@@ -245,14 +245,22 @@
 		overflow-y: auto;
 	}
 
+	/*
+	 * A line, not a band (FEAT-084): the lists' type size — an annotated
+	 * message was a size above a lightweight tag's summary — no rule, and a
+	 * rounded highlight inset from the pane's edges.
+	 */
 	.row {
 		display: grid;
 		grid-template-columns: minmax(0, 260px) minmax(0, 1fr) 90px auto;
 		align-items: center;
 		gap: 10px;
-		padding: 4px 12px;
-		border-bottom: 1px solid var(--soft);
+		margin: 0 6px;
+		padding: 4px 6px;
+		border-radius: var(--r-button);
 		min-height: 30px;
+		font-size: var(--fs-secondary);
+		transition: background var(--t-fast) var(--ease);
 	}
 
 	/* A lightweight tag carries nothing but a position, so it is dimmed rather
@@ -265,17 +273,27 @@
 		background: var(--hover);
 	}
 
+	/*
+	 * The cell holds to its column (FEAT-084). Name, kind and commit could not
+	 * shrink, so a long name pushed the commit over the message beside it; the
+	 * name now gives way, with an ellipsis, and the rest keep their size.
+	 */
 	.what,
 	.says {
 		display: flex;
 		align-items: baseline;
 		gap: 8px;
 		min-width: 0;
+		overflow: hidden;
 	}
 
-	.name {
+	.what .name {
 		color: var(--accent);
-		flex: none;
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.kind,
@@ -291,11 +309,19 @@
 		white-space: nowrap;
 	}
 
+	/* On the row being looked at (FEAT-084), as the file lists' are. */
 	.acts {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
 		gap: 6px;
+		opacity: 0;
+		transition: opacity var(--t-fast) var(--ease);
+	}
+
+	.row:hover .acts,
+	.row:focus-within .acts {
+		opacity: 1;
 	}
 
 	.create {
@@ -323,7 +349,7 @@
 	.foot {
 		padding: 8px 12px;
 		background-color: var(--chrome-veil);
-		border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+		border-top: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
 		box-shadow: none;
 		position: relative;
 		z-index: 1;

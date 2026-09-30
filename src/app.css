@@ -733,6 +733,13 @@ a {
 	 */
 	--chrome-veil: transparent;
 	--graph-bg: var(--bg);
+	/*
+	 * And their rules (FEAT-084). A screen's header and footer drew a hairline
+	 * against the content, which with no fill on either side was a line across
+	 * one surface. Space separates them here; outside the pane the fallback
+	 * each screen gives keeps the old rule.
+	 */
+	--band-rule: transparent;
 	background-color: var(--bg);
 	border: 1px solid var(--pane-edge);
 	border-top-color: var(--glass-edge);

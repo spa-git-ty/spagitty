@@ -137,6 +137,7 @@ rather than an audit.
 | [FEAT-081](items/FEAT-081-the-graph-resizes-like-a-hand-moves.md) | The graph resizes like a hand moves | Graph | Open |
 | [FEAT-082](items/FEAT-082-a-spatial-shell.md) | A spatial shell | chrome | Open |
 | [FEAT-083](items/FEAT-083-the-content-in-the-spatial-language.md) | The content in the spatial language | Graph, all | Open |
+| [FEAT-084](items/FEAT-084-the-other-screens-in-the-spatial-language.md) | The other screens in the spatial language | 1F, 1K, 1M, 1N, 1O, 1Q, all | Open |
 
 ## Bugs
 

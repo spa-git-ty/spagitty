@@ -227,9 +227,19 @@
 		padding-right: 0;
 	}
 
+	/*
+	 * A row is a line, not a band (FEAT-084): the lists' type size, no rule
+	 * under it, and a rounded highlight inset from the pane's edges — the same
+	 * row the file lists and the graph draw. The inset comes out of the row's
+	 * padding, so the cells stay under their headings.
+	 */
 	.row {
-		border-bottom: 1px solid var(--soft);
 		min-height: 30px;
+		margin: 0 6px;
+		padding-inline: 6px;
+		border-radius: var(--r-button);
+		font-size: var(--fs-secondary);
+		transition: background var(--t-fast) var(--ease);
 	}
 
 	/* Nothing on a merged branch is only there, so it reads as spent — dimmed
@@ -246,6 +256,22 @@
 
 	.row:hover {
 		background: var(--hover);
+	}
+
+	/*
+	 * The actions show on the row being looked at — hovered or holding focus
+	 * (FEAT-084). Two or three buttons on every one of a thousand rows was most
+	 * of what made the table read as crowded. They stay in the row, so the
+	 * keyboard reaches them and the row keeps its height.
+	 */
+	.row .cell.actions {
+		opacity: 0;
+		transition: opacity var(--t-fast) var(--ease);
+	}
+
+	.row:hover .cell.actions,
+	.row:focus-within .cell.actions {
+		opacity: 1;
 	}
 
 	.mark {
@@ -291,6 +317,8 @@
 		right: 0;
 	}
 
+	/* Drawn only while the header is pointed at (FEAT-084), as the graph's
+	   are: at rest, space separates the columns. */
 	.divider::after {
 		content: '';
 		position: absolute;
@@ -298,6 +326,11 @@
 		top: 0;
 		width: 1.5px;
 		height: 100%;
+		background: transparent;
+		transition: background var(--t-fast) var(--ease);
+	}
+
+	.head:hover .divider::after {
 		background: var(--soft);
 	}
 

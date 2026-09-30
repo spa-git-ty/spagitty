@@ -137,7 +137,7 @@
 	.head {
 		padding: 10px 12px;
 		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
 		box-shadow: none;
 		position: relative;
 		z-index: 1;
