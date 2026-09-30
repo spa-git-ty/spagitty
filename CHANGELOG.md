@@ -79,6 +79,8 @@ stays backward-compatible.
   that paints the window, so on a large repository the window stopped
   responding until it finished. It now runs beside it. Switching tabs quickly
   leaves the one you clicked last open.
+- **No pale strip beside the commit detail.** The graph's column header left a
+  band beside the detail card's corner that the card's shadow did not reach.
 - **No box inside the box.** The diff on Working copy, Diff and Stash, the
   sides of a conflict and the Farm's columns each drew a second border, corner
   and shadow inside the window's pane.

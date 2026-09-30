@@ -439,6 +439,19 @@ describe('the soft spatial interface', () => {
 		expect(naming.map((path) => path.replaceAll('\\', '/'))).toEqual(['src/lib/ui/Wordmark.svelte']);
 	});
 
+	/**
+	 * BUG-041: the graph header's pinned half is clear at rest, and takes the
+	 * pane's colour only while the graph is scrolled under it. Opaque at rest,
+	 * it was the one band the detail card's shadow could not fall on.
+	 */
+	it('keeps the pinned header clear until something is under it', () => {
+		const header = readFileSync('src/lib/graph/GraphHeader.svelte', 'utf8');
+		const rest = header.match(/\n\t\.header-frozen \{[^}]*position: absolute[^}]*\}/)?.[0] ?? '';
+		expect(rest).not.toBe('');
+		expect(rest).not.toMatch(/background-color: var\(--bg\)/);
+		expect(header).toMatch(/\.header-frozen\.scrolled \{[^}]*background-color: var\(--bg\)/);
+	});
+
 	it('gives the open tab no drop shadow, only its surface and edge', () => {
 		const tabs = readFileSync('src/lib/chrome/RepoTabs.svelte', 'utf8');
 		expect(tabs).not.toMatch(/\.tab\.active\s*{[^}]*box-shadow/s);

@@ -360,18 +360,27 @@
 		flex: none;
 	}
 
+	/*
+	 * Clear at rest (BUG-041). Nothing is under the pinned half until the graph
+	 * is scrolled sideways, and an opaque band there was the one thing in the
+	 * pane the detail card's shadow could not fall on: a pale strip with hard
+	 * edges beside the card's corner.
+	 */
 	.header-frozen {
 		position: absolute;
 		top: 0;
 		right: 0;
 		bottom: 0;
 		z-index: 3;
-		background-color: var(--bg);
-		transition: box-shadow 0.12s ease;
+		transition:
+			box-shadow 0.12s ease,
+			background-color 0.12s ease;
 	}
 
-	/* The seam, only while the graph is under it — as the rows do. */
+	/* The pane's colour and the seam, only while the graph is under it — as
+	   the rows do. */
 	.header-frozen.scrolled {
+		background-color: var(--bg);
 		box-shadow: -8px 0 14px -4px color-mix(in srgb, var(--umbra) 32%, transparent);
 	}
 
