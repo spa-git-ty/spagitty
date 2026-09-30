@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { click, render } from '../../testing/mount';
 import type { PullRequest } from '$lib/types';
@@ -349,7 +349,9 @@ describe('the promises this screen makes', () => {
 
 		const touching = rust.filter((path) => /\bureq\b/.test(readFileSync(path, 'utf8')));
 
-		expect(touching.map((path) => path.slice(core.length + 1))).toEqual(['forge/http.rs']);
+		expect(touching.map((path) => relative(core, path).split(sep).join('/'))).toEqual([
+			'forge/http.rs'
+		]);
 	});
 
 	it('names every state in words a user of any host would recognise', () => {
