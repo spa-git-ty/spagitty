@@ -1441,16 +1441,25 @@
 		background-image: linear-gradient(var(--selection), var(--selection));
 	}
 
-	/* No rules between the columns (FEAT-083): space separates them. */
+	/*
+	 * No rules between the columns (FEAT-083): space separates them.
+	 *
+	 * The list's own type size, like every other list in the application
+	 * (BUG-036). These cells set none and inherited the body's `--fs-ui`, a
+	 * step above the file lists, the stash, the headers and the refs beside
+	 * them, so the history read as though it came from another application.
+	 */
 	.message {
 		flex: 1;
 		gap: 8px;
 		padding: 0 10px;
+		font-size: var(--fs-secondary);
 	}
 
 	.text {
 		gap: 6px;
 		padding: 0 8px;
+		font-size: var(--fs-secondary);
 	}
 
 	.summary,
