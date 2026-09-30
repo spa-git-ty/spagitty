@@ -35,6 +35,13 @@ impl Fixture {
         // Signing would prompt, and a fixture must never wait for a human.
         fixture.git(&["config", "commit.gpgsign", "false"]);
         fixture.git(&["config", "gc.auto", "0"]);
+        // The machine's line-ending policy stays out of it. Git for Windows
+        // ships `core.autocrlf=true` in its system config, which checks every
+        // file out with CRLF and makes a fixture mean something different on
+        // Windows than everywhere else (BUG-037). A repository's own config
+        // outranks the system's, for `git` and `gix` alike; a test about line
+        // endings sets its own.
+        fixture.git(&["config", "core.autocrlf", "false"]);
         fixture
     }
 

@@ -72,6 +72,9 @@ stays backward-compatible.
 - The test suite passes on Windows. One test compared file paths written with
   `/` against the paths Windows produces with `\`, so it had only ever passed on
   Linux and macOS.
+- The core library's tests pass on Windows. Their test repositories picked up
+  Git for Windows' line-ending setting, so files came back with different line
+  endings than the tests had written.
 
 ## [0.8.1] - 2026-09-13
 
