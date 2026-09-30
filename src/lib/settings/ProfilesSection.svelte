@@ -211,10 +211,12 @@
 		justify-content: space-between;
 	}
 
+	/* The size and weight every other section's heading has (FEAT-084); this
+	   one was a size above and bold, and read as the page's title. */
 	.title {
 		margin: 0;
-		font-size: var(--fs-title);
-		font-weight: 600;
+		font-size: var(--fs-ui);
+		font-weight: inherit;
 		color: var(--ink);
 	}
 

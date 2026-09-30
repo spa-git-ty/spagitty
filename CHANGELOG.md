@@ -29,6 +29,13 @@ stays backward-compatible.
   working copy and the commit detail are floating cards; branch labels are
   capsules and tags keep a shape of their own. The lanes are drawn exactly as
   before.
+- **Every screen in the same language.** Branches, Tags and Reflog are lists
+  like the rest: no line under every row, the same text size, and their
+  buttons appear on the row you point at instead of down every row. Screens no
+  longer draw a line under their header or over their footer. A long tag name
+  ends in "…" instead of running into its message. The Farm's title matches
+  the other screens and its start page is one card, not a card of cards; File
+  history's prompt sits in the middle of the window.
 - **File lists you can read.** Every list of changed files names the file
   first and whole, with its folder after it, instead of cutting the path from
   its start. Each change carries a coloured letter — M, A, D, R, U — in place of

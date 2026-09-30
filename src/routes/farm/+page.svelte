@@ -753,7 +753,7 @@
 		gap: 8px;
 		padding: 10px 12px;
 		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
 		position: relative;
 		z-index: 1;
 	}
@@ -764,6 +764,12 @@
 		align-items: center;
 		gap: 8px;
 		min-width: 0;
+	}
+
+	/* Every other screen names itself at the title size; this one was left at
+	   the body's (FEAT-084). */
+	.title {
+		font-size: var(--fs-title);
 	}
 
 	.body {

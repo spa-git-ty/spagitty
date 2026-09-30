@@ -200,7 +200,7 @@
 		justify-content: space-between;
 		padding: 10px 12px;
 		background-color: var(--chrome-veil);
-		border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
 		box-shadow: none;
 		position: relative;
 		z-index: 1;
@@ -215,9 +215,8 @@
 	}
 
 	.refs {
-		padding: 8px 12px;
+		padding: 4px 12px 8px;
 		flex-wrap: wrap;
-		border-bottom: 1px solid var(--soft);
 	}
 
 	.field {
@@ -232,14 +231,21 @@
 		overflow-y: auto;
 	}
 
+	/*
+	 * A line, not a band (FEAT-084): the lists' type size, no rule, and a
+	 * rounded highlight inset from the pane's edges.
+	 */
 	.row {
 		display: grid;
 		grid-template-columns: 90px 90px 150px minmax(0, 1fr) 90px auto;
 		align-items: center;
 		gap: 10px;
-		padding: 4px 12px;
-		border-bottom: 1px solid var(--soft);
+		margin: 0 6px;
+		padding: 4px 6px;
+		border-radius: var(--r-button);
 		min-height: 30px;
+		font-size: var(--fs-secondary);
+		transition: background var(--t-fast) var(--ease);
 	}
 
 	.row:hover {
@@ -264,11 +270,19 @@
 		color: var(--muted);
 	}
 
+	/* On the row being looked at (FEAT-084), as the file lists' are. */
 	.acts {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
 		gap: 6px;
+		opacity: 0;
+		transition: opacity var(--t-fast) var(--ease);
+	}
+
+	.row:hover .acts,
+	.row:focus-within .acts {
+		opacity: 1;
 	}
 
 	.empty {
@@ -281,7 +295,7 @@
 	.foot {
 		padding: 8px 12px;
 		background-color: var(--chrome-veil);
-		border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+		border-top: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
 		box-shadow: none;
 		position: relative;
 		z-index: 1;

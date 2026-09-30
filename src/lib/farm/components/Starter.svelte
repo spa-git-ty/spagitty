@@ -271,8 +271,9 @@
 		gap: 10px;
 		padding: 14px 16px;
 		border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+		border-top-color: var(--glass-edge);
 		border-radius: var(--r-panel);
-		background-color: var(--surface-veil);
+		background-color: var(--glass-thick);
 	}
 
 	.field {
@@ -330,14 +331,14 @@
 		list-style: none;
 	}
 
+	/* Four steps, not four boxes (FEAT-084): the ordinal and the space between
+	   them are enough to make a sequence, and a box round each one under the
+	   goal's card made a grid of cards in a card. */
 	.step {
 		display: flex;
 		align-items: flex-start;
 		gap: 9px;
-		padding: 10px 12px;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-panel);
-		background-color: var(--surface-veil);
+		padding: 10px 4px;
 	}
 
 	.ordinal {
@@ -378,14 +379,12 @@
 		font-weight: 600;
 	}
 
+	/* A line each, as a list's rows are (FEAT-084); the dot says the state. */
 	.check {
 		display: flex;
 		align-items: center;
 		gap: 9px;
-		padding: 8px 12px;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-row);
-		background-color: var(--stripe);
+		padding: 6px 4px;
 	}
 
 	.dot {

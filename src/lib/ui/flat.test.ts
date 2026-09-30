@@ -373,6 +373,51 @@ describe('the soft spatial interface', () => {
 		expect(files).toMatch(/\.path \{[^}]*font-size: var\(--fs-secondary\)/);
 	});
 
+	/**
+	 * FEAT-084: the other tables are lists too. Their rows take the lists'
+	 * size, carry no rule, highlight as an inset capsule, and show their
+	 * actions only on the row being looked at.
+	 */
+	it('draws the branch, tag and reflog tables as lists', () => {
+		const tables: [string, RegExp][] = [
+			['src/lib/branches/BranchTable.svelte', /\.row \.cell\.actions \{[^}]*opacity: 0/],
+			['src/routes/tags/+page.svelte', /\.acts \{[^}]*opacity: 0/],
+			['src/routes/reflog/+page.svelte', /\.acts \{[^}]*opacity: 0/]
+		];
+		for (const [path, hidden] of tables) {
+			const source = readFileSync(path, 'utf8');
+			const row = source.match(/\n\t\.row \{[^}]*\}/g)?.join('\n') ?? '';
+			expect(row, path).toMatch(/font-size: var\(--fs-secondary\)/);
+			expect(row, path).toMatch(/border-radius: var\(--r-button\)/);
+			expect(row, path).not.toMatch(/border-bottom/);
+			expect(source, path).toMatch(hidden);
+			expect(source, path).toMatch(/\.row:focus-within/);
+		}
+	});
+
+	/** FEAT-084: a long tag name gives way rather than running into the message. */
+	it('keeps a tag name inside its column', () => {
+		const tags = readFileSync('src/routes/tags/+page.svelte', 'utf8');
+		expect(tags).toMatch(/\.what,\s*\.says \{[^}]*overflow: hidden/);
+		expect(tags).toMatch(/\.what \.name \{[^}]*text-overflow: ellipsis/);
+	});
+
+	/**
+	 * FEAT-084: a screen's header and footer rules are one token, which the
+	 * pane clears. Any rule written with the old colour directly would draw a
+	 * line across the pane again.
+	 */
+	it('draws every screen band rule through the token the pane clears', () => {
+		expect(css).toMatch(/\.window-pane \{[^}]*--band-rule: transparent/);
+		for (const path of componentsUnder('src/routes')) {
+			const source = readFileSync(path, 'utf8');
+			for (const line of source.split('\n')) {
+				if (!/border-(top|bottom): 1px solid .*var\(--line\) 55%/.test(line)) continue;
+				expect(line, path).toContain('var(--band-rule,');
+			}
+		}
+	});
+
 	it('gives the open tab no drop shadow, only its surface and edge', () => {
 		const tabs = readFileSync('src/lib/chrome/RepoTabs.svelte', 'utf8');
 		expect(tabs).not.toMatch(/\.tab\.active\s*{[^}]*box-shadow/s);

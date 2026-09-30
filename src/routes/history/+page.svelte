@@ -55,11 +55,14 @@
 </div>
 
 <style>
+	/* The pane's width, not the prompt's (FEAT-084): without `flex: 1` the page
+	   shrank to its card and the card sat at the pane's left edge. */
 	.history-page {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: var(--bg);
 		overflow: hidden;
 	}
 
@@ -71,10 +74,12 @@
 		padding: 32px;
 	}
 
+	/* A card in the ornaments' glass, as the graph's inspector is (FEAT-084). */
 	.prompt-box {
-		background: var(--panel);
-		border: 1px solid var(--line);
-		border-radius: var(--r-field, 6px);
+		background: var(--glass-thick);
+		border: 1px solid var(--pane-edge);
+		border-top-color: var(--glass-edge);
+		border-radius: var(--r-panel);
 		padding: 24px;
 		max-width: 480px;
 		width: 100%;
@@ -103,19 +108,11 @@
 		margin-top: 8px;
 	}
 
+	/* The well every other field is; only its size is this screen's. */
 	.field {
 		flex: 1;
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: 4px;
-		padding: 8px 10px;
+		min-width: 0;
 		font-size: var(--fs-secondary);
-		color: var(--ink);
-		outline: none;
-	}
-
-	.field:focus {
-		border-color: var(--accent);
 	}
 
 	.mono {
