@@ -10,7 +10,8 @@ import { stash } from '$lib/stash/store.svelte';
 import { diff } from '$lib/diff/store.svelte';
 import Page from './+page.svelte';
 let view:Mounted;
-const button=(name:string)=>view.all('button').find(b=>b.textContent?.trim()===name)!;
+// The refs tabs name this screen too (TASK-045); an action is never a tab.
+const button=(name:string)=>view.all('button').find(b=>b.getAttribute('role')!=='tab'&&b.textContent?.trim()===name)!;
 beforeEach(()=>{
  vi.clearAllMocks();stash.clear();control.reset();openRepository();
  vi.mocked(api.stashes).mockResolvedValue([stashEntry(0)]);

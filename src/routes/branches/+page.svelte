@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { untrack } from 'svelte';
 	import BranchTable from '$lib/branches/BranchTable.svelte';
 	import { branches, FILTERS } from '$lib/branches/store.svelte';
@@ -71,7 +72,7 @@
 <div class="screen">
 	<header class="head">
 		<div class="left">
-			<span class="title">Branches</span>
+			<RefTabs />
 			{#if branches.loaded}<span class="note">{counts}</span>{/if}
 			{#if staleness}
 				<span
@@ -266,10 +267,6 @@
 		min-width: 0;
 	}
 
-	.title {
-		font-size: var(--fs-title);
-		white-space: nowrap;
-	}
 
 	.field {
 		background: transparent;

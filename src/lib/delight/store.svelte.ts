@@ -44,6 +44,7 @@ import { emptyRecord, record as fold, type ActorRecord } from './engine';
 import type { ActorRef, DelightEvent } from './events';
 import { play, type Cue } from './sound';
 import { settings } from '$lib/settings/store.svelte';
+import type { Personality } from '$lib/types';
 import { notice } from '$lib/ui/notice.svelte';
 
 const PREFIX = 'spagitty.delight:';
@@ -83,7 +84,7 @@ let showing = $state<{ badge: Badge; who: string } | null>(null);
 let pulse = $state(0);
 
 /** The personality, honouring the default before the settings read lands. */
-function personality(): 'professional' | 'balanced' | 'fullSpagitty' {
+function personality(): Personality {
 	return settings.settings.personality;
 }
 
@@ -149,14 +150,25 @@ export const delight = {
 		return pulse;
 	},
 
-	/** The Hall of Shame is off in Professional; badges are still recorded. */
-	get showsShame(): boolean {
-		return personality() !== 'professional';
+	/**
+	 * Whether the layer shows anything at all (TASK-045).
+	 *
+	 * Off is the default. Badges are still recorded while it is off, so turning
+	 * it on shows what was earned in the meantime rather than starting from
+	 * nothing.
+	 */
+	get on(): boolean {
+		return personality() !== 'off';
 	},
 
-	/** A reward moment interrupts nothing, but Professional does not want one. */
+	/** The Hall of Shame is off in Off and Professional; badges are still recorded. */
+	get showsShame(): boolean {
+		return this.on && personality() !== 'professional';
+	},
+
+	/** A reward moment interrupts nothing, but Off and Professional do not want one. */
 	get showsRewardMoment(): boolean {
-		return personality() !== 'professional';
+		return this.on && personality() !== 'professional';
 	},
 
 	/** Jokes, easter eggs and shame notices. The top level only. */
@@ -220,7 +232,7 @@ export const delight = {
 		persist();
 
 		const cue = CUES[event.kind];
-		if (cue) {
+		if (cue && this.on) {
 			play(cue, settings.settings.sound);
 			pulse += 1;
 		}
@@ -239,6 +251,9 @@ export const delight = {
 	 * notice, and below that it is recorded and left for the badge screen.
 	 */
 	announce(found: Badge, who: string): void {
+		// Off: recorded, and that is all.
+		if (!this.on) return;
+
 		if (found.shame) {
 			if (this.showsJokes) notice.ok(`${found.emoji} ${found.name}`, found.line);
 			return;

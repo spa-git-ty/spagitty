@@ -15,6 +15,7 @@
 	import ProfilesSection from '$lib/settings/ProfilesSection.svelte';
 	import { SECTIONS, settings } from '$lib/settings/store.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import { delight } from '$lib/delight/store.svelte';
 
 	/**
 	 * Identity, accounts, behaviour, appearance, and what this build is made of.
@@ -44,6 +45,12 @@
 	 *
 	 * Nothing here needs an open repository.
 	 */
+	/**
+	 * God mode drives the delight layer by hand, so it is only offered while the
+	 * layer is on (TASK-045). `#godmode` still lands on it.
+	 */
+	const chips = $derived(SECTIONS.filter((section) => section.id !== 'godmode' || delight.on));
+
 	function follow() {
 		settings.showFromHash(location.hash);
 	}
@@ -68,7 +75,7 @@
 	<header class="head">
 		<div class="left">
 			<span class="title">Settings</span>
-			{#each SECTIONS as section (section.id)}
+			{#each chips as section (section.id)}
 				<Chip active={settings.section === section.id} onclick={() => choose(section.id)}>
 					{section.label}
 				</Chip>

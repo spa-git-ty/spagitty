@@ -38,15 +38,18 @@ const FILE: &str = "settings.json";
 /// changes is how loudly an unlock arrives — a line in the corner, a reward
 /// moment, or the full thing with the jokes and the Hall of Shame.
 ///
-/// `Balanced` is the default because a tool with no acknowledgement at all is
-/// the thing this feature exists to fix, and because the level that respects
-/// concentration is one step away rather than the starting point.
+/// `Off` is the default (TASK-045). The author asked for the layer to be kept
+/// and to stay out of the way until somebody turns it on. Badges are still
+/// recorded while it is off, so turning it on later shows what was earned.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Personality {
+    /// Recorded and never shown: no notice, no reward moment, no sound, and no
+    /// Badges or God mode offered.
+    #[default]
+    Off,
     /// Badges, quietly. No reward moment, no jokes, no Hall of Shame.
     Professional,
-    #[default]
     Balanced,
     /// Everything, including the anti-badges and the easter eggs.
     FullSpagitty,
@@ -153,9 +156,8 @@ impl Default for Settings {
             // On, for the reasoning on the field: a node that cannot say who
             // somebody is has not answered the question it is there for.
             fetch_avatars: true,
-            // The middle setting: an unlock is acknowledged, and nothing
-            // blocks or interrupts. See the type for why this one is not off.
-            personality: Personality::Balanced,
+            // Off until asked (TASK-045). See the type.
+            personality: Personality::Off,
             // Silent until asked, like every other preference here that
             // changes what the application does.
             sound: SoundLevel::Off,
@@ -241,11 +243,22 @@ mod tests {
     }
 
     #[test]
-    fn the_delight_layer_is_balanced_and_silent_until_it_is_asked_otherwise() {
-        // Badges are earned at every level; what defaults here is how loudly
-        // one arrives. Sound is the one that must never start on.
-        assert_eq!(Settings::default().personality, Personality::Balanced);
+    fn the_delight_layer_is_off_and_silent_until_it_is_asked_otherwise() {
+        // Badges are recorded at every level; what defaults here is whether
+        // anything is shown (TASK-045). Sound must never start on.
+        assert_eq!(Settings::default().personality, Personality::Off);
         assert_eq!(Settings::default().sound, SoundLevel::Off);
+    }
+
+    #[test]
+    fn a_file_that_already_names_a_personality_keeps_it() {
+        // Only a file that names none — every new install — starts at Off.
+        let settings = parse(r#"{"personality": "balanced"}"#);
+        assert_eq!(settings.personality, Personality::Balanced);
+        assert_eq!(
+            serde_json::to_string(&Personality::Off).expect("serialising"),
+            "\"off\""
+        );
     }
 
     #[test]
@@ -267,7 +280,7 @@ mod tests {
         // whole object — which would quietly undo every other setting in it.
         let settings = parse(r#"{"personality": "loud", "showGitCommands": true}"#);
 
-        assert_eq!(settings.personality, Personality::Balanced);
+        assert_eq!(settings.personality, Personality::default());
         assert!(
             settings.show_git_commands,
             "an unreadable personality must not cost an unrelated toggle"

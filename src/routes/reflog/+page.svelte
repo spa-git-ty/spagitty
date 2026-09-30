@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { onMount, untrack } from 'svelte';
 	import * as api from '$lib/api';
 	import { relativeTime } from '$lib/format';
@@ -46,7 +47,7 @@
 <div class="screen">
 	<header class="head">
 		<div class="left">
-			<span class="title">Reflog</span>
+			<RefTabs />
 			{#if reflog.log}
 				<span class="note">
 					{reflog.log.entries.length}

@@ -9,7 +9,9 @@ beforeEach(()=>{ vi.clearAllMocks();  history.replaceState(null,'','#appearance'
 afterEach(()=>{view?.destroy();});
 it('follows the URL fragment and renders each selected settings section',()=>{
  view=render(Page,{}); expect(settings.section).toBe('appearance');
- for(const section of SECTIONS){
+ // God mode drives the delight layer, which is off by default (TASK-045).
+ expect(view.all('button').some(b=>b.textContent?.trim()==='God mode')).toBe(false);
+ for(const section of SECTIONS.filter(s=>s.id!=='godmode')){
   const button=view.all('button').find(b=>b.textContent?.trim()===section.label)!; click(button);
   expect(settings.section).toBe(section.id); expect(location.hash).toBe(`#${section.id}`);
   expect(view.get('.body').children.length).toBeGreaterThan(0);
