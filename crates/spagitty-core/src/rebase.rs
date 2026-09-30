@@ -151,8 +151,10 @@ pub struct Preview {
 ///
 /// Generated rather than read: running `git rebase -i` to see the file it opens
 /// would start a rebase, which is the thing this screen exists to avoid. The
-/// range is `upstream..HEAD`, oldest first, merges excluded — which is what
-/// `git rebase` itself lists, and what the test compares against.
+/// range is `upstream..HEAD`, oldest first, merges excluded — the commits
+/// `git rebase` itself lists. Where two lines of history run side by side the
+/// order can differ from git's own todo; it is always one git can replay, every
+/// commit after its parent, and it is the list git is handed.
 pub fn todo(repo: &gix::Repository, upstream: &str) -> Result<Todo> {
     let head = repo.head_id().map_err(|_| Error::EmptyRepository)?.detach();
 
@@ -723,14 +725,27 @@ mod tests {
         for row in &todo.rows {
             assert!(!row.summary.starts_with("Merge"), "{}", row.summary);
         }
-        assert_eq!(
-            todo.rows.iter().map(|r| r.id.clone()).collect::<Vec<_>>(),
-            fixture
-                .git(&["rev-list", "--reverse", "--no-merges", "v0.1.0..HEAD"])
-                .lines()
-                .map(str::to_string)
-                .collect::<Vec<String>>()
-        );
+
+        // The commits git would replay. Not in git's order: that compared
+        // equal only while the fixture's commits shared a second (BUG-039).
+        let listed: Vec<String> = todo.rows.iter().map(|r| r.id.clone()).collect();
+        let mut ours = listed.clone();
+        ours.sort();
+        let mut git_lists: Vec<String> = fixture
+            .git(&["rev-list", "--no-merges", "v0.1.0..HEAD"])
+            .lines()
+            .map(str::to_string)
+            .collect();
+        git_lists.sort();
+        assert_eq!(ours, git_lists);
+
+        // In an order git can replay: every commit after its parent.
+        for (at, id) in listed.iter().enumerate() {
+            let parent = fixture.rev(&format!("{id}^"));
+            if let Some(before) = listed.iter().position(|other| *other == parent) {
+                assert!(before < at, "{id} is listed before its parent {parent}");
+            }
+        }
     }
 
     #[test]

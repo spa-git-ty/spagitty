@@ -180,6 +180,7 @@ rather than an audit.
 | [BUG-036](items/BUG-036-the-commit-list-a-size-above-the-rest.md) | The commit list, a size above the rest | Graph (1A) | Fixed |
 | [BUG-037](items/BUG-037-core-tests-read-the-machines-git-config.md) | Core tests read the machine's git config | none | Fixed |
 | [BUG-038](items/BUG-038-interactive-rebase-cannot-start-on-windows.md) | Interactive rebase cannot start on Windows | 1E | Fixed |
+| [BUG-039](items/BUG-039-a-graph-test-that-reads-the-clock.md) | A graph test that reads the clock | none | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
