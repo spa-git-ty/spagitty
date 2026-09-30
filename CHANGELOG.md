@@ -29,6 +29,14 @@ stays backward-compatible.
   working copy and the commit detail are floating cards; branch labels are
   capsules and tags keep a shape of their own. The lanes are drawn exactly as
   before.
+- **File lists you can read.** Every list of changed files names the file
+  first and whole, with its folder after it, instead of cutting the path from
+  its start. Each change carries a coloured letter — M, A, D, R, U — in place of
+  `~` and `?`. Rows are no longer boxes, and stage and discard appear as
+  round buttons on the row you point at. A stash shows what you wrote first.
+- The commit detail's **Cherry-pick** and **Revert** work; they were labels
+  that did nothing. The status line says the repository is ready once its
+  history is on screen, rather than "Loading history…" for the whole session.
 - **A shorter sidebar.** It shows Farm, Graph, Working copy, Branches, Pull
   requests and Settings. Conflicts joins it while something is in conflict.
   Rebase, Log and All repositories are still one click away — the toolbar,

@@ -228,6 +228,7 @@ of its own.
 | [TASK-043](items/TASK-043-the-linux-renderer-and-the-accessibility-bridge.md) | The Linux renderer and the accessibility bridge | — | Backlog |
 | [TASK-044](items/TASK-044-settings-stops-explaining-itself.md) | Settings stops explaining itself | Settings | Done |
 | [TASK-045](items/TASK-045-a-rail-of-five.md) | A rail of five | chrome | Open |
+| [TASK-046](items/TASK-046-lists-you-can-read.md) | Lists you can read | Working copy, Stash, Diff | Open |
 
 ## Skipped identifiers
 

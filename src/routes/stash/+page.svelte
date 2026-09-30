@@ -58,10 +58,6 @@
 		}
 	});
 
-	const count = $derived(
-		stash.entries.length === 1 ? '1 entry' : `${stash.entries.length} entries`
-	);
-
 	const hunkCount = $derived(stash.file?.hunks.length ?? 0);
 
 	/**
@@ -93,8 +89,9 @@
 <div class="screen">
 	<header class="head">
 		<div class="left">
+			<!-- The Stash tab carries the count; a second one beside the tabs read as
+			     the last tab's (TASK-046). -->
 			<RefTabs />
-			{#if stash.loaded}<span class="note">{count}</span>{/if}
 		</div>
 		<div class="right">
 			{#if stash.loading}<span class="note">Reading…</span>{/if}

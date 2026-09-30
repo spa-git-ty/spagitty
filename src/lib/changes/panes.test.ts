@@ -134,11 +134,13 @@ describe('FileColumn', () => {
 		empty.destroy();
 	});
 
-	it('marks untracked files with the untracked glyph', () => {
+	/** The letter git prints in `status --short`, in its own colour (TASK-046). */
+	it('marks untracked files with the untracked badge', () => {
 		control.setWork(work({ unstaged: [entry('new.txt', 'untracked')] }));
 		const view = render(FileColumn, {});
 
-		expect(view.get('.glyph').textContent?.trim()).toBe('?');
+		expect(view.get('.glyph').textContent?.trim()).toBe('U');
+		expect(view.get('.glyph').classList.contains('untracked')).toBe(true);
 		view.destroy();
 	});
 

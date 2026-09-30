@@ -1,13 +1,15 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { clockTime, fullDate, statusGlyph } from '$lib/format';
+	import { clockTime, fullDate } from '$lib/format';
+	import { cherryPick, revertCommit } from '$lib/graph/actions';
 	import { avatars } from '$lib/graph/avatars.svelte';
 	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import FileName from '$lib/ui/FileName.svelte';
 	import type { ChangedFile } from '$lib/types';
 
 	interface Props {
@@ -36,10 +38,6 @@
 		}
 		return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 	});
-
-	/** See the note in FileList.svelte: keeps `.gitignore` from rendering as
-	    `gitignore.` in the head-elided path column. */
-	const LRM = '\u200e';
 
 	function basename(path: string): string {
 		const slash = path.lastIndexOf('/');
@@ -154,10 +152,7 @@
 					{#if grouping === 'path'}
 						{#each detail.files as file (file.path)}
 							<button class="file" onclick={() => onopen?.(detail.id)} title={file.path}>
-								<span class="mono glyph" class:added={file.status === 'added'}>
-									{statusGlyph(file.status)}
-								</span>
-								<span class="path">{LRM + file.path}</span>
+								<FileName path={file.path} status={file.status} />
 							</button>
 						{/each}
 					{:else}
@@ -169,10 +164,7 @@
 									onclick={() => onopen?.(detail.id)}
 									title={file.path}
 								>
-									<span class="mono glyph" class:added={file.status === 'added'}>
-										{statusGlyph(file.status)}
-									</span>
-									<span class="path">{LRM + basename(file.path)}</span>
+									<FileName path={basename(file.path)} status={file.status} />
 								</button>
 							{/each}
 						{/each}
@@ -189,10 +181,20 @@
 				<div class="actions">
 					<span class="note">Commit actions</span>
 					<div class="chips">
-						<Chip title="Not built yet">
-							Merge into {currentBranch ?? 'current branch'}
+						<!--
+							Every chip here does what it says (TASK-046). "Merge into" and
+							"Revert" were chips titled "Not built yet" that did nothing,
+							the dead-control pattern BUG-030 took off the toolbar. Revert is
+							built, and cherry-pick is what one commit is brought across
+							with; both ask before they change anything.
+						-->
+						<Chip
+							title="Apply this commit on top of {currentBranch ?? 'the current branch'}"
+							onclick={() => void cherryPick([detail.id], [detail.short])}
+						>
+							Cherry-pick
 						</Chip>
-						<Chip title="Not built yet">Revert</Chip>
+						<Chip onclick={() => void revertCommit(detail.id, detail.short)}>Revert</Chip>
 						<Chip onclick={() => goto('/rebase')}>Interactive rebase</Chip>
 						<Chip onclick={copySha}>{copied ? 'Copied' : 'Copy SHA'}</Chip>
 					</div>
@@ -317,46 +319,31 @@
 	.files {
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		gap: 1px;
+		margin: 0 -8px;
 	}
 
 	.file {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		min-height: 30px;
+		padding: 0 8px;
+		border-radius: var(--r-button);
 		text-align: left;
 		width: 100%;
 		min-width: 0;
+		transition: background var(--t-fast) var(--ease);
 	}
 
-	.file:hover .path {
-		color: var(--accent);
+	.file:hover {
+		background: var(--hover);
 	}
 
 	.file.indent {
 		padding-left: 10px;
 	}
 
-	.glyph {
-		color: var(--muted);
-		flex: none;
-		width: 8px;
-	}
 
-	.glyph.added {
-		color: var(--accent);
-	}
-
-	/* rtl puts the ellipsis on the head of the path, where it belongs; the LRM
-	   in the markup keeps the text left-to-right. */
-	.path {
-		font-size: var(--fs-secondary);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		direction: rtl;
-		text-align: left;
-	}
 
 	.dir {
 		margin-top: 4px;
