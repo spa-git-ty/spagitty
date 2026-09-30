@@ -46,7 +46,7 @@
 	</header>
 
 	{#if repo.info === null}
-		<p class="note">No repository is open. Remotes belong to one.</p>
+		<p class="note">No repository is open.</p>
 	{:else}
 		{#if remotes.error}
 			<p class="note error">{remotes.error}</p>

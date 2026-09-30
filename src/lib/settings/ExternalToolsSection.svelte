@@ -63,14 +63,13 @@
 	</div>
 
 	{#if loading && !config}
-		<div class="note">Scanning for installed tools on $PATH…</div>
+		<div class="note">Reading…</div>
 	{:else if config}
 		<div class="tool-settings">
 			<!-- Diff Tool -->
 			<div class="field-card">
 				<div class="card-head">
-					<span class="label">Diff Tool (diff.tool)</span>
-					<span class="current mono">{config.diffTool ?? 'none (built-in)'}</span>
+					<span class="label">Diff tool</span>
 				</div>
 				<div class="control-row">
 					<select
@@ -79,10 +78,10 @@
 						value={config.diffTool ?? ''}
 						onchange={(e) => void updateDiffTool(e.currentTarget.value)}
 					>
-						<option value="">None (use Spagitty built-in diff)</option>
+						<option value="">Built-in</option>
 						{#each config.availableDiffTools as tool}
 							<option value={tool.id}>
-								{tool.name} {tool.isInstalled ? '(detected)' : '(not in PATH)'}
+								{tool.name}{tool.isInstalled ? '' : ' (not installed)'}
 							</option>
 						{/each}
 					</select>
@@ -92,8 +91,7 @@
 			<!-- Merge Tool -->
 			<div class="field-card">
 				<div class="card-head">
-					<span class="label">Merge Tool (merge.tool)</span>
-					<span class="current mono">{config.mergeTool ?? 'none (built-in)'}</span>
+					<span class="label">Merge tool</span>
 				</div>
 				<div class="control-row">
 					<select
@@ -102,27 +100,14 @@
 						value={config.mergeTool ?? ''}
 						onchange={(e) => void updateMergeTool(e.currentTarget.value)}
 					>
-						<option value="">None (use Spagitty built-in merge editor)</option>
+						<option value="">Built-in</option>
 						{#each config.availableMergeTools as tool}
 							<option value={tool.id}>
-								{tool.name} {tool.isInstalled ? '(detected)' : '(not in PATH)'}
+								{tool.name}{tool.isInstalled ? '' : ' (not installed)'}
 							</option>
 						{/each}
 					</select>
 				</div>
-			</div>
-		</div>
-
-		<div class="catalogue-section">
-			<h3 class="sub">Detected utilities on $PATH</h3>
-			<div class="tools-grid">
-				{#each config.availableDiffTools as tool}
-					<div class="tool-pill" class:installed={tool.isInstalled}>
-						<span class="status-dot"></span>
-						<span class="tool-name">{tool.name}</span>
-						<span class="tool-cmd mono">{tool.command}</span>
-					</div>
-				{/each}
 			</div>
 		</div>
 	{:else}
@@ -176,14 +161,6 @@
 		font-weight: inherit;
 	}
 
-	.sub {
-		margin: 0;
-		font-size: var(--fs-secondary);
-		font-weight: 600;
-		color: var(--muted);
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-	}
 
 	.scope-toggle {
 		display: flex;
@@ -225,9 +202,6 @@
 
 	/* What is configured now. The accent, because it is the answer to the
 	   question the row is asking. */
-	.current {
-		color: var(--accent);
-	}
 
 	.control-row {
 		display: flex;
@@ -240,60 +214,12 @@
 		font-size: var(--fs-ui);
 	}
 
-	.catalogue-section {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		margin-top: 8px;
-	}
 
-	.tools-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-	}
 
-	.tool-pill {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		background-color: var(--surface-veil);
-		border: 1px solid var(--soft);
-		border-radius: var(--r-field);
-		padding: 5px 10px;
-		font-size: var(--fs-secondary);
-	}
 
 	/* Present or absent, said with the palette's own green rather than a
 	   hard-coded one — the dot is the whole content of the column. */
-	.status-dot {
-		flex: none;
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: var(--muted);
-		opacity: 0.5;
-	}
 
-	.tool-pill.installed .status-dot {
-		background: var(--ok);
-		opacity: 1;
-	}
 
-	.tool-name {
-		width: 160px;
-		flex: none;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
 
-	.tool-cmd {
-		color: var(--muted);
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
 </style>

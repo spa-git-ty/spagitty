@@ -106,11 +106,11 @@ describe('the command log panel', () => {
 		view.destroy();
 	});
 
-	it('says that reads never ran a command, rather than leaving it to be guessed', async () => {
+	it('lists what ran with no footer explaining what did not (TASK-050)', async () => {
 		await commandLog.show();
 		const view = render(CommandLog, {});
 
-		expect(view.get('.foot').textContent).toContain('in-process');
+		expect(view.find('.foot')).toBeNull();
 		view.destroy();
 	});
 
@@ -118,7 +118,7 @@ describe('the command log panel', () => {
 		await commandLog.show();
 		const view = render(CommandLog, {});
 
-		expect(view.get('.empty').textContent).toContain('Nothing has been run yet');
+		expect(view.get('.empty').textContent?.trim()).toBe('Nothing has run yet.');
 		view.destroy();
 	});
 

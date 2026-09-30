@@ -28,26 +28,21 @@
 		<h2 class="heading">You</h2>
 	</header>
 
+	<!-- The scope, as two chips and nothing else (TASK-050): "global" and "this
+	     repository" say what they are, and the second is off with no
+	     repository open, its title saying why. -->
 	<div class="row">
-		<span class="note">Editing</span>
 		<Chip active={settings.scope === 'global'} onclick={() => settings.setScope('global')}>
 			global
 		</Chip>
 		<Chip
 			active={settings.scope === 'local'}
+			disabled={!settings.canEditLocally}
 			onclick={() => settings.setScope('local')}
-			title={settings.canEditLocally
-				? 'This repository only'
-				: 'No repository is open, so there is no repository configuration to edit'}
+			title={settings.canEditLocally ? 'This repository only' : 'No repository is open'}
 		>
 			this repository
 		</Chip>
-		{#if !settings.canEditLocally}
-			<!-- Why the chip beside this is disabled. The chip's own title says
-			     the same thing; this says it without a hover, because a control
-			     that cannot be pressed has to explain itself where it is. -->
-			<span class="note">No repository is open.</span>
-		{/if}
 	</div>
 
 	{#if identity === null}
@@ -80,13 +75,17 @@
 					Clear
 				</Btn>
 			</div>
-			<p class="note under">
-				{#if value.effective === null}
-					{describeOrigin(value.origin)}
-				{:else}
-					In effect: <span class="mono">{value.effective}</span> — {describeOrigin(value.origin)}
-				{/if}
-			</p>
+			<!-- Only when it adds something (TASK-050): a value set in the scope
+			     being edited is already in the field above. -->
+			{#if value.origin !== settings.scope}
+				<p class="note under">
+					{#if value.effective === null}
+						{describeOrigin(value.origin)}
+					{:else}
+						In effect: <span class="mono">{value.effective}</span> — {describeOrigin(value.origin)}
+					{/if}
+				</p>
+			{/if}
 			{#if describeOverride(value, settings.scope)}
 				<p class="note under warn">{describeOverride(value, settings.scope)}</p>
 			{/if}

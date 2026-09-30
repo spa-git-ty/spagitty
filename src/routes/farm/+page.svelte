@@ -351,11 +351,6 @@
 			<div class="empty">
 				<div class="nothing">
 					<h2 class="heading">A farm lives in a repository</h2>
-					<p class="note">
-						Open one and the farm follows it: its goal, its tasks and its agents are
-						stored with that repository, and the branches its agents produce are the
-						branches you read in the graph.
-					</p>
 					<div class="actions">
 						<Btn primary onclick={() => repo.choose()}>Open repository…</Btn>
 					</div>
@@ -371,10 +366,6 @@
 						Look again
 					</Btn>
 				</div>
-				<p class="note">
-					Spagitty runs these; it does not contain them. What is configured here is which of
-					them this repository should use, and what each is good at.
-				</p>
 
 				{#each farmStore.agents as agent (agent.definition.id)}
 					<AgentCard
@@ -400,9 +391,6 @@
 
 				{#if farmStore.scoreboard.length > 0}
 					<h2 class="heading">What has happened here</h2>
-					<p class="note">
-						Counted in this repository, not a claim about which model is better.
-					</p>
 					<div class="table">
 						{#each farmStore.scoreboard as row (row.agent)}
 							<div class="score">
@@ -460,11 +448,6 @@
 
 				{#if farm}
 					<h2 class="heading">Agents at once</h2>
-					<p class="note">
-						What keeps a farm supervisable is how many run at once, not how many tasks
-						there are. Every one of them is a model you are paying for and a worktree on
-						your disk.
-					</p>
 					<div class="chips">
 						{#each [1, 2, 3, 4, 5, 6, 7, 8] as count (count)}
 							<Chip
@@ -481,11 +464,6 @@
 					</div>
 
 					<h2 class="heading">Attempts before a person is needed</h2>
-					<p class="note">
-						A task sent back by verification or review is tried again, up to this many
-						times. The first failure is normal, the second is usually a bad prompt, and
-						the third is a task nobody has understood yet.
-					</p>
 					<div class="chips">
 						{#each [1, 2, 3, 5, 10] as count (count)}
 							<Chip
@@ -503,10 +481,6 @@
 				{/if}
 
 				<h2 class="heading">Verification</h2>
-				<p class="note">
-					Run against every task's worktree before it can be accepted. With none, a task
-					reaches review having been checked by nobody, and the screen says so.
-				</p>
 				<label class="field">
 					<textarea bind:value={verificationText} rows="3" placeholder="cargo test"></textarea>
 				</label>
@@ -636,7 +610,7 @@
 
 				{#if tasks.length === 0}
 					<p class="note">
-						No tasks yet. Write one, or ask an agent to break the goal into some.
+						No tasks yet.
 					</p>
 				{:else}
 					<div class="tasks">

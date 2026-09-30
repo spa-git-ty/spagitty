@@ -75,11 +75,11 @@ describe('before the configuration has been read', () => {
 });
 
 describe('what a commit made now would do', () => {
-	it('shows the switch as on, and says so in git’s own words', () => {
+	it('shows the switch as on, with no line repeating it (TASK-050)', () => {
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('commit.gpgsign = true');
-		expect(view.text()).toContain('on');
+		expect(view.get('button').textContent?.trim()).toBe('on');
+		expect(view.text()).not.toContain('commit.gpgsign');
 
 		view.destroy();
 	});
@@ -88,26 +88,36 @@ describe('what a commit made now would do', () => {
 		state.signing = aSigning({ enabled: false, global: false });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('commit.gpgsign = false');
+		expect(view.get('button').textContent?.trim()).toBe('off');
 
 		view.destroy();
 	});
 
-	it('names the key that would sign, and where it came from', () => {
+	it('names the signer and the key that would sign', () => {
 		const view = render(SigningSection, {});
 
+		expect(view.text()).toContain('GPG');
 		expect(view.text()).toContain('ABCD1234');
-		expect(view.text()).toContain('user.signingkey');
 
 		view.destroy();
 	});
 
-	it('explains what GPG does with no key rather than only noting the absence', () => {
+	it('says nothing about a key GPG does not need', () => {
 		state.signing = aSigning({ key: null, format: 'openPgp' });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('No user.signingkey');
-		expect(view.text()).toContain('committer address');
+		expect(view.text()).not.toContain('user.signingkey');
+
+		view.destroy();
+	});
+
+	it('says where the value comes from when it is not the file being edited', () => {
+		state.scope = 'local';
+		state.signing = aSigning({ origin: 'global', local: null });
+		const view = render(SigningSection, {});
+
+		expect(view.text()).toContain('commit.gpgsign = true');
+		expect(view.text()).toContain('From your global configuration');
 
 		view.destroy();
 	});
@@ -191,7 +201,7 @@ describe('what the chosen scope actually holds', () => {
 		state.signing = aSigning({ global: true });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('Global holds');
+		expect(view.text()).toContain('Global:');
 
 		view.destroy();
 	});
@@ -201,30 +211,18 @@ describe('what the chosen scope actually holds', () => {
 		state.signing = aSigning({ local: true });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('This repository holds');
+		expect(view.text()).toContain('This repository:');
 
 		view.destroy();
 	});
 
-	it('says a scope that holds nothing holds nothing', () => {
-		// The "In effect" line above already names where the live value came
-		// from, so this line only has to say that it did not come from here.
+	it('offers nothing to clear in a file that holds nothing (TASK-050)', () => {
 		state.scope = 'local';
 		state.signing = aSigning({ local: null });
 		const view = render(SigningSection, {});
 
-		expect(view.text()).toContain('This repository holds nothing');
-
-		view.destroy();
-	});
-
-	it('cannot clear a file that has nothing in it to clear', () => {
-		state.scope = 'local';
-		state.signing = aSigning({ local: null });
-		const view = render(SigningSection, {});
-
-		const clear = view.all('button').find((b) => b.textContent?.includes('Clear'));
-		expect(clear?.hasAttribute('disabled')).toBe(true);
+		expect(view.text()).not.toContain('This repository:');
+		expect(view.all('button').some((b) => b.textContent?.includes('Clear'))).toBe(false);
 
 		view.destroy();
 	});

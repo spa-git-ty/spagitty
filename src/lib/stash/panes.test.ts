@@ -162,7 +162,7 @@ describe('StashList', () => {
 		const view = render(StashList, {});
 
 		expect(view.text()).toContain('Nothing is stashed');
-		expect(view.text()).toContain('puts your uncommitted work aside');
+		expect(view.text()).not.toContain('puts your uncommitted work aside');
 
 		view.destroy();
 	});

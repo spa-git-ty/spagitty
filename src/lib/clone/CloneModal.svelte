@@ -103,11 +103,6 @@
 			</div>
 
 			<footer class="foot">
-				<span class="note">
-					Cloning goes through <span class="mono">git</span>, so your credential helper and
-					keychain work as they do on the command line. Spagitty never asks for a password
-					itself.
-				</span>
 				<span class="spacer"></span>
 				{#if clone.running}
 					<Btn onclick={() => clone.cancel()}>Stop</Btn>

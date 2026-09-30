@@ -69,12 +69,7 @@
 		<div class="results">
 			{#if search.error}
 				<p class="note error">{search.error}</p>
-			{:else if !search.ran}
-				<p class="note">
-					Search by author, message, path or date. Filters combine — every one you add
-					narrows what is left.
-				</p>
-			{:else if search.count === 0 && !search.running}
+			{:else if search.ran && search.count === 0 && !search.running}
 				<p class="note">
 					Nothing matched{#if search.narrowestApplied}, and
 					<span class="mono">{search.narrowestApplied}</span> is the narrowest filter

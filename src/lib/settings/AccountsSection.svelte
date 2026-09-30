@@ -42,9 +42,6 @@
 <section class="section" id="accounts">
 	<header>
 		<h2 class="heading">Accounts</h2>
-		<span class="note">
-			{accounts.length === 0 ? 'No account is connected.' : 'Connected.'}
-		</span>
 	</header>
 
 	{#each accounts as account (account.host + account.user)}
@@ -93,22 +90,10 @@
 	<!--
 		Scopes, because nobody can guess them; everything else was prose
 		(TASK-044).
-
-		The privacy paragraph before this was five sentences and it was five
-		sentences of reassurance. What it actually said — read-only, host you
-		named, keychain, deleted on disconnect — is four words a piece and fits
-		on one line. A reader who wants the argument can hover.
 	-->
 	<p class="note">
 		Read-only token. Fine-grained: <span class="mono">Pull requests: read</span> +
 		<span class="mono">Metadata: read</span>. Classic: <span class="mono">repo</span>.
-	</p>
-
-	<p
-		class="note"
-		title="Spagitty uploads no repository. A connected account adds one request — to the host you named, with the token you issued, for pull requests you can already see in a browser. It never approves, merges or comments. The only other request is the update check under Behaviour."
-	>
-		Read-only, to the host you named. Token in the keychain; disconnecting deletes it.
 	</p>
 </section>
 

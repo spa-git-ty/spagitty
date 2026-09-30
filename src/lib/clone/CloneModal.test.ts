@@ -165,13 +165,12 @@ describe('CloneModal', () => {
 		mounted.destroy();
 	});
 
-	it('says Spagitty never asks for a password itself', async () => {
-		// Criterion 5's honest half: credentials come from a helper or the clone
-		// fails with git's message. Spagitty collects no passwords.
+	it('asks for no password, and says nothing about not asking (TASK-050)', async () => {
 		clone.show();
 		const mounted = render(CloneModal, {});
 
-		expect(mounted.text()).toContain('never asks for a password');
+		expect(mounted.find('input[type="password"]')).toBeNull();
+		expect(mounted.text()).not.toContain('never asks for a password');
 
 		mounted.destroy();
 	});

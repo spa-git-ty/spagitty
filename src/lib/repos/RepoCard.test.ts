@@ -91,7 +91,6 @@ describe('RepoCard', () => {
 		const view = render(RepoCard, { card: card({ present: false }) });
 
 		expect(view.text()).toContain('Not here any more');
-		expect(view.text()).toContain('Spagitty has not touched it either way');
 		const open = view.all('button').find((b) => b.textContent?.includes('Open'));
 		expect((open as HTMLButtonElement).disabled).toBe(true);
 		// The path stays visible: it is the only clue to where it went.

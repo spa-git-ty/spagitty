@@ -29,9 +29,6 @@
 		<div class="empty-prompt">
 			<div class="prompt-box">
 				<h2 class="title">File History & Blame</h2>
-				<p class="desc">
-					Inspect the commit evolution and line-by-line attribution of any file in the repository.
-				</p>
 				<form
 					class="input-form"
 					onsubmit={(e) => {
@@ -95,12 +92,6 @@
 		color: var(--ink);
 	}
 
-	.desc {
-		margin: 0;
-		font-size: var(--fs-secondary);
-		color: var(--muted);
-		line-height: 1.4;
-	}
 
 	.input-form {
 		display: flex;

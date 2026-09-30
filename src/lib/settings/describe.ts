@@ -91,20 +91,20 @@ export function matching(dependencies: Dependency[], query: string): Dependency[
 export function describeSigningProblem(problem: SigningProblem): string {
 	switch (problem.kind) {
 		case 'missingProgram':
-			return `Signing is on, but ${problem.detail} could not be run. Commits will fail until it is installed or gpg.program points at one that is.`;
+			return `${problem.detail} could not be run, so signed commits will fail.`;
 		case 'noSigningKey':
-			return 'Signing is on and set to use an ssh key, but user.signingkey is not set. Unlike GPG, ssh has no address to find a key by, so there is nothing for it to fall back to.';
+			return 'Signing with SSH needs user.signingkey.';
 	}
 }
 
-/** Which machinery git would sign with, named the way its config names it. */
+/** Which machinery git would sign with, by the name people know it by. */
 export function describeSigningFormat(format: SigningFormat): string {
 	switch (format) {
 		case 'openPgp':
-			return 'GPG (gpg.format is openpgp, git’s default)';
+			return 'GPG';
 		case 'ssh':
-			return 'an ssh key (gpg.format is ssh)';
+			return 'SSH';
 		case 'x509':
-			return 'S/MIME (gpg.format is x509)';
+			return 'S/MIME';
 	}
 }

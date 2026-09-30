@@ -32,7 +32,6 @@
 		<BrandMark size={36} />
 		<div>
 			<h2 class="heading">Spagitty · About &amp; License</h2>
-			<span class="note">This build, and every dependency in it.</span>
 		</div>
 	</header>
 
@@ -44,15 +43,6 @@
 		<dt class="note">License</dt>
 		<dd>{about?.license ?? version.license}</dd>
 	</dl>
-
-	<!-- The licence. Why the commit matters is a hover (TASK-044): it is an
-	     argument, not a fact anybody is scanning for. -->
-	<p
-		class="note"
-		title="The commit above identifies the source this binary was built from, so the corresponding source can be obtained for this exact build."
-	>
-		Free software under the GNU General Public License, version 3 or later.
-	</p>
 
 	<h3 class="heading">Dependency licenses</h3>
 
@@ -117,12 +107,6 @@
 			</section>
 		</div>
 
-		<p
-			class="note"
-			title="Generated at build time from Cargo.lock and package-lock.json. The tools that build and test Spagitty are not linked into it and are not listed."
-		>
-			What is linked into this binary.
-		</p>
 	{/if}
 
 	<p class="note trademark">

@@ -82,7 +82,7 @@
 				</li>
 			{:else}
 				<li class="empty note">
-					Nothing has been run yet. This fills as Spagitty executes commands.
+					Nothing has run yet.
 				</li>
 			{/each}
 		</ol>
@@ -93,10 +93,6 @@
 			hiding what it did, when in fact reading history never runs `git` at
 			all.
 		-->
-		<footer class="note foot">
-			Reads — history, refs, diffs, status — are answered in-process and have no command
-			line. This lists what was executed.
-		</footer>
 	</section>
 {/if}
 
@@ -213,8 +209,4 @@
 		padding: 10px;
 	}
 
-	.foot {
-		padding: 6px 10px;
-		border-top: 1px solid var(--line);
-	}
 </style>

@@ -230,10 +230,10 @@ describe('ResultRows', () => {
 });
 
 describe('BlameStrip', () => {
-	it('says what it is for before it has been asked anything', () => {
+	it('shows nothing before it has been asked anything (TASK-050)', () => {
 		const view = render(BlameStrip, {});
 
-		expect(view.text()).toContain('who last touched each line');
+		expect(view.text()).not.toContain('who last touched each line');
 		view.destroy();
 	});
 

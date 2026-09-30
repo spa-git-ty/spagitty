@@ -146,12 +146,12 @@ describe('the section index and the screen agree', () => {
 });
 
 describe('IdentitySection', () => {
-	it('shows each value and which file it is coming from', async () => {
+	it('shows each value in its field, with no line repeating where it came from (TASK-050)', async () => {
 		await settings.load();
 		const mounted = render(IdentitySection, {});
 
-		expect(mounted.text()).toContain('Ada Lovelace');
-		expect(mounted.text()).toContain('From your global configuration.');
+		expect((mounted.get('#identity-name') as HTMLInputElement).value).toBe('Ada Lovelace');
+		expect(mounted.text()).not.toContain('From your global configuration.');
 
 		mounted.destroy();
 	});
@@ -183,12 +183,16 @@ describe('IdentitySection', () => {
 		mounted.destroy();
 	});
 
-	it('says why the repository scope is not on offer with no repository open', async () => {
+	it('turns the repository scope off with no repository open, and says why on it', async () => {
 		identity.mockResolvedValue(anIdentity({ repository: false }));
 		await settings.load();
 		const mounted = render(IdentitySection, {});
+		const local = mounted
+			.all('button')
+			.find((button) => button.textContent?.includes('this repository'));
 
-		expect(mounted.text()).toContain('No repository is open');
+		expect(local?.hasAttribute('disabled')).toBe(true);
+		expect(local?.getAttribute('title')).toBe('No repository is open');
 
 		mounted.destroy();
 	});
@@ -339,10 +343,12 @@ describe('AppearanceSection', () => {
 });
 
 describe('AccountsSection', () => {
-	it('says no account is connected, and offers the two fields that connect one', () => {
+	it('lists nothing with no account connected, and offers the two fields that connect one', () => {
 		const mounted = render(AccountsSection, {});
 
-		expect(mounted.text()).toContain('No account is connected');
+		expect(
+			mounted.all('button').some((button) => button.textContent?.includes('Disconnect'))
+		).toBe(false);
 		expect(mounted.get('#account-host')).toBeTruthy();
 		expect(mounted.get('#account-token')).toBeTruthy();
 		expect(mounted.text()).not.toMatch(/FEAT-\d/);
@@ -383,7 +389,6 @@ describe('AccountsSection', () => {
 
 		expect(mounted.text()).toContain('ada');
 		expect(mounted.text()).toContain('github.com');
-		expect(mounted.text()).toContain('Connected.');
 		expect(
 			mounted.all('button').some((button) => button.textContent?.includes('Disconnect'))
 		).toBe(true);
@@ -391,15 +396,12 @@ describe('AccountsSection', () => {
 		mounted.destroy();
 	});
 
-	it('says what leaves the machine, rather than that nothing does', () => {
-		// The promise narrowed when FEAT-017 landed. A sentence that stayed
-		// absolute would be a sentence that had become false.
+	it('says which token scopes it needs, and nothing more (TASK-050)', () => {
 		const mounted = render(AccountsSection, {});
 		const text = readable(mounted);
 
-		expect(text).toContain('uploads no repository');
-		expect(text).toContain('keychain');
-		expect(text).toMatch(/never approves, merges or comments/);
+		expect(text).toContain('Pull requests: read');
+		expect(text).not.toContain('uploads no repository');
 
 		mounted.destroy();
 	});
@@ -483,10 +485,11 @@ describe('UpdateSection', () => {
 	// found would otherwise still be on screen for the next one.
 	beforeEach(() => settings.clearState());
 
-	it('says nothing has been checked before anything has', () => {
+	it('shows no result before anything has been checked', () => {
 		const mounted = render(UpdateSection, {});
 
-		expect(mounted.text()).toContain('Not checked yet');
+		expect(mounted.text()).not.toContain('Up to date');
+		expect(mounted.text()).not.toContain('has been released');
 		mounted.destroy();
 	});
 
@@ -496,7 +499,6 @@ describe('UpdateSection', () => {
 		const mounted = render(UpdateSection, {});
 		const text = readable(mounted);
 
-		expect(text).toContain('No account, no identifier');
 		expect(text).toContain('Turning it off stops every request');
 
 		mounted.destroy();

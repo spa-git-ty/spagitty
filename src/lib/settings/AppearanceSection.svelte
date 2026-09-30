@@ -76,7 +76,6 @@
 	</header>
 
 	<div class="row">
-		<span class="note label">Mode</span>
 		{#each MODES as option (option.id)}
 			<Chip
 				active={!following && theme.mode === option.id}
@@ -104,7 +103,6 @@
 
 	{#if theme.desktopAvailable}
 		<div class="row">
-			<span class="note label">Desktop</span>
 			<Chip
 				active={desktop}
 				title="Take the colours from the desktop's own theme, and follow it as it changes"
@@ -119,16 +117,10 @@
 					above it says nothing about which colours these are.
 				-->
 				<span class="note">{theme.desktopName ?? 'the desktop palette'}</span>
-			{:else}
-				<span class="note">Colours from {theme.desktopName ?? 'the desktop'}.</span>
 			{/if}
 		</div>
 	{/if}
 
-	<div class="row">
-		<span class="note label">Theme</span>
-		<span class="note">{theme.label}</span>
-	</div>
 
 	<div class="families">
 		{#each swatches as family (family.id)}
@@ -171,9 +163,6 @@
 				{option.label}
 			</Chip>
 		{/each}
-		<span class="note">
-			{DENSITIES.find((option) => option.id === density.id)?.note}
-		</span>
 	</div>
 
 	<div class="hr"></div>
@@ -192,7 +181,6 @@
 		/>
 		<span class="mono muted reading">{Math.round(scale.text * 100)}%</span>
 		<Chip onclick={() => scale.setText(1)}>Reset</Chip>
-		<span class="note">Type and row height.</span>
 	</div>
 
 	<div class="row">
@@ -205,18 +193,11 @@
 			step={ZOOM_STEP}
 			value={scale.zoom}
 			aria-label="Interface zoom"
+			title="Also {mod()} with +, − or 0, from anywhere"
 			oninput={(event) => scale.setZoom(Number(event.currentTarget.value))}
 		/>
 		<span class="mono muted reading">{Math.round(scale.zoom * 100)}%</span>
 		<Chip onclick={() => scale.setZoom(1)}>Reset</Chip>
-		<!--
-			The one thing here a person cannot work out by dragging the slider:
-			that the same control has a keyboard shortcut, from anywhere.
-		-->
-		<span class="note">
-			Everything. <span class="mono">{mod()}</span> with <span class="mono">+</span>,
-			<span class="mono">−</span> or <span class="mono">0</span>.
-		</span>
 	</div>
 </section>
 
