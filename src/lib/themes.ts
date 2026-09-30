@@ -55,6 +55,7 @@
 export type Mode = 'light' | 'dark';
 
 export type FamilyId =
+	| 'pomodoro'
 	| 'catppuccin'
 	| 'dracula'
 	| 'tokyo-night'
@@ -112,6 +113,49 @@ export interface Family {
 	light: Variant;
 	dark: Variant;
 }
+
+/**
+ * Pomodoro, by day — Spagitty's own family (FEAT-086), built from the brand
+ * (FEAT-085): the tomato as the accent, basil, saffron, aubergine and sky for
+ * the lanes, on warm cream. Danger is crimson rather than red, so a
+ * destructive button is never read as the accent.
+ */
+const GIORNO: Palette = {
+	bg: '#fbf7f1',
+	panel: '#f3ece2',
+	ink: '#2a1f1a',
+	muted: 'rgba(42, 31, 26, 0.7)',
+	line: 'rgba(42, 31, 26, 0.24)',
+	soft: 'rgba(42, 31, 26, 0.1)',
+	placeholder: 'rgba(42, 31, 26, 0.32)',
+	accent: '#b8321f',
+	onAccent: '#ffffff',
+	danger: '#b3124a',
+	warn: '#9a5b00',
+	ok: '#2f7d45',
+	selection: 'rgba(184, 50, 31, 0.12)',
+	stripe: 'rgba(42, 31, 26, 0.04)',
+	lanes: ['#c23b22', '#2f8a52', '#a86a00', '#6c4fa3', '#2f6fb0']
+};
+
+/** Pomodoro, by night: the same hues, lit, on warm charcoal. */
+const NOTTE: Palette = {
+	bg: '#1c1613',
+	panel: '#161110',
+	ink: '#f3e9dd',
+	muted: 'rgba(243, 233, 221, 0.62)',
+	line: 'rgba(243, 233, 221, 0.22)',
+	soft: 'rgba(243, 233, 221, 0.1)',
+	placeholder: 'rgba(243, 233, 221, 0.28)',
+	accent: '#f2715a',
+	onAccent: '#2a0e07',
+	danger: '#ff5c7c',
+	warn: '#f0b54a',
+	ok: '#7cc68d',
+	selection: 'rgba(242, 113, 90, 0.18)',
+	stripe: 'rgba(243, 233, 221, 0.045)',
+	lanes: ['#f2715a', '#7cc68d', '#f0b54a', '#a58bd8', '#6aa7e0']
+};
 
 /** Catppuccin Latte. */
 const LATTE: Palette = {
@@ -485,6 +529,12 @@ const EVERFOREST_DARK: Palette = {
  */
 export const FAMILIES: Family[] = [
 	{
+		id: 'pomodoro',
+		name: 'Pomodoro',
+		light: { name: 'Giorno', palette: GIORNO },
+		dark: { name: 'Notte', palette: NOTTE }
+	},
+	{
 		id: 'catppuccin',
 		name: 'Catppuccin',
 		light: { name: 'Latte', palette: LATTE },
@@ -541,7 +591,7 @@ export const FAMILIES: Family[] = [
  * first paint — before any JavaScript has run — is already the default theme
  * rather than a flash of something else.
  */
-export const DEFAULT_FAMILY: FamilyId = 'catppuccin';
+export const DEFAULT_FAMILY: FamilyId = 'pomodoro';
 
 export function isFamily(value: string): value is FamilyId {
 	return FAMILIES.some((family) => family.id === value);

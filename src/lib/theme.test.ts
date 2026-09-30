@@ -125,6 +125,35 @@ describe('init', () => {
 		expect(theme.mode).toBe('dark');
 	});
 
+	it('moves the old default, Catppuccin, to Pomodoro once (FEAT-086)', () => {
+		const store = stubStorage({ [FAMILY_KEY]: 'catppuccin', [MODE_KEY]: 'dark' });
+		stubPrefersDark(false);
+
+		theme.init();
+
+		expect(theme.family).toBe('pomodoro');
+		expect(theme.mode).toBe('dark');
+		expect(store.get(FAMILY_KEY)).toBe('pomodoro');
+	});
+
+	it('keeps Catppuccin chosen after the move', () => {
+		stubStorage({ [FAMILY_KEY]: 'catppuccin', 'spagitty.theme.pomodoro': '1' });
+		stubPrefersDark(false);
+
+		theme.init();
+
+		expect(theme.family).toBe('catppuccin');
+	});
+
+	it('leaves every other stored family where it is', () => {
+		stubStorage({ [FAMILY_KEY]: 'nord' });
+		stubPrefersDark(false);
+
+		theme.init();
+
+		expect(theme.family).toBe('nord');
+	});
+
 	it('still honours a mode stored before families existed', () => {
 		// The key has not changed, so an existing install keeps its light or
 		// dark and gains the default family rather than losing its setting.

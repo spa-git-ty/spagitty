@@ -111,9 +111,9 @@ const TOKENS = [
 ] as const;
 
 describe('the set', () => {
-	it('is eight families, each with a light and a dark variant', () => {
-		expect(FAMILIES).toHaveLength(8);
-		expect(ALL).toHaveLength(16);
+	it('is nine families, each with a light and a dark variant', () => {
+		expect(FAMILIES).toHaveLength(9);
+		expect(ALL).toHaveLength(18);
 
 		for (const family of FAMILIES) {
 			expect(family.light.name).not.toBe('');
@@ -126,6 +126,7 @@ describe('the set', () => {
 		const names = FAMILIES.map((family) => `${family.light.name}/${family.dark.name}`);
 
 		expect(names).toEqual([
+			'Giorno/Notte',
 			'Latte/Mocha',
 			'Alucard/Dracula',
 			'Day/Night',

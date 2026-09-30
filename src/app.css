@@ -6,8 +6,8 @@
  * The token *structure* is fixed by the design handoff — bg, panel, ink, muted,
  * line, soft, placeholder, accent, selection, stripe, plus five lane colors.
  *
- * The values below are the **default family's** palettes — Catppuccin Latte and
- * Mocha — and they exist for one frame: they are what paints before any
+ * The values below are the **default family's** palettes — Pomodoro Giorno and
+ * Notte — and they exist for one frame: they are what paints before any
  * JavaScript has run. Every palette, including these two, lives in
  * src/lib/themes.ts, and theme.svelte.ts writes the chosen one onto <html> as
  * inline custom properties, which override everything here. Editing a colour in
@@ -33,16 +33,16 @@
 }
 
 :root {
-	--bg: #eff1f5;
-	--panel: #e6e9ef;
-	--ink: #4c4f69;
-	--muted: rgba(76, 79, 105, 0.72);
-	--line: rgba(76, 79, 105, 0.26);
-	--soft: rgba(76, 79, 105, 0.12);
-	--placeholder: rgba(76, 79, 105, 0.3);
-	--accent: #c05621;
-	--selection: rgba(192, 86, 33, 0.14);
-	--stripe: rgba(76, 79, 105, 0.05);
+	--bg: #fbf7f1;
+	--panel: #f3ece2;
+	--ink: #2a1f1a;
+	--muted: rgba(42, 31, 26, 0.7);
+	--line: rgba(42, 31, 26, 0.24);
+	--soft: rgba(42, 31, 26, 0.1);
+	--placeholder: rgba(42, 31, 26, 0.32);
+	--accent: #b8321f;
+	--selection: rgba(184, 50, 31, 0.12);
+	--stripe: rgba(42, 31, 26, 0.04);
 
 	/*
 	 * What a result means, said in colour.
@@ -54,15 +54,15 @@
 	 * green, and they are checked against the background the same way the
 	 * accent is.
 	 */
-	--danger: #d20f39;
-	--warn: #bc6a00;
-	--ok: #2e7d1f;
+	--danger: #b3124a;
+	--warn: #9a5b00;
+	--ok: #2f7d45;
 
-	--lane-1: #1e66f5;
-	--lane-2: #8839ef;
-	--lane-3: #d20f39;
-	--lane-4: #179299;
-	--lane-5: #2e7d1f;
+	--lane-1: #c23b22;
+	--lane-2: #2f8a52;
+	--lane-3: #a86a00;
+	--lane-4: #6c4fa3;
+	--lane-5: #2f6fb0;
 
 	/* Type scale (+20%) */
 	--fs-ui: 15.6px;
@@ -142,12 +142,12 @@
 }
 
 :root[data-theme='dark'] {
-	--bg: #1e1e2e;
-	--panel: #181825;
-	--ink: #cdd6f4;
-	--muted: rgba(205, 214, 244, 0.6);
-	--line: rgba(205, 214, 244, 0.24);
-	--soft: rgba(205, 214, 244, 0.11);
+	--bg: #1c1613;
+	--panel: #161110;
+	--ink: #f3e9dd;
+	--muted: rgba(243, 233, 221, 0.62);
+	--line: rgba(243, 233, 221, 0.22);
+	--soft: rgba(243, 233, 221, 0.1);
 
 	/*
 	 * Dark reverses which half does the work. The edge has to be *lighter* than
@@ -175,20 +175,20 @@
 	 * becoming a rule.
 	 */
 	--shadow-edge: rgba(205, 214, 244, 0.11);
-	--placeholder: rgba(205, 214, 244, 0.26);
-	--accent: #eeb04d;
-	--selection: rgba(238, 176, 77, 0.18);
-	--stripe: rgba(205, 214, 244, 0.05);
-	--on-accent: #1e1e2e;
-	--danger: #f38ba8;
-	--warn: #f9e2af;
-	--ok: #a6e3a1;
+	--placeholder: rgba(243, 233, 221, 0.28);
+	--accent: #f2715a;
+	--selection: rgba(242, 113, 90, 0.18);
+	--stripe: rgba(243, 233, 221, 0.045);
+	--on-accent: #2a0e07;
+	--danger: #ff5c7c;
+	--warn: #f0b54a;
+	--ok: #7cc68d;
 
-	--lane-1: #89b4fa;
-	--lane-2: #cba6f7;
-	--lane-3: #f5c2e7;
-	--lane-4: #fab387;
-	--lane-5: #a6e3a1;
+	--lane-1: #f2715a;
+	--lane-2: #7cc68d;
+	--lane-3: #f0b54a;
+	--lane-4: #a58bd8;
+	--lane-5: #6aa7e0;
 }
 
 /*

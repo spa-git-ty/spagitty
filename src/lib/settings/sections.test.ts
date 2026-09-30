@@ -100,7 +100,7 @@ fetchAvatars: false,
 	});
 	licenses.mockResolvedValue(LIST);
 	about.mockResolvedValue({ version: '0.1.0', commit: 'abc1234', license: 'GPL-3.0-or-later' });
-	theme.setFamily('catppuccin');
+	theme.setFamily('pomodoro');
 	theme.setMode('light');
 });
 
@@ -299,7 +299,7 @@ describe('AppearanceSection', () => {
 	it('applies a family when it is chosen', () => {
 		const mounted = render(AppearanceSection, {});
 
-		click(mounted.all('.family')[1]);
+		click(mounted.all('.family')[2]);
 
 		expect(theme.family).toBe('dracula');
 		expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
@@ -332,7 +332,7 @@ describe('AppearanceSection', () => {
 		const mounted = render(AppearanceSection, {});
 
 		const first = mounted.all('.family')[0].querySelector('.chip-colour') as HTMLElement;
-		expect(first.style.background).toBe(paletteOf('catppuccin', 'dark').bg);
+		expect(first.style.background).toBe(paletteOf('pomodoro', 'dark').bg);
 
 		mounted.destroy();
 	});
