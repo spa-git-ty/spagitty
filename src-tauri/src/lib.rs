@@ -157,6 +157,7 @@ pub fn run() {
             commands::review_summaries,
             commands::review_checkout,
             commands::review_files,
+            commands::review_conflicts,
             commands::review_file,
             commands::review_worktree,
             commands::review_state,

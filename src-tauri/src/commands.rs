@@ -25,6 +25,7 @@ use spagitty_core::rebase::{self, Edit, Preview, Todo};
 use spagitty_core::record::{self, Executed};
 use spagitty_core::reflog;
 use spagitty_core::refs::RefIndex;
+use spagitty_core::remerge;
 use spagitty_core::remotes;
 use spagitty_core::repo::{self, RepoInfo, RepoSummary};
 use spagitty_core::search::Query;
@@ -1815,6 +1816,28 @@ pub async fn review_checkout<R: Runtime>(
             host: kind.label().to_string(),
             detail: "the pull request's head was not fetched".into(),
         })
+    })
+    .await
+}
+
+/// What a pull request's merges wrote while resolving conflicts (FEAT-092).
+///
+/// Each merge is re-done by git, which takes a while on a large one, so the
+/// session is let go first, as for the fetch.
+#[tauri::command]
+pub async fn review_conflicts(
+    state: State<'_, AppState>,
+    merge_base: String,
+    head: String,
+    target: String,
+) -> Result<remerge::ConflictFixes> {
+    let (dir, shared) = {
+        let guard = state.session.lock().expect("session lock");
+        let session = guard.as_ref().ok_or(Error::NoRepository)?;
+        (session.path.clone(), session.repo.clone())
+    };
+    off_thread(move || {
+        remerge::conflicts(&shared.to_thread_local(), &dir, &merge_base, &head, &target)
     })
     .await
 }

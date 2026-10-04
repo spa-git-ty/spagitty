@@ -18,14 +18,25 @@ import * as api from '../api';
 import type { ReviewKey } from '../api';
 import { pairWords, type Segment } from '../diff/words';
 import { reading } from '../reading.svelte';
-import type { DiffLine, FileDiff, FileStatus, PullHead, PullRequest, PullRequestComment } from '../types';
-import { blocksOf, blocksOfHunks, lineKey, type Block, type Laid, type Scope } from './rows';
+import type {
+	ConflictFix,
+	ConflictFixes,
+	DiffLine,
+	FileDiff,
+	FileStatus,
+	PullHead,
+	PullRequest,
+	PullRequestComment
+} from '../types';
+import { blocksOf, blocksOfHunks, lineKey, type Block, type Laid, type Scope, type SideName } from './rows';
 import { review } from './store.svelte';
 import { threadsOf, type Thread } from './threads';
 
 export type Layout = 'one' | 'all';
 export type Phase = 'idle' | 'reading' | 'ready' | 'failed';
 export type Panel = 'open' | 'resolved';
+/** Every file; the ones with the author's own changes; the ones with conflict fixes. */
+export type Filter = 'all' | 'author' | 'conflict';
 
 /** A file the pull request touches, as the files list shows it. */
 export interface RoomFile {
@@ -79,6 +90,11 @@ let readingSet = $state(true);
 let comments = $state.raw<PullRequestComment[]>([]);
 let commentsError = $state<string | null>(null);
 let panel = $state<Panel>('open');
+let conflicts = $state.raw<ConflictFixes | null>(null);
+let conflictsError = $state<string | null>(null);
+let filter = $state<Filter>('all');
+/** Which side of a conflict is open under a card's header, by card. */
+let sides = $state.raw<Map<string, SideName>>(new Map());
 
 const threads = $derived(threadsOf(comments));
 const reading_ = new Set<string>();
@@ -108,6 +124,27 @@ async function readComments(number: number, mine: number): Promise<void> {
 		if (mine !== seq) return;
 		comments = [];
 		commentsError = String(e);
+	}
+}
+
+/**
+ * What the pull request's merges wrote while fixing conflicts (FEAT-092), and
+ * keep which files and merges in the record, for the inbox.
+ */
+async function readConflicts(fetched: PullHead, key: ReviewKey, mine: number): Promise<void> {
+	try {
+		const found = await api.reviewConflicts(fetched.mergeBase, fetched.head, fetched.base);
+		if (mine !== seq) return;
+		conflicts = found;
+		conflictsError = null;
+		await review.saveRecord(key, (record) => {
+			record.conflictFiles = found.files.map((file) => file.path);
+			record.conflictMerges = [...new Set(found.fixes.map((fix) => fix.short))];
+		});
+	} catch (e) {
+		if (mine !== seq) return;
+		conflicts = null;
+		conflictsError = String(e);
 	}
 }
 
@@ -188,6 +225,10 @@ export const room = {
 		comments = [];
 		commentsError = null;
 		panel = 'open';
+		conflicts = null;
+		conflictsError = null;
+		filter = 'all';
+		sides = new Map();
 		reading_.clear();
 
 		void readComments(pr.number, mine);
@@ -240,6 +281,7 @@ export const room = {
 		selected = first?.path ?? null;
 		phase = 'ready';
 		if (selected) void this.ensure(selected);
+		if (head) void readConflicts(head, key, mine);
 	},
 
 	/** Leave the room; anything still on its way is dropped. */
@@ -251,6 +293,7 @@ export const room = {
 		files = [];
 		contents = {};
 		comments = [];
+		conflicts = null;
 		reading_.clear();
 	},
 
@@ -297,15 +340,66 @@ export const room = {
 
 	/** The files the diff column shows, laid out. */
 	get laid(): Laid[] {
-		const shown = layout === 'one' ? files.filter((file) => file.path === selected) : files;
+		const shown = layout === 'one' ? files.filter((file) => file.path === selected) : this.visible;
 		return shown.map((file) => {
 			const content = contents[file.path];
 			if (!content) return { path: file.path, lines: null, blocks: [] };
 			if (content.note) return { path: file.path, lines: [], blocks: [], note: content.note };
 			const blocks =
 				content.hunks ?? blocksOf(content.lines, scope, new Set(expanded[file.path] ?? []));
-			return { path: file.path, lines: content.lines, blocks };
+			return { path: file.path, lines: content.lines, blocks, fixes: this.fixesIn(file.path) };
 		});
+	},
+
+	// --- Conflict fixes (FEAT-092) -----------------------------------------
+
+	get conflicts(): ConflictFixes | null {
+		return conflicts;
+	},
+
+	get conflictsError(): string | null {
+		return conflictsError;
+	},
+
+	fixesIn(path: string): ConflictFix[] {
+		return conflicts?.fixes.filter((fix) => fix.path === path) ?? [];
+	},
+
+	hasFix(path: string): boolean {
+		return conflicts?.files.some((file) => file.path === path) ?? false;
+	},
+
+	/** The pull request's author changed it, beyond any conflict fix. */
+	isAuthors(path: string): boolean {
+		return conflicts?.files.find((file) => file.path === path)?.author ?? true;
+	},
+
+	get filter(): Filter {
+		return filter;
+	},
+
+	setFilter(next: Filter): void {
+		filter = next;
+	},
+
+	/** The files the filter lets through: the list, and the column in All. */
+	get visible(): RoomFile[] {
+		if (filter === 'author') return files.filter((file) => this.isAuthors(file.path));
+		if (filter === 'conflict') return files.filter((file) => this.hasFix(file.path));
+		return files;
+	},
+
+	/** Which side of a card's conflict is open, by card. */
+	get sides(): ReadonlyMap<string, SideName> {
+		return sides;
+	},
+
+	/** Show one side of a card's conflict, or close it when it is the one open. */
+	toggleSide(chunk: string, side: SideName): void {
+		const next = new Map(sides);
+		if (next.get(chunk) === side) next.delete(chunk);
+		else next.set(chunk, side);
+		sides = next;
 	},
 
 	get selected(): string | null {

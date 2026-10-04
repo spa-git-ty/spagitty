@@ -438,6 +438,34 @@ export interface FullFile {
 	lines: DiffLine[];
 }
 
+/** Lines one merge wrote in one place while resolving a conflict (FEAT-092). */
+export interface ConflictFix {
+	path: string;
+	merge: string;
+	short: string;
+	summary: string;
+	/** The lines of the head it wrote that the pull request adds. */
+	lines: number[];
+	/** What the target and the pull request had where they conflicted; empty outside a conflict. */
+	mainSide: string[];
+	branchSide: string[];
+}
+
+export interface FixedFile {
+	path: string;
+	/** The pull request also changes it outside its conflict fixes. */
+	author: boolean;
+}
+
+export interface ConflictFixes {
+	fixes: ConflictFix[];
+	files: FixedFile[];
+	/** Every merge re-done, by short id. */
+	merges: string[];
+	/** More merges than were re-done. */
+	truncated: boolean;
+}
+
 /** Checks and threads the list did not carry, asked for after it (FEAT-088). */
 export interface ReviewSummary {
 	number: number;

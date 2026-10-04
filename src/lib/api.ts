@@ -60,6 +60,7 @@ import type {
 	FileChange,
 	FullFile,
 	PullHead,
+	ConflictFixes,
 	ReviewVerdict,
 	Settings,
 	Signing,
@@ -621,6 +622,11 @@ export function reviewSummaries(
  */
 export function reviewCheckout(number: number, target: string, head: string): Promise<PullHead> {
 	return invoke('review_checkout', { number, target, head });
+}
+
+/** What a pull request's merges wrote while resolving conflicts (FEAT-092). */
+export function reviewConflicts(mergeBase: string, head: string, target: string): Promise<ConflictFixes> {
+	return invoke('review_conflicts', { mergeBase, head, target });
 }
 
 /** The files a pull request changes, read from disk (FEAT-089). */

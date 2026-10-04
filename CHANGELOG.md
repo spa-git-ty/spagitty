@@ -43,6 +43,11 @@ stays backward-compatible.
   unticked. A focus ruler follows the line you are on (`j` and `k`), `Aa`
   switches the reading font, and the threads sit under their lines and in a
   Conversation card that takes you to them.
+- **Conflict fixes, told apart.** Code a pull request's author wrote while
+  resolving a merge conflict is framed in blue in the review room and never
+  shown as their own work: which merge wrote it, the exact lines, and what
+  each side had there. Filter the files by the author's work or the conflict
+  fixes. Needs git 2.36 or later.
 
 ### Changed
 

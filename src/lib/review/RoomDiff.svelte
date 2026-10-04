@@ -8,7 +8,8 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import { room } from './room.svelte';
-	import { lineRows, rowsOf, type Row } from './rows';
+	import type { ConflictFix } from '$lib/types';
+	import { lineRows, rowsOf, type Row, type SideName } from './rows';
 	import { threadsByPlace } from './threads';
 
 	/**
@@ -29,7 +30,8 @@
 
 	let list = $state<VirtualRows<Row> | null>(null);
 
-	const rows = $derived(rowsOf(room.laid, threadsByPlace(room.threads)));
+	const rows = $derived(rowsOf(room.laid, threadsByPlace(room.threads), room.sides));
+	const target = $derived(room.pr?.targetBranch ?? 'main');
 	const lines = $derived(lineRows(rows));
 	const focusAt = $derived(room.focus === null ? -1 : rows.findIndex((row) => row.key === room.focus));
 	const focusChunk = $derived.by(() => {
@@ -54,7 +56,9 @@
 			case 'fold':
 				return 38;
 			case 'head':
-				return 28;
+				return row.fix ? 92 : 28;
+			case 'side':
+				return 44 + linePx * Math.max(1, sideLines(row.fix, row.side).length);
 			case 'line':
 				return linePx + (row.last ? 10 : 0);
 			case 'thread':
@@ -117,6 +121,18 @@
 		return [path.slice(0, cut + 1), path.slice(cut + 1)];
 	}
 
+	function sideLines(fix: ConflictFix, side: SideName): string[] {
+		return side === 'main' ? fix.mainSide : fix.branchSide;
+	}
+
+	/** Which merge wrote it, and whether it was a conflict at all. */
+	function madeIn(fix: ConflictFix): string {
+		const where = `Made in merge ${fix.short}${fix.summary ? ` (${fix.summary})` : ''}`;
+		return fix.mainSide.length > 0 || fix.branchSide.length > 0
+			? `${where}.`
+			: `${where}, away from any conflict.`;
+	}
+
 	function unchanged(count: number): string {
 		return count === 1 ? '1 unchanged line' : `${count} unchanged lines`;
 	}
@@ -157,7 +173,40 @@
 			</div>
 		{:else if row.kind === 'head'}
 			<div class="part top {row.tone}">
+				{#if row.fix}
+					{@const fix = row.fix}
+					<div class="fix">
+						<span class="fix-icon"><Icon name="conflict" size="1.2em" /></span>
+						<span class="fix-text">
+							<span class="fix-title">Conflict fix, not in the author's own commits</span>
+							<span class="fix-note">{madeIn(fix)}</span>
+						</span>
+						{#if fix.mainSide.length > 0 || fix.branchSide.length > 0}
+							<Chip active={room.sides.get(row.chunk) === 'main'} onclick={() => room.toggleSide(row.chunk, 'main')}
+								>{target}'s side</Chip
+							>
+							<Chip
+								active={room.sides.get(row.chunk) === 'branch'}
+								onclick={() => room.toggleSide(row.chunk, 'branch')}>branch's side</Chip
+							>
+						{/if}
+					</div>
+				{/if}
 				<div class="head-text mono">{row.text}</div>
+			</div>
+		{:else if row.kind === 'side'}
+			{@const lines = sideLines(row.fix, row.side)}
+			<div class="slot">
+				<div class="part {row.tone}">
+					<div class="side">
+						<span class="note">{row.side === 'main' ? `What ${target} had here` : 'What this branch had here'}</span>
+						{#if lines.length > 0}
+							<pre class="side-lines">{lines.join('\n')}</pre>
+						{:else}
+							<span class="note">Nothing: it had removed these lines.</span>
+						{/if}
+					</div>
+				</div>
 			</div>
 		{:else if row.kind === 'line'}
 			{@const words = room.contentOf(row.path)?.words.get(row.index)}
@@ -165,6 +214,7 @@
 				<div class="part {row.tone}" class:end={row.last}>
 					<div
 						class="line {row.line.origin}"
+						class:fixed={row.fixed}
 						class:focused={room.ruler && focusAt === index}
 						class:dim={room.ruler && room.rulerMode === 'chunk' && focusChunk !== null && row.chunk !== focusChunk}
 					>
@@ -305,6 +355,76 @@
 	}
 
 	/* Unchanged lines shown: there, but not news. */
+	/* Written while fixing a merge conflict: framed in sky, never mistaken
+	   for the author's own work (FEAT-092). */
+	.part.conflict {
+		border-color: var(--resolve);
+		border-left-width: 1.5px;
+		border-right-width: 1.5px;
+	}
+
+	.part.top.conflict {
+		border-top-width: 1.5px;
+	}
+
+	.part.end.conflict {
+		border-bottom-width: 1.5px;
+	}
+
+	.fix {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 14px;
+		background: var(--resolve-soft);
+	}
+
+	.fix-icon {
+		display: inline-flex;
+		color: var(--resolve);
+	}
+
+	.fix-text {
+		flex: 1 1 300px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.fix-title {
+		color: var(--resolve);
+		font-weight: 600;
+		font-size: var(--fs-secondary);
+	}
+
+	.fix-note {
+		font-family: var(--read-font);
+		font-size: var(--fs-secondary);
+		line-height: 1.55;
+	}
+
+	.side {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 10px 14px;
+		background: var(--sunken);
+		border-bottom: 1px solid var(--pane-edge);
+	}
+
+	.side-lines {
+		margin: 0;
+		font-family: var(--code-font);
+		font-size: var(--fs-code);
+		line-height: var(--code-lh);
+		letter-spacing: var(--code-ls);
+		white-space: pre-wrap;
+		word-break: break-word;
+		tab-size: 4;
+	}
+
 	.part.plain {
 		background-color: transparent;
 	}
@@ -351,6 +471,11 @@
 
 	.line.added .marker {
 		background: var(--ok);
+	}
+
+	/* The exact lines the fix wrote, inside a card that may hold more. */
+	.line.fixed .marker {
+		background: var(--resolve);
 	}
 
 	.line.removed .marker {
