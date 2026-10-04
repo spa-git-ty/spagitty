@@ -143,6 +143,7 @@ rather than an audit.
 | [FEAT-087](items/FEAT-087-the-review-screen-and-inbox.md) | The Review screen and its inbox | 1R, chrome | Open |
 | [FEAT-088](items/FEAT-088-gitlab-as-its-api-says.md) | GitLab, as its API says | 1R, 1H, Settings | Open |
 | [FEAT-089](items/FEAT-089-a-pull-request-read-from-disk.md) | A pull request read from disk | 1R | Open |
+| [FEAT-090](items/FEAT-090-settings-reading.md) | Settings › Reading | 1K, 1B, 1C, 1O, 1R | Open |
 
 ## Bugs
 

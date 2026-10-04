@@ -160,6 +160,17 @@ export const scale = {
 		commitZoom(1);
 	},
 
+	/**
+	 * The code size before zoom and text scale, in CSS pixels (FEAT-090).
+	 *
+	 * Settings › Reading chooses it; it still composes with both dials, so a
+	 * zoomed window keeps code in proportion with everything else.
+	 */
+	setCodeSize(px: number): void {
+		TYPE_BASE['fs-code'] = px;
+		apply();
+	},
+
 	/** Restore what was chosen last. Called once, at boot, before the first paint. */
 	init(): void {
 		text = clamp(stored(TEXT_KEY) ?? 1, TEXT_MIN, TEXT_MAX);

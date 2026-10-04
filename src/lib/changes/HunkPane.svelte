@@ -4,6 +4,7 @@
 	import { discardHunk } from '$lib/changes/discard';
 	import Chip from '$lib/ui/Chip.svelte';
 	import type { DiffLine } from '$lib/types';
+	import { pairWords } from '$lib/diff/words';
 
 	/**
 	 * The hunks of the selected file, each with the actions that make sense for
@@ -21,6 +22,8 @@
 	 */
 
 	const file = $derived(changes.file);
+	/** The changed words in each hunk's changed lines (FEAT-090). */
+	const marks = $derived(file ? file.hunks.map((hunk) => pairWords(hunk.lines)) : []);
 	const side = $derived(changes.selection?.side ?? 'unstaged');
 
 	function sign(line: DiffLine): string {
@@ -73,7 +76,11 @@
 						<span class="num">{line.old ?? ''}</span>
 						<span class="num">{line.new ?? ''}</span>
 						<span class="sign">{sign(line)}</span>
-						<span class="text">{line.text}</span>
+						<span class="text"
+							>{#each marks[index]?.get(row) ?? [{ text: line.text, changed: false }] as piece, p (p)}<span
+									class:word={piece.changed}>{piece.text}</span
+								>{/each}</span
+						>
 					</div>
 				{/each}
 			</section>
@@ -100,8 +107,10 @@
 		min-width: 0;
 		min-height: 0;
 		overflow: auto;
-		font-family: var(--font-mono);
+		font-family: var(--code-font);
 		font-size: var(--fs-code);
+		line-height: var(--code-lh);
+		letter-spacing: var(--code-ls);
 	}
 
 	.pad {
@@ -162,11 +171,26 @@
 		padding-right: 12px;
 	}
 
+	/* Settings › Reading decides the strength (FEAT-090): calm is a marker
+	   down the side and a faint tint, classic the full rows. */
 	.line.added {
-		background: color-mix(in srgb, var(--ok) 14%, transparent);
+		background: var(--diff-add-bg);
+		box-shadow: inset var(--diff-marker) 0 0 var(--ok);
 	}
 
 	.line.removed {
-		background: color-mix(in srgb, var(--danger) 14%, transparent);
+		background: var(--diff-del-bg);
+		box-shadow: inset var(--diff-marker) 0 0 var(--danger);
+		color: var(--diff-del-ink);
+	}
+
+	.line.added .word {
+		background: var(--diff-add-hl);
+		border-radius: 3px;
+	}
+
+	.line.removed .word {
+		background: var(--diff-del-hl);
+		border-radius: 3px;
 	}
 </style>

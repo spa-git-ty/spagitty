@@ -5,6 +5,7 @@
 	import RemotesSection from '$lib/settings/RemotesSection.svelte';
 	import LicenseSection from '$lib/settings/LicenseSection.svelte';
 	import AppearanceSection from '$lib/settings/AppearanceSection.svelte';
+	import ReadingSection from '$lib/settings/ReadingSection.svelte';
 	import BehaviourSection from '$lib/settings/BehaviourSection.svelte';
 	import IdentitySection from '$lib/settings/IdentitySection.svelte';
 	import GodModeSection from '$lib/settings/GodModeSection.svelte';
@@ -103,6 +104,8 @@
 			<GodModeSection />
 		{:else if settings.section === 'appearance'}
 			<AppearanceSection />
+		{:else if settings.section === 'reading'}
+			<ReadingSection />
 		{:else if settings.section === 'license'}
 			<LicenseSection />
 		{/if}
