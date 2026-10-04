@@ -76,6 +76,10 @@ stays backward-compatible.
 
 ### Fixed
 
+- **A self-hosted forge behind a company certificate connects.** Spagitty
+  checked certificates against a bundled list of public authorities and
+  ignored the ones your computer trusts, so a GitLab signed by an internal CA
+  was reported as unreachable. It now uses the system's certificate store.
 - **A one-line change on Windows no longer shows as the whole file rewritten.**
   Files checked out with Windows line endings were compared with the
   repository's copy byte for byte, so every line differed. The working file is

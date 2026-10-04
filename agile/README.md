@@ -187,6 +187,7 @@ rather than an audit.
 | [BUG-039](items/BUG-039-a-graph-test-that-reads-the-clock.md) | A graph test that reads the clock | none | Fixed |
 | [BUG-040](items/BUG-040-the-shells-pane-class-leaks-into-five-components.md) | The shell's pane class leaks into five components | 1B, 1C, 1D, 1G, 1Q | Fixed |
 | [BUG-041](items/BUG-041-the-pinned-header-cuts-the-detail-cards-shadow.md) | The pinned header cuts the detail card's shadow | 1A | Fixed |
+| [BUG-042](items/BUG-042-a-corporate-ca-is-not-trusted.md) | A corporate CA is not trusted | Settings, Pull requests | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
