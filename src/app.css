@@ -75,6 +75,16 @@
 	--lh-ui: 1.35;
 
 	/*
+	 * How code and prose meant to be read are set (FEAT-087): the face for a
+	 * pull request's words, and the face, line height and letter spacing for
+	 * code. These are the plain defaults; reading preferences replace them.
+	 */
+	--read-font: var(--font-ui);
+	--code-font: var(--font-mono);
+	--code-lh: 1.45;
+	--code-ls: 0em;
+
+	/*
 	 * Radii.
 	 *
 	 * Boot values only, like the colours above: `applyMetrics()` rewrites every

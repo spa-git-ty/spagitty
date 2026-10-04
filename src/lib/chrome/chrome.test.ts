@@ -904,7 +904,7 @@ describe('NavRail', () => {
 		view.destroy();
 	});
 
-	/** Six rows where there were fourteen (TASK-045). */
+	/** Six rows where there were fourteen (TASK-045), and Review (FEAT-087). */
 	it('shows the everyday screens and Settings, and nothing else', () => {
 		repoControl.setInfo(info());
 		repoControl.setCounts(counts({ conflicts: 0 }));
@@ -916,9 +916,28 @@ describe('NavRail', () => {
 			'Working copy',
 			'Branches',
 			'Pull requests',
+			'Review',
 			'Settings'
 		]);
 
+		view.destroy();
+	});
+
+	/** FEAT-087: Review has no count, and a dot while a review is asked of you. */
+	it('marks Review while a pull request waits on your review', async () => {
+		const { requests } = await import('$lib/requests/store.svelte');
+		const { request } = await import('../../testing/git-fixtures');
+		repoControl.setInfo(info());
+		repoControl.setCounts(counts({ conflicts: 0 }));
+		const view = render(NavRail, {});
+		const dot = () => view.get('[aria-label="Review"]').querySelector('.dot');
+
+		expect(dot()).toBeNull();
+		requests.present([request({ reviewRequested: true })]);
+		flushSync();
+		expect(dot()).not.toBeNull();
+
+		requests.clear();
 		view.destroy();
 	});
 

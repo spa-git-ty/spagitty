@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Review room</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;family=JetBrains+Mono:wght@400;600&amp;family=Lexend:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--resolve:var(--lane-5);--resolve-soft:color-mix(in srgb,var(--lane-5) 11%,transparent);--add-bg:color-mix(in srgb,var(--ok) 8%,transparent);--del-bg:color-mix(in srgb,var(--danger) 6%,transparent);--add-hl:color-mix(in srgb,var(--ok) 24%,transparent);--del-hl:color-mix(in srgb,var(--danger) 18%,transparent);--ruler:color-mix(in srgb,var(--warn) 22%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="{{rootVars}} height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px 4px">
+<a href="Review Inbox.dc.html" class="chip" style="text-decoration: none; color: var(--ink); font-size: var(--fs-secondary); padding: 4px 12px 4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 6 8.5 12l6 6"></path></svg>Review</a>
+<div style="flex: 1 1 380px; min-width: 0; display: flex; align-items: baseline; gap: 8px">
+<span style="font-family: var(--font-mono); color: var(--muted); font-size: var(--fs-ui)">#214</span>
+<span style="font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Cache avatars on disk instead of in memory</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="note">{{viewedCount}} of {{fileCount}} viewed</span>
+<span style="width: 96px; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden"><span style="display: block; height: 100%; width: {{progressPct}}; background: var(--ok); border-radius: 999px"></span></span>
+</div>
+<button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Open in worktree</button>
+<button class="btn primary">Finish review · {{draftCount}}</button>
+</header>
+<div style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 18px 12px 112px" class="note">
+<span><span style="color: var(--ink)">yasser-dev</span> wants to merge</span>
+<span class="chip" style="font-family: var(--font-mono)">feat/avatar-disk-cache</span><span>into</span><span class="chip" style="font-family: var(--font-mono)">main</span>
+<span>·</span><span style="color: var(--ok)">checks passing</span><span>·</span><span>GitHub</span>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 8px; padding: 0 10px 0 10px">
+
+<aside aria-label="Touched files" style="width: 262px; flex: none; display: flex; flex-direction: column; min-height: 0">
+<div style="display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 8px 10px">
+<sc-for list="{{filters}}" as="ft" hint-placeholder-count="3"><button class="chip {{ft.cls}}" onClick="{{ft.pick}}" aria-pressed="{{ft.on}}">{{ft.label}}</button></sc-for>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0 0 12px; overflow: auto; flex: 1; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{fileList}}" as="f" hint-placeholder-count="6">
+<li style="{{f.rowStyle}} display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px">
+<input type="checkbox" aria-label="Viewed {{f.name}}" checked="{{f.viewed}}" onChange="{{f.toggle}}" style="width: 16px; height: 16px; accent-color: var(--ok); flex: none; margin: 0">
+<button onClick="{{f.pick}}" style="flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 2px">
+<span style="{{f.nameStyle}} font-family: var(--font-mono); font-size: var(--fs-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.name}}</span>
+<span style="display: flex; gap: 8px; align-items: center; font-size: var(--fs-mono); color: var(--muted)">
+<span style="font-family: var(--font-mono)"><span style="color: var(--ok)">{{f.addTxt}}</span> <span style="color: var(--danger)">{{f.delTxt}}</span></span>
+<sc-if value="{{f.hasResolve}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; align-items: center; gap: 4px; color: var(--resolve)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--resolve)"></span>conflict fix</span></sc-if>
+<sc-if value="{{f.hasThreads}}" hint-placeholder-val="{{false}}"><span style="color: var(--accent)">{{f.threadsTxt}}</span></sc-if>
+</span>
+</button>
+</li>
+</sc-for>
+</ul>
+<div class="note" style="padding: 10px 10px 14px; display: flex; flex-direction: column; gap: 5px; font-size: var(--fs-mono)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--muted)"></span>Author's own commits</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--resolve)"></span>Written while fixing a merge conflict</span>
+</div>
+</aside>
+
+<section aria-label="Diff" style="flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column">
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 4px 8px 96px; display: flex; flex-direction: column; gap: 22px">
+<sc-for list="{{shownFiles}}" as="file" hint-placeholder-count="1">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+<span style="font-family: var(--font-mono); font-size: var(--fs-secondary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"><span style="color: var(--muted)">{{file.dir}}</span>{{file.name}}</span>
+<span style="font-family: var(--font-mono); font-size: var(--fs-mono)"><span style="color: var(--ok)">{{file.addTxt}}</span> <span style="color: var(--danger)">{{file.delTxt}}</span></span>
+<span style="flex: 1"></span>
+<button class="chip {{file.viewedCls}}" onClick="{{file.toggle}}" aria-pressed="{{file.viewed}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5 10 17.5 19 7"></path></svg>Viewed</button>
+</div>
+
+<sc-for list="{{file.blocks}}" as="b" hint-placeholder-count="2">
+<div style="display: contents">
+<sc-if value="{{b.isFold}}" hint-placeholder-val="{{false}}">
+<button onClick="{{b.expand}}" class="note" style="align-self: center; display: flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: var(--fs-mono)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9.5l6-5 6 5M6 14.5l6 5 6-5"></path></svg>{{b.label}}</button>
+</sc-if>
+<sc-if value="{{b.isHunk}}" hint-placeholder-val="{{true}}">
+<div class="card" style="{{b.boxStyle}} overflow: hidden">
+<sc-if value="{{b.isResolve}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; background: var(--resolve-soft)">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--resolve)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h8M9 6 12 9l-3 3M20 15h-8M15 12l-3 3 3 3"></path></svg>
+<div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 2px">
+<span style="color: var(--resolve); font-weight: 600; font-size: var(--fs-secondary)">Conflict fix, not in the author's own commits</span>
+<span style="font-family: var(--read-font); font-size: var(--fs-secondary); line-height: 1.55">{{b.note}}</span>
+</div>
+<button class="chip">main's side</button><button class="chip">branch's side</button>
+</div>
+</sc-if>
+<div style="padding: 5px 14px; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); background: var(--sunken)">{{b.header}}</div>
+<sc-for list="{{b.rows}}" as="r" hint-placeholder-count="8">
+<div style="display: contents">
+<div style="{{r.rowStyle}} display: grid; grid-template-columns: 3px 44px 44px 20px 28px minmax(0, 1fr)">
+<span style="{{r.markerStyle}}"></span>
+<button onClick="{{r.focus}}" aria-label="Focus line" style="text-align: right; padding-right: 8px; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); line-height: var(--code-lh)">{{r.o}}</button>
+<button onClick="{{r.focus}}" aria-label="Focus line" style="text-align: right; padding-right: 8px; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); line-height: var(--code-lh)">{{r.n}}</button>
+<span style="{{r.signStyle}} font-family: var(--code-font); font-size: var(--code-size); line-height: var(--code-lh); text-align: center">{{r.sign}}</span>
+<span style="display: flex; align-items: center; justify-content: center"><button onClick="{{r.comment}}" aria-label="Comment on this line" style="width: 22px; height: 22px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; opacity: {{r.plusOpacity}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button></span>
+<span style="{{r.textStyle}} font-family: var(--code-font); font-size: var(--code-size); line-height: var(--code-lh); letter-spacing: var(--code-ls); white-space: pre-wrap; word-break: break-word; padding: 1px 12px 1px 4px"><sc-for list="{{r.segs}}" as="s" hint-placeholder-count="1"><span style="{{s.style}}">{{s.t}}</span></sc-for></span>
+</div>
+
+<sc-for list="{{r.threads}}" as="t" hint-placeholder-count="0">
+<div style="margin: 8px 14px 12px 116px; padding: 12px 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--pane-edge); box-shadow: var(--shadow-1); display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 8px"><span class="chip {{t.chipCls}}">{{t.statusLabel}}</span><span style="flex: 1"></span><button class="chip" onClick="{{t.toggle}}">{{t.toggleLabel}}</button></div>
+<sc-for list="{{t.comments}}" as="c" hint-placeholder-count="2">
+<div style="display: flex; gap: 10px">
+<span style="width: 26px; height: 26px; border-radius: 50%; background: {{c.avatar}}; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; flex: none">{{c.ini}}</span>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<span class="note"><span style="color: var(--ink); font-weight: 600">{{c.who}}</span> · {{c.when}}</span>
+<span style="font-family: var(--read-font); font-size: var(--read-size); line-height: 1.65; letter-spacing: var(--code-ls); max-width: 62ch">{{c.body}}</span>
+</div>
+</div>
+</sc-for>
+<div style="display: flex; gap: 8px"><input type="text" aria-label="Reply" placeholder="Reply…" style="flex: 1; border: 1px solid var(--pane-edge); background: var(--sunken); border-radius: 999px; padding: 7px 14px; font-size: var(--fs-secondary)"><button class="btn">Reply</button></div>
+</div>
+</sc-for>
+
+<sc-if value="{{r.hasDraft}}" hint-placeholder-val="{{false}}">
+<div style="margin: 8px 14px 12px 116px; padding: 12px 14px; border-radius: 16px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px"><span class="note" style="color: var(--warn); font-weight: 600">Pending · goes out with Finish review</span><span style="flex: 1"></span><button class="note" onClick="{{r.removeDraft}}" style="text-decoration: underline">Delete</button></div>
+<span style="font-family: var(--read-font); font-size: var(--read-size); line-height: 1.65; letter-spacing: var(--code-ls); max-width: 62ch">{{r.draftBody}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{r.composerOpen}}" hint-placeholder-val="{{false}}">
+<div style="margin: 8px 14px 12px 116px; padding: 12px 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); display: flex; flex-direction: column; gap: 10px">
+<label for="composer" class="note">Line {{r.n}}{{r.o}} · shift-click a line number to cover a range</label>
+<textarea id="composer" rows="3" value="{{draftText}}" onChange="{{typeDraft}}" placeholder="What should change here, and why?" style="border: 1px solid var(--pane-edge); background: var(--sunken); border-radius: 7px; padding: 9px 12px; font-family: var(--read-font); font-size: var(--read-size); line-height: 1.6; resize: vertical"></textarea>
+<div style="display: flex; gap: 8px; justify-content: flex-end"><button class="btn" onClick="{{cancelComposer}}">Cancel</button><button class="btn primary" onClick="{{saveDraft}}">Add to review</button></div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+<div class="ornament" role="toolbar" aria-label="Review controls" style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; height: 52px; padding: 0 9px; border-radius: 999px; white-space: nowrap; max-width: calc(100% - 16px)">
+<button class="tool" onClick="{{prevFile}}" aria-label="Previous file" style="width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M14.5 6 8.5 12l6 6"></path></svg></button>
+<span style="display: flex; flex-direction: column; line-height: 1.15; min-width: 0; max-width: 150px"><span style="font-family: var(--font-mono); font-size: var(--fs-mono); font-weight: 600; overflow: hidden; text-overflow: ellipsis">{{posName}}</span><span class="note" style="font-size: 11px">{{posTxt}}</span></span>
+<button class="tool" onClick="{{nextFileOnly}}" aria-label="Next file" style="width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg></button>
+<span class="vr"></span>
+<span style="display: flex; padding: 2px; border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); border: 1px solid var(--pane-edge)">
+<button class="tool" onClick="{{showChunks}}" aria-pressed="{{isChunks}}" style="{{chunksStyle}} height: 28px">Changes</button>
+<button class="tool" onClick="{{showWhole}}" aria-pressed="{{isWhole}}" style="{{wholeStyle}} height: 28px">Whole file</button>
+</span>
+<span style="display: flex; padding: 2px; border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); border: 1px solid var(--pane-edge)">
+<button class="tool" onClick="{{showOne}}" aria-pressed="{{isOne}}" style="{{oneStyle}} height: 28px">One</button>
+<button class="tool" onClick="{{showAll}}" aria-pressed="{{isAll}}" style="{{allStyle}} height: 28px">All</button>
+</span>
+<span class="vr"></span>
+<button class="tool" onClick="{{toggleFocus}}" aria-pressed="{{focusOn}}" title="Focus ruler" aria-label="Focus ruler" style="{{focusBtnStyle}} width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9.5h16M4 14.5h16"></path></svg></button>
+<button class="tool" onClick="{{toggleReading}}" aria-pressed="{{readingOn}}" title="Reading font" aria-label="Reading font" style="{{readingBtnStyle}} width: 32px; padding: 0; justify-content: center; font-weight: 700">Aa</button>
+<span class="vr"></span>
+<button class="tool" onClick="{{nextFile}}" style="background: var(--ok); color: #fff; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5 10 17.5 19 7"></path></svg>Viewed, next</button>
+</div>
+</section>
+
+<aside aria-label="Conversation" style="width: 300px; flex: none; display: flex; flex-direction: column; min-height: 0; margin: 0 0 10px; padding: 12px 10px 0; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px">
+<div style="display: flex; align-items: center; gap: 6px; padding: 4px 4px 10px">
+<span style="font-size: var(--fs-ui); flex: 1">Conversation</span>
+<button class="chip {{panelOpenCls}}" onClick="{{panelOpen}}">Open {{openCount}}</button>
+<button class="chip {{panelResolvedCls}}" onClick="{{panelResolved}}">Resolved {{resolvedCount}}</button>
+</div>
+<div style="flex: 1; overflow: auto; padding: 0 4px 12px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{panelThreads}}" as="t" hint-placeholder-count="2">
+<button class="card" onClick="{{t.jump}}" style="text-align: left; padding: 11px 12px; display: flex; flex-direction: column; gap: 6px">
+<span style="display: flex; align-items: center; gap: 6px"><span class="chip" style="font-family: var(--font-mono)">{{t.where}}</span><span style="flex: 1"></span><span class="note" style="font-size: var(--fs-mono)">{{t.replies}}</span></span>
+<span class="note"><span style="color: var(--ink); font-weight: 600">{{t.first.who}}</span> · {{t.first.when}}</span>
+<span style="font-family: var(--read-font); font-size: var(--fs-secondary); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">{{t.first.body}}</span>
+</button>
+</sc-for>
+<span class="note" style="padding: 8px 4px 0; color: var(--warn)">Your pending · {{draftCount}}</span>
+<sc-for list="{{draftList}}" as="d" hint-placeholder-count="1">
+<button onClick="{{d.jump}}" style="text-align: left; padding: 11px 12px; border-radius: 10px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); display: flex; flex-direction: column; gap: 6px">
+<span class="chip" style="font-family: var(--font-mono); align-self: flex-start">{{d.where}}</span>
+<span style="font-family: var(--read-font); font-size: var(--fs-secondary); line-height: 1.6">{{d.body}}</span>
+</button>
+</sc-for>
+</div>
+<div style="padding: 8px 4px 14px; display: flex; flex-direction: column; gap: 6px">
+<label for="pr-comment" class="note">On the whole pull request</label>
+<textarea id="pr-comment" rows="2" placeholder="Overall thoughts…" style="border: 1px solid var(--pane-edge); background: var(--sunken); border-radius: 7px; padding: 8px 10px; font-size: var(--fs-secondary); resize: vertical"></textarea>
+</div>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · working copy clean · fetched 4 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · Submodules 0 · <span style="font-family: var(--font-mono); font-size: var(--fs-mono)">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"readingFont":{"editor":"enum","options":["Atkinson Hyperlegible Mono","Lexend","JetBrains Mono"],"default":"Atkinson Hyperlegible Mono"},"lineHeight":{"editor":"range","min":1.4,"max":2.2,"step":0.05,"default":1.85},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var F = [
+ {id:'f0', dir:'crates/spagitty-core/src/', name:'avatars.rs', add:9, del:4, blocks:[
+  {fold:12, lines:[[' ',1,1,'// SPDX-License-Identifier: GPL-3.0-or-later'],[' ',2,2,''],[' ',3,3,'//! Author avatars, fetched once and kept on disk.'],[' ',4,4,''],[' ',5,5,'use std::fs;'],[' ',6,6,'use std::path::{Path, PathBuf};'],[' ',7,7,'use std::time::Duration;'],[' ',8,8,''],[' ',9,9,'use crate::error::{Error, Result};'],[' ',10,10,''],[' ',11,11,'const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);'],[' ',12,12,'']]},
+  {origin:'author', header:'@@ -13,8 +13,10 @@  pub fn avatar', lines:[
+   [' ',13,13,'pub fn avatar(email: &str, size: u32) -> Result<Avatar> {'],
+   [' ',14,14,'    let key = cache_key(email, size);'],
+   ['-',15,null,'    if let Some(hit) = ⟦MEMORY.lock().get(&key)⟧ {'],
+   ['-',16,null,'        return Ok(⟦hit.clone()⟧);'],
+   ['+',null,15,'    let path = cache_dir()?.join(format!("{key}.png"));'],
+   ['+',null,16,'    if ⟦path.exists() && !is_stale(&path, MAX_AGE)?⟧ {'],
+   ['+',null,17,'        return ⟦Avatar::from_file(&path)⟧;'],
+   [' ',17,18,'    }'],
+   [' ',18,19,'    let bytes = fetch_gravatar(email, size)?;'],
+   ['-',19,null,'    ⟦MEMORY.lock().insert(key, ⟧Avatar::from_bytes(&bytes)⟦?)⟧;'],
+   ['+',null,20,'    ⟦fs::write(&path, &bytes)?;⟧'],
+   ['+',null,21,'    Avatar::from_bytes(&bytes)'],
+   [' ',20,22,'}']]},
+  {fold:6, lines:[[' ',21,23,''],[' ',22,24,'fn is_stale(path: &Path, max_age: Duration) -> Result<bool> {'],[' ',23,25,'    let modified = fs::metadata(path)?.modified()?;'],[' ',24,26,'    Ok(modified.elapsed().unwrap_or_default() > max_age)'],[' ',25,27,'}'],[' ',26,28,'']]},
+  {origin:'resolve', header:'@@ -27,5 +29,8 @@  fn cache_dir', note:'Made in merge 7c1e9a0 (main into feat/avatar-disk-cache). main added the XDG fallback, this branch added the avatars folder. The result keeps both.', lines:[
+   [' ',27,29,'fn cache_dir() -> Result<PathBuf> {'],
+   [' ',28,30,'    let base = dirs::cache_dir()'],
+   ['+',null,31,'        ⟦.or_else(|| std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from))⟧'],
+   [' ',29,32,'        .ok_or(Error::NoCacheDir)?;'],
+   ['+',null,33,'    let dir = base.join("spagitty")⟦.join("avatars")⟧;'],
+   ['+',null,34,'    ⟦fs::create_dir_all(&dir)?;⟧'],
+   ['-',30,null,'    Ok(⟦base.join("spagitty")⟧)'],
+   ['+',null,35,'    Ok(⟦dir⟧)'],
+   [' ',31,36,'}']]}
+ ]},
+ {id:'f1', dir:'src/lib/graph/', name:'avatars.svelte.ts', add:0, del:3, blocks:[
+  {fold:41, lines:[[' ',40,40,'/** One request per address, however many rows show it. */'],[' ',41,41,'']]},
+  {origin:'author', header:'@@ -42,7 +42,4 @@  export async function avatarFor', lines:[
+   [' ',42,42,'export async function avatarFor(email: string): Promise<string> {'],
+   ['-',43,null,'	const cached = ⟦memo.get(email)⟧;'],
+   ['-',44,null,'	if (cached) return cached;'],
+   [' ',45,43,'	const url = await api.avatar(email, SIZE);'],
+   ['-',46,null,'	⟦memo.set(email, url);⟧'],
+   [' ',47,44,'	return url;'],
+   [' ',48,45,'}']]}
+ ]},
+ {id:'f2', dir:'src/lib/', name:'types.ts', add:2, del:0, blocks:[
+  {fold:309, lines:[[' ',308,308,'/** Who wrote a commit, as the graph shows them. */'],[' ',309,309,'']]},
+  {origin:'resolve', header:'@@ -310,4 +310,6 @@  export interface Author', note:'Made in merge 7c1e9a0. Both sides added a field to Author. The result keeps both.', lines:[
+   [' ',310,310,'export interface Author {'],
+   [' ',311,311,'	email: string;'],
+   [' ',312,312,'	name: string;'],
+   ['+',null,313,'	⟦avatarPath?: string;⟧'],
+   ['+',null,314,'	⟦initials: string;⟧'],
+   [' ',313,315,'}']]}
+ ]},
+ {id:'f3', dir:'src-tauri/src/commands/', name:'avatars.rs', add:2, del:1, blocks:[
+  {fold:17, lines:[[' ',16,16,'use crate::to_message;'],[' ',17,17,'']]},
+  {origin:'author', header:'@@ -18,5 +18,6 @@', lines:[
+   [' ',18,18,'#[tauri::command]'],
+   [' ',19,19,'pub fn avatar(email: String, size: u32) -> Result<String, String> {'],
+   ['-',20,null,'    let a = core::avatars::avatar(&email, size)⟦.map_err(|e| e.to_string())⟧?;'],
+   ['+',null,20,'    let a = core::avatars::avatar(&email, size)⟦.map_err(to_message)⟧?;'],
+   ['+',null,21,'    ⟦log::debug!("avatar {email} served from {}", a.source());⟧'],
+   [' ',21,22,'    Ok(a.data_url())'],
+   [' ',22,23,'}']]}
+ ]},
+ {id:'f4', dir:'crates/spagitty-core/', name:'Cargo.toml', add:1, del:0, blocks:[
+  {origin:'author', header:'@@ -21,3 +21,4 @@  [dependencies]', lines:[
+   [' ',21,21,'dirs = "5"'],
+   [' ',22,22,'gix = { workspace = true }'],
+   ['+',null,23,'⟦tempfile = "3"⟧'],
+   [' ',23,24,'serde = { version = "1", features = ["derive"] }']]}
+ ]},
+ {id:'f5', dir:'', name:'CHANGELOG.md', add:2, del:0, blocks:[
+  {origin:'author', header:'@@ -3,3 +3,5 @@', lines:[
+   [' ',3,3,'## Unreleased'],
+   [' ',4,4,''],
+   ['+',null,5,'- ⟦Avatars are cached on disk and survive restarts.⟧'],
+   ['+',null,6,''],
+   [' ',5,7,'### Fixed']]}
+ ]}
+];
+var T = [
+ {id:'t1', file:'f0', key:'f0:n20', where:'avatars.rs:20', status:'open', comments:[
+  {who:'nour.h', ini:'NH', avatar:'#6c4fa3', when:'2 h ago', body:'Writing straight to the final path means a crash mid-write leaves half a PNG, and is_stale will happily serve it for a week. Write to a temp file, then rename?'},
+  {who:'yasser-dev', ini:'YD', avatar:'#2f8a52', when:'1 h ago', body:'Good catch. Switching to tempfile + persist, that is why tempfile is already in Cargo.toml.'}]},
+ {id:'t2', file:'f1', key:'f1:o43', where:'avatars.svelte.ts:43', status:'resolved', comments:[
+  {who:'nour.h', ini:'NH', avatar:'#6c4fa3', when:'3 h ago', body:'Is anything else still reading memo?'},
+  {who:'yasser-dev', ini:'YD', avatar:'#2f8a52', when:'2 h ago', body:'No, the declaration is gone too.'}]},
+ {id:'t3', file:null, key:null, where:'whole PR', status:'open', comments:[
+  {who:'nour.h', ini:'NH', avatar:'#6c4fa3', when:'2 h ago', body:'Should the disk cache have a size cap? A big monorepo has thousands of authors.'}]}
+];
+var DEF = {sel:'f0', scope:'chunks', layout:'one', focus:true, reading:true, filter:'all', panel:'open',
+ viewed:{f3:true, f4:true, f5:true}, focusKey:'f0:n20', composer:null, draftText:'', expanded:{},
+ resolved:{}, drafts:[{key:'f0:n17', file:'f0', where:'avatars.rs:17', body:'If the PNG on disk is corrupt this returns Err and the avatar never refetches. Fall through to the fetch instead?'}]};
+
+class Component extends DCLogic {
+ st() { return Object.assign({}, DEF, this.state || {}); }
+ set(p) { this.setState(Object.assign({}, this.st(), p)); }
+ renderVals() {
+  var s = this.st(), self = this;
+  var fontName = this.props.readingFont || 'Atkinson Hyperlegible Mono';
+  var lh = this.props.lineHeight || 1.85;
+  var rootVars = s.reading
+   ? "--read-font: 'Atkinson Hyperlegible', system-ui, sans-serif; --read-size: 15.6px; --code-font: '" + fontName + "', 'JetBrains Mono', ui-monospace, monospace; --code-size: 15px; --code-lh: " + lh + "; --code-ls: 0.02em;"
+   : "--read-font: var(--font-ui); --read-size: 14.4px; --code-font: var(--font-mono); --code-size: 14.4px; --code-lh: 1.45; --code-ls: 0;";
+  var segOn = function (on) { return on ? 'background: var(--surface-2); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-1);' : 'color: var(--muted);'; };
+  var tog = function (on) { return on ? 'background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent);' : 'color: var(--muted);'; };
+  var status = function (t) { return s.resolved[t.id] !== undefined ? s.resolved[t.id] : t.status === 'resolved'; };
+  var hasOrigin = function (f, o) { return f.blocks.some(function (b) { return b.origin === o; }); };
+  var visible = F.filter(function (f) {
+   if (s.filter === 'author') return hasOrigin(f, 'author');
+   if (s.filter === 'resolve') return hasOrigin(f, 'resolve');
+   return true;
+  });
+  var viewedCount = F.filter(function (f) { return s.viewed[f.id]; }).length;
+  var toggleViewed = function (id) { return function () { var v = Object.assign({}, s.viewed); v[id] = !v[id]; self.set({ viewed: v }); }; };
+  var threadCount = function (id) { return T.filter(function (t) { return t.file === id && !status(t); }).length; };
+
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'review' ? 'on' : '', dot: k === 'review' };
+  });
+  var tools = TOOLS.map(function (t) {
+   if (t === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] };
+  });
+
+  var fileList = visible.map(function (f) {
+   var sel = f.id === s.sel && s.layout === 'one';
+   var tc = threadCount(f.id);
+   return { name: f.name, addTxt: '+' + f.add, delTxt: '−' + f.del, viewed: !!s.viewed[f.id],
+    rowStyle: sel ? 'background: color-mix(in srgb, var(--accent) 14%, transparent);' : '',
+    nameStyle: s.viewed[f.id] ? 'color: var(--muted);' : 'color: var(--ink); font-weight: 600;',
+    hasResolve: hasOrigin(f, 'resolve'), hasThreads: tc > 0, threadsTxt: tc + (tc === 1 ? ' thread' : ' threads'),
+    toggle: toggleViewed(f.id), pick: function () { self.set({ sel: f.id, layout: 'one', composer: null }); } };
+  });
+
+  var buildRow = function (f, line, bb) {
+   var kind = line[0], o = line[1], n = line[2];
+   var key = kind === '-' ? f.id + ':o' + o : f.id + ':n' + n;
+   var segs = line[3].split(/[⟦⟧]/).map(function (p, i) {
+    var hl = i % 2 === 1;
+    return { t: p, style: hl ? (kind === '+' ? 'background: var(--add-hl); border-radius: 4px;' : kind === '-' ? 'background: var(--del-hl); border-radius: 4px;' : '') : '' };
+   }).filter(function (x) { return x.t !== ''; });
+   if (segs.length === 0) segs = [{ t: ' ', style: '' }];
+   var focusedBlock = bb._keys.indexOf(s.focusKey) >= 0;
+   var isFocusLine = s.focusKey === key;
+   var dim = s.focus && !focusedBlock;
+   var bg = kind === '+' ? 'var(--add-bg)' : kind === '-' ? 'var(--del-bg)' : 'transparent';
+   if (s.focus && isFocusLine) bg = 'var(--ruler)';
+   var draft = s.drafts.filter(function (d) { return d.key === key; })[0];
+   var threads = T.filter(function (t) { return t.key === key; }).map(function (t) {
+    var r = status(t);
+    return { comments: t.comments, statusLabel: r ? 'Resolved' : 'Open', chipCls: r ? '' : 'on', toggleLabel: r ? 'Reopen' : 'Resolve',
+     toggle: function () { var m = Object.assign({}, s.resolved); m[t.id] = !r; self.set({ resolved: m }); } };
+   });
+   return {
+    o: o === null ? '' : String(o), n: n === null ? '' : String(n),
+    sign: kind === '+' ? '+' : kind === '-' ? '−' : '', segs: segs,
+    rowStyle: 'background: ' + bg + '; opacity: ' + (dim ? '0.42' : '1') + ';',
+    markerStyle: 'background: ' + (kind === '+' ? 'var(--ok)' : kind === '-' ? 'var(--danger)' : 'transparent') + ';',
+    signStyle: kind === '+' ? 'color: var(--ok); font-weight: 700;' : kind === '-' ? 'color: var(--danger); font-weight: 700;' : '',
+    textStyle: kind === '-' ? 'color: var(--muted);' : 'color: var(--ink);',
+    plusOpacity: isFocusLine || s.composer === key ? '1' : '0.3',
+    threads: threads, hasDraft: !!draft, draftBody: draft ? draft.body : '',
+    removeDraft: function () { self.set({ drafts: s.drafts.filter(function (d) { return d.key !== key; }) }); },
+    composerOpen: s.composer === key && !draft,
+    focus: function () { self.set({ focusKey: key }); },
+    comment: function () { self.set({ composer: key, focusKey: key, draftText: '' }); }
+   };
+  };
+
+  var buildFile = function (f) {
+   var blocks = [];
+   f.blocks.forEach(function (b, bi) {
+    var ek = f.id + ':' + bi;
+    if (b.fold && !(s.scope === 'whole' || s.expanded[ek])) {
+     blocks.push({ isFold: true, isHunk: false, label: b.fold + ' unchanged lines',
+      expand: function () { var e = Object.assign({}, s.expanded); e[ek] = true; self.set({ expanded: e }); }, rows: [] });
+     return;
+    }
+    var bb = { _keys: b.lines.map(function (l) { return l[0] === '-' ? f.id + ':o' + l[1] : f.id + ':n' + l[2]; }) };
+    var isResolve = b.origin === 'resolve';
+    blocks.push({ isFold: false, isHunk: true, isResolve: isResolve, note: b.note || '',
+     header: b.fold ? 'unchanged · ' + b.lines[0][2] + '–' + b.lines[b.lines.length - 1][2] : b.header,
+     boxStyle: isResolve ? 'border: 1.5px solid var(--resolve);' : b.fold ? 'box-shadow: none; background: transparent;' : '',
+     rows: b.lines.map(function (l) { return buildRow(f, l, bb); }) });
+   });
+   return { dir: f.dir, name: f.name, addTxt: '+' + f.add, delTxt: '−' + f.del, viewed: !!s.viewed[f.id], viewedCls: s.viewed[f.id] ? 'on' : '', toggle: toggleViewed(f.id), blocks: blocks };
+  };
+
+  var selFile = F.filter(function (f) { return f.id === s.sel; })[0] || F[0];
+  var idx = F.indexOf(selFile);
+  var openT = T.filter(function (t) { return !status(t); });
+  var resT = T.filter(function (t) { return status(t); });
+  var jumpTo = function (fileId, key) { return function () { if (fileId) self.set({ sel: fileId, layout: 'one', focusKey: key, filter: 'all' }); }; };
+
+  return {
+   theme: this.props.theme || 'dark', rootVars: rootVars, rail: rail, tools: tools,
+   viewedCount: viewedCount, fileCount: F.length, progressPct: Math.round(viewedCount / F.length * 100) + '%',
+   draftCount: s.drafts.length,
+   filters: [['all', 'All ' + F.length], ['author', 'Author'], ['resolve', 'Conflict fixes']].map(function (x) {
+    return { label: x[1], on: s.filter === x[0], cls: s.filter === x[0] ? 'on' : '', pick: function () { self.set({ filter: x[0] }); } };
+   }),
+   fileList: fileList,
+   isChunks: s.scope === 'chunks', isWhole: s.scope === 'whole', chunksStyle: segOn(s.scope === 'chunks'), wholeStyle: segOn(s.scope === 'whole'),
+   showChunks: function () { self.set({ scope: 'chunks', expanded: {} }); }, showWhole: function () { self.set({ scope: 'whole' }); },
+   isOne: s.layout === 'one', isAll: s.layout === 'all', oneStyle: segOn(s.layout === 'one'), allStyle: segOn(s.layout === 'all'),
+   showOne: function () { self.set({ layout: 'one' }); }, showAll: function () { self.set({ layout: 'all' }); },
+   focusOn: s.focus, focusBtnStyle: tog(s.focus), toggleFocus: function () { self.set({ focus: !s.focus }); },
+   readingOn: s.reading, readingBtnStyle: tog(s.reading), toggleReading: function () { self.set({ reading: !s.reading }); },
+   shownFiles: (s.layout === 'one' ? [selFile] : visible).map(buildFile),
+   posName: s.layout === 'one' ? selFile.name : 'All files',
+   posTxt: s.layout === 'one' ? (idx + 1) + ' of ' + F.length : visible.length + ' files',
+   draftText: s.draftText,
+   typeDraft: function (e) { self.set({ draftText: e.target.value }); },
+   cancelComposer: function () { self.set({ composer: null, draftText: '' }); },
+   saveDraft: function () {
+    if (!s.composer || !s.draftText.trim()) return;
+    var fid = s.composer.split(':')[0];
+    var f = F.filter(function (x) { return x.id === fid; })[0];
+    self.set({ drafts: s.drafts.concat([{ key: s.composer, file: fid, where: f.name + ':' + s.composer.split(':')[1].slice(1), body: s.draftText.trim() }]), composer: null, draftText: '' });
+   },
+   prevFile: function () { self.set({ sel: F[(idx - 1 + F.length) % F.length].id, layout: 'one', composer: null }); },
+   nextFileOnly: function () { self.set({ sel: F[(idx + 1) % F.length].id, layout: 'one', composer: null }); },
+   nextFile: function () {
+    var v = Object.assign({}, s.viewed); v[selFile.id] = true;
+    var next = null;
+    for (var i = 1; i <= F.length; i++) { var c = F[(idx + i) % F.length]; if (!v[c.id]) { next = c; break; } }
+    self.set({ viewed: v, sel: (next || selFile).id, layout: 'one', composer: null });
+   },
+   panelOpenCls: s.panel === 'open' ? 'on' : '', panelResolvedCls: s.panel === 'resolved' ? 'on' : '',
+   panelOpen: function () { self.set({ panel: 'open' }); }, panelResolved: function () { self.set({ panel: 'resolved' }); },
+   openCount: openT.length, resolvedCount: resT.length,
+   panelThreads: (s.panel === 'open' ? openT : resT).map(function (t) {
+    var n = t.comments.length - 1;
+    return { where: t.where, first: t.comments[0], replies: n === 0 ? 'no replies' : n + (n === 1 ? ' reply' : ' replies'), jump: jumpTo(t.file, t.key) };
+   }),
+   draftList: s.drafts.map(function (d) { return { where: d.where, body: d.body, jump: jumpTo(d.file, d.key) }; })
+  };
+ }
+}
+</script>
+</body>
+</html>

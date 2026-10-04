@@ -70,6 +70,18 @@ function request(overrides: Partial<PullRequest> = {}): PullRequest {
 		added: 25,
 		removed: 5,
 		mergeable: true,
+
+		headSha: 'a1b2c3d4e5f6',
+
+		reviewRequested: false,
+
+		openThreads: 0,
+
+		resolvedThreads: 0,
+
+		repliesToYou: 0,
+
+		repository: null,
 		...overrides
 	};
 }

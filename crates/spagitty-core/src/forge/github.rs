@@ -47,34 +47,67 @@ fn graphql_url(host: &str) -> String {
     }
 }
 
+/// One pull request's fields, shared by the list and the search (FEAT-087).
+///
+/// `reviewThreads` is what the Review screen's inbox counts: threads open and
+/// resolved, and which open ones somebody answered after you started them. The
+/// first and the last comment of each is enough to tell — the whole thread is
+/// read only when the pull request is opened.
+const FIELDS: &str = r#"
+fragment Row on PullRequest {
+  id
+  number
+  title
+  body
+  isDraft
+  updatedAt
+  mergeable
+  changedFiles
+  additions
+  deletions
+  headRefName
+  headRefOid
+  baseRefName
+  reviewDecision
+  author { login }
+  repository { nameWithOwner }
+  reviewRequests(first: 20) {
+    nodes { requestedReviewer { ... on User { login } } }
+  }
+  commits(last: 1) {
+    nodes { commit { statusCheckRollup { state } } }
+  }
+  reviewThreads(first: 50) {
+    nodes {
+      isResolved
+      first: comments(first: 1) { nodes { author { login } } }
+      last: comments(last: 1) { nodes { author { login } } }
+    }
+  }
+}
+"#;
+
 /// Everything the Pull requests screen shows, in one query.
 const QUERY: &str = r#"
 query($owner: String!, $name: String!, $limit: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequests(states: OPEN, first: $limit, orderBy: {field: UPDATED_AT, direction: DESC}) {
-      nodes {
-        id
-        number
-        title
-        body
-        isDraft
-        updatedAt
-        mergeable
-        changedFiles
-        additions
-        deletions
-        headRefName
-        baseRefName
-        reviewDecision
-        author { login }
-        reviewRequests(first: 20) {
-          nodes { requestedReviewer { ... on User { login } } }
-        }
-        commits(last: 1) {
-          nodes { commit { statusCheckRollup { state } } }
-        }
-      }
+      nodes { ...Row }
     }
+  }
+}
+"#;
+
+/// Open pull requests anywhere on the host that involve the token's owner
+/// (FEAT-087). Two searches in one request: asked to review, and involved
+/// some other way — commented, mentioned, reviewed before.
+const INVOLVED: &str = r#"
+query($requested: String!, $involved: String!, $limit: Int!) {
+  requested: search(query: $requested, type: ISSUE, first: $limit) {
+    nodes { ...Row }
+  }
+  involved: search(query: $involved, type: ISSUE, first: $limit) {
+    nodes { ...Row }
   }
 }
 "#;
@@ -82,7 +115,7 @@ query($owner: String!, $name: String!, $limit: Int!) {
 /// The open pull requests for `repo`, as `me` sees them.
 pub fn pull_requests(repo: &Repo, token: &str, me: &str) -> Result<Vec<PullRequest>> {
     let body = serde_json::json!({
-        "query": QUERY,
+        "query": format!("{QUERY}{FIELDS}"),
         "variables": { "owner": repo.owner, "name": repo.name, "limit": LIMIT },
     })
     .to_string();
@@ -99,6 +132,83 @@ pub fn pull_requests(repo: &Repo, token: &str, me: &str) -> Result<Vec<PullReque
     }
 
     read_pull_requests(&response.body, me, &repo.host)
+}
+
+/// The open pull requests on `host` that involve `me`, in any repository
+/// (FEAT-087).
+pub fn involved_pull_requests(host: &str, token: &str, me: &str) -> Result<Vec<PullRequest>> {
+    if me.is_empty() {
+        return Err(Error::Forge {
+            host: host.to_string(),
+            detail: "no account is connected for this host".into(),
+        });
+    }
+
+    let body = serde_json::json!({
+        "query": format!("{INVOLVED}{FIELDS}"),
+        "variables": {
+            "requested": format!("is:pr is:open archived:false review-requested:{me}"),
+            "involved": format!("is:pr is:open archived:false involves:{me} -author:{me}"),
+            "limit": LIMIT,
+        },
+    })
+    .to_string();
+
+    let response = http::post_json(&graphql_url(host), token, host, &body)?;
+
+    if response.status < 200 || response.status >= 300 {
+        return Err(status_error(
+            host,
+            response.status,
+            &response.body,
+            response.retry_after.as_deref(),
+        ));
+    }
+
+    read_involved(&response.body, me, host)
+}
+
+/// Turn the two searches into one list, each pull request once. Makes no
+/// request.
+///
+/// A search answers with any issue-shaped node; one that is not a pull request
+/// carries none of these fields and is skipped by [`row`].
+pub fn read_involved(body: &str, me: &str, host: &str) -> Result<Vec<PullRequest>> {
+    let json: Value = serde_json::from_str(body).map_err(|_| Error::Forge {
+        host: host.to_string(),
+        detail: "sent something that is not JSON".into(),
+    })?;
+
+    if let Some(message) = graphql_error(&json) {
+        return Err(Error::Forge {
+            host: host.to_string(),
+            detail: message,
+        });
+    }
+
+    let mut rows: Vec<PullRequest> = Vec::new();
+    for search in ["requested", "involved"] {
+        let nodes = json["data"][search]["nodes"]
+            .as_array()
+            .ok_or_else(|| Error::Forge {
+                host: host.to_string(),
+                detail: "answered without a list of pull requests".into(),
+            })?;
+        for node in nodes {
+            let Some(mut found) = row(node, me) else {
+                continue;
+            };
+            found.repository = node["repository"]["nameWithOwner"]
+                .as_str()
+                .map(str::to_string);
+            if !rows.iter().any(|held| held.id == found.id) {
+                rows.push(found);
+            }
+        }
+    }
+
+    rows.sort_by_key(|row| std::cmp::Reverse(row.updated));
+    Ok(rows)
 }
 
 /// Who a token belongs to.
@@ -249,8 +359,15 @@ fn row(node: &Value, me: &str) -> Option<PullRequest> {
     let review = review_of(node["reviewDecision"].as_str());
     let reviewers = requested_reviewers(node);
     let needs = needs_you(me, author, review, &reviewers);
+    let threads = threads_of(node, me);
 
     Some(PullRequest {
+        head_sha: node["headRefOid"].as_str().unwrap_or("").to_string(),
+        review_requested: !me.is_empty() && reviewers.iter().any(|login| login == me),
+        open_threads: threads.open,
+        resolved_threads: threads.resolved,
+        replies_to_you: threads.replies_to_you,
+        repository: None,
         id: node["id"].as_str().unwrap_or("").to_string(),
         number,
         title: node["title"].as_str().unwrap_or("").to_string(),
@@ -273,6 +390,47 @@ fn row(node: &Value, me: &str) -> Option<PullRequest> {
         removed: node["deletions"].as_u64().unwrap_or(0),
         mergeable: mergeable_of(node["mergeable"].as_str()),
     })
+}
+
+/// What one pull request's review threads add up to, for `me`.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Threads {
+    open: u32,
+    resolved: u32,
+    replies_to_you: u32,
+}
+
+/// Count the threads, and the open ones `me` started where somebody else has
+/// spoken since (FEAT-087).
+///
+/// Only the first and the last comment are read, which is enough: a thread
+/// you started whose last word is yours is waiting on the author, and one
+/// whose last word is theirs is waiting on you.
+fn threads_of(node: &Value, me: &str) -> Threads {
+    let mut threads = Threads::default();
+    let Some(nodes) = node["reviewThreads"]["nodes"].as_array() else {
+        return threads;
+    };
+
+    let login = |thread: &Value, which: &str| {
+        thread[which]["nodes"][0]["author"]["login"]
+            .as_str()
+            .unwrap_or("")
+            .to_string()
+    };
+
+    for thread in nodes {
+        if thread["isResolved"].as_bool().unwrap_or(false) {
+            threads.resolved += 1;
+            continue;
+        }
+        threads.open += 1;
+        if !me.is_empty() && login(thread, "first") == me && login(thread, "last") != me {
+            threads.replies_to_you += 1;
+        }
+    }
+
+    threads
 }
 
 /// GitHub's review decision, in the screen's words.
@@ -495,6 +653,8 @@ pub fn create_pull_request(
         added: json.get("additions").and_then(Value::as_u64).unwrap_or(0),
         removed: json.get("deletions").and_then(Value::as_u64).unwrap_or(0),
         mergeable: json.get("mergeable").and_then(Value::as_bool),
+        head_sha: json["head"]["sha"].as_str().unwrap_or_default().to_string(),
+        ..PullRequest::default()
     })
 }
 
@@ -549,6 +709,87 @@ mod tests {
         assert_eq!(row.removed, 34);
         assert!(!row.draft);
         assert_eq!(row.mergeable, Some(true));
+    }
+
+    // FEAT-087 — what the Review screen's inbox reads off the same row.
+
+    fn thread(resolved: bool, first: &str, last: &str) -> Value {
+        serde_json::json!({
+            "isResolved": resolved,
+            "first": { "nodes": [{ "author": { "login": first } }] },
+            "last": { "nodes": [{ "author": { "login": last } }] }
+        })
+    }
+
+    #[test]
+    fn the_head_commit_and_a_review_request_are_read_off_the_row() {
+        let mut bent = node();
+        bent["headRefOid"] = serde_json::json!("a1b2c3");
+
+        let mine = one(bent.clone(), "ada");
+        assert_eq!(mine.head_sha, "a1b2c3");
+        assert!(mine.review_requested);
+
+        let theirs = one(bent, "grace");
+        assert!(!theirs.review_requested);
+    }
+
+    #[test]
+    fn threads_are_counted_open_and_resolved_and_answered_ones_are_yours() {
+        let mut bent = node();
+        bent["reviewThreads"] = serde_json::json!({ "nodes": [
+            // You asked, the author answered: back with you.
+            thread(false, "ada", "grace"),
+            // You asked and nobody has answered yet.
+            thread(false, "ada", "ada"),
+            // Somebody else's thread.
+            thread(false, "linus", "grace"),
+            // Answered, and settled.
+            thread(true, "ada", "grace"),
+        ]});
+
+        let row = one(bent, "ada");
+        assert_eq!(row.open_threads, 3);
+        assert_eq!(row.resolved_threads, 1);
+        assert_eq!(row.replies_to_you, 1);
+    }
+
+    #[test]
+    fn a_row_with_no_threads_says_none_rather_than_failing() {
+        let row = one(node(), "ada");
+        assert_eq!((row.open_threads, row.resolved_threads), (0, 0));
+        assert_eq!(row.replies_to_you, 0);
+        assert_eq!(row.repository, None);
+    }
+
+    #[test]
+    fn the_two_searches_become_one_list_with_each_pull_request_once() {
+        let mut first = node();
+        first["repository"] = serde_json::json!({ "nameWithOwner": "team/one" });
+        first["updatedAt"] = serde_json::json!("2026-08-25T09:30:00Z");
+        let mut second = node();
+        second["id"] = serde_json::json!("PR_other");
+        second["number"] = serde_json::json!(7);
+        second["repository"] = serde_json::json!({ "nameWithOwner": "team/two" });
+        second["updatedAt"] = serde_json::json!("2026-08-26T09:30:00Z");
+
+        let body = serde_json::json!({ "data": {
+            "requested": { "nodes": [first.clone()] },
+            // The same pull request again, and an issue the search also found.
+            "involved": { "nodes": [first, second, { "title": "an issue" }] }
+        }})
+        .to_string();
+
+        let rows = read_involved(&body, "ada", "github.com").expect("a list");
+        assert_eq!(rows.len(), 2);
+        // Newest first, whichever search found it.
+        assert_eq!(rows[0].repository.as_deref(), Some("team/two"));
+        assert_eq!(rows[1].repository.as_deref(), Some("team/one"));
+    }
+
+    #[test]
+    fn searching_with_no_login_is_refused_before_anything_is_sent() {
+        assert!(involved_pull_requests("github.com", "token", "").is_err());
     }
 
     #[test]
@@ -771,16 +1012,24 @@ mod tests {
             "baseRefName",
             "reviewDecision",
             "statusCheckRollup",
+            "headRefOid",
+            "reviewThreads",
         ] {
             assert!(
-                QUERY.contains(field),
+                FIELDS.contains(field),
                 "the query no longer asks for {field}"
             );
         }
 
+        // Both reads spell the fields once, through the fragment.
+        assert!(QUERY.contains("...Row"));
+        assert!(INVOLVED.contains("...Row"));
+
         // Read-only, by decision. A mutation here would be a write nobody
         // reviewed.
-        assert!(!QUERY.contains("mutation"));
+        for query in [QUERY, INVOLVED, FIELDS] {
+            assert!(!query.contains("mutation"));
+        }
     }
 
     #[test]

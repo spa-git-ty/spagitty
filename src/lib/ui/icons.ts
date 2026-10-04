@@ -57,7 +57,9 @@ export type IconName =
 	| 'check'
 	| 'refresh'
 	| 'badge'
-	| 'farm';
+	| 'farm'
+	| 'review'
+	| 'ruler';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -114,6 +116,14 @@ export const ICONS: Record<IconName, string[]> = {
 	// A change proposed from one place to another.
 	request: ['M7 5v14', 'M7 5.5a2.5 2.5 0 1 0 0-.02', 'M7 19.5a2.5 2.5 0 1 0 0-.02', 'M17 19V9a3 3 0 0 0-3-3h-3', 'M14 3l-3 3 3 3'],
 	search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z', 'M16.5 16.5 21 21'],
+	// An open eye: the Review screen, where a change is read rather than
+	// browsed (FEAT-087).
+	review: [
+		'M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z',
+		'M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'
+	],
+	// Two rails with a line between them: the focus ruler (FEAT-087).
+	ruler: ['M4 9.5h16', 'M4 14.5h16'],
 	// A clock turned back: where HEAD has been.
 	history: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3 4v4h4', 'M12 8v4.5l3 1.8'],
 	folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],

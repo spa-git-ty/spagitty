@@ -14,6 +14,15 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Review, a place to read pull requests.** A new screen beside Pull
+  requests, with an eye on the sidebar and a dot while a review is waiting on
+  you. Its inbox groups pull requests by what they need from you — asked to
+  review, answered after you commented, or open — and shows how big each is
+  and how far you got. A preview says what is worth knowing before you start.
+  *All my repos* lists the ones involving you everywhere on the host.
+
 ### Changed
 
 - **A new face.** The icon is three cream strands on a tomato plate that cross

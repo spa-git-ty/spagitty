@@ -48,6 +48,7 @@ use crate::network_worker::{self, NetworkWorker};
 use crate::profiles;
 use crate::rebase_worker::{self, RebaseWorker};
 use crate::recents;
+use crate::review_state;
 use crate::search_worker::{self, SearchWorker};
 use crate::settings::Settings;
 use crate::watch::{self, RepoWatcher};
@@ -1713,6 +1714,94 @@ pub async fn set_pr_draft<R: Runtime>(
     let (repo, token, _) = forge_credentials(&app, state)?;
     off_thread(move || forge::review::set_draft_status(&repo, &token, number, &id, &title, draft))
         .await
+}
+
+/// Open pull requests anywhere on a host that involve the person (FEAT-087):
+/// the Review screen's "All my repos".
+///
+/// The host is the open repository's when it is on one, and otherwise the
+/// first connected account's — the screen is still useful with a repository
+/// that has no forge remote.
+#[tauri::command]
+pub async fn involved_pull_requests<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Vec<PullRequest>> {
+    let open = forge_repo(state)?;
+    let connected = accounts::load(&app);
+    let account = match &open {
+        Some(repo) => accounts::for_host(&connected, &repo.host),
+        None => connected.first(),
+    }
+    .cloned()
+    .ok_or_else(|| Error::ForgeUnauthorized {
+        host: open
+            .as_ref()
+            .map(|repo| repo.host.clone())
+            .unwrap_or_default(),
+        detail: "no account is connected for this host".into(),
+    })?;
+
+    let Some(token) = forge::keychain::read(&account.host, &account.user)? else {
+        return Err(Error::ForgeUnauthorized {
+            host: account.host.clone(),
+            detail: "the token for this account is no longer in the keychain".into(),
+        });
+    };
+
+    off_thread(move || {
+        forge::involved_pull_requests(account.kind, &account.host, &token, &account.user)
+    })
+    .await
+}
+
+/// Which recent repository is a clone of `slug` on `host`, if any (FEAT-087).
+///
+/// A row from "All my repos" belongs to some repository; reviewing it means
+/// opening that repository, and this is how the screen finds where it is on
+/// disk. Read from the remotes of the repositories Spagitty already knows,
+/// and nothing else is searched.
+#[tauri::command(async)]
+pub fn local_clone_of<R: Runtime>(app: AppHandle<R>, host: String, slug: String) -> Option<String> {
+    recents::load(&app).into_iter().find_map(|path| {
+        let repository = repo::open(&path).ok()?;
+        let found = forge::identify_repo(&repository).ok().flatten()?;
+        (found.host == host && found.slug().eq_ignore_ascii_case(&slug))
+            .then(|| path.to_string_lossy().into_owned())
+    })
+}
+
+/// What the reviewer has done on one pull request, or null (FEAT-087).
+#[tauri::command(async)]
+pub fn review_state<R: Runtime>(
+    app: AppHandle<R>,
+    host: String,
+    owner: String,
+    name: String,
+    number: u64,
+) -> Option<serde_json::Value> {
+    let root = review_state::root(&app)?;
+    review_state::read(&review_state::path_in(&root, &host, &owner, &name, number)?)
+}
+
+/// Keep what the reviewer has done on one pull request (FEAT-087). A null
+/// state forgets it.
+#[tauri::command(async)]
+pub fn set_review_state<R: Runtime>(
+    app: AppHandle<R>,
+    host: String,
+    owner: String,
+    name: String,
+    number: u64,
+    state: serde_json::Value,
+) -> Result<()> {
+    let path = review_state::root(&app)
+        .and_then(|root| review_state::path_in(&root, &host, &owner, &name, number))
+        .ok_or_else(|| Error::Config("nowhere to keep this review".into()))?;
+    if state.is_null() {
+        return review_state::forget(&path).map_err(Error::Config);
+    }
+    review_state::write(&path, &state).map_err(Error::Config)
 }
 
 /// Is there a newer Spagitty than this one?

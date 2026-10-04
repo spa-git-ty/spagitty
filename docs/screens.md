@@ -29,6 +29,7 @@ under Amendment 11.
 | 1O | File history | `/history` | no | Built | FEAT-063 |
 | 1P | Badges | `/badges` | yes | Built | FEAT-072 |
 | 1Q | Farm | `/farm` | yes | Built | FEAT-073 |
+| 1R | Review | `/review` | yes | Built | FEAT-087 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -43,6 +44,10 @@ of a repository; Badges answers what has been *done* in one, and by whom.
 it was cut into, and the agents working them. It takes the rail's top slot: it
 is the product's own subject, and everything below it in the rail is where the
 farm's output is read.
+
+1R, Review, came from the author's own reviewing: pull requests read closely,
+by a dyslexic reviewer, without the host's clutter. It sits beside 1H, which is
+still where pull requests are browsed, created and merged.
 
 What remains deferred is named on the screen that defers it, in place rather
 than being absent — a conflicted stash apply, and the forges Spagitty has no
@@ -869,3 +874,28 @@ starting a farm, because a farm with no agent is still a plan.
 **Spagitty runs agents; it does not contain them.** Claude Code, Codex, Cursor
 and Oh My Pi are detected on `PATH`, and anything else with a command line can
 be added by hand. There is no model here and no key.
+
+## 1R — Review
+
+**Built.** `src/routes/review/+page.svelte`, `src/lib/review/`, and the forge
+and `review_state` modules behind it (FEAT-087).
+
+A place to read a pull request, beside 1H. Pull requests is still where they
+are browsed, created and merged; Review is where one is read closely enough to
+answer it.
+
+**The inbox** groups the open repository's pull requests by what each needs
+from you: *Needs you* (you are a requested reviewer), *Back with you* (a thread
+you started has an answer), and *Open on this repo*. Your own are left out.
+Each card shows its size in one to three bars and how far you got; the preview
+card beside them says what is worth knowing before you start. *All my repos*
+lists the open pull requests anywhere on the host that involve you; opening one
+opens the clone Spagitty knows of it.
+
+**The list is the one 1H reads**, read when a repository opens — so the rail's
+dot is right before the screen is visited — and on Refresh, never on a timer.
+
+**What you have done on a pull request is kept** as one JSON file per pull
+request under Spagitty's application data, not in the repository: it is the
+reviewer's working state, and the same pull request from another clone is the
+same review.

@@ -5,7 +5,9 @@
 	import { delight } from '$lib/delight/store.svelte';
 	import { isItemActive, navRows } from '$lib/nav';
 	import { repo } from '$lib/repo.svelte';
+	import { review } from '$lib/review/store.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import type { NavItem } from '$lib/nav';
 
 	/**
 	 * The rail is an ornament (FEAT-082): a floating pill of icons beside the
@@ -48,7 +50,11 @@
 	 * many commits or branches there are is inventory, and a dot on every icon
 	 * would say nothing.
 	 */
-	function waiting(key: keyof typeof counts | undefined): boolean {
+	function waiting(item: NavItem): boolean {
+		// Review has no count to show: its dot is a pull request waiting on
+		// your review (FEAT-087).
+		if (item.code === '1R') return review.waiting;
+		const key = item.count;
 		if (key !== 'working' && key !== 'conflicts') return false;
 		return (counts[key] ?? 0) > 0;
 	}
@@ -90,7 +96,7 @@
 			>
 				<span class="glyph">
 					<Icon name={row.item.icon} size="1.2em" />
-					{#if waiting(row.item.count)}<span class="dot" aria-hidden="true"></span>{/if}
+					{#if waiting(row.item)}<span class="dot" aria-hidden="true"></span>{/if}
 				</span>
 				<span class="label">{row.item.label}</span>
 				<span class="count mono">
