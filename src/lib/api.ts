@@ -57,6 +57,9 @@ import type {
 	ForgeRepo,
 	GraphOrder,
 	ReviewSummary,
+	FileChange,
+	FullFile,
+	PullHead,
 	ReviewVerdict,
 	Settings,
 	Signing,
@@ -609,6 +612,35 @@ export function reviewSummaries(
 	asks: { repository: string | null; number: number }[]
 ): Promise<[string | null, ReviewSummary][]> {
 	return invoke('review_summaries', { asks });
+}
+
+/**
+ * Bring a pull request's head and target branch into the repository (FEAT-089).
+ * Skipped when the head already fetched is `head`, the one the host reports.
+ * A network operation; the error is git's own when the remote refuses.
+ */
+export function reviewCheckout(number: number, target: string, head: string): Promise<PullHead> {
+	return invoke('review_checkout', { number, target, head });
+}
+
+/** The files a pull request changes, read from disk (FEAT-089). */
+export function reviewFiles(from: string, to: string): Promise<FileChange[]> {
+	return invoke('review_files', { from, to });
+}
+
+/** One file of a pull request, whole (FEAT-089). */
+export function reviewFile(
+	from: string,
+	to: string,
+	path: string,
+	oldPath: string | null = null
+): Promise<FullFile> {
+	return invoke('review_file', { from, to, path, oldPath });
+}
+
+/** Put a pull request's head in a worktree of its own; answers its path (FEAT-089). */
+export function reviewWorktree(number: number, head: string): Promise<string> {
+	return invoke('review_worktree', { number, head });
 }
 
 /** Which repository Spagitty knows is a clone of `slug` on `host`, or null (FEAT-087). */

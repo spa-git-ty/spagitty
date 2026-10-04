@@ -32,6 +32,7 @@ pub mod forge;
 pub mod graph;
 pub mod identity;
 pub mod ops;
+pub mod pull;
 pub mod rebase;
 pub mod record;
 pub mod reflog;

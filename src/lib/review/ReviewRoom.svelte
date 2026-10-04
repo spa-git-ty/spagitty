@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { CHECK_LABELS, requests } from '$lib/requests/store.svelte';
 	import { review } from './store.svelte';
@@ -23,6 +24,9 @@
 				<span class="number mono">#{pr.number}</span>
 				<span class="title">{pr.title}</span>
 			</span>
+			<Btn disabled={review.makingWorktree !== null} onclick={() => review.openWorktree(pr)}>
+				<Icon name="folder" size="1em" />Open in worktree
+			</Btn>
 		</header>
 		<div class="meta note">
 			<span><span class="who">{pr.authorName}</span> wants to merge</span>

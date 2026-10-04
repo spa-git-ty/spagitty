@@ -12,13 +12,6 @@
 	 * The Review inbox (FEAT-087): pull requests grouped by what each needs
 	 * from you, and a preview of the chosen one.
 	 */
-	interface Props {
-		/** Check the chosen pull request out into a worktree. */
-		onworktree?: (number: number) => void;
-	}
-
-	let { onworktree }: Props = $props();
-
 	const groups = $derived(review.groups);
 	const selected = $derived(review.selected);
 	let opening = $state(false);
@@ -106,11 +99,9 @@
 				pr={selected}
 				record={review.recordOf(selected)}
 				notHere={review.notHere}
-				{opening}
+				opening={opening || review.makingWorktree !== null}
 				onopen={() => open(selected.id)}
-				onworktree={onworktree && review.isHere(selected)
-					? () => onworktree(selected.number)
-					: undefined}
+				onworktree={review.isHere(selected) ? () => review.openWorktree(selected) : undefined}
 			/>
 		{/if}
 	</div>

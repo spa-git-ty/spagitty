@@ -989,6 +989,16 @@ pub fn fetch_spawn(repo: &Path, remote: &str, prune: bool) -> Result<std::proces
     record_spawn(command(repo, &args), &args)
 }
 
+/// Fetch particular refs from one remote, and nothing else (FEAT-089): a pull
+/// request's head and its target, for the Review room. No tags — reviewing a
+/// pull request should not bring every tag down with it.
+pub fn fetch_refspecs(repo: &Path, remote: &str, refspecs: &[&str]) -> Result<()> {
+    let mut args = vec!["fetch", "--no-tags", "--no-write-fetch-head", remote];
+    args.extend_from_slice(refspecs);
+    run(repo, &args)?;
+    Ok(())
+}
+
 fn fetch_args(remote: &str, prune: bool) -> Vec<&str> {
     let mut args = vec!["fetch", "--progress"];
     if prune {
