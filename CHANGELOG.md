@@ -80,6 +80,9 @@ stays backward-compatible.
   checked certificates against a bundled list of public authorities and
   ignored the ones your computer trusts, so a GitLab signed by an internal CA
   was reported as unreachable. It now uses the system's certificate store.
+- **A GitLab token connects as GitLab.** Settings checked every token as if it
+  were for GitHub, so a GitLab token failed with "Field 'viewer' doesn't exist".
+  The host's name now decides which service the token is checked against.
 - **A one-line change on Windows no longer shows as the whole file rewritten.**
   Files checked out with Windows line endings were compared with the
   repository's copy byte for byte, so every line differed. The working file is

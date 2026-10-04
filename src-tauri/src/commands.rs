@@ -1471,6 +1471,10 @@ pub async fn forge_connect<R: Runtime>(
             detail: "a host is needed".into(),
         });
     }
+    // The hostname decides when it names a forge. The screen only ever sends
+    // GitHub, so a `gitlab.` host was asked GitHub's GraphQL question and
+    // answered "Field 'viewer' doesn't exist on type 'Query'" (BUG-043).
+    let kind = forge::kind_of(&host).unwrap_or(kind);
     if token.trim().is_empty() {
         return Err(Error::Forge {
             host,

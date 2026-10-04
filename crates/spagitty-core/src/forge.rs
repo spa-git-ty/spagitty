@@ -239,7 +239,10 @@ fn split_host_and_path(url: &str) -> Option<(&str, &str)> {
 /// enterprise host works without being configured. Anything else is `None`,
 /// and connecting it is a decision a person makes rather than a guess this
 /// function makes.
-fn kind_of(host: &str) -> Option<Kind> {
+///
+/// Public because connecting an account asks it too (BUG-043): a token for a
+/// `gitlab.` host is proved against GitLab, not against GitHub.
+pub fn kind_of(host: &str) -> Option<Kind> {
     if host == "github.com" || host.starts_with("github.") {
         return Some(Kind::GitHub);
     }
@@ -479,6 +482,18 @@ mod tests {
         ] {
             assert!(identify(url).is_none(), "expected nothing for {url}");
         }
+    }
+
+    #[test]
+    fn a_self_hosted_gitlab_is_known_by_its_hostname() {
+        // The host BUG-043 was raised against: a GitLab under a company domain,
+        // named `gitlab.` like the enterprise GitHub rule expects.
+        assert_eq!(
+            kind_of("gitlab.apps.ocp-nonprod-01.hodomain.local"),
+            Some(Kind::GitLab)
+        );
+        assert_eq!(kind_of("github.com"), Some(Kind::GitHub));
+        assert_eq!(kind_of("git.example.com"), None);
     }
 
     #[test]
