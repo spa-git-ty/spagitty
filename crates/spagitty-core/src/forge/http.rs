@@ -207,6 +207,38 @@ pub fn patch_json(url: &str, token: &str, host: &str, body: &str) -> Result<Resp
     send_json(Verb::Patch, url, token, host, body)
 }
 
+/// `DELETE url` with a bearer token, and no body (FEAT-088).
+///
+/// The same rules and the same reporting as [`get_json`]. GitLab discards a
+/// pending review comment this way, which is how a review that failed half way
+/// through sending takes back the comments it had already left as drafts.
+pub fn delete(url: &str, token: &str, host: &str) -> Result<Response> {
+    if !url.starts_with("https://") {
+        return Err(Error::Forge {
+            host: host.to_string(),
+            detail: "refusing to send a token over an unencrypted connection".into(),
+        });
+    }
+
+    let sent = agent()
+        .delete(url)
+        .header("Authorization", &format!("Bearer {token}"))
+        .call();
+
+    match sent {
+        Ok(response) => Ok(read(response)),
+        Err(ureq::Error::StatusCode(status)) => Ok(Response {
+            status,
+            body: String::new(),
+            retry_after: None,
+        }),
+        Err(error) => Err(Error::ForgeOffline {
+            host: host.to_string(),
+            detail: error.to_string(),
+        }),
+    }
+}
+
 /// Which verb a body-carrying request goes out with.
 ///
 /// Not public: a caller picks a verb by picking a function, so this stays an

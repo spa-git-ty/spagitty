@@ -22,6 +22,11 @@ stays backward-compatible.
   review, answered after you commented, or open — and shows how big each is
   and how far you got. A preview says what is worth knowing before you start.
   *All my repos* lists the ones involving you everywhere on the host.
+- **GitLab, all the way through.** Merge requests now show their files,
+  commits and line comments; replies land in their thread; a review with
+  comments is published as one batch and an approval is pinned to the version
+  you read. Projects in nested groups are found, and a self-hosted GitLab
+  under any name connects as GitLab.
 
 ### Changed
 
@@ -84,6 +89,10 @@ stays backward-compatible.
   offered only while the layer is on.
 
 ### Fixed
+
+- **GitLab no longer says every merge request needs you, or that it passed.**
+  A merge request needs you when you are one of its reviewers, and its checks
+  are its latest pipeline's — shown once read, never assumed.
 
 - **A self-hosted forge behind a company certificate connects.** Spagitty
   checked certificates against a bundled list of public authorities and

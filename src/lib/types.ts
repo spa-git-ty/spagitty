@@ -381,9 +381,37 @@ export interface PullRequestComment {
 /** A local draft inline comment waiting to be published with a review (FEAT-059). */
 export interface DraftComment {
 	path: string;
+	/** The line the comment is on — the last, when it covers a range. */
 	line: number;
 	side: string;
 	body: string;
+	/** The first line, when the comment covers a range, and its side. */
+	startLine?: number | null;
+	startSide?: string | null;
+	/** Where `line` and `startLine` sit, as GitLab places a comment (FEAT-088). */
+	place?: LinePlace | null;
+	startPlace?: LinePlace | null;
+	/** The file's path before the change, when it was renamed. */
+	oldPath?: string | null;
+}
+
+/**
+ * One diff line as GitLab counts it (FEAT-088): the two versions' counters at
+ * that line — its own number on its side, the next line's on the other.
+ */
+export interface LinePlace {
+	kind: 'added' | 'removed' | 'context';
+	old: number;
+	new: number;
+}
+
+/** Checks and threads the list did not carry, asked for after it (FEAT-088). */
+export interface ReviewSummary {
+	number: number;
+	checks: CheckState | null;
+	openThreads: number;
+	resolvedThreads: number;
+	repliesToYou: number;
 }
 
 /** Which hosting service a remote points at (FEAT-017, FEAT-070). */

@@ -141,6 +141,7 @@ rather than an audit.
 | [FEAT-085](items/FEAT-085-a-new-mark-palette-and-wordmark.md) | A new mark, palette and wordmark | brand, chrome, 1J | Open |
 | [FEAT-086](items/FEAT-086-the-pomodoro-theme.md) | The Pomodoro theme | all | Done |
 | [FEAT-087](items/FEAT-087-the-review-screen-and-inbox.md) | The Review screen and its inbox | 1R, chrome | Open |
+| [FEAT-088](items/FEAT-088-gitlab-as-its-api-says.md) | GitLab, as its API says | 1R, 1H, Settings | Open |
 
 ## Bugs
 

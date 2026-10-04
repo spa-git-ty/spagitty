@@ -1434,11 +1434,18 @@ pub fn apply_identity_profile(
 /// `None` when no repository is open, when its remote is not a host Spagitty
 /// reads, or when it has several remotes and no `origin` — none of which is an
 /// error. Plenty of repositories are not on a forge at all.
+///
+/// A host a connected account names counts as that account's kind, so a
+/// self-hosted GitLab not called `gitlab.` anything is still read (FEAT-088).
 #[tauri::command(async)]
-pub fn forge_repo(state: State<'_, AppState>) -> Result<Option<Repo>> {
+pub fn forge_repo<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Option<Repo>> {
+    let known = accounts::load(&app);
     let guard = state.session.lock().expect("session lock");
     match guard.as_ref() {
-        Some(session) => forge::identify_repo(&session.repo.to_thread_local()),
+        Some(session) => forge::identify_repo_with(&session.repo.to_thread_local(), &known),
         None => Ok(None),
     }
 }
@@ -1475,7 +1482,6 @@ pub async fn forge_connect<R: Runtime>(
     // The hostname decides when it names a forge. The screen only ever sends
     // GitHub, so a `gitlab.` host was asked GitHub's GraphQL question and
     // answered "Field 'viewer' doesn't exist on type 'Query'" (BUG-043).
-    let kind = forge::kind_of(&host).unwrap_or(kind);
     if token.trim().is_empty() {
         return Err(Error::Forge {
             host,
@@ -1485,10 +1491,12 @@ pub async fn forge_connect<R: Runtime>(
 
     // Proving the token is a network round trip, so it goes off the main
     // thread like every other one.
-    let asked = {
+    // A host that names no forge is asked GitLab's question first, so a
+    // self-hosted GitLab under any name connects as GitLab (FEAT-088).
+    let (kind, asked) = {
         let host = host.clone();
         let token = token.trim().to_string();
-        off_thread(move || forge::whoami(kind, &host, &token)).await?
+        off_thread(move || forge::identify_account(&host, &token, kind)).await?
     };
 
     forge::keychain::store(&host, &asked, token.trim())?;
@@ -1532,7 +1540,7 @@ fn forge_credentials<R: Runtime>(
     app: &AppHandle<R>,
     state: State<'_, AppState>,
 ) -> Result<(Repo, String, String)> {
-    let Some(repo) = forge_repo(state)? else {
+    let Some(repo) = forge_repo(app.clone(), state)? else {
         return Err(Error::Forge {
             host: String::new(),
             detail: "this repository is not on a service Spagitty can read".into(),
@@ -1727,7 +1735,7 @@ pub async fn involved_pull_requests<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
 ) -> Result<Vec<PullRequest>> {
-    let open = forge_repo(state)?;
+    let open = forge_repo(app.clone(), state)?;
     let connected = accounts::load(&app);
     let account = match &open {
         Some(repo) => accounts::for_host(&connected, &repo.host),
@@ -1755,6 +1763,77 @@ pub async fn involved_pull_requests<R: Runtime>(
     .await
 }
 
+/// One pull request the Review inbox wants checks and threads for.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SummaryAsk {
+    /// `owner/name`, or null for the open repository.
+    repository: Option<String>,
+    number: u64,
+}
+
+/// Checks and thread counts the list did not carry (FEAT-088).
+///
+/// GitLab's merge request list has neither; GitHub's has both and answers
+/// with nothing here. Each pull request names its repository when it came
+/// from "All my repos"; the rest are the open repository's.
+#[tauri::command]
+pub async fn review_summaries<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    asks: Vec<SummaryAsk>,
+) -> Result<Vec<(Option<String>, forge::ReviewSummary)>> {
+    let open = forge_repo(app.clone(), state)?;
+    let connected = accounts::load(&app);
+    let Some(account) = (match &open {
+        Some(repo) => accounts::for_host(&connected, &repo.host),
+        None => connected.first(),
+    })
+    .cloned() else {
+        return Ok(Vec::new());
+    };
+    let Some(token) = forge::keychain::read(&account.host, &account.user)? else {
+        return Ok(Vec::new());
+    };
+
+    off_thread(move || {
+        // Grouped by repository, so each project is asked about once.
+        let mut by_repo: Vec<(Option<String>, Vec<u64>)> = Vec::new();
+        for ask in asks {
+            match by_repo.iter_mut().find(|(slug, _)| *slug == ask.repository) {
+                Some((_, numbers)) => numbers.push(ask.number),
+                None => by_repo.push((ask.repository, vec![ask.number])),
+            }
+        }
+
+        let mut found = Vec::new();
+        for (slug, numbers) in by_repo {
+            let repo = match &slug {
+                None => match &open {
+                    Some(repo) => repo.clone(),
+                    None => continue,
+                },
+                Some(slug) => {
+                    let Some((owner, name)) = slug.rsplit_once('/') else {
+                        continue;
+                    };
+                    Repo {
+                        kind: account.kind,
+                        host: account.host.clone(),
+                        owner: owner.to_string(),
+                        name: name.to_string(),
+                    }
+                }
+            };
+            for summary in forge::review_summaries(&repo, &token, &account.user, &numbers) {
+                found.push((slug.clone(), summary));
+            }
+        }
+        Ok(found)
+    })
+    .await
+}
+
 /// Which recent repository is a clone of `slug` on `host`, if any (FEAT-087).
 ///
 /// A row from "All my repos" belongs to some repository; reviewing it means
@@ -1763,9 +1842,12 @@ pub async fn involved_pull_requests<R: Runtime>(
 /// and nothing else is searched.
 #[tauri::command(async)]
 pub fn local_clone_of<R: Runtime>(app: AppHandle<R>, host: String, slug: String) -> Option<String> {
+    let known = accounts::load(&app);
     recents::load(&app).into_iter().find_map(|path| {
         let repository = repo::open(&path).ok()?;
-        let found = forge::identify_repo(&repository).ok().flatten()?;
+        let found = forge::identify_repo_with(&repository, &known)
+            .ok()
+            .flatten()?;
         (found.host == host && found.slug().eq_ignore_ascii_case(&slug))
             .then(|| path.to_string_lossy().into_owned())
     })
@@ -1974,7 +2056,9 @@ pub async fn avatar<R: Runtime>(
 
     // Taken from the app rather than as a command argument: an async command
     // that borrows `State` has to return a `Result`, and nothing here is one.
-    let repo = forge_repo(app.state::<AppState>()).ok().flatten();
+    let repo = forge_repo(app.clone(), app.state::<AppState>())
+        .ok()
+        .flatten();
 
     // Off the main thread for the reason on `check_update`: this is a network
     // request with a timeout on it, and a synchronous command holds the window

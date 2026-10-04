@@ -34,9 +34,11 @@
 		return parts.join(' · ');
 	});
 
-	// The saved records behind each card's progress, read as rows arrive.
+	// The saved records behind each card's progress, read as rows arrive, and
+	// on GitLab the checks and threads its list leaves out (FEAT-088).
 	$effect(() => {
 		void review.loadRecords(review.list);
+		void review.loadSummaries();
 	});
 
 	async function open(id: string) {

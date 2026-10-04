@@ -178,3 +178,34 @@ it('says so when nothing is waiting', async () => {
 	view = render(Page, {});
 	await vi.waitFor(() => expect(view.text()).toContain('Nothing to review.'));
 });
+
+it('asks GitLab for the checks and threads its list leaves out, once', async () => {
+	vi.mocked(api.forgeRepo).mockResolvedValue({
+		kind: 'gitLab',
+		host: 'gitlab.example.com',
+		owner: 'team/backend',
+		name: 'payments'
+	});
+	vi.mocked(api.pullRequests).mockResolvedValue([{ ...ASKED, checks: null, openThreads: 0 }]);
+	vi.mocked(api.reviewSummaries).mockResolvedValue([
+		[null, { number: 214, checks: 'failing', openThreads: 2, resolvedThreads: 1, repliesToYou: 0 }]
+	]);
+	view = render(Page, {});
+
+	await vi.waitFor(() => expect(view.text()).toContain('Checks failing'));
+	expect(view.text()).toContain('2 open threads');
+	expect(api.reviewSummaries).toHaveBeenCalledTimes(1);
+	expect(api.reviewSummaries).toHaveBeenCalledWith([{ repository: null, number: 214 }]);
+	expect(api.reviewState).toHaveBeenCalledWith({
+		host: 'gitlab.example.com',
+		owner: 'team/backend',
+		name: 'payments',
+		number: 214
+	});
+});
+
+it('asks GitHub nothing more: its list already says', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	expect(api.reviewSummaries).not.toHaveBeenCalled();
+});
