@@ -273,9 +273,17 @@ fn agent() -> ureq::Agent {
         //
         // Naming the provider is the whole fix. It also makes the choice
         // visible here rather than implied by a line in `Cargo.toml`.
+        //
+        // **The roots are chosen too.** `RootCerts` defaults to `WebPki` — the
+        // bundled Mozilla list — and with native-tls that also *disables* the
+        // platform's built-in roots. A self-hosted forge signed by a corporate
+        // CA that the machine trusts was refused with "unable to find any
+        // user-specified roots in the final cert chain" (BUG-042).
+        // `PlatformVerifier` is what the header promises: the OS store.
         .tls_config(
             ureq::tls::TlsConfig::builder()
                 .provider(ureq::tls::TlsProvider::NativeTls)
+                .root_certs(ureq::tls::RootCerts::PlatformVerifier)
                 .build(),
         )
         .build()
@@ -359,6 +367,20 @@ mod tests {
             agent.config().tls_config().provider(),
             ureq::tls::TlsProvider::NativeTls
         );
+    }
+
+    #[test]
+    fn the_agent_trusts_the_platform_certificate_store_not_a_bundled_one() {
+        // ureq's default is the bundled Mozilla list, which with native-tls
+        // turns the platform's roots *off*. A GitLab signed by a corporate CA
+        // the machine trusts was then refused (BUG-042). Asserted by reading
+        // the config back, for the same reason as the provider test above.
+        let agent = agent();
+
+        assert!(matches!(
+            agent.config().tls_config().root_certs(),
+            ureq::tls::RootCerts::PlatformVerifier
+        ));
     }
 
     #[test]
