@@ -264,6 +264,13 @@ mod tests {
         assert_eq!(paths, vec!["lib.rs", "new.rs"]);
         assert_eq!((files[0].added, files[0].removed), (2, 1));
         assert_eq!(files[1].status, FileStatus::Added);
+        // The list carries the blobs a viewed tick is kept against, the same
+        // ones the whole file reports.
+        let whole =
+            diff::full_file_between(&repo, &pull.merge_base, &pull.head, "lib.rs", None).unwrap();
+        assert_eq!(files[0].new_blob, whole.new_blob);
+        assert_eq!(files[0].old_blob, whole.old_blob);
+        assert_eq!(files[1].old_blob, None);
     }
 
     #[test]

@@ -59,7 +59,8 @@ export type IconName =
 	| 'badge'
 	| 'farm'
 	| 'review'
-	| 'ruler';
+	| 'ruler'
+	| 'unfold';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -124,6 +125,8 @@ export const ICONS: Record<IconName, string[]> = {
 	],
 	// Two rails with a line between them: the focus ruler (FEAT-087).
 	ruler: ['M4 9.5h16', 'M4 14.5h16'],
+	// Two chevrons opening apart: unchanged lines folded away (FEAT-091).
+	unfold: ['M6 9.5l6-5 6 5', 'M6 14.5l6 5 6-5'],
 	// A clock turned back: where HEAD has been.
 	history: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3 4v4h4', 'M12 8v4.5l3 1.8'],
 	folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],

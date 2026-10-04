@@ -174,6 +174,9 @@ export interface FileChange {
 	tooLarge: boolean;
 	added: number;
 	removed: number;
+	/** The blob on each side, null where the file does not exist (FEAT-091). */
+	oldBlob?: string | null;
+	newBlob?: string | null;
 }
 
 export interface CommitDiff {

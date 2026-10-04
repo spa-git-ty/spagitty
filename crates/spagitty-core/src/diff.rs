@@ -125,6 +125,11 @@ pub struct FileChange {
     pub too_large: bool,
     pub added: u32,
     pub removed: u32,
+    /// The blob on each side, null where the file does not exist. The Review
+    /// room keeps a viewed tick against the new one (FEAT-091), so it can say
+    /// which files changed since they were ticked without reading them.
+    pub old_blob: Option<String>,
+    pub new_blob: Option<String>,
 }
 
 /// Everything the Diff screen's header and file list need.
@@ -235,6 +240,8 @@ pub fn commit_diff(repo: &gix::Repository, id: &str) -> Result<CommitDiff> {
             too_large: stats.too_large,
             added: stats.added,
             removed: stats.removed,
+            old_blob: change.old.map(|id| id.to_string()),
+            new_blob: change.new.map(|id| id.to_string()),
         });
     }
 
@@ -327,6 +334,8 @@ pub fn changes_between(repo: &gix::Repository, from: &str, to: &str) -> Result<V
             too_large: stats.too_large,
             added: stats.added,
             removed: stats.removed,
+            old_blob: change.old.map(|id| id.to_string()),
+            new_blob: change.new.map(|id| id.to_string()),
         });
     }
     Ok(files)

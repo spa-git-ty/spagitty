@@ -36,6 +36,13 @@ stays backward-compatible.
   colours with the changed words marked. Diff, Working copy, File history and
   Review all follow it, and every face ships with Spagitty, so it works
   offline. Diffs now default to the calm reading set.
+- **The review room.** Open a pull request from Review and it lands on the
+  first file you have not viewed. Read each file as its changes, with the
+  unchanged lines folded, or whole; one file at a time or all in one column.
+  Tick files as viewed — a file the author changes afterwards comes back
+  unticked. A focus ruler follows the line you are on (`j` and `k`), `Aa`
+  switches the reading font, and the threads sit under their lines and in a
+  Conversation card that takes you to them.
 
 ### Changed
 
