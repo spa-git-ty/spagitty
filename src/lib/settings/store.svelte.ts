@@ -323,8 +323,9 @@ export const settings = {
 		busy = true;
 		writeError = null;
 		try {
-			// One host is supported; the kind is not a question to ask a person
-			// who already typed the hostname.
+			// The kind is not a question to ask a person who already typed the
+			// hostname: the backend reads it from the host (`gitlab.` is GitLab)
+			// and uses this only for a host that names no forge (BUG-043).
 			accounts = await api.forgeConnect('gitHub', host, token);
 			return true;
 		} catch (e) {
