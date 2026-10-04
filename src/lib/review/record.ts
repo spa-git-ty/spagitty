@@ -14,7 +14,7 @@
  * — possibly from an older build, possibly hand-edited — and the screen.
  */
 
-import type { ForgeRepo, PullRequest } from '../types';
+import type { ForgeRepo, LinePlace, PullRequest } from '../types';
 import type { ReviewKey } from '../api';
 
 /** A comment written in the review room and not yet sent. */
@@ -34,6 +34,15 @@ export interface PendingComment {
 	headSha: string;
 	/** Unix seconds. */
 	createdAt: number;
+	/**
+	 * Where the last and the first line sit by both versions' counters, which
+	 * is how GitLab places a comment (FEAT-093). Null in a record from before
+	 * they were kept; GitHub needs only the numbers.
+	 */
+	place: LinePlace | null;
+	startPlace: LinePlace | null;
+	/** The file's path before the change, when it was renamed. */
+	oldPath: string | null;
 }
 
 export interface ReviewRecord {
@@ -88,19 +97,40 @@ function pending(value: unknown): PendingComment | null {
 	const line = Number(raw.line);
 	if (typeof raw.path !== 'string' || !Number.isInteger(line) || line < 1) return null;
 	if (typeof raw.body !== 'string' || raw.body.trim() === '') return null;
+	const endSide = side(raw.side) ?? 'RIGHT';
+	const startSide = side(raw.startSide) ?? endSide;
 	const asked = raw.startLine === null || raw.startLine === undefined ? null : Number(raw.startLine);
-	const start = asked !== null && Number.isInteger(asked) && asked >= 1 && asked < line ? asked : null;
+	// A range starts before it ends — on one side. Across the two sides the
+	// numbers are different counts, and a removed line can carry a larger one.
+	const start =
+		asked !== null && Number.isInteger(asked) && asked >= 1 && (asked < line || startSide !== endSide)
+			? asked
+			: null;
 	return {
 		id: typeof raw.id === 'string' && raw.id ? raw.id : `${raw.path}:${line}:${Math.random()}`,
 		path: raw.path,
 		line,
-		side: side(raw.side) ?? 'RIGHT',
+		side: endSide,
 		startLine: start,
-		startSide: start !== null ? (side(raw.startSide) ?? side(raw.side) ?? 'RIGHT') : null,
+		startSide: start !== null ? startSide : null,
 		body: raw.body,
 		headSha: typeof raw.headSha === 'string' ? raw.headSha : '',
-		createdAt: Number.isFinite(Number(raw.createdAt)) ? Number(raw.createdAt) : 0
+		createdAt: Number.isFinite(Number(raw.createdAt)) ? Number(raw.createdAt) : 0,
+		place: placeOf(raw.place),
+		startPlace: start !== null ? placeOf(raw.startPlace) : null,
+		oldPath: typeof raw.oldPath === 'string' && raw.oldPath ? raw.oldPath : null
 	};
+}
+
+function placeOf(value: unknown): LinePlace | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const raw = value as Record<string, unknown>;
+	const count = (n: unknown) => (Number.isInteger(n) && (n as number) >= 0 ? (n as number) : null);
+	const old = count(raw.old);
+	const fresh = count(raw.new);
+	if (raw.kind !== 'added' && raw.kind !== 'removed' && raw.kind !== 'context') return null;
+	if (old === null || fresh === null) return null;
+	return { kind: raw.kind, old, new: fresh };
 }
 
 /**

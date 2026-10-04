@@ -565,6 +565,20 @@ export function replyComment(
 	return invoke('reply_comment', { number, commentId, body });
 }
 
+/**
+ * Every comment the Review room shows: line comments with their threads, and
+ * the comments on the pull request as a whole, which have an empty path
+ * (FEAT-093).
+ */
+export function reviewComments(number: number): Promise<PullRequestComment[]> {
+	return invoke('review_comments', { number });
+}
+
+/** Resolve a thread on the host, or open it again (FEAT-093). */
+export function resolveThread(number: number, threadId: string, resolved: boolean): Promise<void> {
+	return invoke('resolve_thread', { number, threadId, resolved });
+}
+
 /** Merge a pull request on the configured forge (FEAT-071). */
 export function mergePullRequest(
 	number: number,

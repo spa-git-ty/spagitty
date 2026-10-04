@@ -18,6 +18,7 @@ import * as api from '../api';
 import type { ReviewKey } from '../api';
 import { pairWords, type Segment } from '../diff/words';
 import { reading } from '../reading.svelte';
+import { notice } from '../ui/notice.svelte';
 import type {
 	ConflictFix,
 	ConflictFixes,
@@ -26,9 +27,12 @@ import type {
 	FileStatus,
 	PullHead,
 	PullRequest,
-	PullRequestComment
+	PullRequestComment,
+	ReviewVerdict
 } from '../types';
-import { blocksOf, blocksOfHunks, lineKey, type Block, type Laid, type Scope, type SideName } from './rows';
+import { pendingOn, toDraft } from './drafts';
+import type { PendingComment } from './record';
+import { blocksOf, blocksOfHunks, lineKey, type Block, type Laid, type Scope, type SideName, type Composing } from './rows';
 import { review } from './store.svelte';
 import { threadsOf, type Thread } from './threads';
 
@@ -95,6 +99,12 @@ let conflictsError = $state<string | null>(null);
 let filter = $state<Filter>('all');
 /** Which side of a conflict is open under a card's header, by card. */
 let sides = $state.raw<Map<string, SideName>>(new Map());
+/** Where a comment is being written (FEAT-093). */
+let composer = $state<Composing | null>(null);
+/** The text for the pull request as a whole, as typed. */
+let body = $state('');
+let bodyTimer: ReturnType<typeof setTimeout> | null = null;
+let sending = $state(false);
 
 const threads = $derived(threadsOf(comments));
 const reading_ = new Set<string>();
@@ -116,7 +126,7 @@ function fileAt(path: string | null): RoomFile | null {
 
 async function readComments(number: number, mine: number): Promise<void> {
 	try {
-		const found = await api.pullRequestComments(number);
+		const found = await api.reviewComments(number);
 		if (mine !== seq) return;
 		comments = found;
 		commentsError = null;
@@ -229,6 +239,11 @@ export const room = {
 		conflictsError = null;
 		filter = 'all';
 		sides = new Map();
+		composer = null;
+		body = review.recordAt(key)?.body ?? '';
+		if (bodyTimer) clearTimeout(bodyTimer);
+		bodyTimer = null;
+		sending = false;
 		reading_.clear();
 
 		void readComments(pr.number, mine);
@@ -346,7 +361,7 @@ export const room = {
 			if (!content) return { path: file.path, lines: null, blocks: [] };
 			if (content.note) return { path: file.path, lines: [], blocks: [], note: content.note };
 			const blocks =
-				content.hunks ?? blocksOf(content.lines, scope, new Set(expanded[file.path] ?? []));
+				content.hunks ?? cut(file.path, content.lines);
 			return { path: file.path, lines: content.lines, blocks, fixes: this.fixesIn(file.path) };
 		});
 	},
@@ -572,22 +587,202 @@ export const room = {
 	 * opened, and the line in focus.
 	 */
 	async jumpTo(thread: Thread): Promise<void> {
-		if (thread.line === null || !fileAt(thread.path)) return;
-		this.select(thread.path);
-		await this.ensure(thread.path);
-		const content = contents[thread.path];
-		if (!content || content.note) return;
-		const index = content.lines.findIndex((line) =>
-			thread.side === 'LEFT' ? line.old === thread.line && line.origin !== 'added' : line.new === thread.line
-		);
-		if (index < 0) return;
-		if (!content.hunks) {
-			const fold = blocksOf(content.lines, scope, new Set(expanded[thread.path] ?? [])).find(
-				(block) => block.kind === 'fold' && block.from <= index && index < block.to
-			);
-			if (fold) this.expand(thread.path, fold.from);
+		if (thread.line === null) return;
+		await goTo(thread.path, thread.side, thread.line, `${thread.path}\nthread\n${thread.id}`);
+	},
+
+	/**
+	 * Resolve a thread on the host, or open it again (FEAT-093). Shown at
+	 * once, and put back with the reason if the host refuses.
+	 */
+	async setResolved(thread: Thread, resolved: boolean): Promise<void> {
+		if (!current || !thread.threadId) return;
+		const ids = new Set(thread.comments.map((comment) => comment.id));
+		const mark = (to: boolean) => {
+			comments = comments.map((comment) => (ids.has(comment.id) ? { ...comment, resolved: to } : comment));
+		};
+		mark(resolved);
+		try {
+			await api.resolveThread(current.pr.number, thread.threadId, resolved);
+		} catch (e) {
+			mark(!resolved);
+			notice.failed(resolved ? 'The thread was not resolved' : 'The thread was not reopened', e);
 		}
-		focus = lineKey(thread.path, index);
-		target = `${thread.path}\nthread\n${thread.id}`;
+	},
+
+	/** Answer a thread on the host, now: a reply is not held for the review. */
+	async reply(thread: Thread, body: string): Promise<boolean> {
+		if (!current || body.trim() === '') return false;
+		try {
+			const posted = await api.replyComment(current.pr.number, thread.id, body.trim());
+			comments = [...comments, posted];
+			return true;
+		} catch (e) {
+			notice.failed('The reply was not sent', e);
+			return false;
+		}
+	},
+
+	// --- Pending comments (FEAT-093) -----------------------------------------
+
+	/** The lines a comment is being written on, or null. */
+	get composer(): Composing | null {
+		return composer;
+	},
+
+	/** Start a comment on one line. */
+	compose(path: string, index: number): void {
+		if (!head || !contents[path]) return;
+		composer = { path, from: index, to: index };
+	},
+
+	/**
+	 * Cover a range: from where the comment being written starts — or the
+	 * line in focus — to `index`, in the same file.
+	 */
+	extend(path: string, index: number): void {
+		if (!head || !contents[path]) return;
+		if (composer && composer.path === path) {
+			composer = { path, from: composer.from, to: index };
+			return;
+		}
+		const at = focus?.startsWith(`${path}\n`) ? Number(focus.slice(path.length + 1)) : NaN;
+		composer = { path, from: Number.isInteger(at) ? at : index, to: index };
+	},
+
+	closeComposer(): void {
+		composer = null;
+	},
+
+	/** Every comment waiting for Finish review, against any head. */
+	get drafts(): PendingComment[] {
+		return (current ? review.recordAt(current.key)?.drafts : null) ?? [];
+	},
+
+	/** Written against the head being read: placed on their lines, and sent. */
+	get currentDrafts(): PendingComment[] {
+		const sha = head?.head ?? current?.pr.headSha ?? '';
+		return this.drafts.filter((draft) => draft.headSha === sha);
+	},
+
+	/** Written before the author last pushed: their lines may have moved. */
+	get olderDrafts(): PendingComment[] {
+		const sha = head?.head ?? current?.pr.headSha ?? '';
+		return this.drafts.filter((draft) => draft.headSha !== sha);
+	},
+
+	/** Keep what is in the composer as a pending comment. */
+	async addDraft(body: string): Promise<boolean> {
+		const writing = composer;
+		const content = writing ? contents[writing.path] : undefined;
+		const file = writing ? fileAt(writing.path) : null;
+		if (!current || !head || !writing || !content || !file || body.trim() === '') return false;
+		const draft = pendingOn(writing.path, file.oldPath, content.lines, writing.from, writing.to, body, head.head);
+		await review.saveRecord(current.key, (record) => {
+			record.drafts.push(draft);
+		});
+		composer = null;
+		return true;
+	},
+
+	async removeDraft(id: string): Promise<void> {
+		if (!current) return;
+		await review.saveRecord(current.key, (record) => {
+			record.drafts = record.drafts.filter((draft) => draft.id !== id);
+		});
+	},
+
+	async jumpToDraft(draft: PendingComment): Promise<void> {
+		await goTo(draft.path, draft.side, draft.line, `${draft.path}\ndraft\n${draft.id}`);
+	},
+
+	/** What is written for the pull request as a whole, waiting with them. */
+	get body(): string {
+		return body;
+	},
+
+	/** Keep it a moment after the typing stops: a file written per key is a lot. */
+	setBody(text: string): void {
+		body = text;
+		if (bodyTimer) clearTimeout(bodyTimer);
+		const key = current?.key;
+		bodyTimer = setTimeout(() => {
+			bodyTimer = null;
+			if (key) void review.saveRecord(key, (record) => (record.body = text));
+		}, 400);
+	},
+
+	get sending(): boolean {
+		return sending;
+	},
+
+	/**
+	 * Finish review: every pending comment written against this head, and
+	 * the text for the whole pull request, sent as one review with its
+	 * verdict. Sent comments leave the record; older ones stay to be looked
+	 * at again.
+	 */
+	async finish(verdict: ReviewVerdict): Promise<boolean> {
+		if (!current || sending) return false;
+		const opened = current;
+		const sendNow = this.currentDrafts;
+		const text = body;
+		sending = true;
+		try {
+			await api.submitReview(opened.pr.number, verdict, text, sendNow.map(toDraft));
+			if (bodyTimer) clearTimeout(bodyTimer);
+			bodyTimer = null;
+			const sent = new Set(sendNow.map((draft) => draft.id));
+			await review.saveRecord(opened.key, (record) => {
+				record.drafts = record.drafts.filter((draft) => !sent.has(draft.id));
+				record.body = '';
+			});
+			body = '';
+			notice.ok('Review sent', VERDICTS[verdict]);
+			void readComments(opened.pr.number, seq);
+			return true;
+		} catch (e) {
+			notice.failed('The review was not sent', e);
+			return false;
+		} finally {
+			sending = false;
+		}
 	}
 };
+
+/** A file read from disk, cut into blocks as the room shows it. */
+function cut(path: string, lines: DiffLine[]): Block[] {
+	const fixed = new Set(room.fixesIn(path).flatMap((fix) => fix.lines));
+	return blocksOf(lines, scope, new Set(expanded[path] ?? []), fixed);
+}
+
+/** What the toast says each verdict was. */
+const VERDICTS: Record<ReviewVerdict, string> = {
+	approve: 'Approved',
+	requestChanges: 'Changes requested',
+	comment: 'Commented'
+};
+
+/**
+ * Go to a line: its file, opened alone, with the fold over it opened, the
+ * line in focus, and `row` brought into view once it is drawn.
+ */
+async function goTo(path: string, side: 'LEFT' | 'RIGHT', line: number, row: string): Promise<void> {
+	if (!fileAt(path)) return;
+	room.select(path);
+	await room.ensure(path);
+	const content = contents[path];
+	if (!content || content.note) return;
+	const index = content.lines.findIndex((candidate) =>
+		side === 'LEFT' ? candidate.old === line && candidate.origin !== 'added' : candidate.new === line
+	);
+	if (index < 0) return;
+	if (!content.hunks) {
+		const fold = cut(path, content.lines).find(
+			(block) => block.kind === 'fold' && block.from <= index && index < block.to
+		);
+		if (fold) room.expand(path, fold.from);
+	}
+	focus = lineKey(path, index);
+	target = row;
+}

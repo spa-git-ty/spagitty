@@ -4,13 +4,15 @@
 	import { relativeTime } from '$lib/format';
 	import { PLAIN, reading } from '$lib/reading.svelte';
 	import { scale } from '$lib/scale.svelte';
+	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import { room } from './room.svelte';
 	import type { ConflictFix } from '$lib/types';
 	import { lineRows, rowsOf, type Row, type SideName } from './rows';
-	import { threadsByPlace } from './threads';
+	import { draftsByPlace } from './drafts';
+	import { threadsByPlace, type Thread } from './threads';
 
 	/**
 	 * The review room's diff column (FEAT-091).
@@ -23,6 +25,11 @@
 	 * The reading aids live here: the focus ruler under the line being read,
 	 * which `j` and `k` move and a line number sets, and the other chunks faded
 	 * back when Settings › Reading asks for the whole chunk.
+	 *
+	 * And the writing (FEAT-093): a `+` on every line opens a box under it,
+	 * shift-clicking a line number stretches it over a range, and what is
+	 * written waits, tinted, under its lines until Finish review. Threads
+	 * from the host take a reply and are resolved or reopened in place.
 	 */
 
 	/** Room under the last row for the review pill floating over it. */
@@ -30,7 +37,22 @@
 
 	let list = $state<VirtualRows<Row> | null>(null);
 
-	const rows = $derived(rowsOf(room.laid, threadsByPlace(room.threads), room.sides));
+	const rows = $derived(
+		rowsOf(room.laid, threadsByPlace(room.threads), room.sides, {
+			drafts: draftsByPlace(room.currentDrafts),
+			composer: room.composer
+		})
+	);
+	/** The lines the comment being written covers, by index, in its file. */
+	const covered = $derived.by(() => {
+		const writing = room.composer;
+		if (!writing) return null;
+		return { path: writing.path, from: Math.min(writing.from, writing.to), to: Math.max(writing.from, writing.to) };
+	});
+	/** What is typed into the composer, and into each thread's reply box. */
+	let draftText = $state('');
+	let replies = $state<Record<number, string>>({});
+	let replying = $state<number | null>(null);
 	const target = $derived(room.pr?.targetBranch ?? 'main');
 	const lines = $derived(lineRows(rows));
 	const focusAt = $derived(room.focus === null ? -1 : rows.findIndex((row) => row.key === room.focus));
@@ -62,7 +84,11 @@
 			case 'line':
 				return linePx + (row.last ? 10 : 0);
 			case 'thread':
-				return 70 + 64 * row.thread.comments.length + (row.last ? 10 : 0);
+				return 120 + 64 * row.thread.comments.length + (row.last ? 10 : 0);
+			case 'draft':
+				return 96 + (row.last ? 10 : 0);
+			case 'composer':
+				return 180 + (row.last ? 10 : 0);
 		}
 	}
 
@@ -119,6 +145,51 @@
 	function split(path: string): [string, string] {
 		const cut = path.lastIndexOf('/');
 		return [path.slice(0, cut + 1), path.slice(cut + 1)];
+	}
+
+	/** A line number pressed: the ruler there, or with shift a range to comment on. */
+	function pressNumber(event: MouseEvent, row: Extract<Row, { kind: 'line' }>) {
+		if (event.shiftKey && room.head) {
+			room.extend(row.path, row.index);
+			return;
+		}
+		room.setFocus(row.key);
+	}
+
+	function compose(row: Extract<Row, { kind: 'line' }>) {
+		room.setFocus(row.key);
+		room.compose(row.path, row.index);
+		draftText = '';
+	}
+
+	let keeping = false;
+
+	async function keep() {
+		if (keeping) return;
+		keeping = true;
+		if (await room.addDraft(draftText)) draftText = '';
+		keeping = false;
+	}
+
+	/** `Line 17`, or `Lines 12–17`: what the box covers, by the new numbers where there are any. */
+	function coverage(row: Extract<Row, { kind: 'composer' }>): string {
+		const content = room.contentOf(row.path);
+		if (!content) return '';
+		const number = (index: number) => {
+			const line = content.lines[index];
+			return line.new ?? line.old ?? 0;
+		};
+		const [from, to] = [Math.min(row.from, row.to), Math.max(row.from, row.to)];
+		return from === to ? `Line ${number(to)}` : `Lines ${number(from)}–${number(to)}`;
+	}
+
+	async function answer(thread: Thread) {
+		const text = replies[thread.id] ?? '';
+		if (text.trim() === '' || replying !== null) return;
+		replying = thread.id;
+		const sent = await room.reply(thread, text);
+		replying = null;
+		if (sent) replies = { ...replies, [thread.id]: '' };
 	}
 
 	function sideLines(fix: ConflictFix, side: SideName): string[] {
@@ -215,17 +286,28 @@
 					<div
 						class="line {row.line.origin}"
 						class:fixed={row.fixed}
+						class:covered={covered !== null && covered.path === row.path && row.index >= covered.from && row.index <= covered.to}
 						class:focused={room.ruler && focusAt === index}
 						class:dim={room.ruler && room.rulerMode === 'chunk' && focusChunk !== null && row.chunk !== focusChunk}
 					>
 						<span class="marker"></span>
-						<button class="num" aria-label="Focus line" onclick={() => room.setFocus(row.key)}
+						<button class="num" aria-label="Focus line" onclick={(event) => pressNumber(event, row)}
 							>{row.line.old ?? ''}</button
 						>
-						<button class="num" aria-label="Focus line" onclick={() => room.setFocus(row.key)}
+						<button class="num" aria-label="Focus line" onclick={(event) => pressNumber(event, row)}
 							>{row.line.new ?? ''}</button
 						>
 						<span class="sign">{sign(row.line.origin)}</span>
+						<span class="plus-cell">
+							{#if room.head}
+								<button
+									class="plus"
+									class:shown={focusAt === index || (covered !== null && covered.path === row.path && covered.to === row.index)}
+									aria-label="Comment on this line"
+									onclick={() => compose(row)}><Icon name="plus" size="0.75em" weight={2.6} /></button
+								>
+							{/if}
+						</span>
 						<span class="text"
 							>{#each words ?? [{ text: row.line.text, changed: false }] as piece, p (p)}<span
 									class:word={piece.changed}>{piece.text}</span
@@ -240,6 +322,12 @@
 					<div class="thread">
 						<div class="thread-head">
 							<Chip active={!row.thread.resolved}>{row.thread.resolved ? 'Resolved' : 'Open'}</Chip>
+							<span class="grow"></span>
+							{#if row.thread.threadId}
+								<Chip onclick={() => room.setResolved(row.thread, !row.thread.resolved)}
+									>{row.thread.resolved ? 'Reopen' : 'Resolve'}</Chip
+								>
+							{/if}
 						</div>
 						{#each row.thread.comments as comment (comment.id)}
 							<div class="comment">
@@ -250,6 +338,57 @@
 								</div>
 							</div>
 						{/each}
+						<div class="reply">
+							<input
+								type="text"
+								aria-label="Reply"
+								placeholder="Reply…"
+								value={replies[row.thread.id] ?? ''}
+								oninput={(event) => (replies = { ...replies, [row.thread.id]: event.currentTarget.value })}
+								onkeydown={(event) => {
+									if (event.key === 'Enter') void answer(row.thread);
+								}}
+							/>
+							<Btn onclick={() => answer(row.thread)} disabled={replying === row.thread.id || !(replies[row.thread.id] ?? '').trim()}
+								>Reply</Btn
+							>
+						</div>
+					</div>
+				</div>
+			</div>
+		{:else if row.kind === 'draft'}
+			<div class="slot" class:gap={row.last}>
+				<div class="part {row.tone}" class:end={row.last}>
+					<div class="pending">
+						<div class="pending-head">
+							<span class="pending-title">Pending · goes out with Finish review</span>
+							<span class="grow"></span>
+							<button class="delete note" onclick={() => room.removeDraft(row.draft.id)}>Delete</button>
+						</div>
+						<p class="body">{row.draft.body}</p>
+					</div>
+				</div>
+			</div>
+		{:else if row.kind === 'composer'}
+			<div class="slot" class:gap={row.last}>
+				<div class="part {row.tone}" class:end={row.last}>
+					<div class="composer">
+						<label for="composer" class="note">{coverage(row)} · shift-click a line number to cover a range</label>
+						<!-- svelte-ignore a11y_autofocus -->
+						<textarea
+							id="composer"
+							rows="3"
+							autofocus
+							placeholder="What should change here, and why?"
+							bind:value={draftText}
+							onkeydown={(event) => {
+								if (event.key === 'Escape') room.closeComposer();
+							}}
+						></textarea>
+						<div class="composer-actions">
+							<Btn onclick={() => room.closeComposer()}>Cancel</Btn>
+							<Btn primary quiet onclick={keep} disabled={!draftText.trim()}>Add to review</Btn>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -441,7 +580,7 @@
 
 	.line {
 		display: grid;
-		grid-template-columns: 3px var(--diff-gutter-w) var(--diff-gutter-w) 20px minmax(0, 1fr);
+		grid-template-columns: 3px var(--diff-gutter-w) var(--diff-gutter-w) 20px 28px minmax(0, 1fr);
 		font-family: var(--code-font);
 		font-size: var(--fs-code);
 		line-height: var(--code-lh);
@@ -459,6 +598,11 @@
 	/* The ruler: a warm band under the line being read. */
 	.line.focused {
 		background: var(--ruler);
+	}
+
+	/* The lines the comment being written covers. */
+	.line.covered {
+		background: var(--accent-soft);
 	}
 
 	.line.dim {
@@ -514,6 +658,33 @@
 		color: var(--danger);
 	}
 
+	.plus-cell {
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		padding-top: max(0px, calc((var(--fs-code) * var(--code-lh) - 22px) / 2));
+	}
+
+	/* Faint until the line is the one being read: a column of strong buttons
+	   down every line would be the loudest thing in the diff. */
+	.plus {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		background: var(--accent-soft);
+		color: var(--accent);
+		opacity: 0.3;
+		transition: opacity var(--t-fast) var(--ease);
+	}
+
+	.plus.shown,
+	.plus:hover,
+	.plus:focus-visible {
+		opacity: 1;
+	}
+
 	.text {
 		padding: 1px 12px 1px 4px;
 		white-space: pre-wrap;
@@ -538,7 +709,7 @@
 	}
 
 	.thread {
-		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 20px);
+		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 48px);
 		padding: 12px 14px;
 		border-radius: var(--r-floating);
 		background: var(--surface-2);
@@ -547,6 +718,78 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+	}
+
+	.reply {
+		display: flex;
+		gap: 8px;
+	}
+
+	.reply input {
+		flex: 1;
+		min-width: 0;
+		border: 1px solid var(--pane-edge);
+		background: var(--sunken);
+		border-radius: var(--r-pill);
+		padding: 7px 14px;
+		font-size: var(--fs-secondary);
+	}
+
+	/* Written here and not sent: warm, so it is never taken for what the
+	   host already has. */
+	.pending {
+		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 48px);
+		padding: 12px 14px;
+		border-radius: var(--r-floating);
+		background: var(--warn-soft);
+		border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.pending-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.pending-title {
+		color: var(--warn);
+		font-weight: 600;
+		font-size: var(--fs-secondary);
+	}
+
+	.delete {
+		text-decoration: underline;
+	}
+
+	.composer {
+		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 48px);
+		padding: 12px 14px;
+		border-radius: var(--r-floating);
+		background: var(--surface-2);
+		border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.composer textarea {
+		border: 1px solid var(--pane-edge);
+		background: var(--sunken);
+		border-radius: var(--r-field);
+		padding: 9px 12px;
+		font-family: var(--read-font);
+		font-size: var(--read-size);
+		line-height: 1.6;
+		resize: vertical;
+	}
+
+	.composer-actions {
+		display: flex;
+		gap: 8px;
+		justify-content: flex-end;
 	}
 
 	.thread-head {

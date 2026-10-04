@@ -129,7 +129,10 @@ describe('chipsOf and factsOf', () => {
 					startSide: null,
 					body: 'Fall through?',
 					headSha: 'x',
-					createdAt: 0
+					createdAt: 0,
+					place: null,
+					startPlace: null,
+					oldPath: null
 				}
 			]
 		});

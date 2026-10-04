@@ -101,6 +101,8 @@ describe('rowsOf', () => {
 		line: 15,
 		side: 'RIGHT',
 		resolved: false,
+		threadId: null,
+		general: false,
 		comments: []
 	};
 

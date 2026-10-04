@@ -6,6 +6,7 @@
 	import { codeStack, PLAIN, reading, uiStack } from '$lib/reading.svelte';
 	import { CHECK_LABELS, requests } from '$lib/requests/store.svelte';
 	import { scale } from '$lib/scale.svelte';
+	import FinishReview from './FinishReview.svelte';
 	import RoomConversation from './RoomConversation.svelte';
 	import RoomDiff from './RoomDiff.svelte';
 	import RoomFiles from './RoomFiles.svelte';
@@ -32,6 +33,8 @@
 	});
 
 	const viewed = $derived(room.viewedCount);
+	/** The Finish review card is open (FEAT-093). */
+	let finishing = $state(false);
 	const total = $derived(room.files.length);
 
 	/**
@@ -76,6 +79,12 @@
 			<Btn disabled={review.makingWorktree !== null} onclick={() => review.openWorktree(pr)}>
 				<Icon name="folder" size="1em" />Open in worktree
 			</Btn>
+			<span class="finish-anchor">
+				<Btn primary disabled={room.phase !== 'ready'} onclick={() => (finishing = !finishing)}>
+					Finish review · {room.currentDrafts.length}
+				</Btn>
+				{#if finishing}<FinishReview onclose={() => (finishing = false)} />{/if}
+			</span>
 		</header>
 		<div class="meta note">
 			<span><span class="who">{pr.authorName}</span> wants to merge</span>
@@ -165,6 +174,10 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.finish-anchor {
+		position: relative;
 	}
 
 	.progress {

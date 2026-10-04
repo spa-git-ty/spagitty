@@ -48,6 +48,11 @@ stays backward-compatible.
   shown as their own work: which merge wrote it, the exact lines, and what
   each side had there. Filter the files by the author's work or the conflict
   fixes. Needs git 2.36 or later.
+- **Review comments that wait for you.** In the review room, comment on a
+  line or shift-click to cover a range; what you write stays pending — even
+  across a restart — until *Finish review* sends it all with Approve, Request
+  changes or Comment and a note on the whole pull request. Reply to threads,
+  and resolve or reopen them on GitHub and GitLab from Spagitty.
 
 ### Changed
 

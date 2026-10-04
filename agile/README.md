@@ -146,6 +146,7 @@ rather than an audit.
 | [FEAT-090](items/FEAT-090-settings-reading.md) | Settings › Reading | 1K, 1B, 1C, 1O, 1R | Open |
 | [FEAT-091](items/FEAT-091-the-review-room.md) | The review room | 1R | Open |
 | [FEAT-092](items/FEAT-092-conflict-fix-origin.md) | Conflict fixes, told apart | 1R | Open |
+| [FEAT-093](items/FEAT-093-threads-done-properly.md) | Threads done properly | 1R | Open |
 
 ## Bugs
 

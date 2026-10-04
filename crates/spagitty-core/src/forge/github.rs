@@ -306,6 +306,138 @@ fn draft_mutation(id: &str, draft: bool) -> String {
     serde_json::json!({ "query": mutation, "variables": { "id": id } }).to_string()
 }
 
+/// A review thread: its node id, whether it is resolved, and the comments in
+/// it by their REST ids (FEAT-093).
+///
+/// REST lists the comments and says nothing of threads; GraphQL knows the
+/// threads, and resolving one is a mutation on its node id. This is the
+/// bridge: each comment from REST is matched to its thread by `databaseId`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewThread {
+    pub id: String,
+    pub resolved: bool,
+    pub comments: Vec<u64>,
+}
+
+const THREADS: &str = "query($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes { id isResolved comments(first: 100) { nodes { databaseId } } }
+      }
+    }
+  }
+}";
+
+/// Every review thread on a pull request.
+pub fn review_threads(repo: &Repo, token: &str, number: u64) -> Result<Vec<ReviewThread>> {
+    let mut threads = Vec::new();
+    let mut after: Option<String> = None;
+    for _ in 0..10 {
+        let body = serde_json::json!({
+            "query": THREADS,
+            "variables": { "owner": repo.owner, "name": repo.name, "number": number, "after": after },
+        })
+        .to_string();
+        let response = http::post_json(&graphql_url(&repo.host), token, &repo.host, &body)?;
+        if response.status < 200 || response.status >= 300 {
+            return Err(status_error(
+                &repo.host,
+                response.status,
+                &response.body,
+                response.retry_after.as_deref(),
+            ));
+        }
+        let (page, next) = read_review_threads(&response.body, &repo.host)?;
+        threads.extend(page);
+        match next {
+            Some(cursor) => after = Some(cursor),
+            None => break,
+        }
+    }
+    Ok(threads)
+}
+
+/// One page of review threads, and the cursor of the next when there is one.
+/// Makes no request.
+pub fn read_review_threads(body: &str, host: &str) -> Result<(Vec<ReviewThread>, Option<String>)> {
+    let json: Value = serde_json::from_str(body).map_err(|_| Error::Forge {
+        host: host.to_string(),
+        detail: "sent something that is not JSON".into(),
+    })?;
+    if let Some(message) = graphql_error(&json) {
+        return Err(Error::Forge {
+            host: host.to_string(),
+            detail: message,
+        });
+    }
+    let connection = &json["data"]["repository"]["pullRequest"]["reviewThreads"];
+    let nodes = connection["nodes"].as_array().ok_or_else(|| Error::Forge {
+        host: host.to_string(),
+        detail: "answered without the pull request's threads".into(),
+    })?;
+    let threads = nodes
+        .iter()
+        .filter_map(|node| {
+            Some(ReviewThread {
+                id: node["id"].as_str()?.to_string(),
+                resolved: node["isResolved"].as_bool().unwrap_or(false),
+                comments: node["comments"]["nodes"]
+                    .as_array()
+                    .map(|comments| {
+                        comments
+                            .iter()
+                            .filter_map(|comment| comment["databaseId"].as_u64())
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            })
+        })
+        .collect();
+    let next = connection["pageInfo"]["hasNextPage"]
+        .as_bool()
+        .unwrap_or(false)
+        .then(|| connection["pageInfo"]["endCursor"].as_str().map(str::to_string))
+        .flatten();
+    Ok((threads, next))
+}
+
+/// Resolve a review thread, or open it again (FEAT-093).
+pub fn resolve_thread(host: &str, token: &str, id: &str, resolved: bool) -> Result<()> {
+    let response = http::post_json(&graphql_url(host), token, host, &resolve_mutation(id, resolved))?;
+    if response.status < 200 || response.status >= 300 {
+        return Err(status_error(
+            host,
+            response.status,
+            &response.body,
+            response.retry_after.as_deref(),
+        ));
+    }
+    let json: Value = serde_json::from_str(&response.body).map_err(|_| Error::Forge {
+        host: host.to_string(),
+        detail: "sent something that is not JSON".into(),
+    })?;
+    match graphql_error(&json) {
+        Some(message) => Err(Error::Forge {
+            host: host.to_string(),
+            detail: message,
+        }),
+        None => Ok(()),
+    }
+}
+
+/// The mutation that resolves a thread or opens it again: two mutations, as
+/// GitHub offers them.
+fn resolve_mutation(id: &str, resolved: bool) -> String {
+    let mutation = if resolved {
+        "mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { isResolved } } }"
+    } else {
+        "mutation($id: ID!) { unresolveReviewThread(input: { threadId: $id }) { thread { isResolved } } }"
+    };
+    serde_json::json!({ "query": mutation, "variables": { "id": id } }).to_string()
+}
+
 /// Turn a GraphQL answer into rows. Makes no request.
 pub fn read_pull_requests(body: &str, me: &str, host: &str) -> Result<Vec<PullRequest>> {
     let json: Value = serde_json::from_str(body).map_err(|_| Error::Forge {
@@ -1070,5 +1202,47 @@ mod tests {
             Err(Error::Forge { detail, .. }) => assert!(detail.contains("no identifier")),
             other => panic!("expected a refusal, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn review_threads_are_read_with_their_comments_and_the_next_page() {
+        let body = r#"{"data":{"repository":{"pullRequest":{"reviewThreads":{
+            "pageInfo":{"hasNextPage":true,"endCursor":"Y3Vyc29y"},
+            "nodes":[
+              {"id":"PRRT_1","isResolved":false,"comments":{"nodes":[{"databaseId":11},{"databaseId":12}]}},
+              {"id":"PRRT_2","isResolved":true,"comments":{"nodes":[{"databaseId":13}]}},
+              {"isResolved":true}
+            ]}}}}}"#;
+        let (threads, next) = read_review_threads(body, "github.com").unwrap();
+        assert_eq!(
+            threads,
+            vec![
+                ReviewThread { id: "PRRT_1".into(), resolved: false, comments: vec![11, 12] },
+                ReviewThread { id: "PRRT_2".into(), resolved: true, comments: vec![13] },
+            ]
+        );
+        assert_eq!(next.as_deref(), Some("Y3Vyc29y"));
+
+        let last = r#"{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":"x"},"nodes":[]}}}}}"#;
+        assert_eq!(read_review_threads(last, "github.com").unwrap(), (vec![], None));
+        let refused = r#"{"errors":[{"message":"Resource not accessible by integration"}]}"#;
+        assert!(read_review_threads(refused, "github.com").is_err());
+    }
+
+    #[test]
+    fn a_thread_is_resolved_and_reopened_by_its_own_mutation() {
+        let resolve: Value = serde_json::from_str(&resolve_mutation("PRRT_1", true)).unwrap();
+        assert!(resolve["query"].as_str().unwrap().contains("resolveReviewThread(input: { threadId: $id })"));
+        assert!(!resolve["query"].as_str().unwrap().contains("unresolve"));
+        assert_eq!(resolve["variables"]["id"], "PRRT_1");
+
+        let reopen: Value = serde_json::from_str(&resolve_mutation("PRRT_1", false)).unwrap();
+        assert!(reopen["query"].as_str().unwrap().contains("unresolveReviewThread"));
+    }
+
+    #[test]
+    fn the_threads_query_only_reads() {
+        assert!(!THREADS.contains("mutation"));
+        assert!(THREADS.contains("isResolved") && THREADS.contains("databaseId"));
     }
 }
