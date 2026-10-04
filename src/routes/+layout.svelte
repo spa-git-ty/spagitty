@@ -1,12 +1,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import '../app.css';
 
 	import * as api from '$lib/api';
+	import { timing } from '$lib/timing.svelte';
 	import { gentleFly } from '$lib/motion';
 	import CloneModal from '$lib/clone/CloneModal.svelte';
 	import { clone } from '$lib/clone/store.svelte';
@@ -226,6 +227,13 @@
 	 * rather than through a store, so the same shortcut and a bookmark behave
 	 * identically.
 	 */
+	// How long a screen takes to appear, from asking for it to its first
+	// painted frame (TASK-052). God mode's Timings panel reads it.
+	beforeNavigate(({ to }) => {
+		if (to) timing.start('navigate', to.url.pathname);
+	});
+	afterNavigate(() => timing.settle('navigate'));
+
 	function shortcut(event: KeyboardEvent) {
 		if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
 

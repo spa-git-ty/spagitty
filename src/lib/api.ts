@@ -7,7 +7,8 @@
  * types from `./types`, so a command rename is a one-file change.
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { invoke as call, type InvokeArgs } from '@tauri-apps/api/core';
+import { timing } from './timing.svelte';
 import type { DesktopTheme } from './omarchy';
 import type {
 	About,
@@ -27,6 +28,7 @@ import type {
 	ExternalToolInfo,
 	ExternalToolsConfig,
 	ExecutedCommand,
+	CommandTiming,
 	FileDiff,
 	IdentityProfile,
 	Identity,
@@ -71,6 +73,26 @@ import type {
 	Worktree,
 	WorkingCopy
 } from './types';
+
+/**
+ * Every call to the backend, timed (TASK-052): what a screen waits for, from
+ * asking to the answer, for God mode's Timings panel. The one place that
+ * calls the backend is the one place that can time all of it.
+ */
+function invoke<T>(command: string, args?: InvokeArgs): Promise<T> {
+	const started = timing.now();
+	const asked = args === undefined ? call<T>(command) : call<T>(command, args);
+	return asked.then(
+		(answer) => {
+			timing.trip(command, started, true);
+			return answer;
+		},
+		(error: unknown) => {
+			timing.trip(command, started, false);
+			throw error;
+		}
+	);
+}
 
 export function openRepo(path: string, order: GraphOrder = 'date'): Promise<OpenResult> {
 	return invoke('open_repo', { path, order });
@@ -1055,6 +1077,14 @@ export function networkRelease(): Promise<void> {
  * New ones also arrive as `git-command` events; this is the catch-up read for
  * what ran before the panel was opened.
  */
+/**
+ * How long each command waited for the open repository and how long it held
+ * it, after `after` (TASK-052).
+ */
+export function commandTimings(after = 0): Promise<CommandTiming[]> {
+	return invoke('command_timings', { after });
+}
+
 export function gitCommands(since = 0): Promise<ExecutedCommand[]> {
 	return invoke('git_commands', { since });
 }
