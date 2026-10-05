@@ -291,11 +291,11 @@
 						class:dim={room.ruler && room.rulerMode === 'chunk' && focusChunk !== null && row.chunk !== focusChunk}
 					>
 						<span class="marker"></span>
-						<button class="num" aria-label="Focus line" onclick={(event) => pressNumber(event, row)}
-							>{row.line.old ?? ''}</button
-						>
-						<button class="num" aria-label="Focus line" onclick={(event) => pressNumber(event, row)}
-							>{row.line.new ?? ''}</button
+						<button
+							class="num"
+							class:old={row.line.new === null}
+							aria-label="Focus line"
+							onclick={(event) => pressNumber(event, row)}>{row.line.new ?? row.line.old ?? ''}</button
 						>
 						<span class="sign">{sign(row.line.origin)}</span>
 						<span class="plus-cell">
@@ -580,7 +580,9 @@
 
 	.line {
 		display: grid;
-		grid-template-columns: 3px var(--diff-gutter-w) var(--diff-gutter-w) 20px 28px minmax(0, 1fr);
+		/* One number per line (TASK-053): the new one, or the old one on a
+		   removed line. Two side by side read as each line numbered twice. */
+		grid-template-columns: 3px var(--diff-gutter-w) 20px 28px minmax(0, 1fr);
 		font-family: var(--code-font);
 		font-size: var(--fs-code);
 		line-height: var(--code-lh);
@@ -641,6 +643,11 @@
 
 	.num:hover {
 		color: var(--ink);
+	}
+
+	/* A removed line's number is the old file's: there, but quieter. */
+	.num.old {
+		opacity: 0.55;
 	}
 
 	.sign {
@@ -709,7 +716,7 @@
 	}
 
 	.thread {
-		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 48px);
+		margin: 8px 14px 12px calc(3px + var(--diff-gutter-w) + 48px);
 		padding: 12px 14px;
 		border-radius: var(--r-floating);
 		background: var(--surface-2);
@@ -738,7 +745,7 @@
 	/* Written here and not sent: warm, so it is never taken for what the
 	   host already has. */
 	.pending {
-		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 48px);
+		margin: 8px 14px 12px calc(3px + var(--diff-gutter-w) + 48px);
 		padding: 12px 14px;
 		border-radius: var(--r-floating);
 		background: var(--warn-soft);
@@ -765,7 +772,7 @@
 	}
 
 	.composer {
-		margin: 8px 14px 12px calc(3px + 2 * var(--diff-gutter-w) + 48px);
+		margin: 8px 14px 12px calc(3px + var(--diff-gutter-w) + 48px);
 		padding: 12px 14px;
 		border-radius: var(--r-floating);
 		background: var(--surface-2);

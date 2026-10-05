@@ -259,6 +259,7 @@ of its own.
 | [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Open |
 | [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
 | [TASK-052](items/TASK-052-nothing-waits-in-line.md) | Nothing waits in line | all | Open |
+| [TASK-053](items/TASK-053-the-review-room-after-first-use.md) | The review room after first use | 1R | Done |
 
 ## Skipped identifiers
 

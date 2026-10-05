@@ -180,18 +180,35 @@ it('marks only the words that changed', async () => {
 	expect(words.join(' ')).not.toContain('line');
 });
 
-it('shows the whole file with nothing folded', async () => {
+it('shows the whole file as one card, with nothing folded', async () => {
 	await openRoom();
 	click(button('Whole file'));
 	expect(view.all('button.fold')).toHaveLength(0);
 	expect(view.text()).toContain('line 29');
+	// TASK-053: the changes in place in the file, not cut into parts.
+	expect(view.all('.part.top')).toHaveLength(1);
+	expect(view.text()).not.toContain('unchanged ·');
 	click(button('Changes'));
 	expect(view.all('button.fold')).toHaveLength(2);
 });
 
+it('numbers each line once', async () => {
+	// TASK-053: one column, the new number, or the old one on a removed line.
+	await openRoom();
+	const numbers = (text: string) => {
+		const line = view.all('.line').find((row) => row.textContent?.includes(text))!;
+		return [...line.querySelectorAll('.num')].map((num) => num.textContent);
+	};
+	expect(numbers('line 16')).toEqual(['16']);
+	expect(numbers('MEMORY.lock()')).toEqual(['15']);
+	expect(numbers('path.exists()')).toEqual(['15']);
+	const removed = view.all('.line').find((row) => row.textContent?.includes('MEMORY.lock()'))!;
+	expect(removed.querySelector('.num')!.classList.contains('old')).toBe(true);
+});
+
 it('ticks a file and goes on to the next one not viewed', async () => {
 	await openRoom();
-	click(button('Viewed, next'));
+	click(pill().querySelector('button.viewed')!);
 	await vi.waitFor(() => expect(pill().textContent).toContain('types.ts'));
 
 	const saved = vi.mocked(api.setReviewState).mock.calls.at(-1)![1] as Record<string, unknown>;
@@ -201,6 +218,29 @@ it('ticks a file and goes on to the next one not viewed', async () => {
 
 	fire(files().querySelector('input[aria-label="Viewed types.ts"]')!, 'change');
 	await vi.waitFor(() => expect(view.text()).toContain('2 of 2 viewed'));
+});
+
+it('says on the pill whether the file is viewed, and offers Finish once all are', async () => {
+	// TASK-053.
+	await openRoom();
+	const viewed = () => pill().querySelector<HTMLButtonElement>('button.viewed');
+	expect(viewed()!.getAttribute('aria-pressed')).toBe('false');
+
+	click(viewed()!);
+	await vi.waitFor(() => expect(pill().textContent).toContain('types.ts'));
+	click(view.get('[aria-label="Previous file"]'));
+	await vi.waitFor(() => expect(pill().textContent).toContain('avatars.rs'));
+	expect(viewed()!.getAttribute('aria-pressed')).toBe('true');
+	click(viewed()!);
+	await vi.waitFor(() => expect(view.text()).toContain('0 of 2 viewed'));
+
+	click(viewed()!);
+	await vi.waitFor(() => expect(view.text()).toContain('1 of 2 viewed'));
+	click(viewed()!);
+	await vi.waitFor(() => expect(view.text()).toContain('2 of 2 viewed'));
+	expect(viewed()).toBeNull();
+	click(pill().querySelector('button.finish')!);
+	expect(view.find('[aria-label="Finish review"][role="dialog"]')).not.toBeNull();
 });
 
 it('shows every file in one column on All', async () => {
@@ -347,9 +387,14 @@ it('lists the files by who wrote them', async () => {
 	await openRoom();
 	await vi.waitFor(() => expect(files().textContent).toContain('conflict fix'));
 
-	click(button('Conflict fixes'));
+	// TASK-053: each filter says how many it lets through, and each file
+	// says who wrote it.
+	const by = () =>
+		[...files().querySelectorAll('li')].filter((li) => li.querySelector('.by')).map((li) => li.querySelector('.name')!.textContent);
+	expect(by()).toEqual(['types.ts']);
+	click(button('Conflict fixes 1'));
 	expect(names()).toEqual(['avatars.rs']);
-	click(button('Author'));
+	click(button('Author 1'));
 	expect(names()).toEqual(['types.ts']);
 	click(button('All 2'));
 	expect(names()).toEqual(['avatars.rs', 'types.ts']);
@@ -371,7 +416,7 @@ const typeInto = (element: Element, text: string) => {
 	fire(element, 'input');
 };
 const numberOf = (text: string) =>
-	view.all('.line').find((line) => line.textContent?.includes(text))!.querySelectorAll('button.num')[1] as HTMLElement;
+	view.all('.line').find((line) => line.textContent?.includes(text))!.querySelector('button.num') as HTMLElement;
 
 it('keeps a comment written on a line until Finish review', async () => {
 	await openRoom();

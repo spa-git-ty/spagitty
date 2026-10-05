@@ -83,3 +83,25 @@ it('never puts a fix and the author’s own change in one card, however close', 
 	const tones = rows.filter((row) => row.kind === 'head').map((row) => row.kind === 'head' && row.tone);
 	expect(tones).toEqual(['hunk', 'conflict']);
 });
+
+it('keeps a fix a card of its own in the whole file too', () => {
+	// TASK-053: the whole file is one card, except where a merge wrote it.
+	const lines: DiffLine[] = [];
+	for (let n = 1; n <= 30; n++) {
+		if (n === 10 || n === 16) {
+			lines.push({ origin: 'removed', old: n, new: null, text: `old ${n}` });
+			lines.push({ origin: 'added', old: null, new: n, text: `new ${n}` });
+		} else {
+			lines.push({ origin: 'context', old: n, new: n, text: `line ${n}` });
+		}
+	}
+	const fix = blocksOf(lines, 'changes', new Set(), new Set([16])).filter((block) => block.kind === 'hunk')[1];
+
+	const whole = blocksOf(lines, 'whole', new Set(), new Set([16]));
+	expect(whole).toEqual([
+		{ kind: 'hunk', from: 0, to: fix.from },
+		fix,
+		{ kind: 'hunk', from: fix.to, to: lines.length }
+	]);
+	expect(blocksOf(lines, 'whole')).toEqual([{ kind: 'hunk', from: 0, to: lines.length }]);
+});
