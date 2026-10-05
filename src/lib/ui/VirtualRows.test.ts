@@ -104,3 +104,32 @@ it('brings a row into view on asking', () => {
 	expect(viewport().scrollTop).toBe(16_000);
 	expect(drawn()).toContain('r800');
 });
+
+it('leaves an effect that asked for a row alone when rows are measured (BUG-047)', async () => {
+	// The room opens a file at its top from an effect. Reading the row
+	// offsets made that effect depend on every measurement, so each row drawn
+	// while scrolling sent the reader back to the top.
+	const { default: Harness } = await import('../../testing/VirtualRowsHarness.svelte');
+	const host = document.createElement('div');
+	document.body.appendChild(host);
+	let runs = 0;
+	const harness = mount(Harness, { target: host, props: { items: ITEMS, onrun: () => runs++ } });
+	flushSync();
+	const port = host.querySelector<HTMLElement>('.viewport')!;
+	port.scrollTop = 10_000;
+	port.dispatchEvent(new Event('scroll'));
+	flushSync();
+
+	const rows = observers.at(-1)!;
+	const above = host.querySelector<HTMLElement>('[data-key="r470"]')!;
+	rows.callback(
+		[{ target: above, borderBoxSize: [{ blockSize: 50, inlineSize: 0 }] }] as unknown as ResizeObserverEntry[],
+		rows as unknown as ResizeObserver
+	);
+	flushSync();
+
+	expect(runs).toBe(1);
+	expect(port.scrollTop).toBe(10_030);
+	unmount(harness);
+	host.remove();
+});
