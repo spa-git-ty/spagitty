@@ -11,7 +11,12 @@ permissions:
 
 jobs:
   launch:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - name: Download the release DMG
         env:
@@ -23,6 +28,9 @@ jobs:
           mount=$(mktemp -d)
           hdiutil attach ./*.dmg -nobrowse -readonly -mountpoint "$mount" <<< 'Y' > /dev/null
           cp -R "$mount"/*.app /Applications/
+          xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;" /Applications/Spagitty.app
+          xattr -l /Applications/Spagitty.app
+          codesign -dvvv /Applications/Spagitty.app 2>&1 | head -20
           hdiutil detach "$mount"
           ls -la /Applications/Spagitty.app/Contents/MacOS
           sw_vers; uname -m
@@ -31,9 +39,12 @@ jobs:
         run: |
           mkdir -p out
           exe=$(ls /Applications/Spagitty.app/Contents/MacOS/* | head -1)
-          RUST_BACKTRACE=full "$exe" > out/stdout.txt 2> out/stderr.txt &
-          pid=$!
+          open /Applications/Spagitty.app || echo "open failed $?"
           sleep 30
+          pid=$(pgrep -x spagitty | head -1)
+          echo "pid: ${pid:-none}"
+          touch out/stdout.txt out/stderr.txt
+          if [ -z "$pid" ]; then pid=999999; fi
           screencapture -x out/screen.png || true
           if kill -0 "$pid" 2>/dev/null; then
             echo "=== ALIVE after 30s"
@@ -45,15 +56,15 @@ jobs:
             echo "=== main thread"
             awk '/Call graph:/{f=1} f' out/sample.txt | head -120
           else
-            wait "$pid"; echo "=== EXITED $?"
+            echo "=== NOT RUNNING after 30s"
           fi
           echo "=== stderr"; tail -60 out/stderr.txt
           echo "=== stdout"; tail -20 out/stdout.txt
-          log show --last 3m --predicate 'process CONTAINS[c] "spagitty"' --style compact > out/log.txt 2>&1 || true
+          log show --last 3m --predicate 'process CONTAINS[c] "spagitty" OR process == "syspolicyd" OR process == "amfid" OR process == "XprotectService" OR eventMessage CONTAINS[c] "spagitty"' --style compact > out/log.txt 2>&1 || true
           echo "=== unified log"; tail -60 out/log.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: launch
+          name: launch-${{ matrix.os }}
           path: out
