@@ -119,6 +119,55 @@ it('shows how far a saved review got, and goes on from there', async () => {
 	expect(view.text()).toContain('Needs you');
 });
 
+it('opens a GitLab merge request from this repository', async () => {
+	// BUG-044. GitLab's list names each row's project (`references.full`)
+	// even when it is this repository's own list.
+	vi.mocked(api.forgeRepo).mockResolvedValue({
+		kind: 'gitLab',
+		host: 'gitlab.example.com',
+		owner: 'team',
+		name: 'billing'
+	});
+	vi.mocked(api.forgeAccounts).mockResolvedValue([
+		{ kind: 'gitLab', host: 'gitlab.example.com', user: 'mahmoud' }
+	]);
+	vi.mocked(api.pullRequests).mockResolvedValue([
+		{ ...ASKED, repository: 'team/billing' }
+	]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(1));
+
+	click(button('Start review'));
+
+	await vi.waitFor(() => expect(review.room?.pr.number).toBe(214));
+	expect(api.localCloneOf).not.toHaveBeenCalled();
+	expect(api.reviewState).toHaveBeenCalledWith({
+		host: 'gitlab.example.com',
+		owner: 'team',
+		name: 'billing',
+		number: 214
+	});
+});
+
+it('says why a review did not open', async () => {
+	const { notice } = await import('$lib/ui/notice.svelte');
+	const elsewhere = request({ id: 'PR_77', number: 77, title: 'Elsewhere', repository: 'other/thing' });
+	vi.mocked(api.involvedPullRequests).mockResolvedValue([elsewhere]);
+	vi.mocked(api.localCloneOf).mockRejectedValue(new Error('the clone list could not be read'));
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	click(button('All my repos'));
+	await vi.waitFor(() => expect(view.text()).toContain('Elsewhere'));
+
+	click(button('Start review'));
+
+	await vi.waitFor(() => expect(notice.current?.tone).toBe('error'));
+	expect(notice.current?.title).toBe('The review could not be opened');
+	expect(notice.current?.detail).toContain('the clone list could not be read');
+	expect((button('Start review') as HTMLButtonElement).disabled).toBe(false);
+	notice.dismiss();
+});
+
 it('reads every repository on asking, and says when a row has no clone here', async () => {
 	const elsewhere = request({
 		id: 'PR_77',

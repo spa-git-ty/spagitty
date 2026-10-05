@@ -174,9 +174,15 @@ export const review = {
 		return requests.all.some((pr) => pr.reviewRequested);
 	},
 
-	/** Where a pull request's record is kept. */
+	/**
+	 * Where a pull request's record is kept.
+	 *
+	 * A row of this repository is on its host. GitLab names the project on
+	 * every row, its own list's too (BUG-044), so naming one does not make a
+	 * row another repository's.
+	 */
 	keyOf(pr: PullRequest): ReviewKey | null {
-		return keyFor(requests.repo, pr, pr.repository ? searchHost : (requests.repo?.host ?? null));
+		return keyFor(requests.repo, pr, this.isHere(pr) ? (requests.repo?.host ?? null) : searchHost);
 	},
 
 	/** The saved record for a pull request, once it has been read. */

@@ -4,6 +4,7 @@
 	import { requests } from '$lib/requests/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import { notice } from '$lib/ui/notice.svelte';
 	import InboxCard from './InboxCard.svelte';
 	import InboxPreview from './InboxPreview.svelte';
 	import { review } from './store.svelte';
@@ -41,6 +42,8 @@
 		opening = true;
 		try {
 			await review.open(pr);
+		} catch (e) {
+			notice.failed('The review could not be opened', e);
 		} finally {
 			opening = false;
 		}
