@@ -7,11 +7,13 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Markdown from '$lib/ui/Markdown.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import { room } from './room.svelte';
 	import type { ConflictFix } from '$lib/types';
 	import { lineRows, rowsOf, type Row, type SideName } from './rows';
 	import { draftsByPlace } from './drafts';
+	import { paint } from '$lib/diff/highlight';
 	import { threadsByPlace, type Thread } from './threads';
 
 	/**
@@ -280,7 +282,11 @@
 				</div>
 			</div>
 		{:else if row.kind === 'line'}
-			{@const words = room.contentOf(row.path)?.words.get(row.index)}
+			{@const content = room.contentOf(row.path)}
+			{@const runs = paint(
+				content?.syntax[row.index] ?? [{ type: 'plain', text: row.line.text }],
+				content?.words.get(row.index)
+			)}
 			<div class="slot" class:gap={row.last}>
 				<div class="part {row.tone}" class:end={row.last}>
 					<div
@@ -309,8 +315,7 @@
 							{/if}
 						</span>
 						<span class="text"
-							>{#each words ?? [{ text: row.line.text, changed: false }] as piece, p (p)}<span
-									class:word={piece.changed}>{piece.text}</span
+							>{#each runs as run, p (p)}<span class="tok-{run.type}" class:word={run.changed}>{run.text}</span
 								>{/each}{#if row.line.text === ''}&#8203;{/if}</span
 						>
 					</div>
@@ -334,7 +339,7 @@
 								<AuthorAvatar email={null} name={comment.author} />
 								<div class="said">
 									<span class="note"><span class="who">{comment.author}</span> · {relativeTime(comment.createdAt)}</span>
-									<p class="body">{comment.body}</p>
+									<div class="body"><Markdown source={comment.body} compact /></div>
 								</div>
 							</div>
 						{/each}
@@ -365,7 +370,7 @@
 							<span class="grow"></span>
 							<button class="delete note" onclick={() => room.removeDraft(row.draft.id)}>Delete</button>
 						</div>
-						<p class="body">{row.draft.body}</p>
+						<div class="body"><Markdown source={row.draft.body} compact /></div>
 					</div>
 				</div>
 			</div>
@@ -822,15 +827,9 @@
 		font-weight: 600;
 	}
 
-	/* As written: a comment is read as prose, not rendered as a page. */
+	/* Drawn as the host draws it (FEAT-094), at a reading measure. */
 	.body {
-		margin: 0;
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
-		font-family: var(--read-font);
-		font-size: var(--read-size);
-		line-height: 1.65;
 		letter-spacing: var(--code-ls);
-		max-width: 62ch;
+		max-width: 72ch;
 	}
 </style>

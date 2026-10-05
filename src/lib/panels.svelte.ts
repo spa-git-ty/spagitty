@@ -20,6 +20,9 @@ import {
 	FARM_LOG_H,
 	RAIL_W,
 	REQUESTS_DETAIL_W,
+	REVIEW_PREVIEW_W,
+	ROOM_CONVERSATION_W,
+	ROOM_FILES_W,
 	STASH_ENTRIES_W
 } from './metrics';
 
@@ -95,6 +98,28 @@ export const PANELS = {
 		min: 200,
 		max: 520
 	},
+	// Review (FEAT-094): a description wants room, and so does a long path.
+	reviewPreview: {
+		variable: 'review-preview-w',
+		side: 'right',
+		initial: REVIEW_PREVIEW_W,
+		min: 280,
+		max: 900
+	},
+	roomFiles: {
+		variable: 'room-files-w',
+		side: 'left',
+		initial: ROOM_FILES_W,
+		min: 180,
+		max: 560
+	},
+	roomConversation: {
+		variable: 'room-conversation-w',
+		side: 'right',
+		initial: ROOM_CONVERSATION_W,
+		min: 240,
+		max: 720
+	},
 	farmLog: {
 		variable: 'farm-log-h',
 		side: 'bottom',
@@ -123,6 +148,9 @@ let detail = $state(DETAIL_W);
 /** The panels added by FEAT-037, which have no reason to be named individually. */
 let extra = $state<Record<string, number>>({
 	requestsDetail: REQUESTS_DETAIL_W,
+	reviewPreview: REVIEW_PREVIEW_W,
+	roomFiles: ROOM_FILES_W,
+	roomConversation: ROOM_CONVERSATION_W,
 	changesFiles: CHANGES_FILES_W,
 	diffFiles: DIFF_FILES_W,
 	stashEntries: STASH_ENTRIES_W,
@@ -307,6 +335,9 @@ export const panels = {
 		detail = DETAIL_W;
 		extra = {
 			requestsDetail: REQUESTS_DETAIL_W,
+			reviewPreview: REVIEW_PREVIEW_W,
+			roomFiles: ROOM_FILES_W,
+			roomConversation: ROOM_CONVERSATION_W,
 			changesFiles: CHANGES_FILES_W,
 			diffFiles: DIFF_FILES_W,
 			stashEntries: STASH_ENTRIES_W,

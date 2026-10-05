@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { click, render, type Mounted } from '../../testing/mount';
+import { click, press, render, type Mounted } from '../../testing/mount';
 import { openRepository, request } from '../../testing/git-fixtures';
 import { calls, control } from '../../testing/repo-store.svelte';
 vi.mock('$lib/api');
@@ -289,4 +289,26 @@ it('says what git said when the worktree cannot be made', async () => {
 	expect(notice.current?.detail).toContain('Permission denied');
 	expect(api.reviewWorktree).not.toHaveBeenCalled();
 	notice.dismiss();
+});
+
+it('draws the description as its host does, and widens from its edge', async () => {
+	// FEAT-094: dependabot's table, as a table.
+	const { panels } = await import('$lib/panels.svelte');
+	vi.mocked(api.pullRequests).mockResolvedValue([
+		{
+			...ASKED,
+			body: 'Bumps the group:\n\n| Package | From | To |\n| --- | --- | --- |\n| ktor | `3.5.2` | `3.6.0` |'
+		}
+	]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(1));
+	const preview = view.get('aside[aria-label="Pull request preview"]');
+	expect([...preview.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['Package', 'From', 'To']);
+	expect(preview.textContent).not.toContain('| --- |');
+
+	const edge = view.get('[role="separator"][aria-label="Resize the preview"]');
+	const before = panels.size('reviewPreview');
+	press(edge, 'ArrowLeft');
+	expect(panels.size('reviewPreview')).toBe(before + 8);
+	panels.reset();
 });

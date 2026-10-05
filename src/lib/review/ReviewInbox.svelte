@@ -4,6 +4,7 @@
 	import { requests } from '$lib/requests/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import Splitter from '$lib/ui/Splitter.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import InboxCard from './InboxCard.svelte';
 	import InboxPreview from './InboxPreview.svelte';
@@ -98,6 +99,7 @@
 		</div>
 
 		{#if selected}
+			<Splitter panel="reviewPreview" label="Resize the preview" />
 			<InboxPreview
 				pr={selected}
 				record={review.recordOf(selected)}

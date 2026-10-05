@@ -77,7 +77,7 @@
 
 <style>
 	.files {
-		width: 262px;
+		width: var(--room-files-w);
 		flex: none;
 		display: flex;
 		flex-direction: column;

@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
-	import PRMarkdown from '$lib/requests/PRMarkdown.svelte';
+	import Markdown from '$lib/ui/Markdown.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import type { PullRequest } from '$lib/types';
 	import { continueLabel, factsOf, progressOf } from './inbox';
@@ -34,7 +34,7 @@
 	<span class="title">{pr.title}</span>
 
 	{#if pr.body.trim()}
-		<div class="body"><PRMarkdown markdown={pr.body} /></div>
+		<div class="body"><Markdown source={pr.body} /></div>
 	{/if}
 
 	{#if facts.length > 0}
@@ -60,7 +60,7 @@
 <style>
 	/* The inset card, as on Graph: inside the pane, its own corner and edge. */
 	.preview {
-		width: 330px;
+		width: var(--review-preview-w);
 		flex: none;
 		display: flex;
 		flex-direction: column;
@@ -81,12 +81,12 @@
 		line-height: 1.4;
 	}
 
+	/* As much of the description as there is room for; it scrolls past that. */
 	.body {
-		font-family: var(--read-font);
-		line-height: 1.7;
-		letter-spacing: var(--code-ls);
-		max-height: 40%;
+		flex: 0 1 auto;
+		min-height: 96px;
 		overflow: auto;
+		padding-right: 4px;
 	}
 
 	.facts {

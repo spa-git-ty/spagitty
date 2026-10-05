@@ -573,3 +573,36 @@ it('lists comments on the whole pull request', async () => {
 	expect(conversation().textContent).toContain('Should the cache have a size cap?');
 	expect(conversation().textContent).toContain('Open 2');
 });
+
+it('colours each line by its language, and keeps the changed words marked', async () => {
+	// FEAT-094.
+	await openRoom();
+	const added = view.all('.line.added').find((line) => line.textContent?.includes('path.exists()'))!;
+	expect([...added.querySelectorAll('.tok-fn')].map((span) => span.textContent)).toEqual(['exists', 'is_stale']);
+	expect(added.querySelector('.word')).not.toBeNull();
+});
+
+it('resizes the files and the conversation from their edges', async () => {
+	// FEAT-094.
+	const { panels } = await import('$lib/panels.svelte');
+	await openRoom();
+	const files = view.get('[role="separator"][aria-label="Resize the files"]');
+	const talk = view.get('[role="separator"][aria-label="Resize the conversation"]');
+	const [before, beside] = [panels.size('roomFiles'), panels.size('roomConversation')];
+	press(files, 'ArrowRight');
+	press(talk, 'ArrowLeft');
+	expect(panels.size('roomFiles')).toBe(before + 8);
+	expect(panels.size('roomConversation')).toBe(beside + 8);
+	panels.reset();
+});
+
+it('draws comments as their host does', async () => {
+	// FEAT-094.
+	vi.mocked(api.reviewComments).mockResolvedValue([
+		comment(1, { body: 'Use `tempfile` here:\n\n```rust\nlet f = tempfile()?;\n```', threadId: 'T1' })
+	]);
+	await openRoom();
+	await vi.waitFor(() => expect(view.find('.thread .body code')).not.toBeNull());
+	expect(view.get('.thread .body .tok-keyword').textContent).toBe('let');
+	expect(view.text()).not.toContain('```');
+});

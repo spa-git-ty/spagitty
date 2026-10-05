@@ -16,6 +16,7 @@
 
 import * as api from '../api';
 import type { ReviewKey } from '../api';
+import { detectLanguage, tokenizeDiff, type Token } from '../diff/highlight';
 import { pairWords, type Segment } from '../diff/words';
 import { reading } from '../reading.svelte';
 import { notice } from '../ui/notice.svelte';
@@ -67,6 +68,8 @@ export interface Content {
 	hunks: Block[] | null;
 	/** Changed words, by line index (FEAT-090). */
 	words: Map<number, Segment[]>;
+	/** Each line's colours, by line index, each side read on its own (FEAT-094). */
+	syntax: Token[][];
 	/** Instead of lines: binary, too large, could not be read. */
 	note?: string;
 }
@@ -178,6 +181,7 @@ function fromPatch(patch: FileDiff[], headSha: string): RoomFile[] {
 			lines: laid.lines,
 			hunks: laid.blocks,
 			words: pairWords(laid.lines),
+			syntax: tokenizeDiff(laid.lines, detectLanguage(file.path)),
 			note: noteFor(out[out.length - 1]) ?? undefined
 		};
 	}
@@ -323,7 +327,7 @@ export const room = {
 		if (!file || contents[path] || reading_.has(path) || !head) return;
 		const note = noteFor(file);
 		if (note) {
-			put(path, { lines: [], hunks: null, words: new Map(), note });
+			put(path, { lines: [], hunks: null, words: new Map(), syntax: [], note });
 			return;
 		}
 		const mine = seq;
@@ -333,10 +337,15 @@ export const room = {
 		try {
 			const whole = await api.reviewFile(from, to, path, file.oldPath);
 			if (mine !== seq) return;
-			put(path, { lines: whole.lines, hunks: null, words: pairWords(whole.lines) });
+			put(path, {
+				lines: whole.lines,
+				hunks: null,
+				words: pairWords(whole.lines),
+				syntax: tokenizeDiff(whole.lines, detectLanguage(path))
+			});
 		} catch (e) {
 			if (mine !== seq) return;
-			put(path, { lines: [], hunks: null, words: new Map(), note: `This file could not be read: ${e}` });
+			put(path, { lines: [], hunks: null, words: new Map(), syntax: [], note: `This file could not be read: ${e}` });
 		} finally {
 			reading_.delete(path);
 		}
