@@ -91,7 +91,20 @@ runs:
         mount=$(mktemp -d)
         # `-nobrowse` keeps it out of the Finder, `-readonly` guarantees
         # nothing here can alter the bytes that are about to be published.
-        hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount"
+        #
+        # The image carries the GPL as a licence to agree to (`licenseFile` in
+        # tauri.conf.json), so `attach` prints it and asks. On a runner nothing
+        # answers: stdin is empty, which `hdiutil` takes as a refusal, and the
+        # step ended in exit 1 after the licence text on every Mac lane
+        # (BUG-050). It is answered the way a person opening the download
+        # answers it, and the licence is kept out of the log unless the mount
+        # fails.
+        attached="${RUNNER_TEMP:-/tmp}/hdiutil-attach.log"
+        if ! hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount" <<< 'Y' >"$attached" 2>&1; then
+          cat "$attached"
+          echo "::error::the image did not mount"
+          exit 1
+        fi
         # Detach whatever happens, or a later step in the same job inherits a
         # mounted image and a confusing failure.
         trap 'hdiutil detach "$mount" >/dev/null 2>&1 || true' EXIT
