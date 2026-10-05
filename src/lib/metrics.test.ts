@@ -443,11 +443,15 @@ describe('narrowing the graph column', () => {
 				for (const columns of [1, 5, 8, 12, 13, 20, 48, 382]) {
 					const span = laneSpanFor(laneColumnWidth(columns, zoom, density), zoom, density);
 					for (let lane = 0; lane < columns; lane++) {
-						// A rounding pixel of span is all an undragged column can lose.
-						expect(
-							laneX(lane, columns, zoom, span, density),
-							`lane ${lane}/${columns} @${zoom}`
-						).toBeCloseTo(laneX(lane, columns, zoom, LANE_SPAN, density), 0);
+						// Rounding the column to a whole pixel is all an undragged column
+						// can lose or gain: half a pixel of width, which is half a pixel
+						// of x at any zoom. Against no span at all, not `LANE_SPAN`:
+						// since BUG-048 that would spread a compact column's deepest lanes.
+						const drift = Math.abs(
+							laneX(lane, columns, zoom, span, density) -
+								laneX(lane, columns, zoom, undefined, density)
+						);
+						expect(drift, `lane ${lane}/${columns} @${zoom}`).toBeLessThanOrEqual(0.5 + 1e-9);
 					}
 				}
 			}
@@ -501,6 +505,73 @@ describe('narrowing the graph column', () => {
 		const release = (lane: number) =>
 			widths.slice().reverse().find((w) => laneX(lane, 12, 1, laneSpanFor(w)) === LANE_X0 + lane * LANE_PITCH);
 		expect(release(3)).toBeLessThan(release(4) ?? Infinity);
+	});
+});
+
+/**
+ * BUG-048 — the author dragged the graph column wider on `git/git` and the
+ * lanes stopped where they had always stopped: a deep history's lanes were
+ * capped at the resting span as well as at the dragged one, so only narrowing
+ * did anything. These pin the other direction of the same fold.
+ */
+describe('widening the graph column', () => {
+	// git/git's mean depth, which compresses to the floor and still overflows.
+	const deep = 187;
+	const resting = laneSpanFor(laneColumnWidth(deep));
+
+	it('draws more of a deep history’s lanes apart, at the pitch they already had', () => {
+		const span = laneSpanFor(650);
+		expect(span).toBeGreaterThan(resting);
+
+		// At rest everything past the span's end stacks on it.
+		expect(laneX(30, deep, 1, resting)).toBe(LANE_X0 + resting);
+		// Wider, lane 30 has its own x, a floor's pitch from lane 29.
+		expect(laneX(30, deep, 1, span)).toBe(LANE_X0 + 30 * LANE_PITCH_MIN);
+		expect(laneX(30, deep, 1, span) - laneX(29, deep, 1, span)).toBe(LANE_PITCH_MIN);
+		// And the deepest still fold, onto the new boundary rather than the old one.
+		expect(laneX(deep - 1, deep, 1, span)).toBe(LANE_X0 + span);
+	});
+
+	it('does not move a lane that was already apart', () => {
+		for (const columns of [3, 8, 12, 20, deep]) {
+			for (const width of [400, 650, 1200]) {
+				const span = laneSpanFor(width);
+				for (let lane = 0; lane < columns; lane++) {
+					const atRest = laneX(lane, columns);
+					if (atRest < LANE_X0 + laneSpanFor(laneColumnWidth(columns))) {
+						expect(laneX(lane, columns, 1, span), `lane ${lane}/${columns} @${width}px`).toBe(
+							atRest
+						);
+					}
+				}
+			}
+		}
+	});
+
+	it('moves no lane further than the pointer, and keeps every node inside, at any width', () => {
+		for (const density of [COMFORTABLE, COMPACT]) {
+			for (let width = 1200; width > 331; width -= 1) {
+				const wide = laneSpanFor(width, 1, density);
+				const narrow = laneSpanFor(width - 1, 1, density);
+				for (const lane of [0, 11, 20, 21, 40, deep - 1]) {
+					const step = laneX(lane, deep, 1, wide, density) - laneX(lane, deep, 1, narrow, density);
+					expect(step).toBeGreaterThanOrEqual(0);
+					expect(step).toBeLessThanOrEqual(1 + 1e-9);
+				}
+				const right = laneX(deep - 1, deep, 1, wide, density) + laneNodeRadius(density) + NODE_HALO;
+				expect(right).toBeLessThanOrEqual(width);
+			}
+		}
+	});
+
+	it('leaves a compact column with no span where an undragged one rests', () => {
+		const span = laneSpanFor(laneColumnWidth(deep, 1, COMPACT), 1, COMPACT);
+		for (const lane of [0, 5, 12, 13, deep - 1]) {
+			const drift = Math.abs(laneX(lane, deep, 1, undefined, COMPACT) - laneX(lane, deep, 1, span, COMPACT));
+			expect(drift).toBeLessThanOrEqual(0.5);
+			// Not 110px further out, which is where `LANE_SPAN` would have put it.
+			expect(laneX(lane, deep, 1, undefined, COMPACT)).toBeLessThan(LANE_X0 + LANE_SPAN - 100);
+		}
 	});
 });
 

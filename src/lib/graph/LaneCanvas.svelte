@@ -5,7 +5,7 @@
 	import { graph } from '$lib/graph/store.svelte';
 	import { drawLanes } from '$lib/graph/lanes';
 	import { forgetPortraits } from '$lib/graph/portrait';
-	import { LANE_COLOR_COUNT, LANE_SPAN, laneColorVar } from '$lib/metrics';
+	import { LANE_COLOR_COUNT, laneColorVar } from '$lib/metrics';
 	import { scale } from '$lib/scale.svelte';
 	import { theme } from '$lib/theme.svelte';
 
@@ -33,7 +33,7 @@
 		width,
 		height,
 		columns,
-		span = LANE_SPAN,
+		span,
 		highlight = null,
 		stashes
 	}: Props = $props();
