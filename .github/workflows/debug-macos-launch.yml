@@ -1,0 +1,59 @@
+# Throwaway: launch the published Apple Silicon DMG on a Mac runner and record
+# why it does not open a window. Lives only on debug/** branches.
+name: debug macos launch
+
+on:
+  push:
+    branches: ['debug/**']
+
+permissions:
+  contents: read
+
+jobs:
+  launch:
+    runs-on: macos-15
+    steps:
+      - name: Download the release DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download v0.8.1-alpha.1 --repo "${{ github.repository }}" --pattern '*aarch64*.dmg' --dir .
+
+      - name: Install it
+        run: |
+          mount=$(mktemp -d)
+          hdiutil attach ./*.dmg -nobrowse -readonly -mountpoint "$mount" <<< 'Y' > /dev/null
+          cp -R "$mount"/*.app /Applications/
+          hdiutil detach "$mount"
+          ls -la /Applications/Spagitty.app/Contents/MacOS
+          sw_vers; uname -m
+
+      - name: Launch and observe
+        run: |
+          mkdir -p out
+          exe=$(ls /Applications/Spagitty.app/Contents/MacOS/* | head -1)
+          RUST_BACKTRACE=full "$exe" > out/stdout.txt 2> out/stderr.txt &
+          pid=$!
+          sleep 30
+          screencapture -x out/screen.png || true
+          if kill -0 "$pid" 2>/dev/null; then
+            echo "=== ALIVE after 30s"
+            ps -o pid,stat,%cpu,etime,command -p "$pid"
+            echo "=== process tree"
+            ps -axo pid,ppid,stat,etime,command | awk -v p="$pid" '$1==p || $2==p'
+            for c in $(pgrep -P "$pid"); do ps -axo pid,ppid,stat,etime,command | awk -v p="$c" '$2==p'; done
+            sample "$pid" 5 -file out/sample.txt > /dev/null 2>&1 || true
+            echo "=== main thread"
+            awk '/Call graph:/{f=1} f' out/sample.txt | head -120
+          else
+            wait "$pid"; echo "=== EXITED $?"
+          fi
+          echo "=== stderr"; tail -60 out/stderr.txt
+          echo "=== stdout"; tail -20 out/stdout.txt
+          log show --last 3m --predicate 'process CONTAINS[c] "spagitty"' --style compact > out/log.txt 2>&1 || true
+          echo "=== unified log"; tail -60 out/log.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: launch
+          path: out
