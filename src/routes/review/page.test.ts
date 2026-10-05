@@ -260,34 +260,56 @@ it('asks GitHub nothing more: its list already says', async () => {
 	expect(api.reviewSummaries).not.toHaveBeenCalled();
 });
 
-it('puts the pull request in a worktree of its own, fetching it first', async () => {
+it('checks the pull request out as a branch, fetching it first', async () => {
+	// FEAT-095: it was Open in worktree.
 	const { notice } = await import('$lib/ui/notice.svelte');
-	vi.mocked(api.reviewCheckout).mockResolvedValue({
-		head: 'f00d',
-		base: 'ba5e',
-		mergeBase: 'b0b0'
+	vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'f00d', base: 'ba5e', mergeBase: 'b0b0' });
+	vi.mocked(api.reviewCheckOut).mockResolvedValue({
+		branch: 'feat/avatar-disk-cache',
+		upstream: 'origin/feat/avatar-disk-cache',
+		renamed: false
 	});
-	vi.mocked(api.reviewWorktree).mockResolvedValue('/repos/spagitty-pr-214');
 	view = render(Page, {});
 	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	expect(button('Open in worktree')).toBeUndefined();
 
-	click(button('Open in worktree'));
-	await vi.waitFor(() => expect(api.reviewWorktree).toHaveBeenCalledWith(214, 'f00d'));
+	click(button('Check out branch'));
+	await vi.waitFor(() =>
+		expect(api.reviewCheckOut).toHaveBeenCalledWith(214, 'f00d', 'feat/avatar-disk-cache', 'main')
+	);
 	expect(api.reviewCheckout).toHaveBeenCalledWith(214, 'main', ASKED.headSha);
-	await vi.waitFor(() => expect(notice.current?.detail).toBe('/repos/spagitty-pr-214'));
+	await vi.waitFor(() => expect(notice.current?.title).toBe('On feat/avatar-disk-cache'));
+	expect(notice.current?.detail).toBe('following origin/feat/avatar-disk-cache');
+	expect(calls.refreshed).toBeGreaterThan(0);
 	notice.dismiss();
 });
 
-it('says what git said when the worktree cannot be made', async () => {
+it('says when the pull request had to take a name of its own', async () => {
 	const { notice } = await import('$lib/ui/notice.svelte');
-	vi.mocked(api.reviewCheckout).mockRejectedValue(new Error('Permission denied (publickey)'));
+	vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'f00d', base: 'ba5e', mergeBase: 'b0b0' });
+	vi.mocked(api.reviewCheckOut).mockResolvedValue({ branch: 'pr-214', upstream: null, renamed: true });
 	view = render(Page, {});
 	await vi.waitFor(() => expect(cards()).toHaveLength(2));
 
-	click(button('Open in worktree'));
+	click(button('Check out branch'));
+	await vi.waitFor(() => expect(notice.current?.title).toBe('On pr-214'));
+	expect(notice.current?.detail).toBe('feat/avatar-disk-cache here is another branch');
+	notice.dismiss();
+});
+
+it('says what git said when the branch cannot be checked out', async () => {
+	const { notice } = await import('$lib/ui/notice.svelte');
+	vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'f00d', base: 'ba5e', mergeBase: 'b0b0' });
+	vi.mocked(api.reviewCheckOut).mockRejectedValue(
+		new Error('Your local changes to the following files would be overwritten by checkout')
+	);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+
+	click(button('Check out branch'));
 	await vi.waitFor(() => expect(notice.current?.tone).toBe('error'));
-	expect(notice.current?.detail).toContain('Permission denied');
-	expect(api.reviewWorktree).not.toHaveBeenCalled();
+	expect(notice.current?.title).toBe('The branch could not be checked out');
+	expect(notice.current?.detail).toContain('would be overwritten');
 	notice.dismiss();
 });
 

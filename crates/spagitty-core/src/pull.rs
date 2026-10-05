@@ -24,7 +24,7 @@
 //! the head. Changes that reached the target since are not the pull request's,
 //! and a diff against the target's tip would show them reversed.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Serialize;
 
@@ -133,36 +133,106 @@ pub fn is_current(fetched: &PullHead, reported_head: &str) -> bool {
     !reported_head.is_empty() && fetched.head == reported_head
 }
 
-/// Where a pull request's worktree goes: beside the repository, named after
-/// it — `spagitty` and pull request 214 make `spagitty-pr-214`.
-pub fn worktree_path(dir: &Path, number: u64) -> Option<PathBuf> {
-    let name = dir.file_name()?.to_string_lossy();
-    Some(dir.parent()?.join(format!("{name}-pr-{number}")))
+/// Where Check out branch left the working copy (FEAT-095).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckedOut {
+    /// The branch now checked out.
+    pub branch: String,
+    /// The remote-tracking branch it follows, when the pull request is the
+    /// remote's own branch.
+    pub upstream: Option<String>,
+    /// The pull request's own branch name is another branch here, so it is
+    /// `pr-N` instead.
+    pub renamed: bool,
 }
 
-/// Put the pull request's head in a worktree of its own, detached, so it can
-/// be built and run without touching the branch you are on (FEAT-089).
+/// A local branch's commit, if there is a branch of that name.
+fn branch_tip(repo: &gix::Repository, name: &str) -> Option<gix::ObjectId> {
+    let mut reference = repo.find_reference(name).ok()?;
+    Some(reference.peel_to_id().ok()?.detach())
+}
+
+/// Is `candidate` `tip` or one of its ancestors?
+fn is_ancestor(repo: &gix::Repository, candidate: gix::ObjectId, tip: gix::ObjectId) -> bool {
+    candidate == tip
+        || repo
+            .merge_base(candidate, tip)
+            .is_ok_and(|base| base.detach() == candidate)
+}
+
+/// A name a branch can have.
+fn is_branch_name(name: &str) -> bool {
+    !name.is_empty() && gix::refs::FullName::try_from(format!("refs/heads/{name}")).is_ok()
+}
+
+/// Check the pull request's fetched head out as a branch here (FEAT-095).
 ///
-/// One worktree per pull request: opened again, it is moved to the new head —
-/// unless it has changes of its own, which are never thrown away; git refuses
-/// the switch and says why.
-pub fn open_worktree(repo: &gix::Repository, number: u64, head: &str) -> Result<PathBuf> {
+/// No branch of yours is ever moved. The pull request's own name, `source`,
+/// is used when there is no branch of that name — it is made at the head —
+/// or when the branch of that name is already at the head. Anything else, or
+/// a name that is the target's (a fork's `main` into `main`), gets
+/// `pr-N`, Spagitty's own, which only ever moves forward: one with commits
+/// the pull request does not have is refused rather than moved.
+///
+/// A new branch follows `remote/source` when that is exactly the head: the
+/// pull request is the remote's own branch, so a pull or a push goes where
+/// the author's does. Uncommitted changes go across, or git refuses and says
+/// what would be overwritten, as for any checkout.
+pub fn check_out(
+    repo: &gix::Repository,
+    remote: &str,
+    number: u64,
+    head: &str,
+    source: &str,
+    target: &str,
+) -> Result<CheckedOut> {
     let dir = crate::repo::workdir(repo)?;
-    let path =
-        worktree_path(dir, number).ok_or_else(|| Error::UnknownPath(dir.display().to_string()))?;
+    let head_id = gix::ObjectId::from_hex(head.as_bytes())
+        .map_err(|_| Error::UnknownCommit(head.to_string()))?;
 
-    let existing = crate::worktrees::list(repo)?;
-    let canonical = |path: &Path| path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    let already = existing
-        .iter()
-        .any(|worktree| canonical(Path::new(&worktree.path)) == canonical(&path));
-
-    if already {
-        shell::checkout_detached(&path, head)?;
-    } else {
-        crate::worktrees::add(repo, &path, Some(head), None, true)?;
+    if source != target && is_branch_name(source) {
+        match branch_tip(repo, &format!("refs/heads/{source}")) {
+            None => {
+                shell::create_branch(dir, source, head, true)?;
+                let tracked = format!("{remote}/{source}");
+                let upstream = (branch_tip(repo, &format!("refs/remotes/{tracked}"))
+                    == Some(head_id))
+                .then(|| shell::set_upstream(dir, source, &tracked).map(|()| tracked))
+                .transpose()?;
+                return Ok(CheckedOut {
+                    branch: source.to_string(),
+                    upstream,
+                    renamed: false,
+                });
+            }
+            Some(at) if at == head_id => {
+                shell::checkout(dir, source)?;
+                return Ok(CheckedOut {
+                    branch: source.to_string(),
+                    upstream: None,
+                    renamed: false,
+                });
+            }
+            Some(_) => {}
+        }
     }
-    Ok(path)
+
+    let own = format!("pr-{number}");
+    if let Some(at) = branch_tip(repo, &format!("refs/heads/{own}")) {
+        if !is_ancestor(repo, at, head_id) {
+            return Err(Error::NotStageable(format!(
+                "{own} has commits the pull request does not; check it out yourself"
+            )));
+        }
+    }
+    shell::switch_reset(dir, &own, head)?;
+    let renamed = source != own;
+    Ok(CheckedOut {
+        branch: own,
+        upstream: None,
+        renamed,
+    })
 }
 
 #[cfg(test)]
@@ -205,14 +275,6 @@ mod tests {
         }
         assert!(refspecs(Kind::GitHub, "or:igin", 1, "main").is_err());
         assert!(refspecs(Kind::Bitbucket, "origin", 1, "main").is_err());
-    }
-
-    #[test]
-    fn the_worktree_sits_beside_the_repository() {
-        assert_eq!(
-            worktree_path(Path::new("/code/spagitty"), 214),
-            Some(PathBuf::from("/code/spagitty-pr-214"))
-        );
     }
 
     /// Stage everything, new files too, and commit.
@@ -307,37 +369,117 @@ mod tests {
         assert_eq!(added.lines.len(), 1);
     }
 
-    #[test]
-    fn the_pull_request_opens_in_a_worktree_of_its_own_and_moves_with_its_head() {
+    /// The clone with `main` checked out and pull request 7 fetched.
+    fn fetched() -> (Fixture, Fixture, String) {
         let (host, clone, head) = host_and_clone();
         clone.git(&["fetch", "-q", "origin", "main"]);
         clone.git(&["checkout", "-q", "-b", "main", "FETCH_HEAD"]);
         fetch(clone.path(), Kind::GitHub, "origin", 7, "main").unwrap();
-        let repo = clone.open();
+        (host, clone, head)
+    }
 
-        let path = open_worktree(&repo, 7, &head).unwrap();
-        assert!(path.ends_with(format!(
-            "{}-pr-7",
-            clone.path().file_name().unwrap().to_string_lossy()
-        )));
+    fn current(clone: &Fixture) -> String {
+        clone.git(&["branch", "--show-current"]).trim().to_string()
+    }
+
+    #[test]
+    fn a_pull_request_is_checked_out_under_its_own_name() {
+        let (_host, clone, head) = fetched();
+        let done = check_out(&clone.open(), "origin", 7, &head, "feature", "main").unwrap();
         assert_eq!(
-            std::fs::read_to_string(path.join("new.rs")).unwrap().trim(),
-            "fresh"
+            done,
+            CheckedOut {
+                branch: "feature".into(),
+                upstream: None,
+                renamed: false
+            }
         );
+        assert_eq!(current(&clone), "feature");
+        assert_eq!(clone.rev("HEAD"), head);
 
-        // The author pushes again; opening it again moves the worktree.
+        // Again, from elsewhere: the branch is already at the head.
+        clone.git(&["checkout", "-q", "main"]);
+        let again = check_out(&clone.open(), "origin", 7, &head, "feature", "main").unwrap();
+        assert_eq!(again.branch, "feature");
+        assert_eq!(current(&clone), "feature");
+    }
+
+    #[test]
+    fn the_remote_s_own_branch_is_followed() {
+        let (_host, clone, head) = fetched();
+        clone.git(&[
+            "fetch",
+            "-q",
+            "origin",
+            "feature:refs/remotes/origin/feature",
+        ]);
+        let done = check_out(&clone.open(), "origin", 7, &head, "feature", "main").unwrap();
+        assert_eq!(done.upstream.as_deref(), Some("origin/feature"));
+        assert_eq!(
+            clone
+                .git(&["rev-parse", "--abbrev-ref", "feature@{upstream}"])
+                .trim(),
+            "origin/feature"
+        );
+    }
+
+    #[test]
+    fn a_branch_of_yours_is_never_moved() {
+        let (_host, clone, head) = fetched();
+        let main = clone.rev("main");
+        // A `feature` of your own, somewhere else.
+        clone.git(&["branch", "feature", "main"]);
+        let done = check_out(&clone.open(), "origin", 7, &head, "feature", "main").unwrap();
+        assert_eq!(
+            done,
+            CheckedOut {
+                branch: "pr-7".into(),
+                upstream: None,
+                renamed: true
+            }
+        );
+        assert_eq!(clone.rev("feature"), main);
+        assert_eq!(clone.rev("HEAD"), head);
+
+        // A fork's `main` into `main` never takes the target's name.
+        clone.git(&["checkout", "-q", "main"]);
+        let done = check_out(&clone.open(), "origin", 7, &head, "main", "main").unwrap();
+        assert_eq!(done.branch, "pr-7");
+        assert_eq!(clone.rev("main"), main);
+    }
+
+    #[test]
+    fn its_own_pr_branch_moves_forward_and_never_back() {
+        let (host, clone, head) = fetched();
+        clone.git(&["branch", "feature", "main"]);
+        check_out(&clone.open(), "origin", 7, &head, "feature", "main").unwrap();
+
+        // The author pushes again; checked out again, pr-7 follows.
         host.git(&["checkout", "-q", "feature"]);
         host.write("new.rs", "fresher\n");
-        let next = save(&host, "again");
-        host.git(&["update-ref", "refs/pull/7/head", &next]);
+        let newer = save(&host, "again");
+        host.git(&["update-ref", "refs/pull/7/head", &newer]);
         fetch(clone.path(), Kind::GitHub, "origin", 7, "main").unwrap();
-        let again = open_worktree(&clone.open(), 7, &next).unwrap();
-        assert_eq!(again, path);
-        assert_eq!(
-            std::fs::read_to_string(path.join("new.rs")).unwrap().trim(),
-            "fresher"
-        );
+        let done = check_out(&clone.open(), "origin", 7, &newer, "feature", "main").unwrap();
+        assert_eq!(done.branch, "pr-7");
+        assert_eq!(clone.rev("HEAD"), newer);
 
-        let _ = clone.git(&["worktree", "remove", "--force", &path.to_string_lossy()]);
+        // A commit of yours on pr-7 is never thrown away.
+        clone.write("mine.rs", "mine\n");
+        let mine = save(&clone, "mine");
+        assert!(check_out(&clone.open(), "origin", 7, &newer, "feature", "main").is_err());
+        assert_eq!(clone.rev("pr-7"), mine);
+    }
+
+    #[test]
+    fn uncommitted_work_it_would_overwrite_stops_it() {
+        let (_host, clone, head) = fetched();
+        clone.write("lib.rs", "mine, not committed\n");
+        assert!(check_out(&clone.open(), "origin", 7, &head, "feature", "main").is_err());
+        assert_eq!(current(&clone), "main");
+        assert_eq!(
+            std::fs::read_to_string(clone.path().join("lib.rs")).unwrap(),
+            "mine, not committed\n"
+        );
     }
 }

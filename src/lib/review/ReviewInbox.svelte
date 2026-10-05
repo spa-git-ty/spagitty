@@ -104,9 +104,9 @@
 				pr={selected}
 				record={review.recordOf(selected)}
 				notHere={review.notHere}
-				opening={opening || review.makingWorktree !== null}
+				opening={opening || review.checkingOut !== null}
 				onopen={() => open(selected.id)}
-				onworktree={review.isHere(selected) ? () => review.openWorktree(selected) : undefined}
+				oncheckout={review.isHere(selected) ? () => review.checkOut(selected) : undefined}
 			/>
 		{/if}
 	</div>

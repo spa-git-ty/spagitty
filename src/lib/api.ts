@@ -71,7 +71,8 @@ import type {
 	Submodule,
 	StashEntry,
 	Worktree,
-	WorkingCopy
+	WorkingCopy,
+	CheckedOut
 } from './types';
 
 /**
@@ -680,9 +681,17 @@ export function reviewFile(
 	return invoke('review_file', { from, to, path, oldPath });
 }
 
-/** Put a pull request's head in a worktree of its own; answers its path (FEAT-089). */
-export function reviewWorktree(number: number, head: string): Promise<string> {
-	return invoke('review_worktree', { number, head });
+/**
+ * Check a pull request's fetched head out as a branch here (FEAT-095): its
+ * own name when free or already there, `pr-N` otherwise.
+ */
+export function reviewCheckOut(
+	number: number,
+	head: string,
+	source: string,
+	target: string
+): Promise<CheckedOut> {
+	return invoke('review_check_out', { number, head, source, target });
 }
 
 /** Which repository Spagitty knows is a clone of `slug` on `host`, or null (FEAT-087). */
