@@ -262,6 +262,7 @@ of its own.
 | [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
 | [TASK-052](items/TASK-052-nothing-waits-in-line.md) | Nothing waits in line | all | Open |
 | [TASK-053](items/TASK-053-the-review-room-after-first-use.md) | The review room after first use | 1R | Done |
+| [TASK-054](items/TASK-054-build-macos-on-a-mac.md) | Build macOS on a Mac | — | Done |
 
 ## Skipped identifiers
 
