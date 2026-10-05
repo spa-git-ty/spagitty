@@ -2195,7 +2195,7 @@ impl FarmService {
         shell::version(workdir)
             .ok()
             .and_then(|_| {
-                std::process::Command::new("git")
+                shell::program("git")
                     .current_dir(workdir)
                     .args(["diff", "--stat", "HEAD~1..HEAD"])
                     .output()

@@ -35,6 +35,7 @@
 //! boundary is drawn before the screens that need it are built.
 
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex, OnceLock, Weak};
@@ -43,6 +44,25 @@ use std::time::Instant;
 use crate::error::{Error, Result};
 use crate::record::{self, Outcome};
 
+/// A program to run, with no console window of its own (BUG-046).
+///
+/// The release build is a Windows GUI program with no console, so Windows gives
+/// each console program it starts a console window of its own: a black box that
+/// flashes up for every git command, and stays for as long as a fetch takes.
+/// Every process this crate starts is built here, so none can forget the flag.
+pub fn program(name: impl AsRef<OsStr>) -> Command {
+    #[allow(unused_mut)]
+    let mut command = Command::new(name);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        /// `CREATE_NO_WINDOW`, from `winbase.h`.
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
+}
+
 /// Build the `git` command every function here spawns.
 ///
 /// One place, so the invariants hold for all of them: the working directory is
@@ -50,7 +70,7 @@ use crate::record::{self, Outcome};
 /// prompt we have no terminal for — credential requests must come back as a
 /// failure the UI can act on, rather than hanging the app forever.
 fn command(repo: &Path, args: &[&str]) -> Command {
-    let mut command = Command::new("git");
+    let mut command = program("git");
     command
         .current_dir(repo)
         .args(args)
@@ -526,7 +546,7 @@ pub fn clone_start(url: &str, destination: &Path) -> Result<std::process::Child>
         &into,
     ];
 
-    let mut command = Command::new("git");
+    let mut command = program("git");
     command
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
@@ -1298,6 +1318,56 @@ pub fn submodule_deinit(repo: &Path, path: &str, force: bool) -> Result<String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// BUG-046. Only [`program`] keeps a console window from opening on
+    /// Windows, so nothing else in the crate may build a process. Test modules
+    /// and the fixtures are left out: `cargo test` has a console of its own.
+    #[test]
+    fn every_process_is_built_by_program() {
+        fn sources(dir: &Path, found: &mut Vec<PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("the source directory") {
+                let path = entry.expect("a source entry").path();
+                if path.is_dir() {
+                    sources(&path, found);
+                } else if path.extension().is_some_and(|ext| ext == "rs") {
+                    found.push(path);
+                }
+            }
+        }
+
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut files = Vec::new();
+        sources(&root, &mut files);
+        let mut builders = Vec::new();
+        for file in files {
+            let name = file
+                .strip_prefix(&root)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+            if name == "fixture.rs" {
+                continue;
+            }
+            let text = std::fs::read_to_string(&file).expect("a source file");
+            let lines: Vec<&str> = text.lines().collect();
+            for (at, line) in lines.iter().enumerate() {
+                let next = lines.get(at + 1).copied().unwrap_or_default();
+                if line.trim_end() == "#[cfg(test)]" && next.starts_with("mod ") {
+                    break;
+                }
+                if !line.trim_start().starts_with("//") && line.contains("Command::new(") {
+                    builders.push(format!("{name}:{}", at + 1));
+                }
+            }
+        }
+
+        assert_eq!(
+            builders.len(),
+            1,
+            "processes built outside `program`: {builders:?}"
+        );
+        assert!(builders[0].starts_with("shell.rs:"), "{builders:?}");
+    }
     use crate::fixture::Fixture;
 
     #[test]

@@ -24,7 +24,6 @@
 //! failure this avoids.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 
 use crate::model::AgentAvailability;
@@ -152,7 +151,7 @@ pub fn probe(path: &Path, args: &[&str]) -> AgentAvailability {
 /// leak a thread per hung probe; this one kills the child, which is the outcome
 /// that matters.
 fn run_briefly(path: &Path, args: &[&str]) -> Result<String, String> {
-    let mut child = Command::new(path)
+    let mut child = spagitty_core::shell::program(path)
         .args(args)
         // A version probe must never wait on a prompt. Same reasoning as
         // `GIT_TERMINAL_PROMPT=0` in `spagitty_core::shell`.

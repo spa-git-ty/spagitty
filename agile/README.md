@@ -198,6 +198,7 @@ rather than an audit.
 | [BUG-043](items/BUG-043-a-gitlab-token-is-checked-as-github.md) | A GitLab token is checked as GitHub | Settings | Fixed |
 | [BUG-044](items/BUG-044-start-review-does-nothing-on-gitlab.md) | Start review does nothing on GitLab | 1R | Fixed |
 | [BUG-045](items/BUG-045-the-name-leaves-the-title-bar.md) | The name leaves the title bar | All | Fixed |
+| [BUG-046](items/BUG-046-a-console-window-opens-for-git.md) | A console window opens for git | All (Windows) | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
