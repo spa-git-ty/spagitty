@@ -1,0 +1,16 @@
+{
+  "name": "@spagitty/extension-sdk",
+  "version": "1.0.0",
+  "description": "Build, test and package Spagitty extensions",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./package": "./src/package.ts"
+  },
+  "engines": {
+    "bun": ">=1.1"
+  }
+}

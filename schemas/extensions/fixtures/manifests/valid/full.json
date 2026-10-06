@@ -1,0 +1,172 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.reviewer",
+  "name": "Reviewer",
+  "version": "2.1.0-beta.1",
+  "publisher": "Example",
+  "description": "A full manifest that uses every contribution point.",
+  "license": "MIT",
+  "homepage": "https://example.com/reviewer",
+  "engines": {
+    "spagitty": ">=0.9.0 <1.0.0",
+    "extensionApi": "^1.0.0"
+  },
+  "runtime": {
+    "kind": "native-process",
+    "entrypoints": {
+      "x86_64-pc-windows-msvc": "bin/windows-x64/reviewer.exe",
+      "aarch64-apple-darwin": "bin/macos-arm64/reviewer"
+    }
+  },
+  "activation": [
+    "onCommand",
+    "onReviewProvider",
+    "onPanel"
+  ],
+  "capabilities": {
+    "required": [
+      "repository.read",
+      "review.provide",
+      "tools.execute"
+    ],
+    "optional": [
+      "forge.pullRequest.read",
+      "forge.pullRequest.comment"
+    ]
+  },
+  "externalTools": [
+    {
+      "id": "lint",
+      "name": "Linter",
+      "executableNames": [
+        "lint",
+        "lint-cli"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "minimumVersion": "1.2.0",
+      "installUrl": "https://example.com/install",
+      "profiles": [
+        {
+          "id": "check",
+          "args": [
+            "check",
+            "--json"
+          ],
+          "options": {
+            "scope": {
+              "type": "enum",
+              "values": {
+                "all": [],
+                "staged": [
+                  "--staged"
+                ]
+              },
+              "required": true
+            },
+            "base": {
+              "type": "revision",
+              "flag": "--base"
+            },
+            "since": {
+              "type": "commit",
+              "flag": "--since"
+            }
+          },
+          "workdir": "operation",
+          "timeoutMs": 600000
+        }
+      ]
+    }
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "id": "review",
+        "title": "Review changes",
+        "context": "workingCopy",
+        "when": [
+          "hasWorkingChanges"
+        ],
+        "reviewProvider": "lint"
+      },
+      {
+        "id": "hello",
+        "title": "Say hello",
+        "palette": true,
+        "menu": false
+      }
+    ],
+    "reviewProviders": [
+      {
+        "id": "lint",
+        "title": "Lint",
+        "targets": [
+          "workingCopy",
+          "farmTask"
+        ],
+        "scopes": [
+          "uncommitted",
+          "committed"
+        ],
+        "configurationFiles": [
+          ".lint.yaml"
+        ],
+        "sendsCodeTo": "nowhere: it runs locally"
+      }
+    ],
+    "panels": [
+      {
+        "id": "findings",
+        "title": "Lint",
+        "renderer": "reviewFindings"
+      },
+      {
+        "id": "about",
+        "title": "About",
+        "renderer": "summary",
+        "location": "global"
+      }
+    ],
+    "settings": [
+      {
+        "key": "strict",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "level",
+        "type": "enum",
+        "values": [
+          "low",
+          "high"
+        ],
+        "labels": {
+          "low": "Low",
+          "high": "High"
+        },
+        "default": "low",
+        "scope": "repository"
+      },
+      {
+        "key": "limit",
+        "type": "number",
+        "min": 1,
+        "max": 10,
+        "default": 5
+      },
+      {
+        "key": "note",
+        "type": "text",
+        "maxLength": 20,
+        "default": "hi"
+      },
+      {
+        "key": "program",
+        "type": "executable",
+        "tool": "lint"
+      }
+    ]
+  }
+}

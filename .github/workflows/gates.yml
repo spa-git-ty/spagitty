@@ -225,10 +225,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: ./.github/actions/linux-deps
         if: matrix.os == 'ubuntu-latest'
+      # The process tree moved to its own crate (FEAT-096), and the extension
+      # host starts real worker processes inside it, so both run on every OS.
       - name: Descendant containment and noisy/cancellable verification
         run: |
-          cargo test -p spagitty-farm --lib execution::tree::tests
+          cargo test -p spagitty-process
           cargo test -p spagitty-farm --lib verification::command::tests
+      - name: Extension workers, tools and packages on this OS
+        run: cargo test -p spagitty-extensions
 
   # --- Gate 4 -------------------------------------------------------------
   security:

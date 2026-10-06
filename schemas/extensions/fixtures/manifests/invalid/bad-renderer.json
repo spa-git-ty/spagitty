@@ -1,0 +1,29 @@
+{
+  "expect": "contributes.panels[0].renderer",
+  "manifest": {
+    "manifestVersion": 1,
+    "id": "com.example.x",
+    "name": "X",
+    "version": "1.0.0",
+    "publisher": "P",
+    "engines": {
+      "spagitty": ">=0.9.0",
+      "extensionApi": "^1.0.0"
+    },
+    "runtime": {
+      "kind": "native-process",
+      "entrypoints": {
+        "x86_64-unknown-linux-gnu": "bin/x"
+      }
+    },
+    "contributes": {
+      "panels": [
+        {
+          "id": "p",
+          "title": "P",
+          "renderer": "html"
+        }
+      ]
+    }
+  }
+}

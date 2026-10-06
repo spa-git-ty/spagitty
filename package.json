@@ -9,11 +9,12 @@
     "dev": "NODE_ENV=development vite dev",
     "build": "NODE_ENV=production vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p packages/extension-sdk --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "ext": "bun tools/extensions/cli.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spagitty.dev/schemas/extensions/review.v1.schema.json",
+  "title": "Spagitty extension review model, version 1",
+  "description": "The review types shared by the host, the frontend and review providers. SPDX-License-Identifier: GPL-3.0-or-later. These are Spagitty's types; they do not describe any provider's own output.",
+  "$defs": {
+    "runStatus": {
+      "enum": ["queued", "running", "completed", "incomplete", "skipped", "failed", "cancelled", "stale", "actionRequired"]
+    },
+    "gate": { "enum": ["notEvaluated", "pass", "changesRequested", "blocked"] },
+    "severity": { "enum": ["critical", "high", "medium", "low", "info", "unknown"] },
+    "disposition": { "enum": ["open", "acknowledged", "dismissed", "sentToAgent"] },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repositoryId", "target", "baseCommit", "headCommit", "scope", "contentDigest"],
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "repositoryId": { "type": "string", "maxLength": 100 },
+        "target": { "enum": ["workingCopy", "farmTask", "pullRequest"] },
+        "taskId": { "type": "string", "maxLength": 64 },
+        "pullRequestNumber": { "type": "integer", "minimum": 1 },
+        "baseCommit": { "type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$" },
+        "headCommit": { "type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$" },
+        "baseRef": { "type": "string", "maxLength": 255 },
+        "scope": { "enum": ["committed", "uncommitted", "tracked", "includeUntracked"] },
+        "contentDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "configurationDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "takenAt": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "title", "message"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reviewId": { "type": "string" },
+        "providerId": { "type": "string" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "providerSeverity": { "type": "string", "maxLength": 40 },
+        "path": { "type": "string", "maxLength": 1024 },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 },
+        "side": { "enum": ["old", "new"] },
+        "title": { "type": "string", "maxLength": 300 },
+        "message": { "type": "string", "maxLength": 20000 },
+        "suggestion": { "type": "string", "maxLength": 20000 },
+        "sourceUrl": { "type": "string", "pattern": "^https://" },
+        "group": { "type": "string", "maxLength": 100 },
+        "disposition": { "$ref": "#/$defs/disposition" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewId", "providerId", "providerVersion", "snapshotId", "status", "summary", "findings", "completeness", "startedAt"],
+      "properties": {
+        "reviewId": { "type": "string" },
+        "providerId": { "type": "string" },
+        "providerVersion": { "type": "string" },
+        "snapshotId": { "type": "string" },
+        "status": { "$ref": "#/$defs/runStatus" },
+        "summary": { "type": "string" },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+        "completeness": { "enum": ["complete", "partial", "unknown"] },
+        "startedAt": { "type": "string" },
+        "finishedAt": { "type": "string" }
+      }
+    }
+  }
+}

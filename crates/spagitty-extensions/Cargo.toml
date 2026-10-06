@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "spagitty-extensions"
+description = "The extension host for Spagitty: manifests, packages, workers, grants and reviews"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Repository reads — status, ranges, refs — are the core's. The host computes
+# what a review covers through it and reimplements nothing.
+spagitty-core = { workspace = true }
+# Workers and the tools they ask for are process trees, contained by the same
+# code as the farm's agents.
+spagitty-process = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# Version requirements in the Cargo dialect, for `engines`. MIT OR Apache-2.0,
+# already in Cargo.lock through Tauri's build tooling.
+semver = "1"
+# SHA-256 for the package integrity index and snapshot digests. MIT OR
+# Apache-2.0, already in Cargo.lock through Tauri.
+sha2 = "0.10"
+# Deflate, for reading package entries. MIT OR Apache-2.0, already in
+# Cargo.lock. The ZIP container itself is read by `zip.rs`, which enforces the
+# package rules before a byte is written — see the plan for why not the `zip`
+# crate.
+flate2 = "1"
+# CRC-32 of each package entry. MIT OR Apache-2.0, already in Cargo.lock.
+crc32fast = "1"
+
+[dev-dependencies]
+spagitty-core = { workspace = true, features = ["fixture"] }
+tempfile = "3"
+
+[[bin]]
+# A scripted worker the host's own tests start as a real process. Built with the
+# crate's tests; never bundled.
+name = "spagitty-test-worker"
+path = "src/bin/spagitty-test-worker.rs"
+test = false
+doc = false

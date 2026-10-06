@@ -4384,6 +4384,7 @@ dependencies = [
  "serde",
  "serde_json",
  "spagitty-core",
+ "spagitty-extensions",
  "spagitty-farm",
  "tauri",
  "tauri-build",
@@ -4405,15 +4406,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "spagitty-extensions"
+version = "0.8.1"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "spagitty-core",
+ "spagitty-process",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "spagitty-farm"
 version = "0.8.1"
 dependencies = [
- "libc",
  "serde",
  "serde_json",
  "spagitty-core",
+ "spagitty-process",
  "tempfile",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "spagitty-process"
+version = "0.8.1"
+dependencies = [
+ "libc",
+ "tempfile",
  "windows-sys 0.61.2",
 ]
 

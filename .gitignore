@@ -18,3 +18,8 @@ run_claude_job.sh
 __pycache__/
 /.spagitty/
 src-tauri/gen/schemas/windows-schema.json
+
+# Extension build products (FEAT-096): programs and packages are made, not kept.
+/examples/extensions/*/bin/
+/examples/extensions/*/dist/
+*.spagitty-extension

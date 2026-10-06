@@ -1,0 +1,27 @@
+{
+  "manifestVersion": 1,
+  "id": "{{id}}",
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "publisher": "{{publisher}}",
+  "description": "{{name}} for Spagitty.",
+  "license": "{{license}}",
+  "engines": { "spagitty": ">=0.9.0, <1.0.0", "extensionApi": "^1.0.0" },
+  "runtime": {
+    "kind": "native-process",
+    "entrypoints": {
+      "x86_64-pc-windows-msvc": "bin/windows-x64/{{program}}.exe",
+      "x86_64-unknown-linux-gnu": "bin/linux-x64/{{program}}",
+      "aarch64-unknown-linux-gnu": "bin/linux-arm64/{{program}}",
+      "x86_64-apple-darwin": "bin/macos-x64/{{program}}",
+      "aarch64-apple-darwin": "bin/macos-arm64/{{program}}"
+    }
+  },
+  "activation": ["onCommand", "onPanel"],
+  "capabilities": { "required": ["repository.read"] },
+  "contributes": {
+    "commands": [{ "id": "hello", "title": "Say hello", "context": "workingCopy" }],
+    "panels": [{ "id": "about", "title": "{{name}}", "renderer": "summary", "location": "workingCopy" }],
+    "settings": [{ "key": "greeting", "title": "Greeting", "type": "text", "default": "Hello", "maxLength": 40 }]
+  }
+}

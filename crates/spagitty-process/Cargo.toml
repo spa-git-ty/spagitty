@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "spagitty-process"
+description = "Process trees Spagitty can stop as a whole"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+# Moved out of `spagitty-farm` (FEAT-096): the farm's agent runs and the
+# extension host's workers and tool runs need the same containment, and two
+# copies of a Windows Job Object implementation would be two to keep honest.
+
+[target.'cfg(unix)'.dependencies]
+# Two calls: `setpgid` on the child, and `kill` on the *group*. MIT OR
+# Apache-2.0, and already in the tree under gix.
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+# Windows job objects keep descendants cancellable after their parent exits.
+# MIT OR Apache-2.0; this version is already present through Tauri.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading"] }
+
+[dev-dependencies]
+tempfile = "3"

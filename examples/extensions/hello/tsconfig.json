@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@spagitty/extension-sdk": [
+        "../../../packages/extension-sdk/src/index.ts"
+      ],
+      "@spagitty/extension-sdk/testing": [
+        "../../../packages/extension-sdk/src/testing/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "test"
+  ]
+}

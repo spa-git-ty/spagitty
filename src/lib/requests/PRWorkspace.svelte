@@ -14,6 +14,9 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import ContributedActions from '$lib/extensions/ContributedActions.svelte';
+	import ExtensionPanels from '$lib/extensions/ExtensionPanels.svelte';
+	import { extensions } from '$lib/extensions/store.svelte';
 
 	const request = $derived(requests.open);
 	const files = $derived(requests.files);
@@ -99,6 +102,16 @@
 	async function handleToggleDraft() {
 		await requests.toggleDraft();
 	}
+
+	// The pull request extension actions and panels are about (FEAT-096).
+	$effect(() => {
+		const open = request;
+		extensions.setContext(
+			'pullRequest',
+			open ? { pullRequest: { number: open.number }, forgeConnected: requests.connected } : null
+		);
+		return () => extensions.setContext('pullRequest', null);
+	});
 </script>
 
 {#if request}
@@ -138,6 +151,7 @@
 
 		<div class="head-right">
 			<div class="pr-actions">
+				<ContributedActions context="pullRequest" />
 				{#if canDraft}
 					<Btn
 						onclick={handleToggleDraft}
@@ -318,6 +332,9 @@
 							{/if}
 						</ul>
 					{/if}
+				</div>
+				<div class="extension-panels">
+					<ExtensionPanels location="pullRequest" revision={request.number} />
 				</div>
 			</aside>
 
@@ -671,6 +688,16 @@
 {/if}
 
 <style>
+	.extension-panels {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 8px;
+	}
+	.extension-panels:empty {
+		display: none;
+	}
+
 	.pr-workspace {
 		flex: 1;
 		min-width: 0;

@@ -12,7 +12,9 @@ mod clone_worker;
 mod command_log;
 mod commands;
 mod desktop;
+mod extensions;
 mod farm;
+mod forge_bridge;
 mod graph_worker;
 mod network_worker;
 mod platform;
@@ -218,6 +220,32 @@ pub fn run() {
             farm::farm_cancel_plan,
             farm::farm_decompose,
             farm::farm_sweep,
+            // The extension host (FEAT-096). Its own module for the same reason
+            // as the farm: a host with its own state and lifetime.
+            extensions::extensions_list,
+            extensions::extensions_inspect,
+            extensions::extensions_install,
+            extensions::extensions_rollback,
+            extensions::extensions_uninstall,
+            extensions::extensions_attach,
+            extensions::extensions_restart,
+            extensions::extensions_enable,
+            extensions::extensions_disable,
+            extensions::extensions_set_grant,
+            extensions::extensions_set_setting,
+            extensions::extensions_choose_executable,
+            extensions::extensions_detect_tool,
+            extensions::extensions_run_command,
+            extensions::extensions_preview_review,
+            extensions::extensions_start_review,
+            extensions::extensions_cancel,
+            extensions::extensions_reviews,
+            extensions::extensions_set_disposition,
+            extensions::extensions_delete_reviews,
+            extensions::extensions_panel,
+            extensions::extensions_suggested_bases,
+            extensions::extensions_confirm,
+            extensions::extensions_location,
         ])
         .setup(|app| {
             if let (Some(window), Some(icon)) =
@@ -236,8 +264,18 @@ pub fn run() {
             // The desktop theme watcher's slot. Empty until somebody chooses
             // to follow the desktop.
             desktop::manage(app.handle());
+
+            // The extension host. Nothing starts until an extension is used.
+            extensions::manage(app.handle());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("starting Spagitty");
+        .build(tauri::generate_context!())
+        .expect("starting Spagitty")
+        .run(|app, event| {
+            // Workers are asked to stop rather than left to notice that
+            // their stdin closed.
+            if let tauri::RunEvent::Exit = event {
+                extensions::shutdown(app);
+            }
+        });
 }
