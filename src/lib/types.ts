@@ -413,6 +413,16 @@ export interface LinePlace {
 }
 
 /** The three commits a pull request read from disk is between (FEAT-089). */
+/** Where Check out branch left the working copy (FEAT-095). */
+export interface CheckedOut {
+	/** The branch now checked out. */
+	branch: string;
+	/** The remote-tracking branch it follows, when the pull request is the remote's own branch. */
+	upstream: string | null;
+	/** The pull request's own name is another branch here, so this is `pr-N`. */
+	renamed: boolean;
+}
+
 export interface PullHead {
 	head: string;
 	/** The target branch's tip. */

@@ -77,8 +77,8 @@
 					<span class="bar"><span class="fill" style:width="{(viewed / total) * 100}%"></span></span>
 				</span>
 			{/if}
-			<Btn disabled={review.makingWorktree !== null} onclick={() => review.openWorktree(pr)}>
-				<Icon name="folder" size="1em" />Open in worktree
+			<Btn disabled={review.checkingOut !== null} onclick={() => review.checkOut(pr)}>
+				<Icon name="branch" size="1em" />Check out branch
 			</Btn>
 			<span class="finish-anchor">
 				<Btn primary disabled={room.phase !== 'ready'} onclick={() => (finishing = !finishing)}>

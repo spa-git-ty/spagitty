@@ -371,6 +371,23 @@ pub fn checkout(repo: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Check out `name`, created at `start` or moved there if it exists (FEAT-095).
+///
+/// `git switch -C`: the move and the checkout are one step, and like any
+/// switch it carries uncommitted changes across or refuses when they would be
+/// overwritten. The caller decides the move loses no commit.
+pub fn switch_reset(repo: &Path, name: &str, start: &str) -> Result<()> {
+    run(repo, &["switch", "-C", name, start])?;
+    Ok(())
+}
+
+/// Make `branch` track `upstream`, a remote-tracking branch like `origin/x`.
+pub fn set_upstream(repo: &Path, branch: &str, upstream: &str) -> Result<()> {
+    let flag = format!("--set-upstream-to={upstream}");
+    run(repo, &["branch", &flag, branch])?;
+    Ok(())
+}
+
 /// Create a branch, optionally checking it out.
 ///
 /// `start` may be empty, which means `HEAD` — the same default `git branch`

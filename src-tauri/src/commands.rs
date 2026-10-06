@@ -1957,13 +1957,29 @@ pub fn review_file(
     })
 }
 
-/// Put a pull request's head in a worktree of its own and say where
-/// (FEAT-089).
+/// Check a pull request's fetched head out as a branch here (FEAT-095): its
+/// own name when that is free or already there, `pr-N` otherwise. The
+/// branch follows the forge remote's own when that is exactly the head.
 #[tauri::command(async)]
-pub fn review_worktree(state: State<'_, AppState>, number: u64, head: String) -> Result<String> {
-    state.with_session("review_worktree", |session| {
-        pull::open_worktree(&session.repo.to_thread_local(), number, &head)
-            .map(|path| path.to_string_lossy().into_owned())
+pub fn review_check_out(
+    state: State<'_, AppState>,
+    number: u64,
+    head: String,
+    source: String,
+    target: String,
+) -> Result<pull::CheckedOut> {
+    state.with_session("review_check_out", |session| {
+        // Opened afresh: the fetch just before wrote refs the shared handle
+        // may not have read.
+        let repository = repo::open(&session.path)?;
+        let listed: Vec<(String, String)> = remotes::remotes(&repository)
+            .into_iter()
+            .map(|remote| (remote.name, remote.url))
+            .collect();
+        let remote = forge::forge_remote(&listed)
+            .map(|(name, _)| name.clone())
+            .unwrap_or_else(|| "origin".to_string());
+        pull::check_out(&repository, &remote, number, &head, &source, &target)
     })
 }
 

@@ -162,7 +162,7 @@ pub fn run() {
             commands::review_comments,
             commands::resolve_thread,
             commands::review_file,
-            commands::review_worktree,
+            commands::review_check_out,
             commands::review_state,
             commands::set_review_state,
             commands::set_pr_draft,

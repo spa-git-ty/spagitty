@@ -42,7 +42,7 @@ let room = $state<{ pr: PullRequest; key: ReviewKey } | null>(null);
 /** A row from another repository that has no clone Spagitty knows. */
 let notHere = $state<string | null>(null);
 /** A worktree being made, for which pull request (FEAT-089). */
-let makingWorktree = $state<number | null>(null);
+let checkingOut = $state<number | null>(null);
 
 /** The repository generation the list was last read for. */
 let primedFor = -1;
@@ -346,29 +346,35 @@ export const review = {
 		room = null;
 	},
 
-	/** The pull request whose worktree is being made, or null. */
-	get makingWorktree(): number | null {
-		return makingWorktree;
+	/** The pull request being checked out, or null. */
+	get checkingOut(): number | null {
+		return checkingOut;
 	},
 
 	/**
-	 * Put a pull request's head in a worktree of its own (FEAT-089), beside
-	 * the repository, so it can be built and run without touching your
-	 * branch. The head is fetched first when it is not here yet.
+	 * Check a pull request's branch out here, to build and run it (FEAT-095).
+	 * The head is fetched first when it is not here yet. A branch of yours is
+	 * never moved: when the pull request's name is taken here, it is `pr-N`.
 	 */
-	async openWorktree(pr: PullRequest): Promise<string | null> {
-		if (!api.inTauri() || makingWorktree !== null) return null;
-		makingWorktree = pr.number;
+	async checkOut(pr: PullRequest): Promise<string | null> {
+		if (!api.inTauri() || checkingOut !== null) return null;
+		checkingOut = pr.number;
 		try {
 			const fetched = await api.reviewCheckout(pr.number, pr.targetBranch, pr.headSha);
-			const path = await api.reviewWorktree(pr.number, fetched.head);
-			notice.ok(`#${pr.number} is in a worktree`, path);
-			return path;
+			const done = await api.reviewCheckOut(pr.number, fetched.head, pr.sourceBranch, pr.targetBranch);
+			const detail = done.renamed
+				? `${pr.sourceBranch} here is another branch`
+				: done.upstream
+					? `following ${done.upstream}`
+					: null;
+			notice.ok(`On ${done.branch}`, detail);
+			return done.branch;
 		} catch (e) {
-			notice.failed('The worktree could not be made', e);
+			notice.failed('The branch could not be checked out', e);
 			return null;
 		} finally {
-			makingWorktree = null;
+			checkingOut = null;
+			await repo.refresh();
 		}
 	},
 
@@ -387,7 +393,7 @@ export const review = {
 		records = {};
 		room = null;
 		notHere = null;
-		makingWorktree = null;
+		checkingOut = null;
 		primedFor = -1;
 	}
 };

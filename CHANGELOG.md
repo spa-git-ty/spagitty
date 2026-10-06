@@ -27,9 +27,9 @@ stays backward-compatible.
   comments is published as one batch and an approval is pinned to the version
   you read. Projects in nested groups are found, and a self-hosted GitLab
   under any name connects as GitLab.
-- **Open a pull request in a worktree.** From Review, a pull request's head is
-  fetched and checked out in a folder beside your repository, so you can build
-  and run it without leaving your branch.
+- **Check out a pull request's branch.** From Review, a pull request's head
+  is fetched and checked out as its own branch, so you can build and run it. A
+  branch of yours is never moved: if the name is taken here, it is `pr-N`.
 - **Settings › Reading.** Choose how code is set — Atkinson Hyperlegible Mono,
   OpenDyslexic Mono, Lexend, JetBrains Mono or your system's — its size, line
   spacing and letter spacing, the interface font, and calm or classic diff

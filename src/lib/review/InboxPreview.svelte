@@ -18,10 +18,10 @@
 		opening: boolean;
 		onopen: () => void;
 		/** Absent where the pull request cannot be checked out here. */
-		onworktree?: () => void;
+		oncheckout?: () => void;
 	}
 
-	let { pr, record, notHere, opening, onopen, onworktree }: Props = $props();
+	let { pr, record, notHere, opening, onopen, oncheckout }: Props = $props();
 
 	const facts = $derived(factsOf(pr, record));
 	const progress = $derived(progressOf(pr, record));
@@ -52,8 +52,8 @@
 		<span class="note">No clone of {notHere} here</span>
 	{/if}
 	<Btn primary quiet disabled={opening} onclick={onopen}>{continueLabel(progress)}</Btn>
-	{#if onworktree}
-		<Btn disabled={opening} onclick={onworktree}>Open in worktree</Btn>
+	{#if oncheckout}
+		<Btn disabled={opening} onclick={oncheckout}>Check out branch</Btn>
 	{/if}
 </aside>
 
