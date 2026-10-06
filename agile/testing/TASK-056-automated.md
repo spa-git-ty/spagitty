@@ -24,4 +24,4 @@ Test Files  163 passed (163)
 ```
 
 `src-tauri`'s own tests (FEAT-102's `merger_state`) do not load on Windows;
-the WSL run was started on 2026-10-06 and is not recorded here yet.
+in WSL (Arch) on 2026-10-06: `cargo test -p spagitty --lib merger_state` — 3 passed, 0 failed.
