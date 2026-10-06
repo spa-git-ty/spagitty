@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { dialog } from '$lib/ui/dialog.svelte';
@@ -91,7 +92,8 @@
 			</Btn>
 			<Btn
 				primary
-				disabled={resolving.stepping || (progress.total > 0 && !resolving.ready)}
+				busy={resolving.stepping}
+				disabled={progress.total > 0 && !resolving.ready}
 				title={progress.total > 0 && !resolving.ready ? 'Resolve every conflict first' : undefined}
 				onclick={() => resolving.continueRebase()}
 			>
@@ -120,7 +122,7 @@
 	{#if stop && resolving.files.length === 0}
 		<p class="note pad">This commit stopped without a conflict to resolve. Continue to commit it as it is, or skip it.</p>
 	{:else if resolving.loading && resolving.files.length === 0}
-		<p class="note pad">Reading the conflicts…</p>
+		<Loader label="Reading the conflicts…" />
 	{:else}
 		<Resolver
 			files={resolving.files}

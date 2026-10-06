@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import BranchCard from './BranchCard.svelte';
@@ -164,7 +165,8 @@
 					{:else}
 						<Btn
 							primary
-							disabled={!onmerge || stopped !== null || busy}
+							{busy}
+							disabled={!onmerge || stopped !== null}
 							title={stopped ?? undefined}
 							onclick={() => onmerge?.()}
 						>
@@ -178,7 +180,7 @@
 			{:else if !merger.a || !merger.b}
 				<p class="note">Choose two branches.</p>
 			{:else}
-				<p class="note">Working out the merge…</p>
+				<Loader label="Working out the merge…" />
 			{/if}
 		</section>
 

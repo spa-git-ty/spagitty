@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { untrack } from 'svelte';
 	import * as api from './api';
 	import { panelsFor, type PlacedPanel } from './contributions';
@@ -95,7 +96,7 @@
 					<SummaryPanel data={data[entry.key]?.value as SummaryData} />
 				{/if}
 			{:else if data[entry.key]?.loading}
-				<p class="muted">Loading…</p>
+				<Loader label="Loading…" />
 			{/if}
 		{/if}
 	</div>
@@ -121,11 +122,6 @@
 
 	.title {
 		font-weight: 600;
-	}
-
-	.muted {
-		color: var(--muted);
-		margin: 0;
 	}
 
 	.error {

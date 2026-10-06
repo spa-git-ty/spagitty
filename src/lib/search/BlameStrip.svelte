@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { relativeTime } from '$lib/format';
 	import { search } from '$lib/search/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -55,7 +56,7 @@
 
 	<div class="body">
 		{#if search.blaming}
-			<p class="note state">Reading…</p>
+			<Loader label="Reading…" />
 		{:else if search.blameError}
 			<p class="note error state">{search.blameError}</p>
 		{:else if search.blame?.refused}

@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { goto } from '$app/navigation';
 	import { clockTime } from '$lib/format';
 	import { stash } from '$lib/stash/store.svelte';
@@ -57,7 +58,7 @@
 			{#if stash.contentsError}
 				<p class="note error">{stash.contentsError}</p>
 			{:else if contents === null}
-				<p class="note">{stash.contentsLoading ? 'Reading…' : ''}</p>
+				<p class="note">{#if stash.contentsLoading}<Loader label="Reading…" />{:else}{/if}</p>
 			{:else}
 				<div class="files-head">
 					<span class="note">{counts}</span>

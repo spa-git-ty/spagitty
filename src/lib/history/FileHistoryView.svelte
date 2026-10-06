@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { fileHistory } from './store.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { relativeTime } from '$lib/format';
@@ -54,7 +55,7 @@
 	</header>
 
 	{#if loading}
-		<div class="loading-state">Loading file history and blame…</div>
+		<Loader label="Loading file history and blame…" />
 	{:else if error}
 		<div class="error-state" role="alert">{error}</div>
 	{:else if !path}
@@ -361,7 +362,6 @@
 		font-family: var(--font-mono);
 	}
 
-	.loading-state,
 	.empty-state,
 	.refused-message {
 		padding: 48px;

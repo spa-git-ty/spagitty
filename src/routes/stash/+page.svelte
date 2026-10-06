@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { onMount, untrack } from 'svelte';
 	import DiffPane from '$lib/diff/DiffPane.svelte';
@@ -94,7 +95,7 @@
 			<RefTabs />
 		</div>
 		<div class="right">
-			{#if stash.loading}<span class="note">Reading…</span>{/if}
+			{#if stash.loading}<Loader size="inline" label="Reading…" />{/if}
 			<Chip active={diff.view === 'unified'} onclick={() => diff.setView('unified')}>
 				unified
 			</Chip>
@@ -108,7 +109,7 @@
 	{:else if stash.error}
 		<div class="empty"><p class="note error">{stash.error}</p></div>
 	{:else if !stash.loaded}
-		<div class="empty"><span class="note">Reading the stash…</span></div>
+		<div class="empty"><Loader label="Reading the stash…" /></div>
 	{:else}
 		<div class="body">
 			<StashList />

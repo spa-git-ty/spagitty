@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { goto } from '$app/navigation';
 	import CommitDetail from '$lib/graph/CommitDetail.svelte';
 	import CommitRows from '$lib/graph/CommitRows.svelte';
@@ -76,7 +77,7 @@
 		{#if repo.info === null}
 			<div class="empty">
 				{#if repo.busy}
-					<span class="note">Opening…</span>
+					<Loader label="Opening…" />
 				{:else}
 					<p class="note">No repository open.</p>
 					<Btn primary onclick={() => repo.choose()}>Open repository…</Btn>

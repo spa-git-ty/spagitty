@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -127,7 +128,7 @@
 	{:else if diff.error}
 		<div class="empty"><p class="note error">{diff.error}</p></div>
 	{:else if diff.commit === null}
-		<div class="empty"><span class="note">Reading the commit…</span></div>
+		<div class="empty"><Loader label="Reading the commit…" /></div>
 	{:else}
 		<div class="body">
 			<FileList

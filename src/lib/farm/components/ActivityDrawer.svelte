@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { eventLine } from '../describe';
 	import { PLANNING_TASK } from '../store.svelte';
@@ -233,7 +234,7 @@
 		</button>
 		{#if tab === 'transcript' && subject && onwholeLog && !whole[subject]}
 			<button class="control" onclick={readWholeLog} disabled={fetching}>
-				{fetching ? 'Reading…' : 'Whole log'}
+				{#if fetching}<Loader size="inline" label="Reading…" />{:else}Whole log{/if}
 			</button>
 		{/if}
 		<button class="control" onclick={copy} title="Copy what is shown">Copy</button>

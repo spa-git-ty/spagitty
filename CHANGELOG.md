@@ -182,6 +182,10 @@ stays backward-compatible.
 
 ### Fixed
 
+- **Loading shows, and notices look like the rest.** Screens that are reading
+  show three weaving strands instead of the word "Reading…", buttons show them
+  while their action runs, and notices are glass with a green tick or a red
+  exclamation. The graph's lanes keep closer to their full spacing.
 - **The graph's lanes are no longer squeezed together.** A busy history has more
   room by default, and dragging the graph column wider spreads its lanes back
   apart.

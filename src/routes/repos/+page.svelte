@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { onMount } from 'svelte';
 	import { clone } from '$lib/clone/store.svelte';
 	import RepoCard from '$lib/repos/RepoCard.svelte';
@@ -35,7 +36,7 @@
 			{/if}
 		</div>
 		<div class="right">
-			{#if repos.loading}<span class="note">Reading…</span>{/if}
+			{#if repos.loading}<Loader size="inline" label="Reading…" />{/if}
 			<Btn disabled={repos.busy} onclick={() => repos.load()}>Refresh</Btn>
 			<Btn disabled={repos.busy} onclick={() => clone.show()}>Clone…</Btn>
 			<Btn primary disabled={repos.busy} onclick={() => repos.choose()}>
@@ -48,7 +49,7 @@
 		{#if repos.error}
 			<p class="note error">{repos.error}</p>
 		{:else if !repos.loaded}
-			<p class="note">Reading…</p>
+			<Loader label="Reading…" />
 		{:else if repos.cards.length === 0}
 			<div class="empty">
 				<div class="brand-hero">

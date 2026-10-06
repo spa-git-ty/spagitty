@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { untrack } from 'svelte';
 	import BranchTable from '$lib/branches/BranchTable.svelte';
@@ -85,7 +86,7 @@
 		</div>
 		<div class="right">
 			{#if network.running}<span class="note">{network.label}</span>{/if}
-			{#if branches.loading}<span class="note">Reading…</span>{/if}
+			{#if branches.loading}<Loader size="inline" label="Reading…" />{/if}
 			<Btn
 				disabled={branches.busy || network.running}
 				title="Bring the remote-tracking refs up to date, so the drift is current"
@@ -102,7 +103,7 @@
 	{:else if branches.error}
 		<div class="empty"><p class="note error">{branches.error}</p></div>
 	{:else if !branches.loaded}
-		<div class="empty"><span class="note">Reading the branches…</span></div>
+		<div class="empty"><Loader label="Reading the branches…" /></div>
 	{:else}
 		<div class="filters">
 			<input

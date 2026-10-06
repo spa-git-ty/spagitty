@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as api from '$lib/farm/api';
@@ -364,7 +365,7 @@
 				</div>
 			</div>
 		{:else if !farmStore.loaded && farmStore.loading}
-			<div class="empty"><p class="note">Reading the farm…</p></div>
+			<div class="empty"><Loader label="Reading the farm…" /></div>
 		{:else if pane === 'agents'}
 			<section class="pane single">
 				<div class="row-between">

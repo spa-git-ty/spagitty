@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Loader from '$lib/ui/Loader.svelte';
 
 	interface Props {
 		primary?: boolean;
@@ -21,6 +22,11 @@
 		 * next thing. Set this on the ones that are merely filled.
 		 */
 		quiet?: boolean;
+		/**
+		 * The action is running (BUG-052): the strands show beside the label
+		 * and the button holds still until it is done.
+		 */
+		busy?: boolean;
 		onclick?: (event: MouseEvent) => void;
 		children: Snippet;
 	}
@@ -30,6 +36,7 @@
 		danger = false,
 		disabled = false,
 		quiet = false,
+		busy = false,
 		title,
 		onclick,
 		children
@@ -41,10 +48,12 @@
 	class:primary
 	class:danger
 	class:glow={primary && !quiet}
-	{disabled}
+	disabled={disabled || busy}
+	aria-busy={busy || undefined}
 	{title}
 	{onclick}
 >
+	{#if busy}<Loader size="inline" label="Working" />{/if}
 	{@render children()}
 </button>
 

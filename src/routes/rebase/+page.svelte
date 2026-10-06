@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
@@ -177,7 +178,7 @@
 		{:else if rebase.error}
 			<p class="note error pad">{rebase.error}</p>
 		{:else if rebase.loading}
-			<p class="note pad">Reading…</p>
+			<Loader label="Reading…" />
 		{:else if !rebase.loaded}
 			<div class="empty pad"></div>
 		{:else if rebase.todo && rebase.todo.rows.length === 0}
