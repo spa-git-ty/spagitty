@@ -11,8 +11,20 @@
 	 * software, and a diff row is never blurred.
 	 */
 
+	/** Open the Finish review card, which the room owns. */
+	let { onfinish }: { onfinish: () => void } = $props();
+
 	const file = $derived(room.selectedFile);
 	const name = $derived(file ? file.path.slice(file.path.lastIndexOf('/') + 1) : '');
+	const viewed = $derived(file !== null && room.isViewed(file.path));
+	// Every file read: what is left is to finish (TASK-053).
+	const done = $derived(room.files.length > 0 && room.viewedCount === room.files.length);
+
+	/** Not viewed: tick it and go on to the next. Viewed: take the tick back. */
+	function mark() {
+		if (file && viewed) void room.setViewed(file.path, false);
+		else void room.viewedNext();
+	}
 </script>
 
 <div class="pill ornament" role="toolbar" aria-label="Review controls">
@@ -70,9 +82,19 @@
 		Aa
 	</button>
 	<span class="vr"></span>
-	<button class="tool next" disabled={!file} onclick={() => room.viewedNext()}>
-		<Icon name="check" size="1em" weight={2.4} />Viewed, next
-	</button>
+	{#if done}
+		<button class="tool finish" disabled={room.phase !== 'ready'} onclick={onfinish}>Finish review</button>
+	{:else}
+		<button
+			class="tool viewed"
+			aria-pressed={viewed}
+			disabled={!file}
+			title={viewed ? undefined : 'Tick it and go to the next file'}
+			onclick={mark}
+		>
+			<Icon name={viewed ? 'circle-check' : 'circle'} size="1.1em" weight={2} />Viewed
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -174,13 +196,24 @@
 		font-weight: 700;
 	}
 
-	.next {
-		background: var(--ok);
+	/* A ring while the file is still to read; the ring ticked, in green, once
+	   it is read (TASK-053). */
+	.viewed {
+		font-weight: 600;
+	}
+
+	.viewed[aria-pressed='true'] {
+		background: color-mix(in srgb, var(--ok) 18%, transparent);
+		color: var(--ok);
+	}
+
+	.finish {
+		background: var(--accent);
 		color: var(--on-accent);
 		font-weight: 600;
 	}
 
-	.next:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--ok) 86%, var(--ink));
+	.finish:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--accent) 86%, var(--ink));
 	}
 </style>

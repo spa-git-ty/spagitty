@@ -34,9 +34,10 @@ describe('blocksOf', () => {
 		]);
 	});
 
-	it('shows an expanded fold, and nothing folded in the whole file', () => {
+	it('shows an expanded fold, and the whole file as one part', () => {
 		expect(blocksOf(lines, 'changes', new Set([19]))[2]).toEqual({ kind: 'plain', from: 19, to: 30 });
-		expect(blocksOf(lines, 'whole').map((block) => block.kind)).toEqual(['plain', 'hunk', 'plain']);
+		// TASK-053: the changes in place, not cut into cards.
+		expect(blocksOf(lines, 'whole')).toEqual([{ kind: 'hunk', from: 0, to: 30 }]);
 	});
 
 	it('shows a run too short to be worth folding', () => {

@@ -55,7 +55,7 @@ interface Range {
  * it. Two such that would have shared their context split it between them
  * instead, with nothing folded in between.
  */
-function changedRanges(lines: DiffLine[], fixed: ReadonlySet<number>): [number, number][] {
+function changedRanges(lines: DiffLine[], fixed: ReadonlySet<number>): Range[] {
 	const ranges: Range[] = [];
 	let i = 0;
 	while (i < lines.length) {
@@ -96,14 +96,16 @@ function changedRanges(lines: DiffLine[], fixed: ReadonlySet<number>): [number, 
 		const last = ranges[ranges.length - 1];
 		if (lines.length - last.to < MIN_FOLD) last.to = lines.length;
 	}
-	return ranges.map((range) => [range.from, range.to]);
+	return ranges;
 }
 
 /**
  * Cut a file into blocks.
  *
  * In `changes` the unchanged runs between the parts are folds, each named by
- * where it starts, and stay shown once expanded. In `whole` nothing is folded.
+ * where it starts, and stay shown once expanded. In `whole` the file is one
+ * part with its changes in place (TASK-053), save what a merge wrote while
+ * fixing a conflict: that is still a card of its own.
  * A file whose text did not change — a rename — is one fold, or one plain
  * block: its lines are there to read, but nothing in them is news.
  *
@@ -125,7 +127,16 @@ export function blocksOf(
 
 	const blocks: Block[] = [];
 	let at = 0;
-	for (const [from, to] of ranges) {
+	if (scope === 'whole') {
+		for (const { from, to } of ranges.filter((range) => range.fixed)) {
+			if (from > at) blocks.push({ kind: 'hunk', from: at, to: from });
+			blocks.push({ kind: 'hunk', from, to });
+			at = to;
+		}
+		if (at < lines.length) blocks.push({ kind: 'hunk', from: at, to: lines.length });
+		return blocks;
+	}
+	for (const { from, to } of ranges) {
 		if (from > at) blocks.push(unchanged(at, from));
 		blocks.push({ kind: 'hunk', from, to });
 		at = to;

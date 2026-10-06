@@ -115,7 +115,7 @@
 					<p class="pad note">This pull request changes no files.</p>
 				{:else if room.phase === 'ready'}
 					<RoomDiff />
-					<RoomPill />
+					<RoomPill onfinish={() => (finishing = true)} />
 				{/if}
 			</section>
 			<RoomConversation />

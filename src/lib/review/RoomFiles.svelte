@@ -20,14 +20,19 @@
 	// Conflict fixes are found in the fetched head; the host's patch has no
 	// merges to re-do.
 	const local = $derived(room.head !== null);
+	// What each filter lets through, so choosing one visibly picks (TASK-053).
+	const authors = $derived(room.files.filter((file) => room.isAuthors(file.path)).length);
+	const fixes = $derived(room.files.filter((file) => room.hasFix(file.path)).length);
 </script>
 
 <aside class="files" aria-label="Touched files">
 	{#if local}
 		<div class="filters">
 			<Chip active={room.filter === 'all'} onclick={() => room.setFilter('all')}>All {room.files.length}</Chip>
-			<Chip active={room.filter === 'author'} onclick={() => room.setFilter('author')}>Author</Chip>
-			<Chip active={room.filter === 'conflict'} onclick={() => room.setFilter('conflict')}>Conflict fixes</Chip>
+			<Chip active={room.filter === 'author'} onclick={() => room.setFilter('author')}>Author {authors}</Chip>
+			<Chip active={room.filter === 'conflict'} onclick={() => room.setFilter('conflict')}
+				>Conflict fixes {fixes}</Chip
+			>
 		</div>
 	{/if}
 	<ul>
@@ -45,6 +50,7 @@
 					<span class="name mono" class:viewed>{name(file.path)}</span>
 					<span class="facts">
 						<span class="mono"><span class="add">+{file.added}</span> <span class="del">−{file.removed}</span></span>
+						{#if local && room.isAuthors(file.path)}<span class="by"><span class="dot author"></span>author</span>{/if}
 						{#if room.hasFix(file.path)}<span class="fix"><span class="dot"></span>conflict fix</span>{/if}
 						{#if threads > 0}<span class="threads">{threads} {threads === 1 ? 'thread' : 'threads'}</span>{/if}
 					</span>
@@ -161,10 +167,14 @@
 		color: var(--danger);
 	}
 
-	.fix {
+	.fix,
+	.by {
 		display: inline-flex;
 		align-items: center;
 		gap: 4px;
+	}
+
+	.fix {
 		color: var(--resolve);
 	}
 

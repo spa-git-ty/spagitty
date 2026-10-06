@@ -55,6 +55,8 @@ export type IconName =
 	| 'chevron-down'
 	| 'terminal'
 	| 'check'
+	| 'circle'
+	| 'circle-check'
 	| 'refresh'
 	| 'badge'
 	| 'farm'
@@ -146,6 +148,9 @@ export const ICONS: Record<IconName, string[]> = {
 	'chevron-down': ['M6 9.5l6 6 6-6'],
 	terminal: ['M4 4h16v16H4z', 'M8 9.5 10.5 12 8 14.5', 'M13 15h3'],
 	check: ['M5 12.5 10 17.5 19 7'],
+	// A ring, and the ring ticked: a file still to read, and one read (TASK-053).
+	circle: ['M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z'],
+	'circle-check': ['M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z', 'M8.3 12.4l2.6 2.6 5-5.4'],
 	refresh: ['M20 11a8 8 0 1 0-.5 4', 'M20 4v7h-7'],
 	// A medal: a disc with a ribbon behind it. Two strokes for the ribbon
 	// rather than one V, so the join under a round cap stays clean.
