@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /**
- * The two questions the Conflicts screen asks (FEAT-016).
+ * The question the Conflicts screen asks (FEAT-016).
  *
  * Most of the screen is safe — taking a side leaves all three stages in the
- * index, so a wrong click costs another click. These two are not, and both are
- * asserted on their wording as much as on the gate:
- *
- * - Abort puts something back, and *what* differs by operation. The one people
- *   get wrong is cherry-pick, where aborting does not undo the commits it
- *   already made.
- * - Leaving a dirty draft throws away text that only exists on screen.
+ * index, so a wrong click costs another click. Abort is not, and it is
+ * asserted on its wording as much as on the gate: it puts something back, and
+ * *what* differs by operation. The one people get wrong is cherry-pick, where
+ * aborting does not undo the commits it already made.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,35 +16,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // binding in the file, so a store built out here would not exist yet.
 vi.mock('$lib/conflicts/store.svelte', () => ({
 	conflicts: {
-		dirty: false,
 		writeError: null as string | null,
 		abort: vi.fn(() => Promise.resolve(true)),
-		continue: vi.fn(() => Promise.resolve(true)),
-		discardDraft: vi.fn(),
-		select: vi.fn(() => Promise.resolve()),
-		step: vi.fn(() => Promise.resolve())
+		continue: vi.fn(() => Promise.resolve(true))
 	}
 }));
 vi.mock('$lib/ui/notice.svelte', () => ({ notice: { ok: vi.fn(), failed: vi.fn() } }));
 
 import { conflicts } from '$lib/conflicts/store.svelte';
 import { dialog } from '$lib/ui/dialog.svelte';
-import { abortBody, abortOperation, leaveDraft, openFile, stepFile } from './actions';
+import { abortBody, abortOperation } from './actions';
 
 const store = conflicts as unknown as {
-	dirty: boolean;
 	writeError: string | null;
 	abort: ReturnType<typeof vi.fn>;
 	continue: ReturnType<typeof vi.fn>;
-	discardDraft: ReturnType<typeof vi.fn>;
-	select: ReturnType<typeof vi.fn>;
-	step: ReturnType<typeof vi.fn>;
 };
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	dialog.dismiss();
-	store.dirty = false;
 	store.writeError = null;
 });
 
@@ -107,61 +95,5 @@ describe('the gate on abort', () => {
 	it('asks nothing when there is no operation to abort', async () => {
 		expect(await abortOperation('none')).toBe(false);
 		expect(dialog.question).toBeNull();
-	});
-});
-
-describe('leaving an unsaved edit', () => {
-	it('goes straight through when there is nothing unsaved', async () => {
-		expect(await leaveDraft()).toBe(true);
-		expect(dialog.question).toBeNull();
-	});
-
-	it('asks, and keeps the edit when the answer is no', async () => {
-		store.dirty = true;
-		const running = leaveDraft();
-
-		expect(dialog.question?.title).toBe('Unsaved changes to the merged file');
-		dialog.dismiss();
-
-		expect(await running).toBe(false);
-		expect(store.discardDraft).not.toHaveBeenCalled();
-	});
-
-	it('throws the edit away only when the answer is yes', async () => {
-		store.dirty = true;
-		const running = leaveDraft();
-		dialog.accept();
-
-		expect(await running).toBe(true);
-		expect(store.discardDraft).toHaveBeenCalled();
-	});
-
-	it('stops a move to another file', async () => {
-		store.dirty = true;
-		const running = openFile('other.txt');
-		dialog.dismiss();
-		await running;
-
-		expect(store.select).not.toHaveBeenCalled();
-	});
-
-	it('stops a step through the pager', async () => {
-		store.dirty = true;
-		const running = stepFile(1);
-		dialog.dismiss();
-		await running;
-
-		expect(store.step).not.toHaveBeenCalled();
-	});
-
-	it('lets the move through once the edit is dealt with', async () => {
-		store.dirty = true;
-		const running = openFile('other.txt');
-		dialog.accept();
-		await running;
-
-		// Forced, because the store refuses an unforced move while dirty and
-		// the question has just been answered.
-		expect(store.select).toHaveBeenCalledWith('other.txt', true);
 	});
 });

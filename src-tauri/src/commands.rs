@@ -51,6 +51,7 @@ use crate::network_worker::{self, NetworkWorker};
 use crate::profiles;
 use crate::rebase_worker::{self, RebaseWorker};
 use crate::recents;
+use crate::merger_state;
 use crate::review_state;
 use crate::search_worker::{self, SearchWorker};
 use crate::settings::Settings;
@@ -1000,6 +1001,20 @@ pub fn conflict_resolve(state: State<'_, AppState>, paths: Vec<String>) -> Resul
     state.with_session("conflict_resolve", |session| conflicts::mark_resolved(&session.repo.to_thread_local(), &paths))
 }
 
+/// Settle one file with what was chosen for it and mark it resolved
+/// (FEAT-102): its text, or one side whole.
+#[tauri::command(async)]
+pub fn conflict_settle(
+    state: State<'_, AppState>,
+    path: String,
+    text: Option<String>,
+    take: Option<conflicts::Side>,
+) -> Result<()> {
+    state.with_session("conflict_settle", |session| {
+        conflicts::settle(&session.repo.to_thread_local(), &path, text.as_deref(), take)
+    })
+}
+
 /// Carry on with whatever the repository is in the middle of.
 #[tauri::command(async)]
 pub fn conflict_continue(state: State<'_, AppState>) -> Result<()> {
@@ -1044,6 +1059,45 @@ pub async fn merger_forecast(
 #[tauri::command(async)]
 pub fn merger_land(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Landed> {
     state.with_session("merger_land", |session| merger::land(&session.repo.to_thread_local(), &ask))
+}
+
+/// Every conflict of merging two branches, each side whole, read from a dry
+/// run (FEAT-102). Writes nothing, so it lets the session go first, as the
+/// forecast does.
+#[tauri::command]
+pub async fn merger_conflicts(
+    state: State<'_, AppState>,
+    a: String,
+    b: String,
+) -> Result<merger::MergeConflicts> {
+    let shared = {
+        let guard = state.lock_session("merger_conflicts");
+        guard.as_ref().ok_or(Error::NoRepository)?.repo.clone()
+    };
+    off_thread(move || merger::conflict_files(&shared.to_thread_local(), &a, &b)).await
+}
+
+/// The choices kept for one merge, or null (FEAT-102).
+#[tauri::command(async)]
+pub fn merger_state<R: Runtime>(app: AppHandle<R>, key: String) -> Option<serde_json::Value> {
+    let root = merger_state::root(&app)?;
+    merger_state::read(&merger_state::path_in(&root, &key)?)
+}
+
+/// Keep the choices made for one merge (FEAT-102). A null state forgets them.
+#[tauri::command(async)]
+pub fn set_merger_state<R: Runtime>(
+    app: AppHandle<R>,
+    key: String,
+    state: serde_json::Value,
+) -> Result<()> {
+    let path = merger_state::root(&app)
+        .and_then(|root| merger_state::path_in(&root, &key))
+        .ok_or_else(|| Error::Config("nowhere to keep this merge's choices".into()))?;
+    if state.is_null() {
+        return merger_state::forget(&path).map_err(Error::Config);
+    }
+    merger_state::write(&path, &state).map_err(Error::Config)
 }
 
 /// Every tag, newest first (FEAT-051).

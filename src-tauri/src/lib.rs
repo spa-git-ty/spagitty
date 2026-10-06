@@ -21,6 +21,7 @@ mod platform;
 mod profiles;
 mod rebase_worker;
 mod recents;
+mod merger_state;
 mod review_state;
 mod search_worker;
 mod settings;
@@ -100,8 +101,12 @@ pub fn run() {
             commands::conflict_resolve,
             commands::conflict_continue,
             commands::conflict_abort,
+            commands::conflict_settle,
             commands::merger_forecast,
             commands::merger_land,
+            commands::merger_conflicts,
+            commands::merger_state,
+            commands::set_merger_state,
             commands::remotes,
             commands::remote_add,
             commands::remote_rename,

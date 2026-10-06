@@ -166,6 +166,10 @@
 		font-weight: 600;
 	}
 
+	.title .mono {
+		font-size: inherit;
+	}
+
 	.tone-a {
 		color: var(--side-a);
 	}

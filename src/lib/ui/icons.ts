@@ -41,6 +41,7 @@ export type IconName =
 	| 'conflict'
 	| 'merge'
 	| 'swap'
+	| 'base'
 	| 'tag'
 	| 'request'
 	| 'search'
@@ -118,6 +119,8 @@ export const ICONS: Record<IconName, string[]> = {
 	merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3', 'M12 12v9', 'M9 18l3 3 3-3'],
 	// Two arrows passing each other: swap two things' places.
 	swap: ['M4 8h14', 'M15 5l3 3-3 3', 'M20 16H6', 'M9 13l-3 3 3 3'],
+	// A peak on a ground line: what both sides started from (FEAT-102).
+	base: ['M4 18h16', 'M7 14l5-8 5 8'],
 	tag: [
 		'M20.5 12.5 12.5 20.5a2 2 0 0 1-2.83 0l-6.17-6.17a2 2 0 0 1-.5-2L4 4l8.33-1a2 2 0 0 1 1.67.57l6.5 6.5a2 2 0 0 1 0 2.43z',
 		'M8 8.01v-.01'

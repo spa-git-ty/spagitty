@@ -5,16 +5,13 @@
  *
  * Most of what this screen does is safe. Taking a side writes the working file
  * and the index still holds all three stages, so a wrong click costs another
- * click. Two things are not like that:
+ * click. One thing is not like that:
  *
  * - **Abort** throws the whole operation away, and what returns to what depends
  *   on which operation it was. A merge goes back to `HEAD`; a rebase goes back
  *   to where the branch started; a cherry-pick or revert leaves the commits it
  *   already made. Saying "this will be undone" without saying which would be
  *   asking someone to agree to something they cannot picture.
- * - **Leaving a dirty draft.** The merged pane is editable, so there is text on
- *   screen that is not on disk. The item named silently discarding it as the
- *   thing not to do, so it is a question rather than a side effect.
  */
 
 import { conflicts } from '$lib/conflicts/store.svelte';
@@ -83,40 +80,6 @@ export async function continueOperation(operation: ConflictOperation): Promise<b
 	}
 	else notice.failed(`Could not continue the ${label(operation)}`, conflicts.writeError);
 	return ok;
-}
-
-/**
- * Ask about an unsaved edit before leaving the file it belongs to.
- *
- * Three answers, and the third is the reason this is a prompt-shaped question
- * rather than a plain confirm: save it, throw it away, or stay where you are.
- * Resolves true when the move may go ahead.
- */
-export async function leaveDraft(): Promise<boolean> {
-	if (!conflicts.dirty) return true;
-
-	const agreed = await dialog.confirm({
-		title: 'Unsaved changes to the merged file',
-		body: 'You have edited the merged result without saving it. Leaving this file throws that edit away.',
-		confirmLabel: 'Discard the edit',
-		danger: true
-	});
-	if (!agreed) return false;
-
-	conflicts.discardDraft();
-	return true;
-}
-
-/** Move to another conflicted file, asking about an unsaved edit first. */
-export async function openFile(path: string): Promise<void> {
-	if (!(await leaveDraft())) return;
-	await conflicts.select(path, true);
-}
-
-/** Step through the pager, asking about an unsaved edit first. */
-export async function stepFile(by: number): Promise<void> {
-	if (!(await leaveDraft())) return;
-	await conflicts.step(by);
 }
 
 function label(operation: ConflictOperation): string {

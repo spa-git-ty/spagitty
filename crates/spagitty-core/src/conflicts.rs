@@ -349,7 +349,7 @@ fn worktree_side(repo: &gix::Repository, path: &str) -> Option<ConflictSide> {
     Some(side_from(&bytes))
 }
 
-fn side_from(data: &[u8]) -> ConflictSide {
+pub(crate) fn side_from(data: &[u8]) -> ConflictSide {
     let bytes = data.len();
 
     if is_binary(data) {
@@ -576,6 +576,48 @@ pub fn take(repo: &gix::Repository, path: &str, side: Side) -> Result<()> {
 /// the point of the screen, and staging for them skips it.
 pub fn mark_resolved(repo: &gix::Repository, paths: &[String]) -> Result<()> {
     crate::shell::stage(crate::repo::workdir(repo)?, paths)
+}
+
+/// Settle one conflicted file with what was chosen for it, and mark it
+/// resolved (FEAT-102): its text, or one side whole — which, for the side that
+/// deleted the file, deletes it.
+///
+/// One call for the resolver's *Mark resolved*, which the person presses
+/// having seen the result: the write and the `git add` belong together there,
+/// and the index is not touched until then.
+pub fn settle(
+    repo: &gix::Repository,
+    path: &str,
+    text: Option<&str>,
+    whole: Option<Side>,
+) -> Result<()> {
+    match (text, whole) {
+        (Some(text), None) => {
+            if !regions(text).is_empty() {
+                return Err(Error::NotStageable(format!(
+                    "{path} still has conflict markers"
+                )));
+            }
+            write_merged(repo, path, text)?;
+            mark_resolved(repo, &[path.to_string()])
+        }
+        (None, Some(side)) => {
+            let stages = sides(repo, path)?;
+            let exists = match side {
+                Side::Ours => stages.ours.is_some(),
+                Side::Theirs => stages.theirs.is_some(),
+            };
+            if exists {
+                take(repo, path, side)?;
+                mark_resolved(repo, &[path.to_string()])
+            } else {
+                crate::shell::remove_path(crate::repo::workdir(repo)?, path)
+            }
+        }
+        _ => Err(Error::NotStageable(format!(
+            "{path} needs either text or a side"
+        ))),
+    }
 }
 
 /// Carry on with whatever the repository is in the middle of.
@@ -1143,5 +1185,52 @@ mod tests {
             None,
             "a path with only a base is not a conflict anyone can act on"
         );
+    }
+}
+
+#[cfg(test)]
+mod settle_tests {
+    use super::*;
+    use crate::fixture::Fixture;
+
+    #[test]
+    fn settling_with_text_writes_it_and_marks_it_resolved() {
+        let fixture = Fixture::conflicted();
+        let repo = fixture.open();
+
+        settle(&repo, "shared.txt", Some("one\nBOTH\nthree\n"), None).unwrap();
+
+        assert_eq!(fixture.read("shared.txt"), "one\nBOTH\nthree\n");
+        assert!(conflicted(&fixture.open()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn text_with_markers_is_refused_and_nothing_is_staged() {
+        let fixture = Fixture::conflicted();
+        let error = settle(
+            &fixture.open(),
+            "shared.txt",
+            Some("<<<<<<< a\nx\n=======\ny\n>>>>>>> b\n"),
+            None,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("markers"), "{error}");
+        assert_eq!(conflicted(&fixture.open()).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn taking_a_side_takes_it_and_marks_it_resolved() {
+        let fixture = Fixture::conflicted();
+        settle(&fixture.open(), "shared.txt", None, Some(Side::Theirs)).unwrap();
+        assert_eq!(fixture.read("shared.txt"), "one\nTHEIRS\nthree\n");
+        assert!(conflicted(&fixture.open()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn taking_the_side_that_deleted_it_deletes_it() {
+        let fixture = Fixture::deleted_on_one_side();
+        settle(&fixture.open(), "gone.txt", None, Some(Side::Theirs)).unwrap();
+        assert!(!fixture.at("gone.txt").exists());
+        assert!(conflicted(&fixture.open()).unwrap().is_empty());
     }
 }

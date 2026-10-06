@@ -292,11 +292,14 @@ changes forward, so the one action that can lose work is the one that asks.
 
 ## 1D — Conflicts
 
-**Built.** `src/routes/conflicts/+page.svelte`, `src/lib/conflicts/`.
+**Built.** `src/routes/conflicts/+page.svelte`, `src/lib/conflicts/`, and the
+shared resolver in `src/lib/resolver/` (FEAT-102).
 It resolves as well as reads, since FEAT-016.
 
-Ours, the merged result and theirs, side by side, with the common ancestor
-behind a disclosure. The three come from the index: when git cannot merge two
+What git stopped on by itself — a pull, a cherry-pick, a revert, a rebase from
+the graph. A merge started in Merger (1S) is resolved there, with the same
+three-column resolver. Ours (A) | the result | theirs (B), one card per marker
+region. The sides come from the index: when git cannot merge two
 versions of a file it keeps all three — stage 1 the base, stage 2 ours, stage 3
 theirs — and leaves the working-tree file with markers in it. That is the whole
 data model, and `crates/spagitty-core/src/conflicts.rs` is a reader for it.
@@ -316,9 +319,11 @@ takes the index's modification time either side of visiting every conflicted
 file, and fails if a status walk rewrote it or left a lock behind. Resolving is
 the only thing that writes, and it is always something the user asked for.
 
-Three ways out of a file — take a whole side, take one marker region, or type
-into the merged pane — each followed by an explicit `git add`, so the index says
-what the screen says. Two ways out of the operation, both in the header:
+Every region is a choice on screen — take ours or theirs, both in either order,
+pick single lines, or edit by hand — and each result line is badged with where
+it came from. Nothing is written until *Mark resolved*, which writes what was
+chosen and runs `git add` in one go, so the index says what the screen says; a
+file whose markers are already gone from disk can be marked resolved as it is. Two ways out of the operation, both in the header:
 Continue, live only once nothing is conflicted, and Abort, whose confirmation
 names what comes back for the operation being abandoned rather than pointing
 vaguely at the reflog.
@@ -963,3 +968,16 @@ with `update-ref` against the tip the plan read, or, where it is checked out,
 uncommitted work. A branch that is not checked out is merged into without
 checking anything out. Then the done state: *<target> now includes <source>*,
 Open in Graph, Merge another.
+
+**Resolving** (FEAT-102) is the shared three-column resolver: the conflicted
+files with a dot per conflict, the files that merge on their own, and for the
+chosen file one card per region — A | Result | B, always in that order, each
+side by its own line numbers with its context dimmed, why it conflicts, and
+the commit on each side that made the change. Take A, Take B, Both in either
+order, Pick lines, Edit by hand, Reset, and All from A or B per file. Every
+result line carries its A, B or ✎ badge; lines that will not land fade. The
+result's line numbers follow the choices. Base shows what the merge base had
+here. A pill at the foot steps through every conflict and jumps to the next
+unresolved. The choices are kept in application data per merge, and are only
+applied again to a region whose sides have not changed. Nothing is written to
+either branch until the commit dialog's button.

@@ -2,37 +2,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import * as api from '$lib/api';
-	import ConflictPager from '$lib/conflicts/ConflictPager.svelte';
-	import ResolveBar from '$lib/conflicts/ResolveBar.svelte';
-	import SidePane from '$lib/conflicts/SidePane.svelte';
 	import { abortOperation, continueOperation } from '$lib/conflicts/actions';
 	import { conflicts } from '$lib/conflicts/store.svelte';
 	import { repo } from '$lib/repo.svelte';
+	import Resolver from '$lib/resolver/Resolver.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 
 	/**
-	 * A repository stopped mid-operation: ours, the merged result, and theirs.
+	 * A repository stopped mid-operation (1D): what git stopped on by itself —
+	 * a pull, a cherry-pick, a revert, a rebase from the graph. Merges started
+	 * in Merger are resolved there; both use the same three-column resolver
+	 * (FEAT-102).
 	 *
-	 * It writes since FEAT-016. Three ways out of a file — a whole side, one
-	 * marker region, or text typed into the merged pane — and one way out of the
-	 * operation, which is Continue once nothing is conflicted any more.
-	 *
-	 * Continue is offered only when the list is empty. git refuses it otherwise
-	 * and says so clearly, but a button that is live for the whole time it
-	 * cannot work reads as broken rather than as guarded.
-	 *
-	 * There is no footer (BUG-014). It carried one sentence — that the screen
-	 * only reads and resolving was not built — which stopped being true when
-	 * FEAT-016 landed, and an escape-hatch command that Abort in the header now
-	 * runs. Both were duplicated by the header, and a footer that repeats the
-	 * header is what TASK-008 took off Branches.
+	 * A is ours (`HEAD`), B is theirs, the side coming in. Every region is a
+	 * choice on screen until *Mark resolved*, which writes the file and stages
+	 * it. Continue is offered only once nothing is conflicted: git refuses it
+	 * otherwise, and a button live for the whole time it cannot work reads as
+	 * broken rather than guarded.
 	 */
 
 	onMount(() => {
-		if (api.inTauri() && repo.info) conflicts.load();
+		if (api.inTauri() && repo.info) void conflicts.load();
 	});
 
-	const kind = $derived(conflicts.sides?.kind ?? 'bothModified');
+	const names = $derived({ a: repo.info?.head.branch ?? 'ours', b: 'theirs' });
+	const roles = { a: 'HEAD', b: 'coming in', result: 'what lands' };
 </script>
 
 <div class="screen">
@@ -51,6 +45,7 @@
 		</div>
 		<div class="right">
 			{#if conflicts.loading}<span class="note">Reading…</span>{/if}
+			{#if conflicts.writeError}<span class="note error" role="alert">{conflicts.writeError}</span>{/if}
 			<Btn disabled={conflicts.busy} onclick={() => conflicts.load()}>Refresh</Btn>
 			{#if conflicts.operation !== 'none'}
 				<Btn
@@ -74,70 +69,40 @@
 		</div>
 	</header>
 
-	{#if conflicts.files.length > 0}
-		<div class="bar">
-			<ConflictPager />
-		</div>
-	{/if}
-
 	<div class="body">
 		{#if conflicts.error}
-			<p class="note error">{conflicts.error}</p>
+			<p class="note error pad">{conflicts.error}</p>
 		{:else if !conflicts.loaded}
-			<p class="note">Reading…</p>
+			<p class="note pad">Reading…</p>
 		{:else if conflicts.files.length === 0}
-			<div class="empty">
+			<p class="note pad">
 				{#if conflicts.operation === 'none'}
-					<p class="note">Nothing is conflicted.</p>
+					Nothing is conflicted.
 				{:else}
-					<p class="note">
-						Every file is resolved. Continue to finish the {conflicts.operationLabel}.
-					</p>
+					Every file is resolved. Continue to finish the {conflicts.operationLabel}.
 				{/if}
-			</div>
-		{:else if conflicts.sidesError}
-			<p class="note error">{conflicts.sidesError}</p>
-		{:else if !conflicts.sides}
-			<p class="note">Reading…</p>
+			</p>
 		{:else}
-			<div class="path mono muted">{conflicts.sides.path}</div>
-			<ResolveBar />
-			<div class="panes">
-				<SidePane
-					title="Ours"
-					subtitle="HEAD"
-					side={conflicts.sides.ours}
-					which="ours"
-					{kind}
-				/>
-				<SidePane
-					title="Merged result"
-					subtitle="on disk, with markers"
-					side={conflicts.sides.merged}
-					which="merged"
-					{kind}
-					middle
-				/>
-				<SidePane
-					title="Theirs"
-					subtitle="the incoming side"
-					side={conflicts.sides.theirs}
-					which="theirs"
-					{kind}
-				/>
-			</div>
-			<details class="base">
-				<summary class="note">Common ancestor</summary>
-				<div class="basepane">
-					<SidePane
-						title="Base"
-						subtitle="what both sides started from"
-						side={conflicts.sides.base}
-						which="base"
-						{kind}
-					/>
-				</div>
-			</details>
+			<Resolver
+				files={conflicts.read}
+				choices={conflicts.choices}
+				{names}
+				{roles}
+				baseShort={null}
+				onchoose={(path, index, choice) => conflicts.choose(path, index, choice)}
+				onwhole={(path, side) => conflicts.whole(path, side)}
+			>
+				{#snippet fileActions(file)}
+					<Btn
+						primary
+						disabled={conflicts.busy || !conflicts.settleable(file.path)}
+						title={conflicts.settleable(file.path) ? 'Write the result and stage it — git add' : 'Resolve every conflict in this file first'}
+						onclick={() => conflicts.settle(file.path)}
+					>
+						{conflicts.asOnDisk(file.path) ? 'Mark resolved as it is' : 'Mark resolved'}
+					</Btn>
+				{/snippet}
+			</Resolver>
 		{/if}
 	</div>
 </div>
@@ -156,12 +121,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		padding: 10px 12px;
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
-		box-shadow: none;
-		position: relative;
-		z-index: 1;
+		padding: 14px 18px 10px;
 		flex: none;
 	}
 
@@ -177,54 +137,18 @@
 		font-size: var(--fs-title);
 	}
 
-	.bar {
-		flex: none;
-		padding: 8px 12px;
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
-		box-shadow: none;
-		position: relative;
-		z-index: 1;
-	}
-
 	.body {
 		flex: 1;
 		min-height: 0;
-		overflow: auto;
-		padding: 10px 12px;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
 	}
 
-	.path {
-		flex: none;
+	.pad {
+		padding: 10px 18px;
 	}
 
-	/* Three equal panes: the widths say the three sides are equally real, which
-	   is the whole point of showing them together. */
-	.panes {
-		flex: 1;
-		min-height: 240px;
-		display: flex;
-		gap: 8px;
-		min-width: 0;
-	}
-
-	.base {
-		flex: none;
-	}
-
-	.basepane {
-		display: flex;
-		height: 200px;
-		padding-top: 8px;
-	}
-
-	.empty {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		max-width: 520px;
+	.error {
+		color: var(--danger);
 	}
 </style>

@@ -41,8 +41,10 @@ use crate::error::{Error, Result};
 use crate::repo::workdir;
 use crate::shell;
 
+pub mod detail;
 pub mod land;
 
+pub use detail::{conflict_files, FileConflict, MergeConflicts, RegionSource};
 pub use land::{land, LandAsk, Landed, Resolution, Strategy, Target};
 
 /// How many of each side's newest commits a card lists.

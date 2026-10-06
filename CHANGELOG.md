@@ -24,6 +24,12 @@ stays backward-compatible.
   where they conflict, found by a dry run that leaves your repository as it
   was. Merge now lands it — into a branch that is not checked out, too,
   without checking it out or touching your working copy.
+- **Resolve conflicts every way, and see where each line came from.**
+  Merger and Conflicts share a new three-column resolver: your side, the
+  result and theirs, one card per conflict. Take either side, both in either
+  order, single lines from each, or type the result yourself; every result
+  line is marked with where it came from, and the base is a click away.
+  Choices made in Merger are kept, so you can leave and come back.
 - **Review, a place to read pull requests.** A new screen beside Pull
   requests, with an eye on the sidebar and a dot while a review is waiting on
   you. Its inbox groups pull requests by what they need from you — asked to
