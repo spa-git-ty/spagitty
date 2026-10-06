@@ -216,6 +216,20 @@ describe('the artefact is opened and asked three different questions', () => {
 		expect(verify).not.toMatch(/codesign\s+(?!-d|--verify)[^\n]*--force/);
 		expect(verify).not.toMatch(/--deep --force/);
 	});
+
+	/**
+	 * BUG-050. A bundle with a licence file makes the image ask for it to be
+	 * agreed to, and on a runner nothing answers unless the step does: `hdiutil`
+	 * reads the empty stdin as a refusal, and every Mac lane failed there after
+	 * printing the GPL.
+	 */
+	it('agrees to the image’s licence when it mounts it', () => {
+		const licensed = Boolean(JSON.parse(read(CONFIG)).bundle?.licenseFile);
+		expect(licensed).toBe(true);
+		const attach = verify.split('\n').find((line) => /^\s*(if ! )?hdiutil attach /.test(line));
+		expect(attach).toBeDefined();
+		expect(attach).toMatch(/<<< 'Y'/);
+	});
 });
 
 describe('what a person is told', () => {
