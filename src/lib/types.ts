@@ -1501,3 +1501,15 @@ export interface MergerConflicts {
 	bTip: string;
 	files: MergerFileConflict[];
 }
+
+/** Where Merger's rebase stands (FEAT-103). */
+export type MergerReplay =
+	| {
+			state: 'stopped';
+			/** The commit being replayed, from 1, of how many. */
+			step: number;
+			total: number;
+			commit: MergerCommit | null;
+			files: MergerFileConflict[];
+	  }
+	| { state: 'done'; tip: string; short: string; written: number };

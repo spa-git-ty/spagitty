@@ -35,7 +35,14 @@
 	const fromResolve = $derived(merger.returnTo === 'resolve');
 
 	function resolve(path: string | null) {
-		if (repo.info) void resolving.open(repo.info.path, path);
+		if (merger.strategy === 'rebase') void resolving.openRebase();
+		else if (repo.info) void resolving.open(repo.info.path, path);
+	}
+
+	/** Merge now: a rebase goes through its worktree, even with nothing in the way. */
+	function mergeNow() {
+		if (merger.strategy === 'rebase') void resolving.openRebase();
+		else merger.openCommit('plan');
 	}
 </script>
 
@@ -44,16 +51,12 @@
 		{#if merger.phase === 'resolve' || (merger.phase !== 'plan' && fromResolve)}
 			<MergerResolve />
 		{:else}
-			<MergerPlan
-				onresolve={merger.strategy === 'rebase' ? undefined : resolve}
-				onmerge={() => merger.openCommit('plan')}
-				busy={merger.landing}
-			/>
+			<MergerPlan onresolve={resolve} onmerge={mergeNow} busy={merger.landing || resolving.loading} />
 		{/if}
 		{#if merger.phase === 'commit' || merger.phase === 'done'}
 			<LandDialog
 				rows={fromResolve && merger.phase === 'commit' ? resolving.summary(names) : []}
-				oncommit={() => void (fromResolve ? resolving.commit() : merger.land())}
+				oncommit={() => void (fromResolve && merger.strategy !== 'rebase' ? resolving.commit() : merger.land())}
 				ongraph={() => void goto('/')}
 			/>
 		{/if}

@@ -76,7 +76,9 @@ import type {
 	MergerForecast,
 	MergerLandAsk,
 	MergerLanded,
-	MergerConflicts
+	MergerConflicts,
+	MergerReplay,
+	MergerResolution
 } from './types';
 
 /**
@@ -366,6 +368,31 @@ export function mergerLand(ask: MergerLandAsk): Promise<MergerLanded> {
 /** Every conflict of merging `a` and `b`, each side whole, from a dry run (FEAT-102). */
 export function mergerConflicts(a: string, b: string): Promise<MergerConflicts> {
 	return invoke('merger_conflicts', { a, b });
+}
+
+/** Start Merger's rebase, or find the one running for this merge (FEAT-103). */
+export function mergerRebaseOpen(ask: MergerLandAsk): Promise<MergerReplay> {
+	return invoke('merger_rebase_open', { ask });
+}
+
+/** Settle the stop with these resolutions and carry the rebase on. */
+export function mergerRebaseContinue(ask: MergerLandAsk, resolutions: MergerResolution[]): Promise<MergerReplay> {
+	return invoke('merger_rebase_continue', { ask, resolutions });
+}
+
+/** Drop the commit the rebase stopped on. */
+export function mergerRebaseSkip(ask: MergerLandAsk): Promise<MergerReplay> {
+	return invoke('merger_rebase_skip', { ask });
+}
+
+/** Undo the rebase; neither branch moved. */
+export function mergerRebaseAbort(ask: MergerLandAsk): Promise<void> {
+	return invoke('merger_rebase_abort', { ask });
+}
+
+/** Move the receiving branch to the replayed commits. */
+export function mergerRebaseFinish(ask: MergerLandAsk): Promise<MergerLanded> {
+	return invoke('merger_rebase_finish', { ask });
 }
 
 /** The choices kept for one merge, or null (FEAT-102). */

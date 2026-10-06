@@ -33,7 +33,19 @@
 		)
 	);
 
+	const stop = $derived(resolving.stop);
+
 	async function abort() {
+		if (stop) {
+			const agreed = await dialog.confirm({
+				title: 'Abort this rebase',
+				body: 'Back to the plan. The commits replayed so far are thrown away; neither branch was moved.',
+				confirmLabel: 'Abort',
+				danger: true
+			});
+			if (agreed) await resolving.abortRebase();
+			return;
+		}
 		if (progress.resolved > 0) {
 			const agreed = await dialog.confirm({
 				title: 'Abort this merge',
@@ -53,13 +65,18 @@
 			<Icon name="chevron-left" size="0.9em" weight={2} />Plan
 		</button>
 		<div class="what">
-			<span class="title">Merging</span>
+			<span class="title">{stop ? 'Rebasing' : 'Merging'}</span>
 			{#if who}
 				<span class="branch mono tone-{who.source}">{who.sourceName}</span>
-				<span class="title">into</span>
+				<span class="title">{stop ? 'onto' : 'into'}</span>
 				<span class="branch mono tone-{who.isNew ? 'new' : who.onto}">{who.targetName}</span>
 			{/if}
-			<span class="note">· {strategy}</span>
+			{#if stop}
+				<span class="note">· commit {stop.step} of {stop.total}</span>
+				{#if stop.commit}<span class="note mono" title={stop.commit.summary}>{stop.commit.short} {stop.commit.summary}</span>{/if}
+			{:else}
+				<span class="note">· {strategy}</span>
+			{/if}
 		</div>
 		{#if progress.total > 0}
 			<span class="progress">
@@ -67,20 +84,41 @@
 				<span class="bar"><span class="fill" style:width="{(progress.resolved / progress.total) * 100}%"></span></span>
 			</span>
 		{/if}
-		<Btn onclick={abort}>Abort</Btn>
-		<Btn
-			primary
-			disabled={!resolving.ready}
-			title={resolving.ready ? undefined : 'Resolve every conflict first'}
-			onclick={() => merger.openCommit('resolve')}
-		>
-			{resolving.ready ? 'Complete merge' : `Complete merge · ${left} left`}
-		</Btn>
+		<Btn disabled={resolving.stepping} onclick={abort}>Abort</Btn>
+		{#if stop}
+			<Btn disabled={resolving.stepping} title="Drop this commit and carry on with the next" onclick={() => resolving.skipRebase()}>
+				Skip this commit
+			</Btn>
+			<Btn
+				primary
+				disabled={resolving.stepping || (progress.total > 0 && !resolving.ready)}
+				title={progress.total > 0 && !resolving.ready ? 'Resolve every conflict first' : undefined}
+				onclick={() => resolving.continueRebase()}
+			>
+				{resolving.stepping ? 'Replaying…' : progress.total > 0 && !resolving.ready ? `Continue · ${left} left` : 'Continue'}
+			</Btn>
+		{:else}
+			<Btn
+				primary
+				disabled={!resolving.ready}
+				title={resolving.ready ? undefined : 'Resolve every conflict first'}
+				onclick={() => merger.openCommit('resolve')}
+			>
+				{resolving.ready ? 'Complete merge' : `Complete merge · ${left} left`}
+			</Btn>
+		{/if}
 	</header>
-	<p class="note under">Nothing is written to either branch until you commit. Your choices are kept, so you can leave and come back.</p>
+	<p class="note under">
+		{stop
+			? 'The rebase runs in a worktree of its own, one commit at a time. Neither branch moves until you finish, and you can leave and come back.'
+			: 'Nothing is written to either branch until you commit. Your choices are kept, so you can leave and come back.'}
+	</p>
 
 	{#if resolving.error}
 		<p class="note error" role="alert">{resolving.error}</p>
+	{/if}
+	{#if stop && resolving.files.length === 0}
+		<p class="note pad">This commit stopped without a conflict to resolve. Continue to commit it as it is, or skip it.</p>
 	{:else if resolving.loading && resolving.files.length === 0}
 		<p class="note pad">Reading the conflicts…</p>
 	{:else}

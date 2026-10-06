@@ -1077,6 +1077,43 @@ pub async fn merger_conflicts(
     off_thread(move || merger::conflict_files(&shared.to_thread_local(), &a, &b)).await
 }
 
+/// Start Merger's rebase in its own worktree, or find the one already
+/// running for this merge (FEAT-103): where it stopped, or that it is done.
+#[tauri::command(async)]
+pub fn merger_rebase_open(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Replay> {
+    state.with_session("merger_rebase_open", |session| merger::rebase_open(&session.repo.to_thread_local(), &ask))
+}
+
+/// Settle the stop's files with what was chosen and carry the rebase on.
+#[tauri::command(async)]
+pub fn merger_rebase_continue(
+    state: State<'_, AppState>,
+    ask: merger::LandAsk,
+    resolutions: Vec<merger::Resolution>,
+) -> Result<merger::Replay> {
+    state.with_session("merger_rebase_continue", |session| {
+        merger::rebase_continue(&session.repo.to_thread_local(), &ask, &resolutions)
+    })
+}
+
+/// Drop the commit Merger's rebase stopped on, and carry on.
+#[tauri::command(async)]
+pub fn merger_rebase_skip(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Replay> {
+    state.with_session("merger_rebase_skip", |session| merger::rebase_skip(&session.repo.to_thread_local(), &ask))
+}
+
+/// Undo Merger's rebase and remove its worktree. Neither branch moved.
+#[tauri::command(async)]
+pub fn merger_rebase_abort(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<()> {
+    state.with_session("merger_rebase_abort", |session| merger::rebase_abort(&session.repo.to_thread_local(), &ask))
+}
+
+/// Move the receiving branch to the replayed commits.
+#[tauri::command(async)]
+pub fn merger_rebase_finish(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Landed> {
+    state.with_session("merger_rebase_finish", |session| merger::rebase_finish(&session.repo.to_thread_local(), &ask))
+}
+
 /// The choices kept for one merge, or null (FEAT-102).
 #[tauri::command(async)]
 pub fn merger_state<R: Runtime>(app: AppHandle<R>, key: String) -> Option<serde_json::Value> {
