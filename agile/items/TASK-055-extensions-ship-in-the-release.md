@@ -2,7 +2,7 @@
 
 # TASK-055 — Extensions ship in the release
 
-**Status:** Open
+**Status:** Backlog
 **Branch:** `task/TASK-055-extensions-ship-in-the-release`
 **Screens:** none.
 **Raised by:** the author, through

@@ -24,6 +24,7 @@ serde_json = { workspace = true }
 [dependencies]
 spagitty-core = { workspace = true }
 spagitty-farm = { workspace = true }
+spagitty-extensions = { workspace = true }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { workspace = true }

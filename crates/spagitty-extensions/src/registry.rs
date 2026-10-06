@@ -24,6 +24,9 @@ use crate::package::{self, Validated};
 use crate::storage::{Installation, Store};
 use crate::{Error, Result};
 
+/// Where `ext dev` leaves requests to attach a development directory.
+pub const DEVELOPMENT_REQUESTS: &str = "development-requests";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Provenance {

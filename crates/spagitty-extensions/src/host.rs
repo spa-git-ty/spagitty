@@ -474,8 +474,53 @@ impl Inner {
     }
 
     fn refresh(&self) {
+        self.import_development_requests();
         let found = registry::discover(&self.config.paths, &self.store);
         *self.entries.lock().expect("entries") = found;
+    }
+
+    /// Attach the development directories `ext dev` asked for.
+    ///
+    /// The tool cannot edit the user state while Spagitty holds it, so it
+    /// leaves a request — `{"path": "…"}` — in `development-requests/`, and
+    /// the host attaches it the next time it reads its list. Each request is
+    /// still one directory a person named on the command line; nothing finds
+    /// development directories by looking.
+    fn import_development_requests(&self) {
+        let dir = self.config.paths.data.join(registry::DEVELOPMENT_REQUESTS);
+        let Ok(requests) = std::fs::read_dir(&dir) else {
+            return;
+        };
+        let mut attached = Vec::new();
+        for request in requests.flatten() {
+            let path = request.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            let wanted = std::fs::read_to_string(&path)
+                .ok()
+                .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+                .and_then(|v| v.get("path").and_then(Value::as_str).map(PathBuf::from));
+            let _ = std::fs::remove_file(&path);
+            let Some(wanted) = wanted else { continue };
+            let reserved: Vec<String> = registry::discover(&self.config.paths, &self.store)
+                .0
+                .iter()
+                .filter(|e| e.provenance == Provenance::Bundled)
+                .map(|e| e.manifest.id.clone())
+                .collect();
+            match registry::attach(&self.store, &wanted, &reserved) {
+                Ok(manifest) => attached.push(manifest.id),
+                Err(error) => self.emit(HostEvent::Notice {
+                    extension: String::new(),
+                    level: "error".into(),
+                    message: format!("{} could not be attached: {error}", wanted.display()),
+                }),
+            }
+        }
+        for id in attached {
+            self.changed(&id);
+        }
     }
 
     fn entry(&self, id: &str) -> Result<Entry> {

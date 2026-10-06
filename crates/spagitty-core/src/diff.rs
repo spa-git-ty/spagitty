@@ -603,8 +603,7 @@ fn trees_changes(old: &gix::Tree<'_>, new: &gix::Tree<'_>) -> Result<Vec<RawChan
 
     let mut changes: Vec<RawChange> = Vec::new();
 
-    old
-        .changes()
+    old.changes()
         .map_err(|e| Error::Diff(e.to_string()))?
         .for_each_to_obtain_tree(new, |change| {
             // A changed subtree is reported alongside the blobs inside it. Only

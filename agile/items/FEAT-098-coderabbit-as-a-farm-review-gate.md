@@ -2,7 +2,7 @@
 
 # FEAT-098 — CodeRabbit as a farm review gate
 
-**Status:** Open
+**Status:** Backlog
 **Branch:** `feature/FEAT-098-coderabbit-as-a-farm-review-gate`
 **Screens:** Farm (1Q).
 **Raised by:** the author, through

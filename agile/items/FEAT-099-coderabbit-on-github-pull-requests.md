@@ -2,7 +2,7 @@
 
 # FEAT-099 — CodeRabbit on GitHub pull requests
 
-**Status:** Open
+**Status:** Backlog
 **Branch:** `feature/FEAT-099-coderabbit-on-github-pull-requests`
 **Screens:** Pull requests (1H).
 **Raised by:** the author, through

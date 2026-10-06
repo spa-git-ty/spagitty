@@ -14,6 +14,22 @@ stays backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Extensions.** Spagitty can run extensions: separate programs that add
+  commands, buttons on the Commit, Farm and Pull request screens, settings,
+  panels and code reviews. Install one from a `.spagitty-extension` file in
+  Settings › Extensions, turn it on per repository, and see before installing
+  exactly what it is, what it asks to do and which files it contains. Updates
+  keep the previous version for rolling back, and removing one removes its
+  commands everywhere at once. An extension is a program that runs with your
+  permissions; Spagitty only does for it what you allow, but it is not a
+  sandbox, and the screens say so.
+- **A kit for writing them.** `bun run ext` creates, tests, attaches, builds,
+  packs and inspects extensions, with a TypeScript SDK, a fake Spagitty to test
+  against, and a published manifest schema and protocol any language can
+  implement. `examples/extensions/hello` is the whole path.
+
 ### Changed
 
 - **A new face.** The icon is three cream strands on a tomato plate that cross

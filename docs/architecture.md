@@ -11,10 +11,20 @@ How Spagitty is put together, and why. Screen-by-screen state lives in
 ```
 src/                    SvelteKit, SPA mode. One store per screen.
   └── invoke ─────────► src-tauri/           Tauri commands, worker, watcher.
-                          ├── calls ───────► crates/spagitty-core/   git, via gix.
-                          └── calls ───────► crates/spagitty-farm/   agents, via processes.
-                                               └── calls ─────────► crates/spagitty-core/
+                          ├── calls ───────► crates/spagitty-core/        git, via gix.
+                          ├── calls ───────► crates/spagitty-farm/        agents, via processes.
+                          │                    └── calls ──► crates/spagitty-core/
+                          └── calls ───────► crates/spagitty-extensions/  extension workers (FEAT-096)
+                                               ├── calls ──► crates/spagitty-core/
+                                               └── starts ─► extension workers and the tools they declare
+
+crates/spagitty-process/  process trees: used by the farm and by the extension host
 ```
+
+The farm and the extension host do not know about each other. The desktop
+layer composes them: it supplies the extension host's forge and confirmation
+services, and the farm's supplemental reviewer (FEAT-098), so neither crate can
+reach into the other's state.
 
 Each layer knows nothing about the one above it.
 
@@ -107,6 +117,43 @@ forwards, and turns `FarmEvent` into one webview event. Its commands are
 threads hold and a blocking command runs on the thread that paints the window
 (BUG-020).
 
+### `crates/spagitty-process`
+
+A process and everything it starts, stopped as one: a Unix process group, or a
+Windows job object assigned while the child is still suspended. Moved out of
+the farm (FEAT-096) so the extension host contains its workers and their tools
+with the same code. Its test runs on all three operating systems in the
+`farm processes` lane.
+
+### `crates/spagitty-extensions`
+
+The extension host (FEAT-096): manifests, packages, the registry, user state
+(grants, enablement, consent), the JSON-RPC protocol, supervised workers,
+operations, external tool runs, review snapshots, the review model and its gate,
+and review history. No Tauri, no frontend, no farm. The contract it implements
+is public: `schemas/extensions/`; the guides are in `docs/extensions/`.
+
+| Module | Holds |
+| --- | --- |
+| `manifest.rs` | `extension.json` and every rule the schema states |
+| `version.rs` | Manifest, API and application compatibility, and the target triple |
+| `protocol.rs` | JSON-RPC 2.0 framing, one message per line |
+| `worker.rs` | One worker: its tree, its stdin, a reader that never waits on the host, callbacks on threads of their own |
+| `operations.rs` | Long-running work, ended exactly once |
+| `tools.rs` | Declared tools: found on `PATH` or chosen, argv built from profiles, run in a tree |
+| `zip.rs`, `package.rs` | The package container, read strictly; validation, extraction, packing |
+| `registry.rs` | Bundled, installed and development extensions; install, update, rollback, uninstall |
+| `storage.rs` | User state, and `.spagitty/extensions/` in the repository |
+| `snapshot.rs` | What a review covers, pinned and hashed |
+| `review.rs`, `history.rs` | The shared review model, the gate, and minimal records |
+| `redact.rs` | Secrets removed on the way in |
+| `host.rs` | The API the desktop calls, and the checked callbacks workers make |
+
+**An extension is not sandboxed.** It is a native program with the user's
+permissions. Process separation keeps a crash out of the window; capabilities
+limit what the host's API does for it. The interface says so wherever an
+extension is installed or turned on.
+
 ### `src-tauri`
 
 Deliberately thin. It holds the open session — one repository at a time — and
@@ -122,6 +169,8 @@ forwards to the core.
 | `search_worker.rs` | A thread per query; starting one cancels the one before |
 | `clone_worker.rs` | A thread per clone; it owns the `git` process, so cancelling is a signal rather than a request |
 | `farm.rs` | The farm's commands and its event bridge. State of its own, with a different lifetime from the graph session |
+| `extensions.rs` | The extension host's commands, its event bridge, and confirmations the person answers in the window (FEAT-096) |
+| `forge_bridge.rs` | Forge reads and writes made on an extension's behalf, with the token kept in the backend |
 | `watch.rs` | Filesystem watcher over the git directory |
 | `platform.rs` | Host facts that must be true before the webview starts |
 | `lib.rs` | Command registration |
@@ -150,6 +199,15 @@ Commands registered today, grouped by what they are for:
   `farm_run_task`, `farm_task_detail`, `farm_transcript`, `farm_merge_task`,
   `farm_review_task`, `farm_verify_task`, `farm_plan`, `farm_cancel_plan`,
   `farm_decompose`, `farm_sweep`.
+- **Extensions** (FEAT-096) — `extensions_list`, `extensions_inspect`,
+  `extensions_install`, `extensions_rollback`, `extensions_uninstall`,
+  `extensions_attach`, `extensions_restart`, `extensions_enable`,
+  `extensions_disable`, `extensions_set_grant`, `extensions_set_setting`,
+  `extensions_choose_executable`, `extensions_detect_tool`,
+  `extensions_run_command`, `extensions_preview_review`,
+  `extensions_start_review`, `extensions_cancel`, `extensions_reviews`,
+  `extensions_set_disposition`, `extensions_delete_reviews`, `extensions_panel`,
+  `extensions_suggested_bases`, `extensions_confirm`, `extensions_location`.
 
 `platform.rs` is the other file that is not about git at all. It arranges the
 webview's environment as the first statement of `run` — before the builder, and
@@ -188,8 +246,13 @@ SvelteKit in SPA mode — `ssr = false`, `prerender = false` in
 `src/routes/+layout.ts`. Tauri serves a static bundle from disk; there is no
 server.
 
-- `src/lib/api.ts` is the **only** module that calls `invoke`. A command rename
-  is a one-file change.
+- `src/lib/api.ts` calls `invoke` for the core's commands. Two subsystems have
+  a bridge of their own, each the only caller in its directory and each held to
+  that by a test: `src/lib/farm/api.ts` and `src/lib/extensions/api.ts`.
+- `src/lib/extensions/` draws everything an extension contributes from data:
+  commands, actions, settings and three panel renderers. No extension code runs
+  in the webview, and nothing an extension sends is handed to the browser as
+  markup.
 - One directory per screen under `src/lib/` — `graph/`, `diff/`, and one per
   screen as it is built — each with a `store.svelte.ts` and its components.
 - `src/lib/chrome/` is the persistent frame: title bar, toolbar, nav rail,
@@ -232,8 +295,11 @@ component, and no second `26` anywhere in the frontend.
 
 ## The `git` binary boundary
 
-`crates/spagitty-core/src/shell.rs` is the only module in the workspace that
-spawns a process. Its header carries the full table and the reasoning; the rule
+`crates/spagitty-core/src/shell.rs` is the only module in the core that spawns
+a process. Outside the core, two more places start processes on purpose and say
+so: the farm, for agents and verification commands, and the extension host,
+for extension workers and the tools their manifests declare — both through
+`spagitty-process`, so every tree can be ended as a whole. Its header carries the full table and the reasoning; the rule
 in one sentence:
 
 > If the operation mutates state that the wider git ecosystem also reads, or

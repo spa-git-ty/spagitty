@@ -140,6 +140,10 @@ rather than an audit.
 | [FEAT-084](items/FEAT-084-the-other-screens-in-the-spatial-language.md) | The other screens in the spatial language | 1F, 1K, 1M, 1N, 1O, 1Q, all | Open |
 | [FEAT-085](items/FEAT-085-a-new-mark-palette-and-wordmark.md) | A new mark, palette and wordmark | brand, chrome, 1J | Open |
 | [FEAT-086](items/FEAT-086-the-pomodoro-theme.md) | The Pomodoro theme | all | Done |
+| [FEAT-096](items/FEAT-096-an-extension-host-anyone-can-build-for.md) | An extension host anyone can build for | 1K, 1C, 1Q, 1H, palette | Open |
+| [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Backlog |
+| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Backlog |
+| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Backlog |
 
 ## Bugs
 
@@ -247,6 +251,7 @@ of its own.
 | [TASK-049](items/TASK-049-the-record-catches-up-with-what-merged.md) | The record catches up with what merged | — | Done |
 | [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Open |
 | [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
+| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Backlog |
 
 ## Skipped identifiers
 

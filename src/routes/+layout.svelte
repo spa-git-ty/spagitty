@@ -38,6 +38,7 @@
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
 	import DialogHost from '$lib/ui/DialogHost.svelte';
+	import ExtensionHost from '$lib/extensions/ExtensionHost.svelte';
 	import NoticeToast from '$lib/ui/NoticeToast.svelte';
 	import { settings as settingsStore } from '$lib/settings/store.svelte';
 	import { theme } from '$lib/theme.svelte';
@@ -394,6 +395,7 @@
 	action started on the graph can finish after the user has navigated away —
 	a dialog owned by a screen would take the question with it.
 -->
+<ExtensionHost />
 <DialogHost />
 <NoticeToast />
 

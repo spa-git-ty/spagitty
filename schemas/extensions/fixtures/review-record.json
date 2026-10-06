@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "extension": "spagitty.coderabbit",
+  "extensionVersion": "1.0.0",
+  "provider": "review",
+  "requester": "person",
+  "snapshot": {
+    "id": "snap-0123456789abcdef0123",
+    "repositoryId": "repo-0123456789abcdef01234567",
+    "target": "workingCopy",
+    "baseCommit": "1111111111111111111111111111111111111111",
+    "headCommit": "2222222222222222222222222222222222222222",
+    "baseRef": "main",
+    "scope": "uncommitted",
+    "contentDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "configurationDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "takenAt": "2026-10-06T10:00:00.000Z"
+  },
+  "result": {
+    "reviewId": "rv-1791000000000-1",
+    "providerId": "review",
+    "providerVersion": "0.8.1",
+    "snapshotId": "snap-0123456789abcdef0123",
+    "status": "completed",
+    "summary": "Two findings.",
+    "findings": [
+      {
+        "id": "f-1",
+        "reviewId": "rv-1791000000000-1",
+        "providerId": "review",
+        "severity": "high",
+        "providerSeverity": "major",
+        "path": "src/lib.rs",
+        "title": "Unchecked index",
+        "message": "`items[0]` panics on an empty list.",
+        "suggestion": "Use items.first().",
+        "disposition": "open"
+      },
+      {
+        "id": "f-2",
+        "reviewId": "rv-1791000000000-1",
+        "providerId": "review",
+        "severity": "unknown",
+        "providerSeverity": "spicy",
+        "title": "Whole review note",
+        "message": "No location was given.",
+        "disposition": "dismissed"
+      }
+    ],
+    "completeness": "complete",
+    "startedAt": "2026-10-06T10:00:00.000Z",
+    "finishedAt": "2026-10-06T10:03:00.000Z"
+  },
+  "gate": {
+    "gate": "blocked",
+    "reason": "1 finding of unknown severity needs assessing.",
+    "blocking": [
+      "f-2"
+    ]
+  },
+  "createdMs": 1791000180000
+}

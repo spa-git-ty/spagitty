@@ -4384,6 +4384,7 @@ dependencies = [
  "serde",
  "serde_json",
  "spagitty-core",
+ "spagitty-extensions",
  "spagitty-farm",
  "tauri",
  "tauri-build",

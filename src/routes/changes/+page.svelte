@@ -8,6 +8,10 @@
 	import { repo } from '$lib/repo.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Splitter from '$lib/ui/Splitter.svelte';
+	import ContributedActions from '$lib/extensions/ContributedActions.svelte';
+	import ExtensionPanels from '$lib/extensions/ExtensionPanels.svelte';
+	import { panelsFor } from '$lib/extensions/contributions';
+	import { extensions } from '$lib/extensions/store.svelte';
 
 	/**
 	 * Stage what you mean to commit, write the message, commit.
@@ -50,6 +54,19 @@
 		return `${files(staged)} staged · ${files(unstaged)} not staged`;
 	});
 
+	// Extension panels for the working copy (FEAT-096): review findings, drawn
+	// below the diff. A finding about a file in the working copy opens it.
+	const reviewPanels = $derived(panelsFor(extensions.all, 'workingCopy').length > 0);
+
+	function openFinding(path: string) {
+		const side = work.unstaged.some((e) => e.path === path)
+			? 'unstaged'
+			: work.staged.some((e) => e.path === path)
+				? 'staged'
+				: null;
+		if (side) changes.open({ path, side });
+	}
+
 	function commitLabel(): string {
 		if (changes.amend) return 'Amend the previous commit';
 		const staged = work.staged.length;
@@ -65,6 +82,7 @@
 			{#if changes.loaded}<span class="note">{summary}</span>{/if}
 		</div>
 		<div class="right">
+			<ContributedActions context="workingCopy" />
 			{#if changes.loading}<span class="note">Reading…</span>{/if}
 			<Btn disabled={changes.busy} onclick={() => changes.load()}>Refresh</Btn>
 		</div>
@@ -88,6 +106,12 @@
 				<HunkPane />
 			</div>
 		</div>
+	{/if}
+
+	{#if repo.info !== null && reviewPanels}
+		<aside class="extension-panels" aria-label="Reviews">
+			<ExtensionPanels location="workingCopy" revision={repo.generation} onopen={(path) => openFinding(path)} />
+		</aside>
 	{/if}
 
 	<!--
@@ -118,6 +142,16 @@
 </div>
 
 <style>
+	.extension-panels {
+		flex: none;
+		max-height: 40%;
+		overflow: auto;
+		padding: 8px 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
 	.screen {
 		flex: 1;
 		min-width: 0;

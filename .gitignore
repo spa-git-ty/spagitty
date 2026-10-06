@@ -17,3 +17,8 @@ run_claude_job.sh
 .idea/
 __pycache__/
 /.spagitty/
+
+# Extension build products (FEAT-096): programs and packages are made, not kept.
+/examples/extensions/*/bin/
+/examples/extensions/*/dist/
+*.spagitty-extension

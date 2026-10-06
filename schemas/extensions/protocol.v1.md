@@ -265,8 +265,10 @@ extension's review provider; `panel.resolve` is not called.
 ```
 
 Markdown is rendered with an allow-list: paragraphs, emphasis, code, lists,
-headings and links. Raw HTML is shown as text. Images are not loaded. A link
-is never opened by rendering it.
+quotes, headings and `https:` links. Raw HTML is never interpreted: comments
+are dropped and tags removed, leaving their text. Images are not loaded; their
+alt text stands in. A link is never opened by rendering it — choosing one
+copies its address.
 
 ## Limits
 

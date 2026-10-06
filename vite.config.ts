@@ -87,12 +87,14 @@ export default defineConfig({
 		// `tools/` is here for the record check (TASK-012), which reads `agile/`
 		// and `docs/` as data. It is not frontend code and is not counted for
 		// coverage — see `coverage.include` below.
-		include: ['src/**/*.test.ts', 'tools/**/*.test.ts'],
+		include: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
 		coverage: {
 			provider: 'v8',
 			// First-party frontend code only. Amendment 10 counts nothing else,
 			// in either direction.
-			include: ['src/lib/**', 'src/routes/**'],
+			// The extension SDK ships to extension authors, so it is counted too
+			// (FEAT-096).
+			include: ['src/lib/**', 'src/routes/**', 'packages/extension-sdk/src/**'],
 			exclude: ['src/**/*.test.ts'],
 			reporter: ['text', 'json-summary'],
 			// The floor. A change that drops below it fails the run rather than

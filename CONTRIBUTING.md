@@ -101,8 +101,11 @@ These come from the design handoff and hold across every screen:
 - **Destructive actions are reversible.** Rebase previews before executing;
   conflict resolution writes nothing until finished; Undo maps to reflog
   restore.
-- **Nothing leaves the machine.** Repositories are read straight from disk;
-  credentials go in the OS keychain.
+- **Nothing leaves the machine unless you ask.** Repositories are read straight
+  from disk; credentials go in the OS keychain; the one HTTP client talks only to
+  forges you connected. An extension you turn on is a program with your
+  permissions and can talk to services of its own — one that sends code
+  somewhere says where, and asks before it is turned on (FEAT-096).
 
 ## Code style
 

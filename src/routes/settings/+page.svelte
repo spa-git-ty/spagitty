@@ -13,6 +13,7 @@
 	import UpdateSection from '$lib/settings/UpdateSection.svelte';
 	import ExternalToolsSection from '$lib/settings/ExternalToolsSection.svelte';
 	import ProfilesSection from '$lib/settings/ProfilesSection.svelte';
+	import ExtensionsSection from '$lib/extensions/ExtensionsSection.svelte';
 	import { SECTIONS, settings } from '$lib/settings/store.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { delight } from '$lib/delight/store.svelte';
@@ -94,6 +95,8 @@
 			<RemotesSection />
 		{:else if settings.section === 'tools'}
 			<ExternalToolsSection />
+		{:else if settings.section === 'extensions'}
+			<ExtensionsSection />
 		{:else if settings.section === 'behaviour'}
 			<BehaviourSection />
 			<UpdateSection />

@@ -1,0 +1,14 @@
+{
+  "name": "hello",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "ext": "bun ../../../tools/extensions/cli.ts"
+  },
+  "dependencies": {
+    "@spagitty/extension-sdk": "file:../../../packages/extension-sdk"
+  },
+  "license": "GPL-3.0-or-later"
+}

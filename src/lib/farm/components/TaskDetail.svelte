@@ -3,6 +3,9 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import TaskChip from './TaskChip.svelte';
+	import ContributedActions from '$lib/extensions/ContributedActions.svelte';
+	import ExtensionPanels from '$lib/extensions/ExtensionPanels.svelte';
+	import { extensions } from '$lib/extensions/store.svelte';
 	import { duration, originLine, TASK_KIND_LABELS, verificationLine } from '../describe';
 	import type { AgentStatus, TaskDetail } from '../types';
 
@@ -60,6 +63,18 @@
 	const running = $derived(task.status === 'running' || task.status === 'verification');
 	/** A task nothing is going to move on its own. */
 	const stalled = $derived(task.status === 'blocked' || task.status === 'failed');
+
+	// The task an extension's farm-task actions and panels are about (FEAT-096):
+	// its worktree is what they read, never the user's checkout.
+	$effect(() => {
+		extensions.setContext('farmTask', {
+			taskId: task.id,
+			taskHasCommit: Boolean(task.branch && task.worktree),
+			workdir: task.worktree,
+			base: task.mergeTarget ?? null
+		});
+		return () => extensions.setContext('farmTask', null);
+	});
 </script>
 
 <div class="detail">
@@ -112,6 +127,7 @@
 		{/if}
 		<Btn disabled={busy} onclick={onedit}>Edit</Btn>
 		<Btn danger disabled={busy || running} onclick={ondelete}>Delete</Btn>
+		<ContributedActions context="farmTask" />
 	</div>
 
 	{#if !running && task.status !== 'done' && agents.length > 1}
@@ -222,6 +238,8 @@
 			{/each}
 		</section>
 	{/if}
+
+	<ExtensionPanels location="farmTask" revision={task.id} />
 
 	{#if detail.handoff && detail.handoff.summary}
 		<section class="block">

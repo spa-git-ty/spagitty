@@ -717,3 +717,38 @@ fn a_packaged_copy_installs_runs_and_uninstalls_without_a_trace() {
         .join("com.example.packaged")
         .exists());
 }
+
+#[test]
+fn a_development_request_left_by_the_tool_is_attached_on_the_next_read() {
+    let h = harness("normal");
+    let copy = tempfile::tempdir().unwrap();
+    let mut m = manifest();
+    m["id"] = json!("com.example.requested");
+    std::fs::write(copy.path().join("extension.json"), m.to_string()).unwrap();
+    let requests = h
+        .host
+        .paths()
+        .data
+        .join(spagitty_extensions::registry::DEVELOPMENT_REQUESTS);
+    std::fs::create_dir_all(&requests).unwrap();
+    std::fs::write(
+        requests.join("one.json"),
+        json!({"path": copy.path()}).to_string(),
+    )
+    .unwrap();
+    let listing = h.host.list(Some(h.repo.path()));
+    let found = listing
+        .extensions
+        .iter()
+        .find(|e| e.id == "com.example.requested")
+        .unwrap();
+    assert_eq!(
+        found.provenance,
+        spagitty_extensions::registry::Provenance::Development
+    );
+    assert!(
+        !requests.join("one.json").exists(),
+        "a request is used once"
+    );
+    assert!(!found.official);
+}

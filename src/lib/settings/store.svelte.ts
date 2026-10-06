@@ -31,6 +31,7 @@ export type Section =
 	| 'you'
 	| 'remotes'
 	| 'tools'
+	| 'extensions'
 	| 'behaviour'
 	| 'personality'
 	| 'godmode'
@@ -50,6 +51,7 @@ export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'you', label: 'You' },
 	{ id: 'remotes', label: 'Remotes' },
 	{ id: 'tools', label: 'External Tools' },
+	{ id: 'extensions', label: 'Extensions' },
 	{ id: 'behaviour', label: 'Behaviour' },
 	{ id: 'personality', label: 'Personality' },
 	{ id: 'godmode', label: 'God mode' },
