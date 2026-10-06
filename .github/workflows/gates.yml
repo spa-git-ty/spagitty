@@ -158,12 +158,20 @@ jobs:
       - uses: ./.github/actions/linux-deps
 
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
+
+      # tauri.conf.json bundles the official extension from a staging folder
+      # that only `tauri build`'s beforeBuildCommand fills. Plain cargo on a
+      # fresh checkout never runs it, so src-tauri's build script fails on the
+      # missing resource before clippy sees a line of code.
+      - name: Stage the official extension
+        run: bun tools/extensions/bundle.ts --debug
+
+      - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: bun run check
 
       # The app icon and the brand collateral are generated from a fixed
@@ -198,6 +206,10 @@ jobs:
         with:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
+
+      # The same staging as gate 2, for the same reason.
+      - name: Stage the official extension
+        run: bun tools/extensions/bundle.ts --debug
 
       - name: Rust tests and coverage
         run: |
