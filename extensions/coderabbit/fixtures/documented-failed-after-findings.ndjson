@@ -1,0 +1,3 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"finding","severity":"major","fileName":"core.txt","comment":"Possible data loss\n\nThe new line overwrites the previous value without checking it.","codegenInstructions":"In core.txt, keep the previous value when the new one is empty.","suggestions":["Keep the old value when the new one is empty."]}
+{"type":"error","message":"The review service closed the connection."}

@@ -54,7 +54,8 @@ problem at once, each with the field it is about.
   pass a command line: you declare executable names (looked up on `PATH`, or
   chosen by the user), and **profiles** — fixed arguments plus typed options
   (`enum` values that map to fixed flags; `revision` and `commit` values that
-  are validated before they reach argv). Spagitty runs the tool in the
+  are validated before they reach argv; options are appended in the order of
+  their names). Spagitty runs the tool in the
   directory it approved for the operation and ends its whole process tree on
   cancellation.
 - **`contributes`** — `commands` (with a `context` and finite `when`

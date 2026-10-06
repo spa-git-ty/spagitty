@@ -82,6 +82,20 @@ pub struct FarmState {
 }
 
 impl FarmState {
+    /// The open farm, when it belongs to the repository at `repo` — for the
+    /// extension bridge, which adds repair tasks to it (FEAT-097) and supplies
+    /// its supplemental reviewer (FEAT-098).
+    pub(crate) fn service_for(&self, repo: &std::path::Path) -> Option<Arc<FarmService>> {
+        let path = self.path.lock().expect("farm path lock").clone()?;
+        let same = |a: &std::path::Path, b: &std::path::Path| {
+            std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
+        };
+        if !same(&path, repo) {
+            return None;
+        }
+        self.service.lock().expect("farm service lock").clone()
+    }
+
     fn service(&self) -> Result<Arc<FarmService>> {
         self.service
             .lock()

@@ -1,0 +1,3 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"finding","severity":"blocker","fileName":"core.txt","comment":"An unfamiliar severity."}
+{"type":"complete","status":"review_completed","findings":1}

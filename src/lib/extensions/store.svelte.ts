@@ -381,7 +381,7 @@ export const extensions = {
 	async previewDraft(): Promise<void> {
 		const open = draft;
 		if (!open) return;
-		const needsBase = open.request.scope !== 'uncommitted';
+		const needsBase = open.request.scope === 'committed' || open.request.scope === 'tracked';
 		const request = needsBase && !open.request.base ? { ...open.request, base: open.bases[0] ?? null } : open.request;
 		draft = { ...open, request, busy: true, error: null };
 		try {
@@ -425,6 +425,18 @@ export const extensions = {
 			reviews = { ...reviews, [id]: records };
 		} catch (failure) {
 			error = describe(failure);
+		}
+	},
+
+	/** Send selected findings to an agent (FEAT-097). */
+	async send(id: string, record: ReviewRecord, findings: string[]): Promise<void> {
+		if (!workdir) return;
+		try {
+			const sent = await api.sendFindings(id, workdir, record.result.reviewId, findings);
+			notice.ok(`Sent ${findings.length} to an agent`, sent.message);
+			await this.loadReviews(id);
+		} catch (failure) {
+			notice.failed('Not sent', describe(failure));
 		}
 	},
 

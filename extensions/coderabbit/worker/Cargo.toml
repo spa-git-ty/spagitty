@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "coderabbit-extension"
+description = "The CodeRabbit extension's worker for Spagitty"
+version = "1.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+# Deliberately nothing of Spagitty's: the worker speaks the public protocol
+# (schemas/extensions/protocol.v1.md) on its own, which is the point of it
+# being the first extension (FEAT-097).
+[dependencies]
+serde_json = { workspace = true }
+# Stable finding ids. MIT OR Apache-2.0, already in Cargo.lock.
+sha2 = "0.10"
+
+[dev-dependencies]
+# The end-to-end tests run the real worker under the real host. Test-only: the
+# worker binary itself links nothing of Spagitty's.
+spagitty-extensions = { workspace = true }
+spagitty-core = { workspace = true, features = ["fixture"] }
+tempfile = "3"
+
+[[bin]]
+name = "coderabbit-extension"
+path = "src/main.rs"

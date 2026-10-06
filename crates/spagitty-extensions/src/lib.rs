@@ -55,6 +55,7 @@ pub mod package;
 pub mod protocol;
 pub mod redact;
 pub mod registry;
+pub mod repair;
 pub mod review;
 pub mod snapshot;
 pub mod storage;

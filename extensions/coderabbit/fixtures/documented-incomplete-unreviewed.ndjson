@@ -1,0 +1,3 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"finding","severity":"trivial","fileName":"notes.md","comment":"Typo in \"entry\"."}
+{"type":"complete","status":"review_completed","findings":1,"outcome":"completed_with_warnings","unreviewedFileCount":2}

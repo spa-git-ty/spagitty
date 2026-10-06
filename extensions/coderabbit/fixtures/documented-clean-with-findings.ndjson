@@ -1,0 +1,7 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"status","status":"reviewing"}
+{"type":"heartbeat"}
+{"type":"finding","severity":"major","fileName":"core.txt","comment":"Possible data loss\n\nThe new line overwrites the previous value without checking it.","codegenInstructions":"In core.txt, keep the previous value when the new one is empty.","suggestions":["Keep the old value when the new one is empty."]}
+{"type":"finding","severity":"trivial","fileName":"notes.md","comment":"Typo in \"entry\"."}
+{"type":"finding","severity":"info","fileName":"notes.md","codegenInstructions":"Consider a heading."}
+{"type":"complete","status":"review_completed","findings":3,"message":"Review completed"}

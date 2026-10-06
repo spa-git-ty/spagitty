@@ -24,7 +24,7 @@
 		committed: 'Committed changes',
 		tracked: 'Committed and uncommitted changes'
 	};
-	const needsBase = $derived(draft.request.scope !== 'uncommitted');
+	const needsBase = $derived(draft.request.scope === 'committed' || draft.request.scope === 'tracked');
 	const destination = $derived(
 		draft.extension.manifest.contributes?.reviewProviders?.find((p) => p.id === draft.provider)?.sendsCodeTo ?? null
 	);

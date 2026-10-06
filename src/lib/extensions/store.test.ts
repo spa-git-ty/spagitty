@@ -20,7 +20,8 @@ vi.mock('./api', () => ({
 	startReview: vi.fn(() => Promise.resolve({ operation: 'op-2', reviewId: 'rv-2' })),
 	cancel: vi.fn(() => Promise.resolve()),
 	reviews: vi.fn(() => Promise.resolve([])),
-	confirm: vi.fn(() => Promise.resolve())
+	confirm: vi.fn(() => Promise.resolve()),
+	sendFindings: vi.fn(() => Promise.resolve({ task: 'TASK-0004', message: 'TASK-0004 is in the farm as a draft.' }))
 }));
 
 import * as api from './api';
@@ -181,6 +182,21 @@ describe('running a command', () => {
 			expect.objectContaining({ target: 'farmTask', scope: 'committed', base: 'main', taskId: 'TASK-0001' }),
 			'/repo/.spagitty/wt'
 		);
+	});
+});
+
+describe('sending findings to an agent', () => {
+	it('reports the draft task it made, and the refusal when it made none', async () => {
+		list.mockResolvedValueOnce(listing());
+		await extensions.setRepository('/repo');
+		const record = { result: { reviewId: 'rv-1' } } as never;
+		await extensions.send('com.example.hello', record, ['f-1']);
+		expect(api.sendFindings).toHaveBeenCalledWith('com.example.hello', '/repo', 'rv-1', ['f-1']);
+		expect(notice.current?.detail).toContain('TASK-0004');
+		vi.mocked(api.sendFindings).mockRejectedValueOnce({ kind: 'refused', message: 'These findings are about uncommitted changes.' });
+		await extensions.send('com.example.hello', record, ['f-1']);
+		expect(notice.current?.tone).toBe('error');
+		expect(notice.current?.detail).toContain('uncommitted');
 	});
 });
 

@@ -2,7 +2,7 @@
 
 # FEAT-097 — CodeRabbit reviews local changes
 
-**Status:** Backlog
+**Status:** Open
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes`
 **Screens:** Working copy (1C), Settings (1K), the command palette.
 **Raised by:** the author, through

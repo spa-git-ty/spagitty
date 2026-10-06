@@ -454,3 +454,93 @@ pub fn extensions_location(state: State<'_, ExtensionsState>) -> Result<Value> {
     let host = state.host()?;
     Ok(json!({"data": host.paths().data, "bundled": host.paths().bundled}))
 }
+
+/// What sending findings to an agent did.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Sent {
+    /// The farm task the findings went to.
+    pub task: String,
+    pub message: String,
+}
+
+/// Send selected findings from a review to an agent (FEAT-097).
+///
+/// A review of committed changes still at `HEAD` becomes a **Draft** farm task
+/// whose description quotes the findings as evidence, never as orders; a person
+/// readies it, and the farm cuts its worktree from `HEAD` then, so nothing here
+/// touches the checkout. Anything else is refused with the reason.
+#[tauri::command(async)]
+pub fn extensions_send_findings(
+    state: State<'_, ExtensionsState>,
+    farm: State<'_, crate::farm::FarmState>,
+    id: String,
+    workdir: PathBuf,
+    review: String,
+    findings: Vec<String>,
+) -> Result<Sent> {
+    use spagitty_extensions::repair;
+    let host = state.host()?;
+    let record = host
+        .reviews(&id, &workdir)?
+        .into_iter()
+        .find(|r| r.result.review_id == review)
+        .ok_or_else(|| Error::Refused("That review is no longer in the history.".into()))?;
+    let chosen = repair::selected(&record, &findings)?;
+    match record.snapshot.target {
+        ReviewTarget::WorkingCopy => {}
+        ReviewTarget::FarmTask => {
+            return Err(Error::Refused(
+                "A farm task's findings go back to it from the Farm screen.".into(),
+            ))
+        }
+        ReviewTarget::PullRequest => {
+            return Err(Error::Refused(
+                "Findings on a pull request are answered on the pull request.".into(),
+            ))
+        }
+    }
+    let head = spagitty_core::repo::open(&workdir)
+        .ok()
+        .and_then(|repo| spagitty_core::repo::head(&repo).id);
+    if let Some(why) = repair::refuse(&record, head.as_deref()) {
+        return Err(Error::Refused(why));
+    }
+    let service = farm
+        .service_for(&workdir)
+        .filter(|service| service.farm().is_some())
+        .ok_or_else(|| {
+            Error::Refused(
+                "Create a farm for this repository on the Farm screen first; the repair task is added to it.".into(),
+            )
+        })?;
+    let name = host
+        .manifest(&id)
+        .map(|m| m.name)
+        .unwrap_or_else(|| id.clone());
+    let words = repair::task(&record, &name, &chosen);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let mut task = spagitty_farm::model::Task::new(
+        spagitty_farm::model::TaskId::new("TASK-0000"),
+        words.title,
+        now,
+    );
+    task.description = words.description;
+    task.acceptance_criteria = words.acceptance_criteria;
+    let added = service
+        .add_task(task)
+        .map_err(|error| Error::Refused(error.to_string()))?;
+    for finding in &findings {
+        host.set_disposition(&id, &workdir, &review, finding, Disposition::SentToAgent)?;
+    }
+    Ok(Sent {
+        task: added.id.as_str().to_string(),
+        message: format!(
+            "{} is in the farm as a draft. Ready it there to start an agent.",
+            added.id.as_str()
+        ),
+    })
+}

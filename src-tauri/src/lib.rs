@@ -231,6 +231,7 @@ pub fn run() {
             extensions::extensions_suggested_bases,
             extensions::extensions_confirm,
             extensions::extensions_location,
+            extensions::extensions_send_findings,
         ])
         .setup(|app| {
             if let (Some(window), Some(icon)) =

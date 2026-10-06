@@ -29,6 +29,16 @@ stays backward-compatible.
   packs and inspects extensions, with a TypeScript SDK, a fake Spagitty to test
   against, and a published manifest schema and protocol any language can
   implement. `examples/extensions/hello` is the whole path.
+- **CodeRabbit reviews, in Spagitty.** The first official extension reviews
+  your uncommitted or committed changes with your own CodeRabbit CLI and
+  account, after showing exactly which files would be sent. Findings arrive as
+  the review runs, with their severity and location as CodeRabbit gave them;
+  a review can be cancelled, is marked out of date if the code changes under
+  it, and is never mistaken for approval. A billing confirmation is shown and
+  never answered for you. Findings on a committed change can be sent to the
+  farm as a draft repair task. It is off until you turn it on per repository,
+  and needs the CodeRabbit CLI 0.7.7 or newer, installed separately.
+
 
 ### Changed
 
