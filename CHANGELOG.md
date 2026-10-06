@@ -120,6 +120,9 @@ stays backward-compatible.
 
 ### Fixed
 
+- **No more console windows on Windows.** Every git command Spagitty ran
+  opened a console window of its own: a flash for a commit, and a window that
+  stayed for as long as a fetch took. They run out of sight now.
 - **GitLab no longer says every merge request needs you, or that it passed.**
   A merge request needs you when you are one of its reviewers, and its checks
   are its latest pipeline's — shown once read, never assumed.

@@ -34,7 +34,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
@@ -331,7 +331,7 @@ fn on_path(program: &str) -> bool {
         return *known;
     }
 
-    let found = Command::new(program)
+    let found = crate::shell::program(program)
         .arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
