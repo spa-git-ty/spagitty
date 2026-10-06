@@ -1200,18 +1200,23 @@ input[type='radio'] {
  * shorten. Those ask the question themselves, through `src/lib/motion.ts`.
  */
 
-/* Syntax highlighting tokens (FEAT-064) */
+/*
+ * Syntax highlighting tokens (FEAT-064). One colour per kind of thing
+ * (FEAT-094): the palette's five lanes each name one, so a keyword is never
+ * the colour of a number, nor a type the colour of a string. Operators and
+ * punctuation step back; they are the most frequent and say the least.
+ */
 .tok-keyword {
-	color: var(--lane-3, #d20f39);
+	color: var(--lane-4, #6c4fa3);
 	font-weight: 500;
 }
 
 .tok-string {
-	color: var(--ok, #2e7d1f);
+	color: var(--lane-2, #2f8a52);
 }
 
 .tok-number {
-	color: var(--warn, #bc6a00);
+	color: var(--lane-3, #a86a00);
 }
 
 .tok-comment {
@@ -1220,17 +1225,33 @@ input[type='radio'] {
 }
 
 .tok-fn {
-	color: var(--lane-1, #1e66f5);
+	color: var(--lane-5, #2f6fb0);
 }
 
 .tok-type {
-	color: var(--lane-2, #8839ef);
+	color: var(--lane-1, #c23b22);
 }
 
 .tok-operator {
-	color: var(--lane-4, #179299);
+	color: var(--muted, rgba(76, 79, 105, 0.72));
 }
 
 .tok-punctuation {
 	color: var(--muted, rgba(76, 79, 105, 0.6));
+}
+
+/* A markup tag's name. */
+.tok-tag {
+	color: var(--lane-1, #c23b22);
+}
+
+/* A markup attribute, or a key in a configuration file. */
+.tok-attr {
+	color: var(--lane-3, #a86a00);
+}
+
+/* Annotations, decorators, attributes, preprocessor lines. */
+.tok-meta {
+	color: var(--lane-4, #6c4fa3);
+	font-style: italic;
 }

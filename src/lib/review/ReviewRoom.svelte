@@ -11,6 +11,7 @@
 	import RoomDiff from './RoomDiff.svelte';
 	import RoomFiles from './RoomFiles.svelte';
 	import RoomPill from './RoomPill.svelte';
+	import Splitter from '$lib/ui/Splitter.svelte';
 	import { room } from './room.svelte';
 	import { review } from './store.svelte';
 
@@ -100,6 +101,7 @@
 
 		<div class="body">
 			<RoomFiles />
+			<Splitter panel="roomFiles" label="Resize the files" />
 			<section class="diff" aria-label="Changes">
 				{#if room.fallback}
 					<p class="fallback note" title={room.fallback}>
@@ -118,6 +120,7 @@
 					<RoomPill onfinish={() => (finishing = true)} />
 				{/if}
 			</section>
+			<Splitter panel="roomConversation" label="Resize the conversation" />
 			<RoomConversation />
 		</div>
 	</div>

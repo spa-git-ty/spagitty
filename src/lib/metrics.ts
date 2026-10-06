@@ -398,6 +398,15 @@ export const SEARCH_SIDE_W = 280;
 /** The detail panel on the Pull requests screen. */
 export const REQUESTS_DETAIL_W = 300;
 
+/** Review's preview of the chosen pull request (FEAT-087), widened by dragging (FEAT-094). */
+export const REVIEW_PREVIEW_W = 360;
+
+/** The review room's touched files (FEAT-091). */
+export const ROOM_FILES_W = 262;
+
+/** The review room's Conversation card (FEAT-093). */
+export const ROOM_CONVERSATION_W = 300;
+
 // --- Stash screen columns -------------------------------------------------
 
 /**
@@ -591,6 +600,9 @@ export function applyMetrics(
 		'repo-card-w': REPO_CARD_W,
 		'search-side-w': SEARCH_SIDE_W,
 		'requests-detail-w': REQUESTS_DETAIL_W,
+		'review-preview-w': REVIEW_PREVIEW_W,
+		'room-files-w': ROOM_FILES_W,
+		'room-conversation-w': ROOM_CONVERSATION_W,
 		'stash-entries-w': STASH_ENTRIES_W,
 		'farm-log-h': FARM_LOG_H,
 		// A person's mark beside a commit is the graph node's own diameter, so

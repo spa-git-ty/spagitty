@@ -18,6 +18,9 @@ import {
 	FARM_LOG_H,
 	RAIL_W,
 	REQUESTS_DETAIL_W,
+	REVIEW_PREVIEW_W,
+	ROOM_CONVERSATION_W,
+	ROOM_FILES_W,
 	STASH_ENTRIES_W
 } from './metrics';
 
@@ -191,7 +194,11 @@ describe('reset', () => {
 			changesFiles: CHANGES_FILES_W,
 			diffFiles: DIFF_FILES_W,
 			stashEntries: STASH_ENTRIES_W,
-			farmLog: FARM_LOG_H
+			farmLog: FARM_LOG_H,
+			// Review's three (FEAT-094).
+			reviewPreview: REVIEW_PREVIEW_W,
+			roomFiles: ROOM_FILES_W,
+			roomConversation: ROOM_CONVERSATION_W
 		});
 	});
 });

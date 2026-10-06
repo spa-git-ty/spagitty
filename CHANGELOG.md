@@ -42,7 +42,9 @@ stays backward-compatible.
   Tick files as viewed — a file the author changes afterwards comes back
   unticked. A focus ruler follows the line you are on (`j` and `k`), `Aa`
   switches the reading font, and the threads sit under their lines and in a
-  Conversation card that takes you to them.
+  Conversation card that takes you to them. Code is in colour, comments read
+  as their host draws them, and the files and the Conversation card — like
+  the inbox's preview — widen from their edge.
 - **Conflict fixes, told apart.** Code a pull request's author wrote while
   resolving a merge conflict is framed in blue in the review room and never
   shown as their own work: which merge wrote it, the exact lines, and what
@@ -60,6 +62,10 @@ stays backward-compatible.
 
 ### Changed
 
+- **Code in colour, as it is.** Diffs and file history colour Kotlin, Java,
+  Gradle, Swift, C#, CSS, HTML, XML, Markdown, Dockerfiles and more, and each
+  kind of word — keyword, string, number, function, type — has a colour of its
+  own; keywords and numbers, types and strings no longer share one.
 - **A new face.** The icon is three cream strands on a tomato plate that cross
   and then run straight, each ending in a commit — clear down to the smallest
   taskbar size. The name is set in Sora with "git" in tomato, in the title row
@@ -120,6 +126,11 @@ stays backward-compatible.
 
 ### Fixed
 
+- **Pull request descriptions read as written.** Tables, nested lists, task
+  lists and the `<details>` blocks bots write are drawn as on GitHub and
+  GitLab, and code blocks are coloured. A link to anything but a web or mail
+  address — a `javascript:` one above all — was made clickable; it no longer
+  is, and nothing in a description can run.
 - **No more console windows on Windows.** Every git command Spagitty ran
   opened a console window of its own: a flash for a commit, and a window that
   stayed for as long as a fetch took. They run out of sight now.

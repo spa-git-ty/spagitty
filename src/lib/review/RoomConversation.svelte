@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { relativeTime } from '$lib/format';
 	import Chip from '$lib/ui/Chip.svelte';
+	import { markdownText } from '$lib/ui/markdown';
 	import { room } from './room.svelte';
 	import { whereOfDraft } from './drafts';
 	import { whereOf } from './threads';
@@ -47,7 +48,7 @@
 					<span class="note small">{replies(thread.comments.length - 1)}</span>
 				</span>
 				<span class="note"><span class="who">{first.author}</span> · {relativeTime(first.createdAt)}</span>
-				<span class="body">{first.body}</span>
+				<span class="body">{markdownText(first.body)}</span>
 			</button>
 		{/each}
 		{#if room.currentDrafts.length > 0}
@@ -55,7 +56,7 @@
 			{#each room.currentDrafts as draft (draft.id)}
 				<button class="draft" onclick={() => room.jumpToDraft(draft)}>
 					<Chip><span class="mono">{whereOfDraft(draft)}</span></Chip>
-					<span class="body">{draft.body}</span>
+					<span class="body">{markdownText(draft.body)}</span>
 				</button>
 			{/each}
 		{/if}
@@ -68,7 +69,7 @@
 						<span class="grow"></span>
 						<button class="note delete" onclick={() => room.removeDraft(draft.id)}>Delete</button>
 					</span>
-					<span class="body">{draft.body}</span>
+					<span class="body">{markdownText(draft.body)}</span>
 				</div>
 			{/each}
 		{/if}
@@ -88,7 +89,7 @@
 <style>
 	/* An inset card, like the commit detail on Graph. */
 	.conversation {
-		width: 300px;
+		width: var(--room-conversation-w);
 		flex: none;
 		display: flex;
 		flex-direction: column;

@@ -147,6 +147,7 @@ rather than an audit.
 | [FEAT-091](items/FEAT-091-the-review-room.md) | The review room | 1R | Open |
 | [FEAT-092](items/FEAT-092-conflict-fix-origin.md) | Conflict fixes, told apart | 1R | Open |
 | [FEAT-093](items/FEAT-093-threads-done-properly.md) | Threads done properly | 1R | Open |
+| [FEAT-094](items/FEAT-094-review-reads-like-code.md) | Review reads like code | 1R, 1H, diff | Open |
 
 ## Bugs
 
