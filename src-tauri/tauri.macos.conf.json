@@ -14,5 +14,10 @@
         "hiddenTitle": true
       }
     ]
+  },
+  "bundle": {
+    "externalBin": [
+      "../extensions/coderabbit/sidecar/coderabbit-extension"
+    ]
   }
 }

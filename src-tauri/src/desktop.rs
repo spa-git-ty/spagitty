@@ -602,7 +602,9 @@ pub fn desktop_theme_unwatch(state: State<'_, DesktopState>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "linux")]
     use std::fs;
+    #[cfg(target_os = "linux")]
     use tempfile::TempDir;
 
     /// The real file from the machine this was written on, trimmed to the
@@ -838,6 +840,7 @@ background = "#ff0000"
     }
 
     /// Build a state-layout Omarchy under a temporary directory.
+    #[cfg(target_os = "linux")]
     fn install(home: &Path, theme: &str, palette: &str) {
         let root = home.join(".local/state/omarchy/current/theme");
         fs::create_dir_all(&root).unwrap();
@@ -849,6 +852,7 @@ background = "#ff0000"
         .unwrap();
     }
 
+    #[cfg(target_os = "linux")]
     fn env_for(home: &Path) -> impl Fn(&str) -> Option<String> + '_ {
         move |name: &str| match name {
             "HOME" => Some(home.to_string_lossy().into_owned()),

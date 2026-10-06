@@ -50,6 +50,7 @@ impl Services for Quiet {
         _: u64,
         _: &str,
         _: &str,
+        _cancel: &std::sync::atomic::AtomicBool,
     ) -> Result<Value, RpcError> {
         Err(RpcError::new(-32011, "none"))
     }

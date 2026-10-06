@@ -14,7 +14,7 @@ const server = await createServer({
   logLevel: 'silent',
   plugins: svelte({ configFile: resolve('svelte.config.js') }),
   resolve: { alias: { $lib: resolve('src/lib') } },
-  server: { middlewareMode: true, hmr: true, ws: false },
+  server: { middlewareMode: true, hmr: true, ws: false, watch: { ignored: ['**/target/**', '**/src-tauri/**', '**/crates/**'] } },
   optimizeDeps: { noDiscovery: true, include: [] }
 });
 try {

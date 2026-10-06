@@ -65,6 +65,8 @@ pub struct Operation {
     pub progress: Option<String>,
     pub findings: Vec<ReviewFinding>,
     pub dropped_findings: usize,
+    /// Callbacks waiting on host-owned tool work do not count as worker silence.
+    pub host_work: usize,
 }
 
 impl Operation {
@@ -96,7 +98,36 @@ pub struct Operations {
     finished: Mutex<VecDeque<String>>,
 }
 
+/// A host callback holds this until its tool work has returned, including
+/// detection. Dropping it resumes the inactivity clock, also on an error.
+pub struct HostWork<'a> {
+    operations: &'a Operations,
+    id: String,
+    extension: String,
+    session: String,
+}
+
+impl Drop for HostWork<'_> {
+    fn drop(&mut self) {
+        self.operations
+            .with(&self.id, &self.extension, &self.session, |op| {
+                op.host_work -= 1;
+                op.last_activity = Instant::now();
+            });
+    }
+}
+
 impl Operations {
+    pub fn host_work(&self, id: &str, extension: &str, session: &str) -> Option<HostWork<'_>> {
+        self.with(id, extension, session, |op| op.host_work += 1)?;
+        Some(HostWork {
+            operations: self,
+            id: id.into(),
+            extension: extension.into(),
+            session: session.into(),
+        })
+    }
+
     pub fn insert(&self, operation: Operation) {
         self.running
             .lock()
@@ -188,7 +219,7 @@ impl Operations {
                 if now >= op.deadline {
                     return Some((op.id.clone(), Expiry::Deadline));
                 }
-                if now.duration_since(op.last_activity) >= inactivity {
+                if op.host_work == 0 && now.duration_since(op.last_activity) >= inactivity {
                     return Some((op.id.clone(), Expiry::Inactive));
                 }
                 None
@@ -230,6 +261,7 @@ mod tests {
             progress: None,
             findings: Vec::new(),
             dropped_findings: 0,
+            host_work: 0,
         }
     }
 
@@ -292,5 +324,54 @@ mod tests {
         assert_eq!(ops.finish_all("a.b").len(), 2);
         assert_eq!(ops.count_for("c.d"), 1);
         assert_eq!(ops.ids(), vec!["3".to_string()]);
+    }
+    #[test]
+    fn host_work_pauses_silence_until_every_callback_returns() {
+        let ops = Operations::default();
+        ops.insert(op("tool", "a.b"));
+        assert!(ops.host_work("tool", "c.d", "s").is_none());
+        assert!(ops.host_work("tool", "a.b", "old").is_none());
+        let first = ops.host_work("tool", "a.b", "s").unwrap();
+        let second = ops.host_work("tool", "a.b", "s").unwrap();
+        let quiet = Instant::now() - INACTIVITY;
+        ops.with_any("tool", |op| op.last_activity = quiet);
+        assert!(ops
+            .expired(Instant::now(), INACTIVITY, CANCEL_GRACE)
+            .is_empty());
+        drop(first);
+        ops.with_any("tool", |op| op.last_activity = quiet);
+        assert!(ops
+            .expired(Instant::now(), INACTIVITY, CANCEL_GRACE)
+            .is_empty());
+        drop(second);
+        assert!(ops
+            .expired(Instant::now(), INACTIVITY, CANCEL_GRACE)
+            .is_empty());
+        ops.with_any("tool", |op| op.last_activity = quiet);
+        assert_eq!(
+            ops.expired(Instant::now(), INACTIVITY, CANCEL_GRACE),
+            vec![("tool".into(), Expiry::Inactive)]
+        );
+    }
+
+    #[test]
+    fn host_work_does_not_suspend_deadlines_or_cancellation() {
+        let ops = Operations::default();
+        ops.insert(op("tool", "a.b"));
+        let waiting = ops.host_work("tool", "a.b", "s").unwrap();
+        let now = Instant::now();
+        ops.with_any("tool", |op| op.deadline = now);
+        assert_eq!(
+            ops.expired(now, INACTIVITY, CANCEL_GRACE),
+            vec![("tool".into(), Expiry::Deadline)]
+        );
+        ops.with_any("tool", |op| op.cancel_requested = Some(now - CANCEL_GRACE));
+        assert_eq!(
+            ops.expired(now, INACTIVITY, CANCEL_GRACE),
+            vec![("tool".into(), Expiry::CancelGrace)]
+        );
+        ops.finish("tool").unwrap();
+        drop(waiting); // A late return cannot resurrect a finished operation.
+        assert!(ops.ids().is_empty());
     }
 }

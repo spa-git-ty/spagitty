@@ -39,25 +39,49 @@ pub fn describe_pull_request(workdir: &Path, number: u64) -> Result<String, RpcE
     Ok(format!("{}#{number}", repo.slug()))
 }
 
-pub fn pull_request_snapshot<R: Runtime>(
-    _app: &AppHandle<R>,
-    _workdir: &Path,
-    _number: u64,
-) -> Result<Value, RpcError> {
-    Err(refused(
-        code::UNSUPPORTED,
-        "pull request snapshots are not available in this build",
-    ))
+fn credentials<R: Runtime>(app: &AppHandle<R>, workdir: &Path) -> Result<(Repo, String), RpcError> {
+    let repo = repo_for(workdir)?;
+    if repo.kind != forge::Kind::GitHub {
+        return Err(refused(
+            code::UNSUPPORTED,
+            "Pull request extension reviews are supported only on GitHub.",
+        ));
+    }
+    let connected = crate::accounts::load(app);
+    let account = crate::accounts::for_host(&connected, &repo.host).ok_or_else(|| {
+        refused(
+            code::NOT_GRANTED,
+            "Connect an account for this repository's host first.",
+        )
+    })?;
+    let token = forge::keychain::read(&account.host, &account.user)
+        .map_err(|e| refused(code::INTERNAL, e.to_string()))?
+        .ok_or_else(|| {
+            refused(
+                code::NOT_GRANTED,
+                "The connected account's token is no longer in the keychain.",
+            )
+        })?;
+    Ok((repo, token))
 }
-
-pub fn post_pull_request_comment<R: Runtime>(
-    _app: &AppHandle<R>,
-    _workdir: &Path,
-    _number: u64,
-    _body: &str,
+pub fn pull_request_snapshot<R: Runtime>(
+    app: &AppHandle<R>,
+    workdir: &Path,
+    number: u64,
 ) -> Result<Value, RpcError> {
-    Err(refused(
-        code::UNSUPPORTED,
-        "pull request comments are not available in this build",
-    ))
+    let (repo, token) = credentials(app, workdir)?;
+    let snapshot = forge::snapshot::pull_request(&repo, &token, number)
+        .map_err(|e| refused(code::INTERNAL, e.to_string()))?;
+    serde_json::to_value(snapshot).map_err(|e| refused(code::INTERNAL, e.to_string()))
+}
+pub fn post_pull_request_comment<R: Runtime>(
+    app: &AppHandle<R>,
+    workdir: &Path,
+    number: u64,
+    body: &str,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<Value, RpcError> {
+    let (repo, token) = credentials(app, workdir)?;
+    forge::snapshot::post_comment_with_stop(&repo, &token, number, body, cancel)
+        .map_err(|e| refused(code::INTERNAL, e.to_string()))
 }

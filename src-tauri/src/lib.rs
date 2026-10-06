@@ -23,6 +23,7 @@ mod rebase_worker;
 mod recents;
 mod search_worker;
 mod settings;
+mod supplemental;
 #[cfg(test)]
 mod testing;
 mod watch;
@@ -199,6 +200,7 @@ pub fn run() {
             farm::farm_task_detail,
             farm::farm_transcript,
             farm::farm_merge_task,
+            farm::farm_review_supplemental,
             farm::farm_review_task,
             farm::farm_verify_task,
             farm::farm_plan,

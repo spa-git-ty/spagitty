@@ -123,8 +123,52 @@ Spagitty never disables certificate checks.
 
 ## Limits of this version
 
-- Pull request reviews on GitHub are FEAT-099; the farm gate is FEAT-098.
 - Paid continuation, API-key sign-in and self-hosted CodeRabbit are not offered.
 - The adapter was built from CodeRabbit's published output contract; see
   `fixtures/README.md` for which fixtures are documentation-derived and how to
   capture real ones (`CODERABBIT_SMOKE=1`).
+
+## Farm review policy
+
+In Farm settings choose **Off** (default), **Advisory**, or **Required** under
+Additional CodeRabbit review. Set the blocking severity (default Medium) and
+maximum repair cycles (default two, at most ten). Automatic review requires
+an autonomy level that reviews and the extension's existing consent. Repairs
+also follow the farm's existing autonomy and attempt limits.
+
+Required mode checks current committed evidence at the common merge boundary,
+for both human and automatic merges. Code, base, provider/package/tool version,
+settings or policy changes invalidate a pass. Missing, disabled, signed-out,
+incomplete or cancelled providers block with a reason. Reopening the app keeps
+the evidence and repair counts but still checks the live provider. A supplemental
+pass cannot replace verification or the independent reviewer. A deliberate policy
+downgrade records the person who changed it and never records an approval.
+
+Select findings in a committed farm task's review to hand them back to the same
+task through its existing repair path. Stale findings are refused. Under Manual
+or lower retry autonomy, this leaves the task waiting on a person. Exhausting
+the supplemental budget always requires a person. Changed code needs fresh
+verification and reviews. The original checkout is preserved.
+
+## GitHub pull requests
+
+Enable the optional PR read/comment permissions on the extension card and use
+a connected GitHub account. In the PR workspace the panel shows CodeRabbit bot
+content, inline locations, check/review revisions and source links. Refresh it
+explicitly or through the existing PR refresh action. A passed check is provider
+status; thread resolution stays unknown because this REST snapshot does not read
+resolution. Partial lists and revision changes are displayed explicitly and never
+become farm gate evidence. Long content is shortened with source links.
+
+**Request incremental review** posts `@coderabbitai review`; **Request full review**
+posts `@coderabbitai full review`. The exact repository, PR and body are shown for
+confirmation. These requests can consume your CodeRabbit allowance. Cancellation
+while confirming prevents the post. A successful POST means requested, not reviewed.
+Ambiguous delivery is retained even across a worker restart. A complete discussion
+refresh is required before deliberately sending again; nothing retries a write.
+
+The default identity requires GitHub's numeric actor ID, Bot type and
+`coderabbitai[bot]` login; checks require a platform app ID and `coderabbitai`
+slug. Configure numeric Bot/App IDs for custom enterprise or service-account
+identities. Invalid identity settings match nothing. Forge tokens remain in the
+backend keychain. Other forges return an explicit unsupported result.

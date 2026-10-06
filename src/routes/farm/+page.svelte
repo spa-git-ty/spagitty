@@ -16,7 +16,7 @@
 	import { AUTONOMY_LEVELS, FARM_STATUS_LABELS, PROVIDER_LABELS, quietLine } from '$lib/farm/describe';
 	import { lines, text } from '$lib/farm/options';
 	import { farmStore } from '$lib/farm/store.svelte';
-	import type { Task, TaskDetail, TaskDraft } from '$lib/farm/types';
+	import type { Task, TaskDetail, TaskDraft, SupplementalPolicy } from '$lib/farm/types';
 	import { repo } from '$lib/repo.svelte';
 	import { panels } from '$lib/panels.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -216,6 +216,13 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	async function changeSupplemental(change: Partial<SupplementalPolicy>): Promise<void> {
+		await act('Could not change review policy', async () => {
+			await api.configure({ supplemental: { mode: 'off', provider: 'spagitty.coderabbit/review', threshold: 'medium', maxRepairs: 2, revision: 1, ...farm?.supplemental, ...change } });
+			await farmStore.refresh();
+		});
 	}
 
 	async function createFarm(): Promise<void> {
@@ -484,6 +491,26 @@
 				<label class="field">
 					<textarea bind:value={verificationText} rows="3" placeholder="cargo test"></textarea>
 				</label>
+				<h2 class="heading">Additional CodeRabbit review</h2>
+				<label class="field">
+					<span>Review policy</span>
+					<select disabled={!farm || busy} value={farm?.supplemental?.mode ?? 'off'} onchange={(event) => changeSupplemental({ mode: event.currentTarget.value as SupplementalPolicy['mode'] })}>
+						<option value="off">Off — review only when requested</option>
+						<option value="advisory">Advisory — show findings after verification</option>
+						<option value="required">Required — block merging until reviewed</option>
+					</select>
+				</label>
+				<label class="field">
+					<span>Block findings at this severity or higher</span>
+					<select disabled={!farm || busy} value={farm?.supplemental?.threshold ?? 'medium'} onchange={(event) => changeSupplemental({ threshold: event.currentTarget.value as SupplementalPolicy['threshold'] })}>
+						<option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+					</select>
+				</label>
+				<label class="field">
+					<span>Maximum repair cycles</span>
+					<input type="number" min="0" max="10" disabled={!farm || busy} value={farm?.supplemental?.maxRepairs ?? 2} onchange={(event) => changeSupplemental({ maxRepairs: Math.max(0, Math.min(10, Number(event.currentTarget.value))) })} />
+				</label>
+				<p class="note">CodeRabbit adds to the independent review. Automatic reviews and repairs follow the farm's autonomy level and require extension consent. Required reviews block merging when unavailable or out of date.</p>
 
 				<h2 class="heading">Repository rules</h2>
 				{#if farmStore.policy.sources.length > 0}

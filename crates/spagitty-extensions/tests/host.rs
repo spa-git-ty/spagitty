@@ -85,6 +85,7 @@ impl Services for FakeServices {
         _: u64,
         _: &str,
         _: &str,
+        _cancel: &std::sync::atomic::AtomicBool,
     ) -> Result<Value, RpcError> {
         Err(RpcError::new(code::DECLINED, "declined"))
     }
@@ -521,6 +522,34 @@ fn cancelling_ends_the_tools_process_tree() {
         !h.repo.path().join("sleeper-survived").exists(),
         "the tool was ended with the operation"
     );
+}
+
+#[test]
+fn a_silent_host_tool_can_outlast_the_inactivity_limit() {
+    let h = harness_with("normal", |c| {
+        c.inactivity = Duration::from_secs(1);
+        c.deadline = Duration::from_secs(15);
+    });
+    let started = Instant::now();
+    assert_eq!(
+        h.command("sleepTool"),
+        ("completed".into(), "exit 0".into())
+    );
+    assert!(started.elapsed() >= Duration::from_secs(4));
+    assert!(h.repo.path().join("sleeper-survived").exists());
+}
+
+#[test]
+fn a_silent_host_tool_is_still_ended_at_the_absolute_deadline() {
+    let h = harness_with("normal", |c| {
+        c.inactivity = Duration::from_secs(1);
+        c.deadline = Duration::from_secs(2);
+    });
+    let (status, message) = h.command("sleepTool");
+    assert_eq!(status, "failed");
+    assert!(message.contains("time limit"), "{message}");
+    std::thread::sleep(Duration::from_secs(4));
+    assert!(!h.repo.path().join("sleeper-survived").exists());
 }
 
 #[test]

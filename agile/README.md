@@ -142,8 +142,8 @@ rather than an audit.
 | [FEAT-086](items/FEAT-086-the-pomodoro-theme.md) | The Pomodoro theme | all | Done |
 | [FEAT-096](items/FEAT-096-an-extension-host-anyone-can-build-for.md) | An extension host anyone can build for | 1K, 1C, 1Q, 1H, palette | Open |
 | [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Open |
-| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Backlog |
-| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Backlog |
+| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Open |
+| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Open |
 
 ## Bugs
 
@@ -251,7 +251,7 @@ of its own.
 | [TASK-049](items/TASK-049-the-record-catches-up-with-what-merged.md) | The record catches up with what merged | — | Done |
 | [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Open |
 | [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
-| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Backlog |
+| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Open |
 
 ## Skipped identifiers
 
@@ -276,5 +276,6 @@ missing documents are not listed here, and fails again if a row here is stale.
 | --- | --- | --- |
 | FEAT-055 | plan, automated, sweep | A rendering-path decision measured on one machine and written as a policy function with a unit test per row of the table. What is missing is a second machine: the plan and sweep are worth writing when somebody with different hardware can confirm or contradict it. |
 | FEAT-056 | plan, automated, sweep | A toggle and a set beside the widths, covered incidentally by the layout round-trip in `panels.test.ts`. The plan and sweep are worth writing when the Graph and Pull requests screens get their own component tests to point at. |
+| BUG-043 | plan, automated, sweep | Inherited from main: the merged fix has no separate verification records. A retrospective verification record is owed. |
 | BUG-001 | plan, automated, sweep | Fixed inside FEAT-003's change before it had a branch of its own; its item document says so. No separate work to plan. |
 | FEAT-073 | plan, automated, sweep | The crate landed with its own Rust tests and the screen with component tests, and the item document records the decisions a plan would have argued in advance. What is missing is the record written *before* the code, which cannot be back-dated honestly; the sweep is owed the first time a farm is driven end to end on a repository that is not this one. |

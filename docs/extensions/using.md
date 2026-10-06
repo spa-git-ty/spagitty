@@ -72,3 +72,18 @@ that stops unexpectedly fails what it was doing and is shown as Stopped; using
 it again starts it again, and after three crashes in ten minutes it waits for
 **Restart**. Nothing restarts on its own, so nothing is ever retried behind
 your back.
+
+## Additional farm reviews and PR requests
+
+Farm settings hold the supplemental Off/Advisory/Required policy, blocking
+severity and repair budget. Installing or enabling CodeRabbit grants neither
+autonomy nor merge permission. Required policy blocks all farm merge paths when
+the exact committed evidence or live provider cannot be validated. A policy
+change is recorded as a person's choice, not an approval. Selected committed
+task findings go back through that task's existing repair path.
+
+The CodeRabbit PR panel uses the connected GitHub account and optional forge
+permissions. Incremental and full requests preview the exact discussion comment
+before posting. A delivered comment is a request; check/review revisions decide
+what was observed. Partial data and unknown thread resolution stay visible.
+Uncertain delivery requires a complete refresh before a deliberate resend.

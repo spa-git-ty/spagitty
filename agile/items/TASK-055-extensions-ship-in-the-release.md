@@ -2,8 +2,8 @@
 
 # TASK-055 — Extensions ship in the release
 
-**Status:** Backlog
-**Branch:** `task/TASK-055-extensions-ship-in-the-release`
+**Status:** Open
+**Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** none.
 **Raised by:** the author, through
 [`docs/proposals/extensions-and-coderabbit.md`](../../docs/proposals/extensions-and-coderabbit.md),

@@ -39,6 +39,14 @@ stays backward-compatible.
   farm as a draft repair task. It is off until you turn it on per repository,
   and needs the CodeRabbit CLI 0.7.7 or newer, installed separately.
 
+- **Additional farm reviews.** Off, Advisory and Required policy, exact committed
+  evidence, live provider checks on manual and automatic merges, and bounded
+  repairs through the existing task flow preserve independent review and autonomy.
+- **CodeRabbit on GitHub PRs.** Attributed summaries, findings and review/check
+  status, explicit incremental/full requests, revision staleness and uncertain
+  delivery handling use backend-owned forge credentials.
+- **Bundled official worker.** Target-specific native packages are built before
+  Tauri bundles them; macOS workers use its sidecar signing path.
 
 ### Changed
 
@@ -102,6 +110,10 @@ stays backward-compatible.
 
 ### Fixed
 
+- Extension operations waiting on host-owned tools no longer trigger inactivity
+  expiry; absolute deadlines and cancellation still apply, including completion races.
+- Expired PR confirmations close, and late review responses cannot replace another
+  repository’s dialog or history. Windows desktop tests and releases share one manifest.
 - **A self-hosted forge behind a company certificate connects.** Spagitty
   checked certificates against a bundled list of public authorities and
   ignored the ones your computer trusts, so a GitLab signed by an internal CA

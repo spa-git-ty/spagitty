@@ -2,8 +2,8 @@
 
 # FEAT-098 — CodeRabbit as a farm review gate
 
-**Status:** Backlog
-**Branch:** `feature/FEAT-098-coderabbit-as-a-farm-review-gate`
+**Status:** Open
+**Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** Farm (1Q).
 **Raised by:** the author, through
 [`docs/proposals/extensions-and-coderabbit.md`](../../docs/proposals/extensions-and-coderabbit.md),

@@ -147,3 +147,18 @@ move independently. Spagitty refuses a package whose `engines` it does not
 satisfy, and refuses a worker whose handshake answers another API major
 version. Additive protocol fields may appear within API 1; ignore the ones you
 do not know.
+
+## Persisted review gates and forge receipts
+
+Implement the optional SDK `checkReview` handler (protocol `review.check`) if your
+provider's saved results can be used by Required farm policy. Return explicit
+`ready`, a reason when unavailable, and the same provider version as your review.
+This is a local availability/authentication check, not a new uploaded review.
+Unsupported or unprovable readiness blocks a required gate after restart.
+
+The SDK's PR snapshot preserves platform actor/app IDs, revision attribution,
+nullable resolution and per-list completeness. PR comment callbacks return
+`status: posted | uncertain`, never a review approval. Pass your operation ID
+to `commentOnPullRequest` so cancellation also covers the host confirmation.
+Store uncertainty before sending, including crash recovery, and never retry an
+ambiguous write automatically. The CodeRabbit worker demonstrates this path.

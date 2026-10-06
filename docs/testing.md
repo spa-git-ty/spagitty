@@ -241,3 +241,29 @@ injects scoped styles with component JavaScript through `emitCss: false`;
 production continues extracting CSS assets. This avoids the v5 plugin's cold-cache
 fallback serving Svelte source as CSS. Build success alone does not test this
 development request order, and this headless test does not replace a visual sweep.
+
+## Extension continuation checks
+
+Deterministic CodeRabbit fixtures are documentation-derived, not captured live
+CLI output. The opt-in smoke body self-skips unless `CODERABBIT_SMOKE=1`; an
+empty default smoke run is not evidence of a live review. Require signed-in CLI
+and disposable review scope for live testing.
+
+Run `cargo test -p spagitty-farm --test supplemental` for durable farm authority,
+policy invalidation, budget, selected repair, cancellation and restart cases.
+The CodeRabbit process suite covers local reviews plus PR request/refresh states,
+missing write grants and uncertain delivery without a live account. Core snapshot
+tests check discussion vs inline routes, pagination bounds, partial reads, unknown
+resolution, cancellation before POST and single-attempt ambiguous writes.
+
+Build hello with `bun run ext pack examples/extensions/hello --build`, then set
+`SPAGITTY_TEST_PACKAGE` to that package and run `cargo test -p spagitty-extensions
+--test foreign_package -- --ignored`. This uses the real host for installation,
+execution, panel rendering, disable and removal of independently produced code.
+
+Use `bun run tauri build` to stage the official worker, build the frontend and
+package the application. Windows test executables need the Common Controls v6
+manifest, just like the native application; build.rs supplies it. Repository path
+assertions compare canonical paths on Windows. Some inherited farm process tests
+still require /bin/sh, so the full workspace suite belongs on Linux; OS-neutral
+process/host/supplemental tests run in the existing cross-platform CI lane.

@@ -28,5 +28,21 @@ fn main() {
         println!("cargo:rerun-if-changed={}", trigger.display());
     }
 
-    tauri_build::build()
+    // Both the application and Cargo's library test executable link the native
+    // dialog API, which needs Common Controls v6. Link one manifest for all
+    // targets; omit Tauri's copy to avoid a duplicate manifest in the app.
+    let mut attributes = tauri_build::Attributes::new();
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc")
+    {
+        println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
+        println!(
+            "cargo:rustc-link-arg=/MANIFESTINPUT:{}",
+            manifest_dir.join("windows-controls.manifest").display()
+        );
+        println!("cargo:rerun-if-changed=windows-controls.manifest");
+        attributes = attributes
+            .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest());
+    }
+    tauri_build::try_build(attributes).expect("Tauri build resources");
 }

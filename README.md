@@ -197,8 +197,13 @@ The through-line: the leverage was real, and the verification was never optional
 Spagitty has no telemetry, no analytics, no account of ours, and no server of
 ours in the path. Repositories stay on disk. Forge personal-access tokens live
 in the OS keychain and never in a configuration file. The webview holds neither
-a token nor an HTTP client — the only network boundary is `crates/spagitty-core`
-talking to the forges you connected, when you ask it to.
+a token nor an HTTP client. First-party forge requests go through
+`crates/spagitty-core` to the accounts you connected, when you ask.
+
+Native extensions run as your user and can access the network; inspect their
+permissions before installing. CodeRabbit sends the selected code to its service
+after repository consent, through your separately installed CLI and account.
+CodeRabbit credentials remain owned by its CLI; forge tokens remain in the backend.
 
 ## Building
 

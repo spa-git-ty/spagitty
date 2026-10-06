@@ -53,6 +53,7 @@ pub mod persistence;
 pub mod policy;
 pub mod review;
 pub mod service;
+pub mod supplemental;
 pub mod verification;
 pub mod workspace;
 

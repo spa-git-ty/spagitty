@@ -16,9 +16,10 @@ use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 use spagitty_core::fixture::Fixture;
+use spagitty_extensions::capabilities::Capability;
 use spagitty_extensions::history::{Requester, ReviewRecord};
 use spagitty_extensions::host::{
-    Config, Events, ExtensionHost, HostEvent, Invocation, Services, State,
+    Config, Events, ExtensionHost, HostEvent, Invocation, PullRequestRef, Services, State,
 };
 use spagitty_extensions::manifest::{Context, ReviewScope, ReviewTarget};
 use spagitty_extensions::protocol::RpcError;
@@ -61,6 +62,7 @@ impl Services for NoForge {
         _: u64,
         _: &str,
         _: &str,
+        _cancel: &std::sync::atomic::AtomicBool,
     ) -> Result<Value, RpcError> {
         Err(RpcError::new(-32011, "none"))
     }
@@ -77,6 +79,10 @@ struct Rig {
 
 impl Rig {
     fn new(scenario: Value) -> Rig {
+        Self::with_services(scenario, Arc::new(NoForge), &[])
+    }
+
+    fn with_services(scenario: Value, services: Arc<dyn Services>, grants: &[Capability]) -> Rig {
         // The package as a release lays it out: the manifest in resources,
         // the program at its entrypoint for this target.
         let resources = tempfile::tempdir().unwrap();
@@ -119,12 +125,12 @@ impl Rig {
         );
         config.cancel_grace = Duration::from_millis(1500);
         let events = Arc::new(Collected::default());
-        let host = ExtensionHost::new(config, events.clone(), Arc::new(NoForge));
+        let host = ExtensionHost::new(config, events.clone(), services);
         let repo = Fixture::dirty();
         host.enable(
             ID,
             repo.path(),
-            &[],
+            grants,
             Some("Reviews send code to CodeRabbit."),
         )
         .unwrap();
@@ -193,6 +199,10 @@ impl Rig {
                 },
             )
             .unwrap();
+        self.finished(&started.operation)
+    }
+
+    fn finished(&self, operation_id: &str) -> (String, String) {
         let deadline = Instant::now() + Duration::from_secs(30);
         loop {
             let found = self.events.0.lock().unwrap().iter().find_map(|e| match e {
@@ -201,7 +211,7 @@ impl Rig {
                     status,
                     message,
                     ..
-                } if *operation == started.operation => Some((status.clone(), message.clone())),
+                } if operation == operation_id => Some((status.clone(), message.clone())),
                 _ => None,
             });
             if let Some(found) = found {
@@ -605,4 +615,172 @@ fn a_missing_cli_is_reported_before_activation_finishes() {
         "{}",
         record.result.summary
     );
+}
+
+struct Forge {
+    snapshot: Mutex<Value>,
+    posted: Mutex<Vec<String>>,
+    uncertain: AtomicBool,
+    invalid_receipt: AtomicBool,
+}
+impl Forge {
+    fn new() -> Self {
+        Self {
+            snapshot: Mutex::new(
+                json!({"headSha":"new","baseSha":"base","revisionCurrent":true,"discussion":{"complete":true,"items":[]},"findings":{"complete":true,"items":[]},"reviews":{"complete":true,"items":[]},"checks":{"complete":true,"items":[]}}),
+            ),
+            posted: Mutex::new(Vec::new()),
+            uncertain: AtomicBool::new(false),
+            invalid_receipt: AtomicBool::new(false),
+        }
+    }
+}
+impl Services for Forge {
+    fn pull_request_snapshot(&self, _: &Path, number: u64) -> Result<Value, RpcError> {
+        assert_eq!(number, 7);
+        Ok(self.snapshot.lock().unwrap().clone())
+    }
+    fn post_pull_request_comment(
+        &self,
+        _: &Path,
+        number: u64,
+        body: &str,
+        _: &str,
+        cancel: &AtomicBool,
+    ) -> Result<Value, RpcError> {
+        assert_eq!(number, 7);
+        if cancel.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(RpcError::new(-32008, "Cancelled"));
+        }
+        self.posted.lock().unwrap().push(body.into());
+        Ok(
+            if self
+                .invalid_receipt
+                .load(std::sync::atomic::Ordering::Acquire)
+            {
+                json!({"status":"unknown"})
+            } else if self.uncertain.load(std::sync::atomic::Ordering::Acquire) {
+                json!({"status":"uncertain","headSha":"new","message":"Delivery uncertain"})
+            } else {
+                json!({"status":"posted","headSha":"new","commentId":1,"url":"https://github.com/o/r/pull/7#issuecomment-1"})
+            },
+        )
+    }
+}
+fn pr_context(r: &Rig) -> Invocation {
+    Invocation {
+        kind: Context::PullRequest,
+        workdir: Some(r.repo.path().into()),
+        task_id: None,
+        pull_request: Some(PullRequestRef {
+            number: 7,
+            head_sha: Some("new".into()),
+        }),
+    }
+}
+fn pr_command(r: &Rig, name: &str) -> (String, String) {
+    let start = r.host.run_command(ID, name, &pr_context(r)).unwrap();
+    r.finished(&start.operation)
+}
+#[test]
+fn pr_requests_are_requested_until_exact_head_evidence_arrives() {
+    let forge = Arc::new(Forge::new());
+    let r = Rig::with_services(
+        scenario("documented-clean-no-findings.ndjson"),
+        forge.clone(),
+        &[
+            Capability::ForgePullRequestRead,
+            Capability::ForgePullRequestComment,
+        ],
+    );
+    assert_eq!(pr_command(&r, "requestIncremental").0, "completed");
+    assert_eq!(
+        r.host
+            .resolve_panel(ID, "pullRequest", &pr_context(&r))
+            .unwrap()["state"],
+        "requested"
+    );
+    assert_eq!(pr_command(&r, "requestFull").0, "completed");
+    assert_eq!(
+        *forge.posted.lock().unwrap(),
+        vec!["@coderabbitai review", "@coderabbitai full review"]
+    );
+    forge.snapshot.lock().unwrap()["checks"]["items"] =
+        json!([{"id":1,"appSlug":"coderabbitai","appId":9,"commitSha":"new","state":"completed"}]);
+    assert_eq!(
+        r.host
+            .resolve_panel(ID, "pullRequest", &pr_context(&r))
+            .unwrap()["state"],
+        "completed"
+    );
+    forge.snapshot.lock().unwrap()["headSha"] = json!("pushed");
+    assert_eq!(
+        r.host
+            .resolve_panel(ID, "pullRequest", &pr_context(&r))
+            .unwrap()["state"],
+        "stale"
+    );
+}
+#[test]
+fn an_uncertain_pr_write_is_never_retried_without_a_complete_refresh() {
+    let forge = Arc::new(Forge::new());
+    forge
+        .uncertain
+        .store(true, std::sync::atomic::Ordering::Release);
+    let r = Rig::with_services(
+        scenario("documented-clean-no-findings.ndjson"),
+        forge.clone(),
+        &[
+            Capability::ForgePullRequestRead,
+            Capability::ForgePullRequestComment,
+        ],
+    );
+    assert!(pr_command(&r, "requestIncremental").1.contains("uncertain"));
+    assert_eq!(pr_command(&r, "requestIncremental").0, "failed");
+    assert_eq!(forge.posted.lock().unwrap().len(), 1);
+    forge.snapshot.lock().unwrap()["discussion"]["complete"] = json!(false);
+    r.host
+        .resolve_panel(ID, "pullRequest", &pr_context(&r))
+        .unwrap();
+    assert_eq!(pr_command(&r, "requestIncremental").0, "failed");
+    assert_eq!(forge.posted.lock().unwrap().len(), 1);
+    forge.snapshot.lock().unwrap()["discussion"]["complete"] = json!(true);
+    r.host
+        .resolve_panel(ID, "pullRequest", &pr_context(&r))
+        .unwrap();
+    forge
+        .uncertain
+        .store(false, std::sync::atomic::Ordering::Release);
+    assert_eq!(pr_command(&r, "requestFull").0, "completed");
+    assert_eq!(forge.posted.lock().unwrap().len(), 2);
+}
+#[test]
+fn pr_writes_without_the_optional_grant_never_reach_the_service() {
+    let forge = Arc::new(Forge::new());
+    let r = Rig::with_services(
+        scenario("documented-clean-no-findings.ndjson"),
+        forge.clone(),
+        &[Capability::ForgePullRequestRead],
+    );
+    assert_eq!(pr_command(&r, "requestFull").0, "failed");
+    assert!(forge.posted.lock().unwrap().is_empty());
+}
+
+#[test]
+fn an_unreadable_delivery_receipt_keeps_uncertainty_and_prevents_a_duplicate() {
+    let forge = Arc::new(Forge::new());
+    forge
+        .invalid_receipt
+        .store(true, std::sync::atomic::Ordering::Release);
+    let r = Rig::with_services(
+        scenario("documented-clean-no-findings.ndjson"),
+        forge.clone(),
+        &[
+            Capability::ForgePullRequestRead,
+            Capability::ForgePullRequestComment,
+        ],
+    );
+    assert_eq!(pr_command(&r, "requestIncremental").0, "failed");
+    assert_eq!(pr_command(&r, "requestIncremental").0, "failed");
+    assert_eq!(forge.posted.lock().unwrap().len(), 1);
 }

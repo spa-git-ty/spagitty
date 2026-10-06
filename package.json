@@ -26,12 +26,12 @@
     "@sveltejs/vite-plugin-svelte": "^5",
     "@tauri-apps/cli": "^2",
     "@types/node": "^26.2.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "happy-dom": "^20.11.2",
     "svelte": "^5",
     "svelte-check": "^4",
     "typescript": "^5",
     "vite": "^6",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }

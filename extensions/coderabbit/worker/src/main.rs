@@ -10,6 +10,7 @@
 
 mod adapter;
 mod connection;
+mod pull_request;
 mod rpc;
 
 use std::sync::atomic::Ordering;
@@ -67,7 +68,10 @@ fn handle(rpc: Arc<Rpc>, method: String, params: Value) -> Result<Value, HostErr
         "command.execute" => {
             let operation = text(&params, "operationId");
             let command = text(&params, "command");
-            if !matches!(command.as_str(), "checkSetup" | "signIn" | "runDiagnostics") {
+            if !matches!(
+                command.as_str(),
+                "checkSetup" | "signIn" | "runDiagnostics" | "requestIncremental" | "requestFull"
+            ) {
                 return Err(refuse(
                     METHOD_NOT_FOUND,
                     format!("CodeRabbit has no command called {command}"),
@@ -75,6 +79,8 @@ fn handle(rpc: Arc<Rpc>, method: String, params: Value) -> Result<Value, HostErr
             }
             std::thread::spawn(move || {
                 let result = match command.as_str() {
+                    "requestIncremental" => pull_request::request(&rpc, &params, false),
+                    "requestFull" => pull_request::request(&rpc, &params, true),
                     "checkSetup" => check_setup(&rpc, &operation),
                     "signIn" => sign_in(&rpc, &operation),
                     _ => diagnostics(&rpc, &operation),
@@ -104,8 +110,25 @@ fn handle(rpc: Arc<Rpc>, method: String, params: Value) -> Result<Value, HostErr
             std::thread::spawn(move || review(&rpc, &params));
             Ok(json!({"accepted": true}))
         }
+        "review.check" => {
+            let operation = text(&params, "operationId");
+            let (state, version) = tool_state(&rpc);
+            if let Some(state) = state {
+                return Ok(
+                    json!({"ready":false,"reason":state.sentence(),"providerVersion":version}),
+                );
+            }
+            let (state, _) =
+                sign_in_state(&rpc, &operation).map_err(|e| refuse(METHOD_NOT_FOUND, e))?;
+            Ok(
+                json!({"ready":state==State::Ready,"reason":state.sentence(),"providerVersion":version}),
+            )
+        }
         "panel.resolve" => match text(&params, "panel").as_str() {
             "connection" => Ok(connection_panel(&rpc)),
+            "pullRequest" => {
+                pull_request::panel(&rpc, &params).map_err(|e| refuse(METHOD_NOT_FOUND, e))
+            }
             other => Err(refuse(
                 METHOD_NOT_FOUND,
                 format!("CodeRabbit has no panel called {other}"),

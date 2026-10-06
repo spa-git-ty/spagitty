@@ -162,6 +162,10 @@ export function eventLine(event: FarmEvent): string {
 			return `${event.task} sent to ${event.reviewer} for review`;
 		case 'reviewCompleted':
 			return `${event.reviewer} ${event.approved ? 'approved' : 'asked for changes on'} ${event.task}`;
+		case 'supplementalPolicyChanged':
+			return `Supplemental reviews: ${event.mode} (changed by ${event.actor})`;
+		case 'supplementalReview':
+			return `${event.task}: ${event.summary}`;
 		case 'mergeRequested':
 			return `Merging ${event.branch}`;
 		case 'mergeCompleted':

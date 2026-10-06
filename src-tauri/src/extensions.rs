@@ -90,7 +90,7 @@ struct Desktop<R: Runtime> {
 impl<R: Runtime> Desktop<R> {
     /// Show the person `confirmation` and wait for their answer. No answer is
     /// a no.
-    fn ask(&self, mut confirmation: Confirmation) -> bool {
+    fn ask(&self, mut confirmation: Confirmation, cancel: &std::sync::atomic::AtomicBool) -> bool {
         let id = format!(
             "confirm-{}",
             std::time::SystemTime::now()
@@ -111,12 +111,25 @@ impl<R: Runtime> Desktop<R> {
                 .remove(&id);
             return false;
         }
-        let answer = receive.recv_timeout(CONFIRM_TIMEOUT).unwrap_or(false);
+        let deadline = std::time::Instant::now() + CONFIRM_TIMEOUT;
+        let answer = loop {
+            if cancel.load(std::sync::atomic::Ordering::Acquire)
+                || std::time::Instant::now() >= deadline
+            {
+                break false;
+            }
+            match receive.recv_timeout(Duration::from_millis(250)) {
+                Ok(answer) => break answer,
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(_) => break false,
+            }
+        };
         self.confirmations
             .lock()
             .expect("confirmations")
             .remove(&id);
-        answer
+        let _ = self.app.emit("extension-confirm-ended", &id);
+        answer && !cancel.load(std::sync::atomic::Ordering::Acquire)
     }
 }
 
@@ -135,20 +148,30 @@ impl<R: Runtime> Services for Desktop<R> {
         number: u64,
         body: &str,
         extension_name: &str,
+        cancel: &std::sync::atomic::AtomicBool,
     ) -> std::result::Result<Value, RpcError> {
         let target = crate::forge_bridge::describe_pull_request(workdir, number)?;
-        let approved = self.ask(Confirmation {
-            id: String::new(),
-            extension: extension_name.to_string(),
-            kind: "pullRequestComment",
-            title: format!("{extension_name} wants to comment on {target}"),
-            target,
-            body: body.to_string(),
-        });
+        let approved = self.ask(
+            Confirmation {
+                id: String::new(),
+                extension: extension_name.to_string(),
+                kind: "pullRequestComment",
+                title: format!("{extension_name} wants to comment on {target}"),
+                target,
+                body: body.to_string(),
+            },
+            cancel,
+        );
+        if cancel.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(RpcError::new(
+                code::CANCELLED,
+                "The operation was cancelled.",
+            ));
+        }
         if !approved {
             return Err(RpcError::new(code::DECLINED, "the person declined"));
         }
-        crate::forge_bridge::post_pull_request_comment(&self.app, workdir, number, body)
+        crate::forge_bridge::post_pull_request_comment(&self.app, workdir, number, body, cancel)
     }
 }
 
@@ -490,9 +513,83 @@ pub fn extensions_send_findings(
     match record.snapshot.target {
         ReviewTarget::WorkingCopy => {}
         ReviewTarget::FarmTask => {
-            return Err(Error::Refused(
-                "A farm task's findings go back to it from the Farm screen.".into(),
-            ))
+            let service = farm
+                .service_for(&workdir)
+                .ok_or_else(|| Error::Refused("Open this repository's farm first.".into()))?;
+            let farm = service
+                .farm()
+                .ok_or_else(|| Error::Refused("Create a farm first.".into()))?;
+            let task_id =
+                spagitty_farm::model::TaskId::new(
+                    record.snapshot.task_id.as_deref().ok_or_else(|| {
+                        Error::Refused("This review has no task identity.".into())
+                    })?,
+                );
+            let task = farm
+                .task(&task_id)
+                .ok_or_else(|| Error::Refused("The reviewed task no longer exists.".into()))?;
+            let task_dir = task
+                .worktree
+                .as_deref()
+                .map(Path::new)
+                .ok_or_else(|| Error::Refused("The task has no worktree.".into()))?;
+            let repository =
+                spagitty_core::repo::open(task_dir).map_err(|e| Error::Refused(e.to_string()))?;
+            if spagitty_core::status::working_copy(&repository)
+                .map_err(|e| Error::Refused(e.to_string()))?
+                .changed_paths()
+                != 0
+            {
+                return Err(Error::Refused(
+                    "Commit the task's changes before sending findings.".into(),
+                ));
+            }
+            let head = spagitty_core::repo::head(&repository)
+                .id
+                .ok_or_else(|| Error::Refused("The task has no committed revision.".into()))?;
+            if let Some(why) = repair::refuse(&record, Some(&head)) {
+                return Err(Error::Refused(why));
+            }
+            let manifest = host
+                .manifest(&id)
+                .ok_or_else(|| Error::Refused("The extension was removed.".into()))?;
+            let declared = manifest
+                .contributes
+                .review_providers
+                .iter()
+                .find(|p| p.id == record.provider)
+                .ok_or_else(|| Error::Refused("The provider was removed.".into()))?;
+            let request = snapshot::Request {
+                target: ReviewTarget::FarmTask,
+                scope: ReviewScope::Committed,
+                base: task.merge_target.clone(),
+                task_id: Some(task_id.to_string()),
+                pull_request_number: None,
+            };
+            let (current, _) = snapshot::take(task_dir, &request, &declared.configuration_files)?;
+            if !record.snapshot.same_code(&current) {
+                return Err(Error::Refused(
+                    "The task or review configuration changed; review it again.".into(),
+                ));
+            }
+            let words = repair::task(&record, &manifest.name, &chosen);
+            service
+                .request_supplemental_changes(spagitty_farm::supplemental::Evidence {
+                    task: task_id.clone(),
+                    head,
+                    policy: farm.supplemental,
+                    identity: String::new(),
+                    outcome: spagitty_farm::supplemental::Outcome::ChangesRequested,
+                    summary: words.title,
+                    change_request: words.description,
+                    record: serde_json::to_value(&record)
+                        .map_err(|e| Error::Refused(e.to_string()))?,
+                })
+                .map_err(|e| Error::Refused(e.to_string()))?;
+            for finding in &findings {
+                host.set_disposition(&id, &workdir, &review, finding, Disposition::SentToAgent)?;
+            }
+            return Ok(Sent{task:task_id.to_string(),message:"Selected findings were returned to the same farm task. Its autonomy level and repair budget decide the next attempt.".into()});
         }
         ReviewTarget::PullRequest => {
             return Err(Error::Refused(

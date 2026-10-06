@@ -74,3 +74,10 @@ Tests  49 passed
 ```
 
 Windows 11, x86_64-pc-windows-msvc, 2026-10-06.
+
+## Continuation verification — 2026-10-06
+
+The subsequent host deadline/callback fixes and complete farm/PR/distribution work
+are recorded in [extensions-continuation-review.md](extensions-continuation-review.md).
+This includes current full-suite coverage, real package lifecycle evidence,
+Windows production builds, dependency checks and explicitly unverified live sweeps.
