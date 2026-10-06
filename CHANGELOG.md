@@ -126,6 +126,11 @@ stays backward-compatible.
 
 ### Fixed
 
+- **Dragging the Graph column wider shows more of a busy graph.** On a
+  history with more branches side by side than the column has room for, the
+  lanes past its edge were stacked on one line, and widening the column left
+  them there. Now a wider column draws more of them apart; the lanes already
+  apart stay exactly where they were.
 - **Pull request descriptions read as written.** Tables, nested lists, task
   lists and the `<details>` blocks bots write are drawn as on GitHub and
   GitLab, and code blocks are coloured. A link to anything but a web or mail

@@ -14,7 +14,6 @@
 import {
 	COMFORTABLE,
 	ELBOW_RADIUS,
-	LANE_SPAN,
 	LANE_STROKE,
 	MERGE_R,
 	NODE_HALO,
@@ -53,9 +52,11 @@ export interface LaneDrawOptions {
 	/**
 	 * Horizontal room the lanes have inside the column as it is now.
 	 *
-	 * `LANE_SPAN` until the graph column is dragged; after that it is whatever
-	 * the chosen width leaves. Lanes that fit do not move; lanes the boundary
-	 * has reached fold onto it, track and node together (FEAT-081). See `laneX`.
+	 * The density's resting span when left out, which is what a column nobody
+	 * has dragged has; after a drag it is whatever the chosen width leaves.
+	 * Lanes that fit do not move; lanes the boundary has reached fold onto it,
+	 * track and node together (FEAT-081), and a wider boundary draws more of a
+	 * deep history's lanes apart (BUG-048). See `laneX`.
 	 */
 	span?: number;
 	/** Row height in effect. `scale.pitch`, not the design constant. */
@@ -119,7 +120,7 @@ export function drawLanes(options: LaneDrawOptions): void {
 		colors,
 		nodeRing,
 		columns,
-		span = LANE_SPAN,
+		span,
 		pitch = ROW_PITCH,
 		zoom = 1,
 		density = COMFORTABLE,
@@ -350,7 +351,7 @@ function drawGhost(
 	zoom: number,
 	scrollTop: number,
 	colors: string[],
-	span: number,
+	span: number | undefined,
 	density: Density
 ): void {
 	if (path.length < 2) return;

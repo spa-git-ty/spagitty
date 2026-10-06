@@ -495,7 +495,12 @@ export function rowCenterY(index: number, pitch: number = ROW_PITCH): number {
  * - deeper lanes join it one by one as the column narrows, and at a span of 0
  *   every lane shares lane 0's x: the graph has merged into one visible lane,
  *   which is what FEAT-046 described and what the reference does;
- * - widening releases them in the reverse order, to exactly where they were.
+ * - widening releases them in the reverse order, to exactly where they were;
+ * - widening past the resting span goes on releasing them (BUG-048). A history
+ *   too deep for its resting span stacks its deepest lanes on the boundary, and
+ *   the boundary is wherever the drag put it — so a column dragged wider than
+ *   it rests draws more of those lanes apart, at the same pitch, and the lanes
+ *   already apart do not move.
  *
  * Logical lane and colour identity are untouched — only the drawn x folds.
  *
@@ -505,10 +510,12 @@ export function rowCenterY(index: number, pitch: number = ROW_PITCH): number {
  * with `floor(span / pitch)` puts a step in the geometry, which is where the
  * 14-pixel jumps came from.
  *
- * `span` defaults to [`LANE_SPAN`], which caps nothing at either density: a
- * lane's natural offset never exceeds its density's resting span, and that is
- * never wider than `LANE_SPAN`. A column nobody has dragged has a span equal to
- * its lanes' own extent, so it caps nothing either.
+ * `span` defaults to the density's resting span, which is what a column nobody
+ * has dragged has: its width is sized to its lanes' own extent, up to the cap.
+ * It used to default to [`LANE_SPAN`], which was the same thing while the
+ * resting span also capped every lane. Now that the span alone does, a compact
+ * column handed `LANE_SPAN` would spread its deepest lanes 110 pixels past a
+ * column that was never dragged.
  *
  * `zoom` scales the horizontal geometry the same way `applyMetrics` scales the
  * CSS widths, so the canvas and the reserved column keep agreeing.
@@ -517,7 +524,7 @@ export function laneX(
 	lane: number,
 	columns: number = LANE_COLUMNS_MIN,
 	zoom = 1,
-	span: number = LANE_SPAN,
+	span?: number,
 	density: Density = COMFORTABLE
 ): number {
 	// A deep history still compresses — against the span the density was sized
@@ -525,13 +532,15 @@ export function laneX(
 	// of the history, not of the hand on the divider.
 	//
 	// Past the pitch floor even that span runs out and the deepest lanes stack on
-	// its end — against the span rather than on the last whole lane before it,
-	// which would put a step in the geometry where none is needed.
+	// the boundary — against the span rather than on the last whole lane before
+	// it, which would put a step in the geometry where none is needed. The
+	// boundary is the dragged span, in either direction: capping at the resting
+	// span as well kept a column dragged wider from drawing anything more
+	// (BUG-048).
 	const resting = laneSpanOf(density);
 	const pitch = lanePitch(columns, resting, density);
 	const index = Math.max(0, Math.min(lane, columns - 1));
-	const natural = Math.min(index * pitch, resting);
-	return (LANE_X0 + Math.min(natural, Math.max(0, span))) * zoom;
+	return (LANE_X0 + Math.min(index * pitch, Math.max(0, span ?? resting))) * zoom;
 }
 
 /**
