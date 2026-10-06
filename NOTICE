@@ -44,12 +44,35 @@ All are compatible with distribution inside a GPL-3.0-or-later work.
 FONTS
 -----
 
-Spagitty ships no bundled font. The UI uses the host platform's system font
-stack. The design handoff wireframes used "Architects Daughter" to signal draft
-status; it is deliberately not shipped.
+The interface uses the host platform's system font stack unless a face is
+chosen in Settings › Reading. The fonts below are bundled, so the application
+works offline; each one's licence text sits beside its file.
 
-If a font is bundled in future, its license (OFL or otherwise) must be stated
-here and its text included in THIRD-PARTY-LICENSES.md.
+  Sora (the wordmark, FEAT-085)            SIL Open Font License 1.1
+    assets/brand/font/Sora.ttf, OFL.txt
+  Atkinson Hyperlegible (FEAT-090)         SIL Open Font License 1.1
+    Copyright 2020 Braille Institute of America, Inc.
+    assets/fonts/atkinson-hyperlegible/
+  Atkinson Hyperlegible Mono (FEAT-090)    SIL Open Font License 1.1
+    Copyright 2020-2024 The Atkinson Hyperlegible Mono Project Authors
+    assets/fonts/atkinson-hyperlegible-mono/
+  Lexend (FEAT-090)                        SIL Open Font License 1.1
+    Copyright 2018 The Lexend Project Authors, Reserved Font Name
+    "RevReading Lexend"
+    assets/fonts/lexend/
+  JetBrains Mono (FEAT-090)                SIL Open Font License 1.1
+    Copyright 2020 The JetBrains Mono Project Authors
+    assets/fonts/jetbrains-mono/
+  OpenDyslexic Mono 1.001 (FEAT-090)       Bitstream Vera Fonts licence
+    Abbie Gonzalez; the monospaced cut is published only under the Bitstream
+    Vera licence, not the OFL that covers the later proportional OpenDyslexic.
+    The Bitstream Vera licence is permissive and GPL-compatible; it permits
+    redistribution inside a larger software package and asks that a modified
+    font not keep the names "Bitstream" or "Vera". The file is unmodified.
+    assets/fonts/opendyslexic-mono/
+
+The design handoff wireframes used "Architects Daughter" to signal draft
+status; it is deliberately not shipped.
 
 
 ICONS

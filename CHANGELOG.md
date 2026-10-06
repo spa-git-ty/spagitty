@@ -30,6 +30,12 @@ stays backward-compatible.
 - **Open a pull request in a worktree.** From Review, a pull request's head is
   fetched and checked out in a folder beside your repository, so you can build
   and run it without leaving your branch.
+- **Settings › Reading.** Choose how code is set — Atkinson Hyperlegible Mono,
+  OpenDyslexic Mono, Lexend, JetBrains Mono or your system's — its size, line
+  spacing and letter spacing, the interface font, and calm or classic diff
+  colours with the changed words marked. Diff, Working copy, File history and
+  Review all follow it, and every face ships with Spagitty, so it works
+  offline. Diffs now default to the calm reading set.
 
 ### Changed
 

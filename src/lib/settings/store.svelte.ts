@@ -35,6 +35,7 @@ export type Section =
 	| 'personality'
 	| 'godmode'
 	| 'appearance'
+	| 'reading'
 	| 'license';
 
 /** The settings that are a yes or a no, and so can be flipped. */
@@ -54,6 +55,7 @@ export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'personality', label: 'Personality' },
 	{ id: 'godmode', label: 'God mode' },
 	{ id: 'appearance', label: 'Appearance' },
+	{ id: 'reading', label: 'Reading' },
 	{ id: 'license', label: 'License' }
 ];
 

@@ -351,6 +351,10 @@
 		white-space: pre;
 		color: var(--ink);
 		flex: 1;
+		/* Set as Settings › Reading sets code (FEAT-090). */
+		font-family: var(--code-font);
+		line-height: var(--code-lh);
+		letter-spacing: var(--code-ls);
 	}
 
 	.mono {

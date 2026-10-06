@@ -8,6 +8,7 @@
 	import * as api from '$lib/api';
 	import type { BinaryDiff, DiffSide } from '$lib/types';
 	import { detectLanguage, highlightLine } from '$lib/diff/highlight';
+	import { pairWords } from '$lib/diff/words';
 
 	/**
 	 * The hunks of the selected file, unified or side by side.
@@ -48,6 +49,8 @@
 		side = null
 	}: Props = $props();
 	const language = $derived(detectLanguage(path));
+	/** The changed words in each hunk's changed lines (FEAT-090). */
+	const marks = $derived(file && !file.binary ? file.hunks.map((hunk) => pairWords(hunk.lines)) : []);
 
 	let binaryData = $state<BinaryDiff | null>(null);
 	let binaryLoading = $state(false);
@@ -122,7 +125,11 @@
 						<span class="num">{line.old ?? ''}</span>
 						<span class="num">{line.new ?? ''}</span>
 						<span class="sign">{sign(line)}</span>
-						<span class="text">{@html highlightLine(line.text, language)}</span>
+						<span class="text"
+							>{#each marks[index]?.get(row) ?? [{ text: line.text, changed: false }] as piece, p (p)}<span
+									class:word={piece.changed}>{@html highlightLine(piece.text, language)}</span
+								>{/each}</span
+						>
 					</div>
 				{/each}
 			</section>
@@ -161,8 +168,10 @@
 		flex: 1;
 		min-width: 0;
 		overflow: auto;
-		font-family: var(--font-mono);
+		font-family: var(--code-font);
 		font-size: var(--fs-code);
+		line-height: var(--code-lh);
+		letter-spacing: var(--code-ls);
 	}
 
 	.pad {
@@ -228,14 +237,29 @@
 		padding-right: 12px;
 	}
 
+	/* Settings › Reading decides the strength (FEAT-090): calm is a marker
+	   down the side and a faint tint, classic the full rows. */
 	.line.added,
 	.side.added {
-		background: color-mix(in srgb, var(--ok) 14%, transparent);
+		background: var(--diff-add-bg);
+		box-shadow: inset var(--diff-marker) 0 0 var(--ok);
 	}
 
 	.line.removed,
 	.side.removed {
-		background: color-mix(in srgb, var(--danger) 14%, transparent);
+		background: var(--diff-del-bg);
+		box-shadow: inset var(--diff-marker) 0 0 var(--danger);
+		color: var(--diff-del-ink);
+	}
+
+	.line.added .word {
+		background: var(--diff-add-hl);
+		border-radius: 3px;
+	}
+
+	.line.removed .word {
+		background: var(--diff-del-hl);
+		border-radius: 3px;
 	}
 
 	/* The empty half of an uneven pairing is not a line that exists. */

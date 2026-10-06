@@ -32,6 +32,53 @@
 	font-display: swap;
 }
 
+/*
+ * The reading faces (FEAT-090), offered in Settings › Reading. Bundled rather
+ * than fetched: the application works offline. Licences beside each file and
+ * in NOTICE.
+ */
+@font-face {
+	font-family: 'Atkinson Hyperlegible';
+	src: url('../assets/fonts/atkinson-hyperlegible/AtkinsonHyperlegible-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Atkinson Hyperlegible';
+	src: url('../assets/fonts/atkinson-hyperlegible/AtkinsonHyperlegible-Bold.ttf') format('truetype');
+	font-weight: 700;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Atkinson Hyperlegible Mono';
+	src: url('../assets/fonts/atkinson-hyperlegible-mono/AtkinsonHyperlegibleMono.ttf') format('truetype');
+	font-weight: 200 800;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'OpenDyslexic Mono';
+	src: url('../assets/fonts/opendyslexic-mono/OpenDyslexicMono-Regular.otf') format('opentype');
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Lexend';
+	src: url('../assets/fonts/lexend/Lexend.ttf') format('truetype');
+	font-weight: 100 900;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'JetBrains Mono';
+	src: url('../assets/fonts/jetbrains-mono/JetBrainsMono.ttf') format('truetype');
+	font-weight: 100 800;
+	font-display: swap;
+}
+
 :root {
 	--bg: #fbf7f1;
 	--panel: #f3ece2;
@@ -83,6 +130,22 @@
 	--code-font: var(--font-mono);
 	--code-lh: 1.45;
 	--code-ls: 0em;
+
+	/*
+	 * A diff's colours (FEAT-090). Calm by default: a thin marker down the
+	 * side and a faint tint, so no row is a block of red or green, and the
+	 * removed text goes quiet. Classic is the full-strength rows. The words
+	 * that changed inside a line get their own, stronger tint; off, it is
+	 * transparent.
+	 */
+	--diff-add-bg: color-mix(in srgb, var(--ok) 8%, transparent);
+	--diff-del-bg: color-mix(in srgb, var(--danger) 6%, transparent);
+	--diff-add-hl: color-mix(in srgb, var(--ok) 24%, transparent);
+	--diff-del-hl: color-mix(in srgb, var(--danger) 18%, transparent);
+	--diff-del-ink: var(--muted);
+	--diff-marker: 3px;
+	/* The focus ruler's band under the line being read. */
+	--ruler: color-mix(in srgb, var(--warn) 22%, transparent);
 
 	/*
 	 * Radii.
@@ -750,6 +813,17 @@ a {
 		0 10px 30px color-mix(in srgb, #000 45%, transparent),
 		0 1px 3px color-mix(in srgb, #000 30%, transparent);
 	--brand: #f2715a;
+}
+
+:root[data-diff='classic'] {
+	--diff-add-bg: color-mix(in srgb, var(--ok) 22%, transparent);
+	--diff-del-bg: color-mix(in srgb, var(--danger) 20%, transparent);
+	--diff-del-ink: var(--ink);
+}
+
+:root[data-words='off'] {
+	--diff-add-hl: transparent;
+	--diff-del-hl: transparent;
 }
 
 .window-pane {

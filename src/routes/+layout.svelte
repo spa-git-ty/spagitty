@@ -36,6 +36,7 @@
 	import { panels } from '$lib/panels.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import { review } from '$lib/review/store.svelte';
+	import { reading } from '$lib/reading.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
 	import DialogHost from '$lib/ui/DialogHost.svelte';
@@ -64,6 +65,9 @@
 		// stored zoom — so there is no frame at 100% before the user's zoom
 		// arrives.
 		scale.init();
+		// How code is set (FEAT-090). After the scale: it sets the code size
+		// the scale multiplies.
+		reading.init();
 		// After the metrics, so stored panel widths win over the defaults.
 		panels.init();
 		// The graph's column density, before the Graph screen lays itself out
