@@ -953,3 +953,13 @@ file either branch touched, conflicts first.
 the git directory that is removed afterwards. It is one dry run per pair, A
 merged with B: direction and strategy are worked out from it on screen, and it
 is asked for again when a branch is picked or the refs move.
+
+**Merge now** (FEAT-101) opens the commit dialog when nothing conflicts: what
+will be written, the message, and a button named for the strategy. The result
+is committed from the dry run's tree with `commit-tree`, or replayed in a
+scratch worktree for a rebase, and only then does the receiving branch move —
+with `update-ref` against the tip the plan read, or, where it is checked out,
+`merge --ff-only` in that worktree, which refuses rather than overwrite
+uncommitted work. A branch that is not checked out is merged into without
+checking anything out. Then the done state: *<target> now includes <source>*,
+Open in Graph, Merge another.

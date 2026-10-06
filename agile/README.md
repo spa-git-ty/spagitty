@@ -154,7 +154,7 @@ rather than an audit.
 | [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Open |
 | [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Open |
 | [FEAT-100](items/FEAT-100-a-merger-that-shows-the-result-first.md) | A merger that shows the result first | 1S, chrome | Open |
-| [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Backlog |
+| [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Open |
 | [FEAT-102](items/FEAT-102-resolve-every-conflict-every-way.md) | Resolve every conflict, every way | 1S, 1D | Backlog |
 | [FEAT-103](items/FEAT-103-a-rebase-that-stops-in-merger.md) | A rebase that stops, in Merger | 1S | Backlog |
 

@@ -41,6 +41,10 @@ use crate::error::{Error, Result};
 use crate::repo::workdir;
 use crate::shell;
 
+pub mod land;
+
+pub use land::{land, LandAsk, Landed, Resolution, Strategy, Target};
+
 /// How many of each side's newest commits a card lists.
 pub const NEWEST: usize = 3;
 

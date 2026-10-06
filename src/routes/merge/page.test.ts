@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, render, type Mounted } from '../../testing/mount';
 import { openRepository } from '../../testing/git-fixtures';
 import { branchRow, cleanForecast, forecast } from '../../testing/merger-fixtures';
@@ -137,4 +137,96 @@ it('says what went wrong', async () => {
 	vi.mocked(api.mergerForecast).mockRejectedValue('main and feat/tab-drag share no history');
 	view = render(Page, {});
 	await vi.waitFor(() => expect(result()).toContain('share no history'));
+});
+
+describe('landing a merge with no conflicts (FEAT-101)', () => {
+	beforeEach(() => {
+		vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast());
+		vi.mocked(api.mergerLand).mockResolvedValue({
+			target: 'main',
+			commit: '4f2c9d1'.padEnd(40, '0'),
+			short: '4f2c9d1',
+			written: 1
+		});
+	});
+
+	it('asks for the message, writes only from the dialog, and says what landed', async () => {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
+
+		click(button('Merge now'));
+		const dialog = await vi.waitFor(() => {
+			const found = view.all('[role="dialog"]')[0];
+			expect(found).toBeDefined();
+			return found;
+		});
+		expect(text(dialog)).toContain('Ready to land on main');
+		const message = view.all('#merger-message')[0] as HTMLTextAreaElement;
+		expect(message.value).toBe("Merge branch 'feat/tab-drag' into main");
+		expect(api.mergerLand).not.toHaveBeenCalled();
+
+		message.value = 'Bring the tab drag in';
+		message.dispatchEvent(new Event('input', { bubbles: true }));
+		click(button('Create merge commit'));
+
+		await vi.waitFor(() => expect(view.text()).toContain('main now includes feat/tab-drag'));
+		expect(api.mergerLand).toHaveBeenCalledWith({
+			a: 'main',
+			b: 'feat/tab-drag',
+			aTip: 'a'.repeat(40),
+			bTip: 'b'.repeat(40),
+			target: 'a',
+			newName: undefined,
+			strategy: 'merge',
+			message: 'Bring the tab drag in',
+			resolutions: []
+		});
+		expect(view.text()).toContain('One merge commit, 4f2c9d1.');
+
+		click(button('Merge another'));
+		await vi.waitFor(() => expect(view.all('[role="dialog"]')).toHaveLength(0));
+	});
+
+	it('Back writes nothing, and a refusal is shown in the dialog', async () => {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
+
+		click(button('Merge now'));
+		await vi.waitFor(() => expect(button('Back')).toBeDefined());
+		click(button('Back'));
+		await vi.waitFor(() => expect(view.all('[role="dialog"]')).toHaveLength(0));
+
+		vi.mocked(api.mergerLand).mockRejectedValue('main changed since it was read; reload and try again');
+		click(button('Merge now'));
+		await vi.waitFor(() => expect(button('Create merge commit')).toBeDefined());
+		click(button('Create merge commit'));
+		await vi.waitFor(() => expect(view.text()).toContain('main changed since it was read'));
+	});
+
+	it('a rebase keeps each message, and a squash names itself', async () => {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
+		click(view.all('button.strategy').find((b) => text(b).startsWith('Rebase'))!);
+		click(button('Merge now'));
+		await vi.waitFor(() => expect(view.text()).toContain('Each replayed commit keeps its own message.'));
+		expect(view.all('#merger-message')).toHaveLength(0);
+		click(button('Finish the rebase'));
+		await vi.waitFor(() => expect(api.mergerLand).toHaveBeenCalled());
+		expect(vi.mocked(api.mergerLand).mock.calls[0][0]).toMatchObject({ strategy: 'rebase', message: undefined });
+	});
+
+	it('into a new branch sends its name', async () => {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
+		click(button('Into a new branch'));
+		click(button('Merge now'));
+		await vi.waitFor(() => expect(button('Create merge commit')).toBeDefined());
+		click(button('Create merge commit'));
+		await vi.waitFor(() => expect(api.mergerLand).toHaveBeenCalled());
+		expect(vi.mocked(api.mergerLand).mock.calls[0][0]).toMatchObject({
+			target: 'new',
+			newName: 'merge/main-tab-drag',
+			message: "Merge branch 'feat/tab-drag' into merge/main-tab-drag"
+		});
+	});
 });

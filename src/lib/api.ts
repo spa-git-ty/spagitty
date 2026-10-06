@@ -73,7 +73,9 @@ import type {
 	Worktree,
 	WorkingCopy,
 	CheckedOut,
-	MergerForecast
+	MergerForecast,
+	MergerLandAsk,
+	MergerLanded
 } from './types';
 
 /**
@@ -348,6 +350,11 @@ export function conflictAbort(): Promise<void> {
 /** What merging `a` and `b` would do, worked out without writing it (FEAT-100). */
 export function mergerForecast(a: string, b: string): Promise<MergerForecast> {
 	return invoke('merger_forecast', { a, b });
+}
+
+/** Commit what Merger planned and move the receiving branch to it (FEAT-101). */
+export function mergerLand(ask: MergerLandAsk): Promise<MergerLanded> {
+	return invoke('merger_land', { ask });
 }
 
 /** Every tag, newest first (FEAT-051). */

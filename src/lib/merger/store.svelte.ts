@@ -8,10 +8,14 @@
  * re-derives the plan from the same forecast (`plan.ts`) and asks git nothing.
  * Picking another branch, or the refs moving under the screen, asks again.
  * Superseded answers are dropped rather than painted over a newer one.
+ *
+ * Landing (FEAT-101) goes through the commit dialog, from the plan when there
+ * is nothing to resolve: it names what will be written and takes the message,
+ * and only its button writes.
  */
 
 import * as api from '../api';
-import type { BranchRow, MergerForecast, Tag } from '../types';
+import type { BranchRow, MergerForecast, MergerLanded, MergerResolution, Tag } from '../types';
 import {
 	defaultNewName,
 	effectiveStrategy,
@@ -43,6 +47,18 @@ let error = $state<string | null>(null);
 let pickables = $state<Pickable[]>([]);
 let current = $state<string | null>(null);
 let seq = 0;
+
+/** Where the screen is: the plan, resolving, the commit dialog, or done. */
+export type Phase = 'plan' | 'resolve' | 'commit' | 'done';
+let phase = $state<Phase>('plan');
+/** Where Back from the commit dialog goes. */
+let returnTo = $state<'plan' | 'resolve'>('plan');
+/** The message as typed; null until it is, so it follows the plan. */
+let typedMessage = $state<string | null>(null);
+let landing = $state(false);
+let landError = $state<string | null>(null);
+/** What landed, and what it came from, for the done state. */
+let landed = $state<{ landed: MergerLanded; source: string; strategy: Strategy } | null>(null);
 
 const KEY = 'spagitty.merger.pick';
 
@@ -150,6 +166,92 @@ export const merger = {
 		return effectiveStrategy(this.choices, asked);
 	},
 	/** Local branch names, for telling a new branch's name is taken. */
+	get phase(): Phase {
+		return phase;
+	},
+	get landing(): boolean {
+		return landing;
+	},
+	get landError(): string | null {
+		return landError;
+	},
+	get landed() {
+		return landed;
+	},
+	/** `Merge branch 'feat' into main`, or `Squash feat into main`. */
+	get defaultMessage(): string {
+		const who = this.roles;
+		if (!who) return '';
+		return this.strategy === 'squash'
+			? `Squash ${who.sourceName} into ${who.targetName}`
+			: `Merge branch '${who.sourceName}' into ${who.targetName}`;
+	},
+	get message(): string {
+		return typedMessage ?? this.defaultMessage;
+	},
+	setMessage(text: string) {
+		typedMessage = text;
+	},
+
+	/** Open the commit dialog, from the plan or from resolving. */
+	openCommit(from: 'plan' | 'resolve' = 'plan') {
+		returnTo = from;
+		landError = null;
+		phase = 'commit';
+	},
+	/** Back out of the commit dialog, writing nothing. */
+	back() {
+		if (landing) return;
+		phase = returnTo;
+		landError = null;
+	},
+	setPhase(next: Phase) {
+		phase = next;
+	},
+
+	/**
+	 * Write it: commit the result and move the receiving branch. Refused by the
+	 * backend if either branch moved since the forecast was read.
+	 */
+	async land(resolutions: MergerResolution[] = []): Promise<boolean> {
+		const plan = forecast;
+		const who = this.roles;
+		if (!plan || !who || !a || !b || landing) return false;
+		const strategy = this.strategy;
+		landing = true;
+		landError = null;
+		try {
+			const result = await api.mergerLand({
+				a,
+				b,
+				aTip: plan.a.tip,
+				bTip: plan.b.tip,
+				target: into,
+				newName: into === 'new' ? this.newName : undefined,
+				strategy,
+				message: strategy === 'rebase' || strategy === 'ff' ? undefined : this.message,
+				resolutions
+			});
+			landed = { landed: result, source: who.sourceName, strategy };
+			phase = 'done';
+			return true;
+		} catch (e) {
+			landError = String(e);
+			return false;
+		} finally {
+			landing = false;
+		}
+	},
+
+	/** Merge another: back to the plan, read afresh. */
+	again() {
+		phase = 'plan';
+		landed = null;
+		typedMessage = null;
+		landError = null;
+		void this.load();
+	},
+
 	get localNames(): string[] {
 		return pickables.filter((option) => option.group === 'local').map((option) => option.name);
 	},
@@ -258,6 +360,12 @@ export const merger = {
 		pickables = [];
 		current = null;
 		repoPath = null;
+		phase = 'plan';
+		returnTo = 'plan';
+		typedMessage = null;
+		landing = false;
+		landError = null;
+		landed = null;
 		seq += 1;
 	}
 };
