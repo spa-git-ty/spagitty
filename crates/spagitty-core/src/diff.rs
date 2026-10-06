@@ -115,6 +115,8 @@ pub struct Hunk {
 #[serde(rename_all = "camelCase")]
 pub struct FileChange {
     pub path: String,
+    /// Where a renamed file was before. Null for every other status.
+    pub old_path: Option<String>,
     pub status: FileStatus,
     /// No line diff exists for this file: it is binary, or one side was over
     /// [`MAX_BLOB_BYTES`]. `added` and `removed` are 0 in both cases, which is
@@ -227,6 +229,7 @@ pub fn commit_diff(repo: &gix::Repository, id: &str) -> Result<CommitDiff> {
 
         files.push(FileChange {
             path: change.path,
+            old_path: change.old_path,
             status: change.status,
             binary: stats.binary,
             too_large: stats.too_large,
@@ -297,6 +300,170 @@ pub fn file_diff(repo: &gix::Repository, id: &str, path: &str) -> Result<FileDif
         removed: stats.removed,
         hunks,
     })
+}
+
+// --- Between two commits (FEAT-089) ----------------------------------------
+
+/// What changed from `from` to `to`, with line counts: the file list of a
+/// pull request read from disk, `from` being where its branch left the base.
+///
+/// The same [`FileChange`] rows [`commit_diff`] gives, and the same price:
+/// every changed blob is line-diffed once for its counts.
+pub fn changes_between(repo: &gix::Repository, from: &str, to: &str) -> Result<Vec<FileChange>> {
+    let base = find_commit(repo, from)?.id;
+    let tip = find_commit(repo, to)?;
+    let changes = tree_changes(repo, &tip, Some(base))?;
+
+    let mut files = Vec::with_capacity(changes.len());
+    for change in changes {
+        let old = blob_bytes(repo, change.old)?;
+        let new = blob_bytes(repo, change.new)?;
+        let stats = line_stats(old.as_deref(), new.as_deref());
+        files.push(FileChange {
+            path: change.path,
+            old_path: change.old_path,
+            status: change.status,
+            binary: stats.binary,
+            too_large: stats.too_large,
+            added: stats.added,
+            removed: stats.removed,
+        });
+    }
+    Ok(files)
+}
+
+/// One file between two commits, whole: every line of the new version with
+/// the removed lines in place (FEAT-089).
+///
+/// The Review room shows a file as its changed parts or as the whole file, and
+/// folds what it does not show; both are cut from these lines on the screen,
+/// so expanding a fold asks nothing more of the backend.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FullFile {
+    pub path: String,
+    pub old_path: Option<String>,
+    pub status: FileStatus,
+    pub binary: bool,
+    pub too_large: bool,
+    pub added: u32,
+    pub removed: u32,
+    /// The blob on each side, null where the file does not exist. A viewed
+    /// tick is kept against the new one, so a file changed after it was
+    /// ticked reads as unviewed.
+    pub old_blob: Option<String>,
+    pub new_blob: Option<String>,
+    pub lines: Vec<DiffLine>,
+}
+
+/// `path` from `from` to `to`, whole. `old_path` is where a renamed file was.
+pub fn full_file_between(
+    repo: &gix::Repository,
+    from: &str,
+    to: &str,
+    path: &str,
+    old_path: Option<&str>,
+) -> Result<FullFile> {
+    let base = find_commit(repo, from)?;
+    let tip = find_commit(repo, to)?;
+    let base_tree = base.tree().map_err(|e| Error::Diff(e.to_string()))?;
+    let tip_tree = tip.tree().map_err(|e| Error::Diff(e.to_string()))?;
+
+    let old_id = blob_at(&base_tree, old_path.unwrap_or(path))?;
+    let new_id = blob_at(&tip_tree, path)?;
+    let status = match (old_id, new_id) {
+        (None, None) => return Err(Error::UnknownPath(path.to_string())),
+        (None, Some(_)) => FileStatus::Added,
+        (Some(_), None) => FileStatus::Deleted,
+        (Some(_), Some(_)) if old_path.is_some_and(|old| old != path) => FileStatus::Renamed,
+        (Some(_), Some(_)) => FileStatus::Modified,
+    };
+
+    let old = blob_bytes(repo, old_id)?;
+    let new = blob_bytes(repo, new_id)?;
+    let stats = line_stats(old.as_deref(), new.as_deref());
+    let lines = if stats.binary || stats.too_large {
+        Vec::new()
+    } else {
+        full_lines(
+            old.as_deref().unwrap_or_default(),
+            new.as_deref().unwrap_or_default(),
+        )
+    };
+
+    Ok(FullFile {
+        path: path.to_string(),
+        old_path: old_path.filter(|old| *old != path).map(str::to_string),
+        status,
+        binary: stats.binary,
+        too_large: stats.too_large,
+        added: stats.added,
+        removed: stats.removed,
+        old_blob: old_id.map(|id| id.to_string()),
+        new_blob: new_id.map(|id| id.to_string()),
+        lines,
+    })
+}
+
+/// Every line of `new`, with the lines of `old` it no longer has in place —
+/// one hunk with unlimited context.
+fn full_lines(old: &[u8], new: &[u8]) -> Vec<DiffLine> {
+    let input = blob::InternedInput::new(
+        blob::sources::byte_lines(old),
+        blob::sources::byte_lines(new),
+    );
+    let diff = blob::diff_with_slider_heuristics(blob::Algorithm::Histogram, &input);
+
+    let text = |token: blob::Token| {
+        let line: &[u8] = input.interner[token];
+        let line = line.strip_suffix(b"\n").unwrap_or(line);
+        let line = line.strip_suffix(b"\r").unwrap_or(line);
+        String::from_utf8_lossy(line).into_owned()
+    };
+
+    let mut lines = Vec::with_capacity(input.after.len());
+    let (mut old_at, mut new_at) = (0u32, 0u32);
+    let context = |lines: &mut Vec<DiffLine>, old_at: &mut u32, new_at: &mut u32, until: u32| {
+        while *old_at < until {
+            lines.push(DiffLine {
+                origin: LineOrigin::Context,
+                old: Some(*old_at + 1),
+                new: Some(*new_at + 1),
+                text: text(input.before[*old_at as usize]),
+            });
+            *old_at += 1;
+            *new_at += 1;
+        }
+    };
+
+    for change in diff.hunks() {
+        context(&mut lines, &mut old_at, &mut new_at, change.before.start);
+        for index in change.before.clone() {
+            lines.push(DiffLine {
+                origin: LineOrigin::Removed,
+                old: Some(index + 1),
+                new: None,
+                text: text(input.before[index as usize]),
+            });
+        }
+        for index in change.after.clone() {
+            lines.push(DiffLine {
+                origin: LineOrigin::Added,
+                old: None,
+                new: Some(index + 1),
+                text: text(input.after[index as usize]),
+            });
+        }
+        old_at = change.before.end;
+        new_at = change.after.end;
+    }
+    context(
+        &mut lines,
+        &mut old_at,
+        &mut new_at,
+        input.before.len() as u32,
+    );
+    lines
 }
 
 // --- The working copy -----------------------------------------------------
@@ -543,6 +710,8 @@ fn to_git(repo: &gix::Repository, path: &str, bytes: Vec<u8>) -> Result<Vec<u8>>
 /// and what the public [`ChangedFile`] deliberately does not carry.
 struct RawChange {
     path: String,
+    /// Where a renamed file was before (FEAT-089).
+    old_path: Option<String>,
     status: FileStatus,
     /// `None` when the file did not exist on that side.
     old: Option<ObjectId>,
@@ -598,12 +767,14 @@ fn tree_changes(
             changes.push(match change {
                 Change::Addition { location, id, .. } => RawChange {
                     path: location.to_string(),
+                    old_path: None,
                     status: FileStatus::Added,
                     old: None,
                     new: Some(id.detach()),
                 },
                 Change::Deletion { location, id, .. } => RawChange {
                     path: location.to_string(),
+                    old_path: None,
                     status: FileStatus::Deleted,
                     old: Some(id.detach()),
                     new: None,
@@ -615,17 +786,20 @@ fn tree_changes(
                     ..
                 } => RawChange {
                     path: location.to_string(),
+                    old_path: None,
                     status: FileStatus::Modified,
                     old: Some(previous_id.detach()),
                     new: Some(id.detach()),
                 },
                 Change::Rewrite {
                     location,
+                    source_location,
                     source_id,
                     id,
                     ..
                 } => RawChange {
                     path: location.to_string(),
+                    old_path: Some(source_location.to_string()),
                     status: FileStatus::Renamed,
                     old: Some(source_id.detach()),
                     new: Some(id.detach()),

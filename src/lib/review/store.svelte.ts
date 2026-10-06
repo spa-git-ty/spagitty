@@ -14,6 +14,7 @@ import * as api from '../api';
 import type { ReviewKey } from '../api';
 import { repo } from '../repo.svelte';
 import { requests } from '../requests/store.svelte';
+import { notice } from '../ui/notice.svelte';
 import type { ForgeKind, PullRequest, ReviewSummary } from '../types';
 import { groupInbox, inboxOrder, type InboxGroup } from './inbox';
 import { keyFor, keyString, normalise, type ReviewRecord } from './record';
@@ -40,6 +41,8 @@ let records = $state<Record<string, ReviewRecord>>({});
 let room = $state<{ pr: PullRequest; key: ReviewKey } | null>(null);
 /** A row from another repository that has no clone Spagitty knows. */
 let notHere = $state<string | null>(null);
+/** A worktree being made, for which pull request (FEAT-089). */
+let makingWorktree = $state<number | null>(null);
 
 /** The repository generation the list was last read for. */
 let primedFor = -1;
@@ -332,6 +335,32 @@ export const review = {
 		room = null;
 	},
 
+	/** The pull request whose worktree is being made, or null. */
+	get makingWorktree(): number | null {
+		return makingWorktree;
+	},
+
+	/**
+	 * Put a pull request's head in a worktree of its own (FEAT-089), beside
+	 * the repository, so it can be built and run without touching your
+	 * branch. The head is fetched first when it is not here yet.
+	 */
+	async openWorktree(pr: PullRequest): Promise<string | null> {
+		if (!api.inTauri() || makingWorktree !== null) return null;
+		makingWorktree = pr.number;
+		try {
+			const fetched = await api.reviewCheckout(pr.number, pr.targetBranch, pr.headSha);
+			const path = await api.reviewWorktree(pr.number, fetched.head);
+			notice.ok(`#${pr.number} is in a worktree`, path);
+			return path;
+		} catch (e) {
+			notice.failed('The worktree could not be made', e);
+			return null;
+		} finally {
+			makingWorktree = null;
+		}
+	},
+
 	clear(): void {
 		involvedSeq += 1;
 		scope = 'repo';
@@ -347,6 +376,7 @@ export const review = {
 		records = {};
 		room = null;
 		notHere = null;
+		makingWorktree = null;
 		primedFor = -1;
 	}
 };

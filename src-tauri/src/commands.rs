@@ -20,6 +20,7 @@ use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
 use spagitty_core::graph::{GraphOrder, ROW_PITCH};
 use spagitty_core::identity::{self, Identity, Key, Scope};
 use spagitty_core::ops::{self, Integration, ResetMode, StashAction};
+use spagitty_core::pull;
 use spagitty_core::rebase::{self, Edit, Preview, Todo};
 use spagitty_core::record::{self, Executed};
 use spagitty_core::reflog;
@@ -1761,6 +1762,102 @@ pub async fn involved_pull_requests<R: Runtime>(
         forge::involved_pull_requests(account.kind, &account.host, &token, &account.user)
     })
     .await
+}
+
+/// Bring a pull request's head and its target branch into the repository,
+/// unless the head already there is the one the host reports (FEAT-089).
+///
+/// The fetch is a network operation and runs off the main thread with the
+/// session lock released: what it needs from the session — the path, the
+/// repository handle, the forge remote — is taken first.
+#[tauri::command]
+pub async fn review_checkout<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    number: u64,
+    target: String,
+    head: String,
+) -> Result<pull::PullHead> {
+    let known = accounts::load(&app);
+    let (dir, shared, remote, kind) = {
+        let guard = state.session.lock().expect("session lock");
+        let session = guard.as_ref().ok_or(Error::NoRepository)?;
+        let repository = session.repo.to_thread_local();
+        let listed: Vec<(String, String)> = remotes::remotes(&repository)
+            .into_iter()
+            .map(|remote| (remote.name, remote.url))
+            .collect();
+        let (name, url) = forge::forge_remote(&listed)
+            .cloned()
+            .ok_or_else(|| Error::Forge {
+                host: String::new(),
+                detail: "no remote to fetch the pull request from".into(),
+            })?;
+        let kind = forge::identify_with(&url, &known)
+            .map(|found| found.kind)
+            .ok_or_else(|| Error::Forge {
+                host: String::new(),
+                detail: "this repository is not on a service Spagitty can read".into(),
+            })?;
+        (session.path.clone(), session.repo.clone(), name, kind)
+    };
+
+    off_thread(move || {
+        if let Some(found) = pull::resolve(&shared.to_thread_local(), &remote, number, &target)? {
+            if pull::is_current(&found, &head) {
+                return Ok(found);
+            }
+        }
+        pull::fetch(&dir, kind, &remote, number, &target)?;
+        // Opened afresh: the refs the fetch wrote are read from disk, not from
+        // whatever the shared handle had cached.
+        pull::resolve(&repo::open(&dir)?, &remote, number, &target)?.ok_or_else(|| Error::Forge {
+            host: kind.label().to_string(),
+            detail: "the pull request's head was not fetched".into(),
+        })
+    })
+    .await
+}
+
+/// The files a pull request changes, read from disk: from its merge base to
+/// its head (FEAT-089).
+#[tauri::command(async)]
+pub fn review_files(
+    state: State<'_, AppState>,
+    from: String,
+    to: String,
+) -> Result<Vec<diff::FileChange>> {
+    state.with_session(|session| diff::changes_between(&session.repo.to_thread_local(), &from, &to))
+}
+
+/// One file of a pull request, whole, read from disk (FEAT-089).
+#[tauri::command(async)]
+pub fn review_file(
+    state: State<'_, AppState>,
+    from: String,
+    to: String,
+    path: String,
+    old_path: Option<String>,
+) -> Result<diff::FullFile> {
+    state.with_session(|session| {
+        diff::full_file_between(
+            &session.repo.to_thread_local(),
+            &from,
+            &to,
+            &path,
+            old_path.as_deref(),
+        )
+    })
+}
+
+/// Put a pull request's head in a worktree of its own and say where
+/// (FEAT-089).
+#[tauri::command(async)]
+pub fn review_worktree(state: State<'_, AppState>, number: u64, head: String) -> Result<String> {
+    state.with_session(|session| {
+        pull::open_worktree(&session.repo.to_thread_local(), number, &head)
+            .map(|path| path.to_string_lossy().into_owned())
+    })
 }
 
 /// One pull request the Review inbox wants checks and threads for.

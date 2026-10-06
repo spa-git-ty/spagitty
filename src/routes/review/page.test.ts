@@ -209,3 +209,34 @@ it('asks GitHub nothing more: its list already says', async () => {
 	await vi.waitFor(() => expect(cards()).toHaveLength(2));
 	expect(api.reviewSummaries).not.toHaveBeenCalled();
 });
+
+it('puts the pull request in a worktree of its own, fetching it first', async () => {
+	const { notice } = await import('$lib/ui/notice.svelte');
+	vi.mocked(api.reviewCheckout).mockResolvedValue({
+		head: 'f00d',
+		base: 'ba5e',
+		mergeBase: 'b0b0'
+	});
+	vi.mocked(api.reviewWorktree).mockResolvedValue('/repos/spagitty-pr-214');
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+
+	click(button('Open in worktree'));
+	await vi.waitFor(() => expect(api.reviewWorktree).toHaveBeenCalledWith(214, 'f00d'));
+	expect(api.reviewCheckout).toHaveBeenCalledWith(214, 'main', ASKED.headSha);
+	await vi.waitFor(() => expect(notice.current?.detail).toBe('/repos/spagitty-pr-214'));
+	notice.dismiss();
+});
+
+it('says what git said when the worktree cannot be made', async () => {
+	const { notice } = await import('$lib/ui/notice.svelte');
+	vi.mocked(api.reviewCheckout).mockRejectedValue(new Error('Permission denied (publickey)'));
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+
+	click(button('Open in worktree'));
+	await vi.waitFor(() => expect(notice.current?.tone).toBe('error'));
+	expect(notice.current?.detail).toContain('Permission denied');
+	expect(api.reviewWorktree).not.toHaveBeenCalled();
+	notice.dismiss();
+});

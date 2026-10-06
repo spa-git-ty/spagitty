@@ -163,6 +163,8 @@ export interface Hunk {
 /** A row in the Diff screen's file list. */
 export interface FileChange {
 	path: string;
+	/** Where a renamed file was before. Null for every other status (FEAT-089). */
+	oldPath?: string | null;
 	status: FileStatus;
 	/**
 	 * No line diff exists: the file is binary, or one side was too large. In
@@ -403,6 +405,34 @@ export interface LinePlace {
 	kind: 'added' | 'removed' | 'context';
 	old: number;
 	new: number;
+}
+
+/** The three commits a pull request read from disk is between (FEAT-089). */
+export interface PullHead {
+	head: string;
+	/** The target branch's tip. */
+	base: string;
+	/** Where the head left the target: the diff is from here. */
+	mergeBase: string;
+}
+
+/**
+ * One file of a pull request, whole (FEAT-089): every line of the new version
+ * with the removed lines in place. The changed parts and the folds between
+ * them are cut from these lines on the screen.
+ */
+export interface FullFile {
+	path: string;
+	oldPath: string | null;
+	status: FileStatus;
+	binary: boolean;
+	tooLarge: boolean;
+	added: number;
+	removed: number;
+	/** The blob on each side; a viewed tick is kept against the new one. */
+	oldBlob: string | null;
+	newBlob: string | null;
+	lines: DiffLine[];
 }
 
 /** Checks and threads the list did not carry, asked for after it (FEAT-088). */
