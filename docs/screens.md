@@ -89,10 +89,14 @@ Persistent across every screen, built with FEAT-001.
   query bar and the `Ctrl+F` shortcut; it is gone. The foot keeps the "Tags N ·
   Submodules N" line, now alone.
 
-  Rail order is the screens roughly as they are worked through — Graph, Working
-  copy, Conflicts, Branches, Stash, Pull requests, Rebase, Log — then a divider,
-  then All repositories and Settings. Log follows Rebase because it is where you
-  go to look something up rather than a step in that sequence.
+  Rail order is the screens roughly as they are worked through — Farm, then
+  Graph, Working copy, Conflicts (while there is something to resolve), Merger,
+  Branches, Pull requests, Review — then the tools, always shown since TASK-056:
+  Rebase, Log, Stash, Tags, Reflog, Badges (with the delight layer on) and All
+  repositories; then Settings. Log follows Rebase because it is where you go to
+  look something up rather than a step in that sequence. Stash, Tags and Reflog
+  are rows of their own again, as the author asked; Branches still names all
+  four in its segmented control.
 
 ## The window itself
 
@@ -169,8 +173,9 @@ move once drawn. Clicking selects; double-clicking opens the diff.
 create-branch/tag-here, reset (soft/mixed/hard, named by effect rather than by
 flag), revert, cherry-pick, rebase-onto, detached checkout and copy-SHA.
 Right-click a branch label for merge, rebase, fast-forward, rename, delete, pin,
-hide and solo. Dragging one label onto another offers the three integration
-verbs, with the gesture carrying the direction. Shift and Ctrl/Cmd build a
+hide and solo. Dragging one label onto another opens Merger's plan for the
+pair (TASK-056), the dragged branch coming into the one it was dropped on, so
+the merge is seen before it is written. Shift and Ctrl/Cmd build a
 second selection — separate from the detail panel's — that cherry-picks a group
 or rebases a range.
 
@@ -937,9 +942,9 @@ listed as *whole PR*.
 `crates/spagitty-core/src/merger.rs` behind it (FEAT-100).
 
 Any two branches, and what merging them would do, before anything is written.
-The graph's drag still merges into the branch that is checked out; Merger is
-for seeing the result first. Conflicts (1D) stays for operations git stopped
-on by itself.
+The graph's right-click menu still merges into the branch that is checked out;
+dragging one branch label onto another opens Merger with that pair (TASK-056).
+Conflicts (1D) stays for operations git stopped on by itself.
 
 **The plan is a dry run, and says so.** Branch A on the left, B on the right,
 the raised Result card between them. The receiving card is outlined in its

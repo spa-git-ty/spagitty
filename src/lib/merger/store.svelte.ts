@@ -91,6 +91,8 @@ function remember(repo: string | null) {
 }
 
 let repoPath: string | null = null;
+/** A pair asked for from elsewhere — the graph's drag — taken on the next prime. */
+let preset: { a: string; b: string; into: Into } | null = null;
 
 /** Local branches newest first, then remote-tracking branches, then tags. */
 export function pickablesFrom(rows: BranchRow[], tags: Tag[]): Pickable[] {
@@ -282,7 +284,14 @@ export const merger = {
 		}
 		const [rows, tags] = await Promise.all([api.branches(), api.tags().catch(() => [] as Tag[])]);
 		pickables = pickablesFrom(rows, tags);
-		if (changed || a === null || b === null) {
+		const wanted = preset;
+		preset = null;
+		if (wanted) {
+			a = wanted.a;
+			b = wanted.b;
+			into = wanted.into;
+			remember(path);
+		} else if (changed || a === null || b === null) {
 			const last = path ? remembered(path) : null;
 			const pair = startingPair(pickables, checkedOut, last);
 			a = pair.a;
@@ -351,6 +360,18 @@ export const merger = {
 		typedName = name;
 	},
 
+	/**
+	 * Open on this pair next time the screen primes (TASK-056): what the
+	 * graph's drag of one branch onto another asks for, B coming into A.
+	 */
+	present(next: { a: string; b: string; into: Into }) {
+		preset = next;
+		phase = 'plan';
+		landed = null;
+		typedMessage = null;
+		typedName = null;
+	},
+
 	/** For tests and previews: a pair and its forecast, as if read. */
 	seed(next: { a: string; b: string; forecast: MergerForecast; pickables?: Pickable[] }) {
 		a = next.a;
@@ -374,6 +395,7 @@ export const merger = {
 		pickables = [];
 		current = null;
 		repoPath = null;
+		preset = null;
 		phase = 'plan';
 		returnTo = 'plan';
 		typedMessage = null;

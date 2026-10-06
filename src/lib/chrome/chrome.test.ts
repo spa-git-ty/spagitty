@@ -905,7 +905,7 @@ describe('NavRail', () => {
 	});
 
 	/** Six rows where there were fourteen (TASK-045), Review (FEAT-087) and Merger (FEAT-100). */
-	it('shows the everyday screens and Settings, and nothing else', () => {
+	it('shows the everyday screens, the tools as the author chose them (TASK-056), and Settings', () => {
 		repoControl.setInfo(info());
 		repoControl.setCounts(counts({ conflicts: 0 }));
 		const view = render(NavRail, {});
@@ -918,6 +918,12 @@ describe('NavRail', () => {
 			'Branches',
 			'Pull requests',
 			'Review',
+			'Rebase',
+			'Log',
+			'Stash',
+			'Tags',
+			'Reflog',
+			'All repositories',
 			'Settings'
 		]);
 
@@ -939,6 +945,34 @@ describe('NavRail', () => {
 		expect(dot()).not.toBeNull();
 
 		requests.clear();
+		view.destroy();
+	});
+
+	/** FEAT-102: Merger's dot is a merge started there with conflicts left. */
+	it('marks Merger while a merge started there has unresolved conflicts', async () => {
+		const { merger } = await import('$lib/merger/store.svelte');
+		const { resolving } = await import('$lib/merger/resolve.svelte');
+		const { conflicts, forecast } = await import('../../testing/merger-fixtures');
+		repoControl.setInfo(info());
+		repoControl.setCounts(counts({ conflicts: 0 }));
+		const view = render(NavRail, {});
+		const dot = () => view.get('[aria-label="Merger"]').querySelector('.dot');
+
+		expect(dot()).toBeNull();
+		merger.seed({ a: 'main', b: 'feat/tab-drag', forecast: forecast() });
+		resolving.seed(conflicts());
+		merger.setPhase('resolve');
+		flushSync();
+		expect(dot()).not.toBeNull();
+
+		resolving.whole('src/lib/chrome/Tabs.svelte', 'a');
+		resolving.whole('src/lib/metrics.ts', 'a');
+		resolving.whole('CHANGELOG.md', 'b');
+		flushSync();
+		expect(dot()).toBeNull();
+
+		resolving.reset();
+		merger.reset();
 		view.destroy();
 	});
 
@@ -967,12 +1001,13 @@ describe('NavRail', () => {
 		}
 	});
 
-	it('is on Branches for Tags, Stash and Reflog too', () => {
-		for (const path of ['/branches', '/tags', '/stash', '/reflog']) {
+	it('Tags, Stash and Reflog are where you are on their own screens (TASK-056)', () => {
+		const rows: Record<string, string> = { '/branches': 'Branches', '/tags': 'Tags', '/stash': 'Stash', '/reflog': 'Reflog' };
+		for (const [path, label] of Object.entries(rows)) {
 			at(path);
 			const view = render(NavRail, {});
 			const active = view.all('.item').filter((i) => i.dataset.active === 'true');
-			expect(active.map((i) => i.getAttribute('aria-label'))).toEqual(['Branches']);
+			expect(active.map((i) => i.getAttribute('aria-label'))).toEqual([label]);
 			view.destroy();
 		}
 	});

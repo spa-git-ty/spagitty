@@ -14,6 +14,8 @@
 	import { visibility } from '$lib/graph/visibility.svelte';
 	import { selection } from '$lib/graph/selection.svelte';
 	import * as act from '$lib/graph/actions';
+	import { goto } from '$app/navigation';
+	import { merger } from '$lib/merger/store.svelte';
 	import { clockTime, fullDate, isNotable, relativeTime } from '$lib/format';
 	import {
 		LANE_STROKE,
@@ -545,10 +547,11 @@
 	// --- Dragging one label onto another ----------------------------------
 
 	/**
-	 * The signature interaction: drag a branch label onto another and choose
-	 * what that means. It is the same four operations the right-click menu
-	 * offers, asked the other way round — by pointing at the pair rather than by
-	 * naming the target.
+	 * The signature interaction: drag a branch label onto another. It opens
+	 * Merger's plan for the pair (TASK-056, the author's choice) — the dragged
+	 * branch coming into the one it was dropped on — so what the merge would
+	 * do, and whether it conflicts, is seen before anything is written. The
+	 * right-click menu still merges into the checked-out branch directly.
 	 */
 	let dragged = $state<Chip | null>(null);
 	let dropTarget = $state<string | null>(null);
@@ -560,25 +563,8 @@
 		dropTarget = null;
 		if (!source || source.name === target.name) return;
 
-		menu = {
-			x: event.clientX,
-			y: event.clientY,
-			label: `${source.name} onto ${target.name}`,
-			items: [
-				{ heading: `${source.name} → ${target.name}` },
-				...act.INTEGRATIONS.map((entry) => ({
-					id: entry.how,
-					label: entry.label,
-					danger: entry.how === 'rebase',
-					// Every one of these acts on the checked-out branch, so the
-					// target has to be checked out first. Saying so beats a
-					// refusal from git a second later.
-					disabled: !target.current,
-					reason: target.current ? undefined : `check out ${target.name} first`,
-					run: () => act.integrate(source.name, target.name, entry.how)
-				}))
-			]
-		};
+		merger.present({ a: target.name, b: source.name, into: 'a' });
+		void goto('/merge');
 	}
 
 	// --- Selection --------------------------------------------------------

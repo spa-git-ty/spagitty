@@ -234,3 +234,10 @@ describe('landing a merge with no conflicts (FEAT-101)', () => {
 		});
 	});
 });
+
+it('opens on the pair the graph’s drag asked for, the dragged branch coming in (TASK-056)', async () => {
+	merger.present({ a: 'feat/tab-drag', b: 'main', into: 'a' });
+	view = render(Page, {});
+	await vi.waitFor(() => expect(api.mergerForecast).toHaveBeenCalledWith('feat/tab-drag', 'main'));
+	expect(merger.into).toBe('a');
+});

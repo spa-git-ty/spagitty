@@ -275,7 +275,7 @@ of its own.
 | [TASK-053](items/TASK-053-the-review-room-after-first-use.md) | The review room after first use | 1R | Done |
 | [TASK-054](items/TASK-054-build-macos-on-a-mac.md) | Build macOS on a Mac | — | Done |
 | [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Open |
-| [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Backlog |
+| [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Open |
 
 ## Skipped identifiers
 

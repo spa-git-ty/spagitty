@@ -112,6 +112,12 @@ stays backward-compatible.
 
 ### Changed
 
+- **The sidebar shows the tools again.** Stash, Tags and Reflog are back as
+  places of their own, and Rebase, Log and All repositories are always there
+  rather than only while open.
+- **Dragging a branch onto another opens Merger** with that pair, so you see
+  what the merge would do — and whether it conflicts — before it happens. The
+  right-click menu still merges into the branch you are on straight away.
 - **Code in colour, as it is.** Diffs and file history colour Kotlin, Java,
   Gradle, Swift, C#, CSS, HTML, XML, Markdown, Dockerfiles and more, and each
   kind of word — keyword, string, number, function, type — has a colour of its
