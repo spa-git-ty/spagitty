@@ -14,7 +14,7 @@
  * Pure: the same lines, scope and expanded folds give the same rows.
  */
 
-import type { DiffLine, Hunk } from '../types';
+import type { ConflictFix, DiffLine, Hunk } from '../types';
 import { placeOf, type Thread } from './threads';
 
 export type Scope = 'changes' | 'whole';
@@ -140,14 +140,30 @@ export function plainHeaderOf(lines: DiffLine[], block: Block): string {
 	return first === last ? `unchanged · ${first}` : `unchanged · ${first}–${last}`;
 }
 
-/** The look of a card: a changed part, or unchanged lines shown. */
-export type Tone = 'hunk' | 'plain';
+/**
+ * The look of a card: a changed part, a changed part written while fixing a
+ * merge conflict (FEAT-092), or unchanged lines shown.
+ */
+export type Tone = 'hunk' | 'conflict' | 'plain';
+
+/** One side of a conflict, shown under its card's header. */
+export type SideName = 'main' | 'branch';
 
 export type Row =
 	| { kind: 'file'; key: string; path: string }
 	| { kind: 'note'; key: string; path: string; text: string }
 	| { kind: 'fold'; key: string; path: string; id: number; count: number }
-	| { kind: 'head'; key: string; path: string; chunk: string; tone: Tone; text: string }
+	| {
+			kind: 'head';
+			key: string;
+			path: string;
+			chunk: string;
+			tone: Tone;
+			text: string;
+			/** The conflict fix a changed part holds. */
+			fix: ConflictFix | null;
+	  }
+	| { kind: 'side'; key: string; path: string; chunk: string; tone: Tone; fix: ConflictFix; side: SideName }
 	| {
 			kind: 'line';
 			key: string;
@@ -157,6 +173,8 @@ export type Row =
 			/** The line's index in its file's lines. */
 			index: number;
 			line: DiffLine;
+			/** Written while fixing a merge conflict. */
+			fixed: boolean;
 			/** The last row of its card. */
 			last: boolean;
 	  }
@@ -180,6 +198,19 @@ export interface Laid {
 	blocks: Block[];
 	/** What to say instead of lines: binary, too large, could not be read. */
 	note?: string;
+	/** What merges wrote in it while fixing conflicts (FEAT-092). */
+	fixes?: ConflictFix[];
+}
+
+/** The fix a changed part holds: the first that wrote one of its added lines. */
+function fixOf(lines: DiffLine[], block: Block, fixes: ConflictFix[]): ConflictFix | null {
+	if (block.kind !== 'hunk' || fixes.length === 0) return null;
+	const added = new Set<number>();
+	for (let i = block.from; i < block.to; i++) {
+		const line = lines[i];
+		if (line.origin === 'added' && line.new !== null) added.add(line.new);
+	}
+	return fixes.find((fix) => fix.lines.some((n) => added.has(n))) ?? null;
 }
 
 /** The key a line's row has, which focus and jumps hold on to. */
@@ -201,8 +232,15 @@ function placesOf(path: string, line: DiffLine): string[] {
  * `threads` are by where they sit (`threadsByPlace`); each is drawn under the
  * line it is on, inside that line's card. A thread on a folded line is in the
  * Conversation card until the fold is opened.
+ *
+ * A changed part that holds a conflict fix is a card of its own tone, and
+ * `sides` says, by card, which side of the conflict is open under its header.
  */
-export function rowsOf(files: Laid[], threads: Map<string, Thread[]> = new Map()): Row[] {
+export function rowsOf(
+	files: Laid[],
+	threads: Map<string, Thread[]> = new Map(),
+	sides: ReadonlyMap<string, SideName> = new Map()
+): Row[] {
 	const rows: Row[] = [];
 	for (const file of files) {
 		const { path } = file;
@@ -216,6 +254,8 @@ export function rowsOf(files: Laid[], threads: Map<string, Thread[]> = new Map()
 			continue;
 		}
 		const lines = file.lines;
+		const fixes = file.fixes ?? [];
+		const fixed = new Set(fixes.flatMap((fix) => fix.lines));
 		if (file.blocks.length === 0) {
 			rows.push({ kind: 'note', key: `${path}\nempty`, path, text: 'The file is empty.' });
 			continue;
@@ -227,12 +267,26 @@ export function rowsOf(files: Laid[], threads: Map<string, Thread[]> = new Map()
 				continue;
 			}
 			const chunk = `${path}\n${block.from}`;
-			const tone: Tone = block.kind;
+			const fix = fixOf(lines, block, fixes);
+			const tone: Tone = fix ? 'conflict' : block.kind;
 			const text = block.kind === 'hunk' ? headerOf(lines, block) : plainHeaderOf(lines, block);
-			rows.push({ kind: 'head', key: `${chunk}\nhead`, path, chunk, tone, text });
+			rows.push({ kind: 'head', key: `${chunk}\nhead`, path, chunk, tone, text, fix });
+			const side = sides.get(chunk);
+			if (fix && side) rows.push({ kind: 'side', key: `${chunk}\nside`, path, chunk, tone, fix, side });
 			for (let index = block.from; index < block.to; index++) {
 				const line = lines[index];
-				rows.push({ kind: 'line', key: lineKey(path, index), path, chunk, tone, index, line, last: false });
+				const isFix = line.origin === 'added' && line.new !== null && fixed.has(line.new);
+				rows.push({
+					kind: 'line',
+					key: lineKey(path, index),
+					path,
+					chunk,
+					tone,
+					index,
+					line,
+					fixed: isFix,
+					last: false
+				});
 				for (const place of placesOf(path, line)) {
 					for (const thread of threads.get(place) ?? []) {
 						rows.push({

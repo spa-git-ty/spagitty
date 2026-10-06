@@ -148,6 +148,10 @@
 	--diff-marker: 3px;
 	/* The focus ruler's band under the line being read. */
 	--ruler: color-mix(in srgb, var(--warn) 22%, transparent);
+	/* Code written while fixing a merge conflict (FEAT-092): sky, the one
+	   lane colour nothing else in a diff means. */
+	--resolve: var(--lane-5);
+	--resolve-soft: color-mix(in srgb, var(--lane-5) 11%, transparent);
 
 	/*
 	 * Radii.

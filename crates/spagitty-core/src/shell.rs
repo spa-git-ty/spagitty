@@ -992,6 +992,27 @@ pub fn fetch_spawn(repo: &Path, remote: &str, prune: bool) -> Result<std::proces
 /// Fetch particular refs from one remote, and nothing else (FEAT-089): a pull
 /// request's head and its target, for the Review room. No tags — reviewing a
 /// pull request should not bring every tag down with it.
+/// A merge as git would have made it, conflict markers and all, diffed
+/// against what was committed: exactly how its conflicts were resolved
+/// (FEAT-092). Git 2.36 or later. The context is wide, so a side kept whole
+/// is shown whole however long it is.
+pub fn remerge_diff(repo: &Path, merge: &str) -> Result<String> {
+    run(
+        repo,
+        &[
+            "-c",
+            "core.quotePath=false",
+            "show",
+            "--remerge-diff",
+            "--format=",
+            "--no-color",
+            "--no-ext-diff",
+            "--unified=2000",
+            merge,
+        ],
+    )
+}
+
 pub fn fetch_refspecs(repo: &Path, remote: &str, refspecs: &[&str]) -> Result<()> {
     let mut args = vec!["fetch", "--no-tags", "--no-write-fetch-head", remote];
     args.extend_from_slice(refspecs);

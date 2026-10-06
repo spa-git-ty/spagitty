@@ -909,3 +909,10 @@ the rows in view are drawn. A second pill floats at the diff's foot with the
 review's own controls — Changes | Whole file, One | All, the focus ruler, `Aa`
 and *Viewed, next* — and the toolbar under the pane is unchanged. When the
 head cannot be fetched, the room reads the host's patch and says so.
+
+**Conflict fixes are told apart** (FEAT-092). Each merge in the pull request is
+re-done by `git show --remerge-diff`, and the lines its resolution wrote are
+followed to the head. A changed part holding them is a sky card (`--resolve`,
+the fifth lane colour) naming the merge, with each side of the conflict a
+click away; the files list marks such files and filters by Author and
+Conflict fixes.

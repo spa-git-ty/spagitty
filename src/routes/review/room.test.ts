@@ -118,6 +118,7 @@ beforeEach(() => {
 	vi.mocked(api.reviewFiles).mockResolvedValue(LISTED);
 	vi.mocked(api.reviewFile).mockImplementation(async (_from, _to, path) => whole(path));
 	vi.mocked(api.pullRequestComments).mockResolvedValue(COMMENTS);
+	vi.mocked(api.reviewConflicts).mockResolvedValue({ fixes: [], files: [], merges: [], truncated: false });
 });
 
 afterEach(() => {
@@ -295,4 +296,69 @@ it('says why when neither the head nor the patch can be read', async () => {
 	await review.open(PR);
 	await vi.waitFor(() => expect(view.text()).toContain('no remote to fetch the pull request from'));
 	expect(view.find('[aria-label="Review controls"]')).toBeNull();
+});
+
+const FIXES = {
+	fixes: [
+		{
+			path: AVATARS,
+			merge: '7c1e9a0'.padEnd(40, '0'),
+			short: '7c1e9a0',
+			summary: "Merge branch 'main' into feat",
+			lines: [15],
+			mainSide: ['main side line'],
+			branchSide: ['MEMORY.lock().get(&key)']
+		}
+	],
+	files: [{ path: AVATARS, author: false }],
+	merges: ['7c1e9a0'],
+	truncated: false
+};
+const names = () => [...files().querySelectorAll('.name')].map((name) => name.textContent);
+
+it('frames what a merge wrote as a conflict fix, with each side on asking', async () => {
+	vi.mocked(api.reviewConflicts).mockResolvedValue(FIXES);
+	await openRoom();
+	await vi.waitFor(() => expect(view.text()).toContain("Conflict fix, not in the author's own commits"));
+
+	expect(api.reviewConflicts).toHaveBeenCalledWith('m1', 'h1', 'b1');
+	expect(view.text()).toContain("Made in merge 7c1e9a0 (Merge branch 'main' into feat).");
+	expect(files().textContent).toContain('conflict fix');
+	expect(view.find('.line.fixed')?.textContent).toContain('path.exists()');
+
+	click(button("main's side"));
+	expect(view.text()).toContain('What main had here');
+	expect(view.text()).toContain('main side line');
+	click(button("branch's side"));
+	expect(view.text()).toContain('What this branch had here');
+	click(button("branch's side"));
+	expect(view.text()).not.toContain('had here');
+
+	// Kept for the inbox's chips.
+	await vi.waitFor(() => {
+		const saved = vi.mocked(api.setReviewState).mock.calls.at(-1)![1] as Record<string, unknown>;
+		expect(saved.conflictFiles).toEqual([AVATARS]);
+		expect(saved.conflictMerges).toEqual(['7c1e9a0']);
+	});
+});
+
+it('lists the files by who wrote them', async () => {
+	vi.mocked(api.reviewConflicts).mockResolvedValue(FIXES);
+	await openRoom();
+	await vi.waitFor(() => expect(files().textContent).toContain('conflict fix'));
+
+	click(button('Conflict fixes'));
+	expect(names()).toEqual(['avatars.rs']);
+	click(button('Author'));
+	expect(names()).toEqual(['types.ts']);
+	click(button('All 2'));
+	expect(names()).toEqual(['avatars.rs', 'types.ts']);
+	expect(files().textContent).toContain('Written while fixing a merge conflict');
+});
+
+it('says when conflict fixes could not be looked for', async () => {
+	vi.mocked(api.reviewConflicts).mockRejectedValue('unknown option: --remerge-diff');
+	await openRoom();
+	await vi.waitFor(() => expect(files().textContent).toContain('Conflict fixes could not be looked for.'));
+	expect(view.text()).not.toContain('Conflict fix, not');
 });

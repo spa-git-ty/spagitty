@@ -37,6 +37,7 @@ pub mod rebase;
 pub mod record;
 pub mod reflog;
 pub mod refs;
+pub mod remerge;
 pub mod remotes;
 pub mod repo;
 pub mod search;
