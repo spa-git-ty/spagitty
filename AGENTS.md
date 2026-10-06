@@ -21,7 +21,15 @@ Describe what this project is for.
 
 ## Coding rules
 
-- 
+- Prefer [`agile/`](agile/) over inventing process. An item's status there is
+  authoritative.
+- Do not invent brand copy. Approved wording lives in
+  [`docs/branding.md`](docs/branding.md). Regenerate collateral with
+  `python3 tools/make-brand.py` and `python3 tools/make-icons.py`; never
+  hand-edit the derived PNGs.
+- Never use the Git logo or Git orange (`#F05133`). Spagitty is independent.
+- Changelog entries go under `## [Unreleased]` in the same change as the work
+  (Amendment 20). Gate 6 reads that file for release notes.
 
 ## Forbidden changes
 
