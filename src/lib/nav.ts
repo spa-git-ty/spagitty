@@ -189,14 +189,19 @@ export const NAV_ITEMS: NavItem[] = [
 		href: '/branches',
 		count: 'branches',
 		group: 'work',
-		icon: 'branch',
-		also: ['/tags', '/stash', '/reflog']
+		icon: 'branch'
 	},
 	{ code: '1H', label: 'Pull requests', href: '/requests', group: 'work', icon: 'request' },
 	// FEAT-087. Reading a pull request, after browsing them.
 	{ code: '1R', label: 'Review', href: '/review', group: 'work', icon: 'review' },
-	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase', shows: 'open' },
-	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search', shows: 'open' },
+	// TASK-056: the author wanted these back where they can be seen, so the
+	// tools are always on the rail again, and Stash, Tags and Reflog are rows
+	// of their own rather than tabs Branches stands for (reversing TASK-045).
+	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase' },
+	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search' },
+	{ code: '1G', label: 'Stash', href: '/stash', group: 'tools', icon: 'stash' },
+	{ code: '1N', label: 'Tags', href: '/tags', group: 'tools', icon: 'tag' },
+	{ code: '1M', label: 'Reflog', href: '/reflog', group: 'tools', icon: 'history' },
 	{
 		code: '1P',
 		label: 'Badges',
@@ -211,8 +216,7 @@ export const NAV_ITEMS: NavItem[] = [
 		label: 'All repositories',
 		href: '/repos',
 		group: 'tools',
-		icon: 'folder',
-		shows: 'open'
+		icon: 'folder'
 	},
 	{
 		code: '1K',

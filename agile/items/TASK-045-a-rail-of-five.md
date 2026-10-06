@@ -49,6 +49,13 @@ for the layer itself.
 - An existing `settings.json` that already names a personality keeps it. Only a
   file that names none, which is every new install, starts at `Off`.
 
+**Reversed in part by TASK-056 (2026-10-06).** The author found Stash, Tags
+and Reflog missing from the rail and asked for them back, and for Rebase, Log
+and All repositories to show always. They are `tools` rows again, always
+shown, and the Branches row no longer stands for the other three. Badges and
+Conflicts are as this item left them, and so is each refs screen's segmented
+control.
+
 ## Non-scope
 
 - The rail's look. The spatial shell that follows this item redraws it; this

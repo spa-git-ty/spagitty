@@ -98,12 +98,14 @@ describe('NAV_ITEMS', () => {
 			'/requests',
 			// FEAT-087. Reading a pull request comes after browsing them.
 			'/review',
-			// TASK-045. On the rail only while open: each is started from
-			// somewhere else — the toolbar, Ctrl+F, the tab strip's `+` — and the
-			// rail shows it while it is where you are. Tags, Stash and Reflog are
-			// not rows at all any more: they are tabs of Branches.
+			// TASK-056. The tools are always on the rail again, and Stash, Tags
+			// and Reflog are rows of their own, as the author asked (reversing
+			// TASK-045, which had made them tabs of Branches).
 			'/rebase',
 			'/search',
+			'/stash',
+			'/tags',
+			'/reflog',
 			'/badges',
 			'/repos',
 			'/settings'
@@ -203,6 +205,12 @@ describe('isShown', () => {
 			'/branches',
 			'/requests',
 			'/review',
+			'/rebase',
+			'/search',
+			'/stash',
+			'/tags',
+			'/reflog',
+			'/repos',
 			'/settings'
 		]);
 	});
@@ -216,11 +224,6 @@ describe('isShown', () => {
 		expect(shown({ ...quiet, pathname: '/conflicts' })).toContain('/conflicts');
 	});
 
-	it('adds a screen that is not on the rail while it is open', () => {
-		for (const href of ['/rebase', '/search', '/repos']) {
-			expect(shown({ ...quiet, pathname: href })).toContain(href);
-		}
-	});
 
 	it('never offers Badges while the delight layer is off, even on its own screen', () => {
 		expect(shown({ ...quiet, pathname: '/badges' })).not.toContain('/badges');
@@ -235,8 +238,11 @@ describe('isShown', () => {
 describe('isItemActive', () => {
 	const branches = NAV_ITEMS.find((item) => item.href === '/branches')!;
 
-	it('puts Branches where you are on each of the refs screens', () => {
-		for (const href of REF_SCREENS) expect(isItemActive(branches, href)).toBe(true);
+	it('Stash, Tags and Reflog are where you are on their own screens, not Branches (TASK-056)', () => {
+		for (const href of REF_SCREENS.slice(1)) {
+			expect(isItemActive(branches, href)).toBe(false);
+			expect(NAV_ITEMS.filter((item) => isItemActive(item, href)).map((item) => item.href)).toEqual([href]);
+		}
 	});
 
 	it('does not put Branches where you are anywhere else', () => {
