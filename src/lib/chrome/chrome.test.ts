@@ -904,7 +904,7 @@ describe('NavRail', () => {
 		view.destroy();
 	});
 
-	/** Six rows where there were fourteen (TASK-045), and Review (FEAT-087). */
+	/** Six rows where there were fourteen (TASK-045), Review (FEAT-087) and Merger (FEAT-100). */
 	it('shows the everyday screens and Settings, and nothing else', () => {
 		repoControl.setInfo(info());
 		repoControl.setCounts(counts({ conflicts: 0 }));
@@ -914,6 +914,7 @@ describe('NavRail', () => {
 			'Farm',
 			'Graph',
 			'Working copy',
+			'Merger',
 			'Branches',
 			'Pull requests',
 			'Review',

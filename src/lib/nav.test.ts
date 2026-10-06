@@ -92,6 +92,8 @@ describe('NAV_ITEMS', () => {
 			'/',
 			'/changes',
 			'/conflicts',
+			// FEAT-100. Where a merge starts, beside where one that stopped is finished.
+			'/merge',
 			'/branches',
 			'/requests',
 			// FEAT-087. Reading a pull request comes after browsing them.
@@ -197,6 +199,7 @@ describe('isShown', () => {
 			'/farm',
 			'/',
 			'/changes',
+			'/merge',
 			'/branches',
 			'/requests',
 			'/review',

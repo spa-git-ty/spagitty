@@ -1381,3 +1381,64 @@ export const DESKTOP_THEME_EVENT = 'desktop-theme-changed';
 
 export const NETWORK_PROGRESS_EVENT = 'network-progress';
 export const NETWORK_DONE_EVENT = 'network-done';
+
+// --- Merger (FEAT-100) ----------------------------------------------------
+
+/** What a name given to Merger turned out to be. Only `local` can receive a merge. */
+export type MergerRefKind = 'local' | 'remote' | 'tag' | 'commit';
+
+export interface MergerCommit {
+	id: string;
+	short: string;
+	summary: string;
+	/** Unix seconds. */
+	time: number;
+}
+
+/** One of the two branches. */
+export interface MergerSide {
+	name: string;
+	kind: MergerRefKind;
+	tip: string;
+	short: string;
+	/** Commits since the two split. */
+	ahead: number;
+	/** The newest of them, newest first, at most three. */
+	newest: MergerCommit[];
+	/** How many of them touch a conflicted file: the most times a rebase of this side can stop. */
+	touching: number;
+	/** When the tip was committed, unix seconds. */
+	time: number;
+	/** The worktree it is checked out in, when it is. */
+	checkedOut: string | null;
+}
+
+/** Which side changed a file since the split, and whether the two collide. */
+export type MergerTouch = 'conflict' | 'both' | 'a' | 'b';
+
+export interface MergerFile {
+	path: string;
+	touch: MergerTouch;
+	addedByA: boolean;
+	addedByB: boolean;
+	deletedByA: boolean;
+	deletedByB: boolean;
+	/** Conflict regions; one for a file that conflicts as a whole. */
+	conflicts: number;
+	kind: ConflictKind | null;
+}
+
+/** What merging A and B would do, worked out without writing it. */
+export interface MergerForecast {
+	a: MergerSide;
+	b: MergerSide;
+	base: string;
+	baseShort: string;
+	/** A's history holds all of B. */
+	aHasB: boolean;
+	bHasA: boolean;
+	files: MergerFile[];
+	/** Conflict regions across every file. */
+	conflicts: number;
+	method: 'mergeTree' | 'worktree';
+}

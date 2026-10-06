@@ -72,7 +72,8 @@ import type {
 	StashEntry,
 	Worktree,
 	WorkingCopy,
-	CheckedOut
+	CheckedOut,
+	MergerForecast
 } from './types';
 
 /**
@@ -342,6 +343,11 @@ export function conflictContinue(): Promise<void> {
 /** Abandon it and put the repository back. */
 export function conflictAbort(): Promise<void> {
 	return invoke('conflict_abort');
+}
+
+/** What merging `a` and `b` would do, worked out without writing it (FEAT-100). */
+export function mergerForecast(a: string, b: string): Promise<MergerForecast> {
+	return invoke('merger_forecast', { a, b });
 }
 
 /** Every tag, newest first (FEAT-051). */

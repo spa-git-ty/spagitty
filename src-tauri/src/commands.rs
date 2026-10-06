@@ -19,6 +19,7 @@ use spagitty_core::forge::review::ReviewVerdict;
 use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
 use spagitty_core::graph::{GraphOrder, ROW_PITCH};
 use spagitty_core::identity::{self, Identity, Key, Scope};
+use spagitty_core::merger;
 use spagitty_core::ops::{self, Integration, ResetMode, StashAction};
 use spagitty_core::pull;
 use spagitty_core::rebase::{self, Edit, Preview, Todo};
@@ -1015,6 +1016,25 @@ pub fn conflict_abort(state: State<'_, AppState>) -> Result<()> {
         let repo = session.repo.to_thread_local();
         conflicts::abort_operation(&repo, conflicts::operation(&repo))
     })
+}
+
+/// What merging two branches would do, worked out without writing it
+/// (FEAT-100).
+///
+/// A merge of a large history takes git a while, so the session is let go
+/// first and the merge is worked out on its own thread, as for the review's
+/// re-done merges.
+#[tauri::command]
+pub async fn merger_forecast(
+    state: State<'_, AppState>,
+    a: String,
+    b: String,
+) -> Result<merger::Forecast> {
+    let shared = {
+        let guard = state.lock_session("merger_forecast");
+        guard.as_ref().ok_or(Error::NoRepository)?.repo.clone()
+    };
+    off_thread(move || merger::forecast(&shared.to_thread_local(), &a, &b)).await
 }
 
 /// Every tag, newest first (FEAT-051).

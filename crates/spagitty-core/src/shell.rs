@@ -1332,6 +1332,392 @@ pub fn submodule_deinit(repo: &Path, path: &str, force: bool) -> Result<String> 
     run(repo, &args)
 }
 
+// --- Merger (FEAT-100) -------------------------------------------------------
+//
+// Merger works out a merge before anything is written, and writes the result
+// without checking anything out. Both halves are plumbing: `merge-tree` for the
+// dry run, a private index and `commit-tree` for the result, and a ref update
+// to land it. Several of these exit 1 to answer "no" rather than to fail, so
+// they run through `run_extra`, which is told which exit codes are answers.
+
+/// What a Merger command needs beyond its arguments.
+#[derive(Default)]
+struct Extra<'a> {
+    env: &'a [(&'a str, &'a OsStr)],
+    stdin: Option<&'a [u8]>,
+    /// Exit codes besides 0 that are an answer rather than a failure.
+    ok: &'a [i32],
+}
+
+/// Run `git` with `extra`, returning its exit code and stdout.
+fn run_extra(repo: &Path, args: &[&str], extra: Extra<'_>) -> Result<(i32, String)> {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
+    let started = Instant::now();
+    let mut command = command(repo, args);
+    command.envs(extra.env.iter().copied());
+    command
+        .stdin(if extra.stdin.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let output = command.spawn().and_then(|mut child| {
+        if let Some(input) = extra.stdin {
+            // Dropped at the end of the block, closing stdin.
+            let mut stdin = child.stdin.take().expect("piped stdin");
+            stdin.write_all(input)?;
+        }
+        child.wait_with_output()
+    });
+    let elapsed = started.elapsed().as_millis() as u64;
+
+    let output = match output {
+        Ok(output) => output,
+        Err(error) => {
+            record::push(
+                args,
+                Outcome::Failed {
+                    code: None,
+                    stderr: error.to_string(),
+                },
+                elapsed,
+            );
+            return Err(error.into());
+        }
+    };
+
+    let code = output.status.code().unwrap_or(-1);
+    if !output.status.success() && !extra.ok.contains(&code) {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        record::push(
+            args,
+            Outcome::Failed {
+                code: output.status.code(),
+                stderr: stderr.clone(),
+            },
+            elapsed,
+        );
+        return Err(Error::Git {
+            command: args.join(" "),
+            stderr,
+        });
+    }
+
+    record::push(args, Outcome::Ok, elapsed);
+    Ok((code, String::from_utf8_lossy(&output.stdout).into_owned()))
+}
+
+/// The installed git's major and minor version, when it says.
+pub fn version_number(repo: &Path) -> Option<(u32, u32)> {
+    parse_version(&version(repo).ok()?)
+}
+
+/// `git version 2.55.0.windows.3` → `(2, 55)`.
+pub(crate) fn parse_version(text: &str) -> Option<(u32, u32)> {
+    let number = text
+        .split_whitespace()
+        .find(|word| word.starts_with(|c: char| c.is_ascii_digit()))?;
+    let mut parts = number.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    Some((major, minor))
+}
+
+/// Where two commits' histories meet. `None` when they share none.
+pub fn merge_base(repo: &Path, a: &str, b: &str) -> Result<Option<String>> {
+    let (code, out) = run_extra(
+        repo,
+        &["merge-base", a, b],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok((code == 0).then(|| out.trim().to_string()))
+}
+
+/// Whether `ancestor` is in `of`'s history (a commit is its own ancestor).
+pub fn is_ancestor(repo: &Path, ancestor: &str, of: &str) -> Result<bool> {
+    let (code, _) = run_extra(
+        repo,
+        &["merge-base", "--is-ancestor", ancestor, of],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok(code == 0)
+}
+
+/// The commit `revision` names, in full. A name that is not a commit is
+/// [`Error::UnknownCommit`], so a screen can say which one.
+pub fn commit_id(repo: &Path, revision: &str) -> Result<String> {
+    let spec = format!("{revision}^{{commit}}");
+    let (code, out) = run_extra(
+        repo,
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            "--end-of-options",
+            &spec,
+        ],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    if code != 0 {
+        return Err(Error::UnknownCommit(revision.to_string()));
+    }
+    Ok(out.trim().to_string())
+}
+
+/// How many commits `range` (`base..tip`) holds.
+pub fn count_commits(repo: &Path, range: &str) -> Result<usize> {
+    let out = run(repo, &["rev-list", "--count", range, "--"])?;
+    Ok(out.trim().parse().unwrap_or(0))
+}
+
+/// How many commits of `range` touch any of `paths`.
+pub fn count_commits_touching(repo: &Path, range: &str, paths: &[String]) -> Result<usize> {
+    let args = with_paths(&["rev-list", "--count", range], paths);
+    let out = run(repo, &args)?;
+    Ok(out.trim().parse().unwrap_or(0))
+}
+
+/// The newest `limit` commits of `range`, one per record: id, short id,
+/// subject and commit time, separated by unit separators.
+pub fn commit_records(repo: &Path, range: &str, limit: usize) -> Result<String> {
+    let limit = format!("-n{limit}");
+    run(
+        repo,
+        &[
+            "log",
+            "--format=%H%x1f%h%x1f%s%x1f%ct%x1e",
+            &limit,
+            range,
+            "--",
+        ],
+    )
+}
+
+/// Every path that differs between two commits, NUL-separated status and
+/// path pairs. Renames are not followed: a renamed file is a delete and an add,
+/// which is what it is on each side of a merge base.
+pub fn changed_names(repo: &Path, from: &str, to: &str) -> Result<String> {
+    run(
+        repo,
+        &[
+            "diff",
+            "--name-status",
+            "-z",
+            "--no-renames",
+            from,
+            to,
+            "--",
+        ],
+    )
+}
+
+/// Merge two commits without touching the index, the working tree or a ref
+/// (git 2.38). Conflicts are written into the result with diff3 markers, so
+/// each region carries what the merge base had there.
+///
+/// Returns whether it merged cleanly, and git's `-z` output: the tree, the
+/// conflicted stages, and the messages.
+pub fn merge_tree(repo: &Path, ours: &str, theirs: &str) -> Result<(bool, String)> {
+    let (code, out) = run_extra(
+        repo,
+        &[
+            "-c",
+            "merge.conflictStyle=diff3",
+            "merge-tree",
+            "--write-tree",
+            "-z",
+            "--messages",
+            ours,
+            theirs,
+        ],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok((code == 0, out))
+}
+
+/// Store `bytes` as a blob, filtered as a file at `path` would be.
+pub fn hash_blob(repo: &Path, path: &str, bytes: &[u8]) -> Result<String> {
+    let flag = format!("--path={path}");
+    let (_, out) = run_extra(
+        repo,
+        &["hash-object", "-w", "--stdin", &flag],
+        Extra {
+            stdin: Some(bytes),
+            ..Extra::default()
+        },
+    )?;
+    Ok(out.trim().to_string())
+}
+
+/// `tree` with some entries replaced, as a new tree.
+///
+/// Built in an index of its own (`index`, a file nobody else reads), so the
+/// repository's index is never read or written. `entries` is
+/// `update-index --index-info` input: `<mode> <blob>\t<path>` per line, and a
+/// mode of 0 removes the path.
+pub fn tree_with(repo: &Path, index: &Path, tree: &str, entries: &str) -> Result<String> {
+    let env: [(&str, &OsStr); 1] = [("GIT_INDEX_FILE", index.as_os_str())];
+    run_extra(
+        repo,
+        &["read-tree", tree],
+        Extra {
+            env: &env,
+            ..Extra::default()
+        },
+    )?;
+    run_extra(
+        repo,
+        &["update-index", "--index-info"],
+        Extra {
+            env: &env,
+            stdin: Some(entries.as_bytes()),
+            ..Extra::default()
+        },
+    )?;
+    let (_, out) = run_extra(
+        repo,
+        &["write-tree"],
+        Extra {
+            env: &env,
+            ..Extra::default()
+        },
+    )?;
+    Ok(out.trim().to_string())
+}
+
+/// A commit of `tree` with `parents`, and `message` read from stdin.
+///
+/// `commit-tree` reads `commit.gpgSign` itself, so a signed repository gets a
+/// signed merge the same as from `git merge`.
+pub fn commit_tree(repo: &Path, tree: &str, parents: &[&str], message: &str) -> Result<String> {
+    let mut args = vec!["commit-tree", tree];
+    for parent in parents {
+        args.push("-p");
+        args.push(parent);
+    }
+    args.push("-F");
+    args.push("-");
+    let (_, out) = run_extra(
+        repo,
+        &args,
+        Extra {
+            stdin: Some(message.as_bytes()),
+            ..Extra::default()
+        },
+    )?;
+    Ok(out.trim().to_string())
+}
+
+/// Move a branch that is not checked out from `old` to `new`, and refuse if
+/// it is no longer at `old` — somebody else moved it since it was read.
+pub fn move_branch(repo: &Path, branch: &str, new: &str, old: &str, reason: &str) -> Result<()> {
+    let name = format!("refs/heads/{branch}");
+    run(repo, &["update-ref", "-m", reason, &name, new, old])?;
+    Ok(())
+}
+
+/// Create `name` at `commit`, tracking nothing. Refused if it exists.
+pub fn branch_at(repo: &Path, name: &str, commit: &str) -> Result<()> {
+    run(repo, &["branch", "--no-track", name, commit])?;
+    Ok(())
+}
+
+/// Bring the branch checked out in `worktree` forward to `commit`, or refuse.
+/// git refuses rather than overwrite uncommitted changes.
+pub fn fast_forward(worktree: &Path, commit: &str) -> Result<()> {
+    run(worktree, &["merge", "--ff-only", commit])?;
+    Ok(())
+}
+
+/// Whether `name` is a name a branch can have. git's rule, so the two never
+/// disagree.
+pub fn valid_branch_name(repo: &Path, name: &str) -> Result<bool> {
+    let (code, _) = run_extra(
+        repo,
+        &["check-ref-format", "--branch", name],
+        Extra {
+            ok: &[1, 128],
+            ..Extra::default()
+        },
+    )?;
+    Ok(code == 0)
+}
+
+/// Merge `source` into what is checked out in a scratch worktree, stopping
+/// before the commit. The dry run for a git older than 2.38, which has no
+/// `merge-tree --write-tree`. Returns whether it merged cleanly.
+pub fn scratch_merge(scratch: &Path, source: &str) -> Result<bool> {
+    let (code, _) = run_extra(
+        scratch,
+        &[
+            "-c",
+            "merge.conflictStyle=diff3",
+            "merge",
+            "--no-commit",
+            "--no-ff",
+            "--no-edit",
+            source,
+        ],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok(code == 0)
+}
+
+/// The index's unmerged entries, `-z`: `<mode> <blob> <stage>\t<path>`.
+pub fn unmerged_entries(repo: &Path) -> Result<String> {
+    run(repo, &["ls-files", "-u", "-z"])
+}
+
+/// Stage everything in a scratch worktree and write its index as a tree.
+pub fn write_all_as_tree(scratch: &Path) -> Result<String> {
+    run(scratch, &["add", "-A"])?;
+    Ok(run(scratch, &["write-tree"])?.trim().to_string())
+}
+
+/// Who last changed lines `start..=end` of `path` in `range` (`base..tip`),
+/// `--porcelain`. Lines nobody in the range changed belong to the boundary.
+pub fn blame_lines(
+    repo: &Path,
+    range: &str,
+    path: &str,
+    start: usize,
+    end: usize,
+) -> Result<String> {
+    let lines = format!("-L{start},{end}");
+    run(repo, &["blame", "--porcelain", &lines, range, "--", path])
+}
+
+/// The newest commit in `range` that touched `path`: id, short id and
+/// subject, separated by unit separators. Empty when none did.
+pub fn last_touch(repo: &Path, range: &str, path: &str) -> Result<String> {
+    run(
+        repo,
+        &["log", "-1", "--format=%H%x1f%h%x1f%s", range, "--", path],
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
