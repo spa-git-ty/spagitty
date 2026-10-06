@@ -57,18 +57,32 @@ fn main() {
 
     let (opened, _) = time("Open the repository", || repo::open(&path).expect("open"));
     let repository = opened;
-    time("Repository info (header, status strip)", || repo::info(&repository).expect("info"));
-    let (refs, _) = time("Index every ref", || RefIndex::build(&repository).expect("refs"));
-    time("Counts (status strip)", || status::counts(&repository, &refs).expect("counts"));
-    time("Working copy status", || status::working_copy(&repository).expect("status"));
-    time("Branches list", || branches::list(&repository).expect("branches"));
+    time("Repository info (header, status strip)", || {
+        repo::info(&repository).expect("info")
+    });
+    let (refs, _) = time("Index every ref", || {
+        RefIndex::build(&repository).expect("refs")
+    });
+    time("Counts (status strip)", || {
+        status::counts(&repository, &refs).expect("counts")
+    });
+    time("Working copy status", || {
+        status::working_copy(&repository).expect("status")
+    });
+    time("Branches list", || {
+        branches::list(&repository).expect("branches")
+    });
 
     let tips = graph::all_tips(&repository).expect("tips");
     time("Graph: first screen (120 rows)", || {
         let mut rows = 0;
         graph::walk(&repository, tips.clone(), &refs, |_| {
             rows += 1;
-            if rows >= 120 { Flow::Stop } else { Flow::Continue }
+            if rows >= 120 {
+                Flow::Stop
+            } else {
+                Flow::Continue
+            }
         })
         .expect("walk")
     });
@@ -78,7 +92,9 @@ fn main() {
     println!("|   (commits walked: {walked}) | | |");
 
     let head = repository.head_id().expect("head").to_string();
-    time("Select a commit (detail)", || diff::commit_detail(&repository, &head).expect("detail"));
+    time("Select a commit (detail)", || {
+        diff::commit_detail(&repository, &head).expect("detail")
+    });
     let (listed, _) = time("Large commit: file list", || {
         diff::commit_diff(&repository, &big_commit).expect("commit diff")
     });
@@ -88,9 +104,13 @@ fn main() {
     });
     let lines: usize = file.hunks.iter().map(|hunk| hunk.lines.len()).sum();
     println!("|   (diff lines: {lines}) | | |");
-    let (blamed_file, _) = time("Blame a long file", || blame::file(&repository, &blamed, "").expect("blame"));
+    let (blamed_file, _) = time("Blame a long file", || {
+        blame::file(&repository, &blamed, "").expect("blame")
+    });
     println!("|   (lines blamed: {}) | | |", blamed_file.lines.len());
-    time("File history (200 entries)", || blame::history(&repository, &blamed, 200).expect("history"));
+    time("File history (200 entries)", || {
+        blame::history(&repository, &blamed, 200).expect("history")
+    });
 
     let base = repository
         .rev_parse_single("HEAD~500")

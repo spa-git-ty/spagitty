@@ -96,7 +96,9 @@ fn parse(text: &str) -> Vec<Remerged> {
             in_hunk = false;
             continue;
         }
-        let Some(file) = files.last_mut() else { continue };
+        let Some(file) = files.last_mut() else {
+            continue;
+        };
         if line.starts_with("@@ ") {
             // `@@ -a,b +c,d @@`: the committed side starts at `c`.
             at = line
@@ -231,11 +233,18 @@ fn id(text: &str) -> Result<ObjectId> {
 
 /// Is `candidate` `tip` or one of its ancestors?
 fn is_ancestor(repo: &gix::Repository, candidate: ObjectId, tip: ObjectId) -> bool {
-    candidate == tip || repo.merge_base(candidate, tip).is_ok_and(|base| base.detach() == candidate)
+    candidate == tip
+        || repo
+            .merge_base(candidate, tip)
+            .is_ok_and(|base| base.detach() == candidate)
 }
 
 /// The two-parent merges between `from` and `to`, newest first.
-fn merges(repo: &gix::Repository, from: ObjectId, to: ObjectId) -> Result<Vec<(ObjectId, ObjectId, ObjectId)>> {
+fn merges(
+    repo: &gix::Repository,
+    from: ObjectId,
+    to: ObjectId,
+) -> Result<Vec<(ObjectId, ObjectId, ObjectId)>> {
     let walk = repo
         .rev_walk([to])
         .with_hidden([from])
@@ -295,18 +304,20 @@ pub fn conflicts(
     let mut added_in = |path: &str| -> (BTreeSet<u32>, bool) {
         added
             .entry(path.to_string())
-            .or_insert_with(|| match diff::full_file_between(repo, merge_base, head, path, None) {
-                Ok(file) => {
-                    let lines: BTreeSet<u32> = file
-                        .lines
-                        .iter()
-                        .filter(|line| line.origin == LineOrigin::Added)
-                        .filter_map(|line| line.new)
-                        .collect();
-                    (lines, file.removed > 0)
-                }
-                Err(_) => (BTreeSet::new(), false),
-            })
+            .or_insert_with(
+                || match diff::full_file_between(repo, merge_base, head, path, None) {
+                    Ok(file) => {
+                        let lines: BTreeSet<u32> = file
+                            .lines
+                            .iter()
+                            .filter(|line| line.origin == LineOrigin::Added)
+                            .filter_map(|line| line.new)
+                            .collect();
+                        (lines, file.removed > 0)
+                    }
+                    Err(_) => (BTreeSet::new(), false),
+                },
+            )
             .clone()
     };
 
@@ -423,11 +434,17 @@ diff --git a/b.ts b/b.ts
     fn a_remerge_diff_is_read_file_by_file_with_the_merge_numbering() {
         let files = parse(REMERGE);
         assert_eq!(
-            files.iter().map(|file| file.path.as_str()).collect::<Vec<_>>(),
+            files
+                .iter()
+                .map(|file| file.path.as_str())
+                .collect::<Vec<_>>(),
             vec!["src/a.rs", "b.ts"]
         );
-        let numbered: Vec<(char, Option<u32>)> =
-            files[0].lines.iter().map(|line| (line.origin, line.number)).collect();
+        let numbered: Vec<(char, Option<u32>)> = files[0]
+            .lines
+            .iter()
+            .map(|line| (line.origin, line.number))
+            .collect();
         assert_eq!(numbered[0], (' ', Some(3)));
         assert_eq!(numbered[6], ('+', Some(4)));
         assert_eq!(numbered[7], ('+', Some(5)));
@@ -468,7 +485,10 @@ diff --git a/b.ts b/b.ts
         let text = "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1,7 +1,1 @@\n-<<<<<<< ours\n-A\n-||||||| base\n-O\n-=======\n-B\n->>>>>>> theirs\n+AB\n";
         let found = regions(&parse(text)[0]);
         assert_eq!(found.len(), 1);
-        assert_eq!((found[0].first.clone(), found[0].second.clone()), (vec!["A".to_string()], vec!["B".to_string()]));
+        assert_eq!(
+            (found[0].first.clone(), found[0].second.clone()),
+            (vec!["A".to_string()], vec!["B".to_string()])
+        );
         assert_eq!(found[0].lines, vec![1]);
     }
 
@@ -502,23 +522,44 @@ diff --git a/b.ts b/b.ts
         save(&fixture, "base");
 
         fixture.git(&["checkout", "-q", "-b", "feature"]);
-        fixture.write("a.rs", &(lines.join("\n").replace("line 5", "branch five") + "\n"));
+        fixture.write(
+            "a.rs",
+            &(lines.join("\n").replace("line 5", "branch five") + "\n"),
+        );
         fixture.write("b.ts", "interface A {\n\tname: string;\n\tx: number;\n}\n");
         save(&fixture, "feature work");
 
         fixture.git(&["checkout", "-q", "main"]);
-        fixture.write("a.rs", &(lines.join("\n").replace("line 5", "main five") + "\n"));
+        fixture.write(
+            "a.rs",
+            &(lines.join("\n").replace("line 5", "main five") + "\n"),
+        );
         fixture.write("b.ts", "interface A {\n\tname: string;\n\ty: number;\n}\n");
         save(&fixture, "main work");
 
         fixture.git(&["checkout", "-q", "feature"]);
-        assert!(!try_git(&fixture, &["merge", "-q", "main"]), "the merge conflicts");
-        fixture.write("a.rs", &(lines.join("\n").replace("line 5", "merged five") + "\n"));
-        fixture.write("b.ts", "interface A {\n\tname: string;\n\tx: number;\n\ty: number;\n}\n");
+        assert!(
+            !try_git(&fixture, &["merge", "-q", "main"]),
+            "the merge conflicts"
+        );
+        fixture.write(
+            "a.rs",
+            &(lines.join("\n").replace("line 5", "merged five") + "\n"),
+        );
+        fixture.write(
+            "b.ts",
+            "interface A {\n\tname: string;\n\tx: number;\n\ty: number;\n}\n",
+        );
         fixture.git(&["add", "-A"]);
         fixture.git(&["commit", "-q", "--no-edit"]);
 
-        fixture.write("a.rs", &format!("top\n{}\n", lines.join("\n").replace("line 5", "merged five")));
+        fixture.write(
+            "a.rs",
+            &format!(
+                "top\n{}\n",
+                lines.join("\n").replace("line 5", "merged five")
+            ),
+        );
         save(&fixture, "a line on top");
         fixture
     }
@@ -536,10 +577,17 @@ diff --git a/b.ts b/b.ts
         assert_eq!(base, target, "main is in the branch now");
 
         let found = conflicts(&repo, &fixture.at(""), &base, &head, &target).unwrap();
-        assert_eq!(found.merges, vec![short_id(&id(&fixture.rev("feature~1")).unwrap())]);
+        assert_eq!(
+            found.merges,
+            vec![short_id(&id(&fixture.rev("feature~1")).unwrap())]
+        );
         assert!(!found.truncated);
 
-        let a = found.fixes.iter().find(|fix| fix.path == "a.rs").expect("a.rs");
+        let a = found
+            .fixes
+            .iter()
+            .find(|fix| fix.path == "a.rs")
+            .expect("a.rs");
         // Line 5 in the merge, line 6 at the head under the new top line.
         assert_eq!(a.lines, vec![6]);
         assert_eq!(a.main_side, vec!["main five".to_string()]);
@@ -548,14 +596,24 @@ diff --git a/b.ts b/b.ts
 
         // The field the branch added is in the resolution: from main's side,
         // the pull request adds only what the merge wrote.
-        let b = found.fixes.iter().find(|fix| fix.path == "b.ts").expect("b.ts");
+        let b = found
+            .fixes
+            .iter()
+            .find(|fix| fix.path == "b.ts")
+            .expect("b.ts");
         assert_eq!(b.lines, vec![3]);
 
         assert_eq!(
             found.files,
             vec![
-                FixedFile { path: "a.rs".into(), author: true },
-                FixedFile { path: "b.ts".into(), author: false },
+                FixedFile {
+                    path: "a.rs".into(),
+                    author: true
+                },
+                FixedFile {
+                    path: "b.ts".into(),
+                    author: false
+                },
             ]
         );
     }
