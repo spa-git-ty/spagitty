@@ -334,6 +334,15 @@ export function afterLabel(strategy: Strategy): string {
 	}
 }
 
+/** One conflict in the commit dialog, with what was chosen for it. */
+export interface SummaryRow {
+	where: string;
+	label: string;
+	badges: SideKey[];
+	/** Typed by hand: drawn in the hand-edit colour. */
+	mine: boolean;
+}
+
 /** Split a path into the folder, drawn muted, and the name. */
 export function splitPath(path: string): { dir: string; name: string } {
 	const cut = path.lastIndexOf('/') + 1;

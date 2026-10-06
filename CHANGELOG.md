@@ -22,7 +22,8 @@ stays backward-compatible.
   fast-forward. Before anything is written it shows which branch receives the
   result, how many commits come in, every file that changes, and whether and
   where they conflict, found by a dry run that leaves your repository as it
-  was.
+  was. Merge now lands it — into a branch that is not checked out, too,
+  without checking it out or touching your working copy.
 - **Review, a place to read pull requests.** A new screen beside Pull
   requests, with an eye on the sidebar and a dot while a review is waiting on
   you. Its inbox groups pull requests by what they need from you — asked to

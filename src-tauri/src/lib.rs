@@ -101,6 +101,7 @@ pub fn run() {
             commands::conflict_continue,
             commands::conflict_abort,
             commands::merger_forecast,
+            commands::merger_land,
             commands::remotes,
             commands::remote_add,
             commands::remote_rename,

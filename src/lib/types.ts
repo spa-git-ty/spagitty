@@ -1442,3 +1442,32 @@ export interface MergerForecast {
 	conflicts: number;
 	method: 'mergeTree' | 'worktree';
 }
+
+/** What lands at one conflicted path (FEAT-101): text, or one side whole. */
+export interface MergerResolution {
+	path: string;
+	text?: string;
+	/** A is `ours`, B is `theirs`. A side with no version deletes the path. */
+	take?: 'ours' | 'theirs';
+}
+
+/** Everything a merge needs to land, as the plan read it. */
+export interface MergerLandAsk {
+	a: string;
+	b: string;
+	aTip: string;
+	bTip: string;
+	target: 'a' | 'b' | 'new';
+	newName?: string;
+	strategy: 'merge' | 'squash' | 'rebase' | 'ff';
+	message?: string;
+	resolutions: MergerResolution[];
+}
+
+export interface MergerLanded {
+	target: string;
+	commit: string;
+	short: string;
+	/** Commits written: 1, the replayed ones, or 0 for a fast-forward. */
+	written: number;
+}

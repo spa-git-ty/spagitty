@@ -1037,6 +1037,15 @@ pub async fn merger_forecast(
     off_thread(move || merger::forecast(&shared.to_thread_local(), &a, &b)).await
 }
 
+/// Land a merge Merger planned (FEAT-101): commit the result and move the
+/// receiving branch to it, refusing if either branch moved since the plan.
+///
+/// It writes, so it holds the session like every other write.
+#[tauri::command(async)]
+pub fn merger_land(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Landed> {
+    state.with_session("merger_land", |session| merger::land(&session.repo.to_thread_local(), &ask))
+}
+
 /// Every tag, newest first (FEAT-051).
 #[tauri::command(async)]
 pub fn tags(state: State<'_, AppState>) -> Result<Vec<tags::Tag>> {

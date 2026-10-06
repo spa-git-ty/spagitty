@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { goto } from '$app/navigation';
+	import LandDialog from '$lib/merger/LandDialog.svelte';
 	import MergerPlan from '$lib/merger/MergerPlan.svelte';
 	import { merger } from '$lib/merger/store.svelte';
 	import { repo } from '$lib/repo.svelte';
@@ -11,19 +13,27 @@
 	 *
 	 * The forecast is asked for again whenever the refs move — a commit, a
 	 * fetch, a checkout elsewhere — because a plan for commits that are no
-	 * longer the branches' tips is a plan for some other merge.
+	 * longer the branches' tips is a plan for some other merge. Not while the
+	 * commit dialog or the done state is up: those describe what is being, or
+	 * was, written, and the merge itself moves the refs.
 	 */
 	$effect(() => {
 		const info = repo.info;
 		void repo.token;
 		if (!info) return;
-		untrack(() => merger.prime(info.path, info.head.branch ?? null));
+		untrack(() => {
+			if (merger.phase === 'commit' || merger.phase === 'done') return;
+			void merger.prime(info.path, info.head.branch ?? null);
+		});
 	});
 </script>
 
 <div class="screen">
 	{#if repo.info}
-		<MergerPlan />
+		<MergerPlan onmerge={() => merger.openCommit('plan')} busy={merger.landing} />
+		{#if merger.phase === 'commit' || merger.phase === 'done'}
+			<LandDialog oncommit={() => void merger.land()} ongraph={() => void goto('/')} />
+		{/if}
 	{:else}
 		<p class="note empty">Open a repository to merge its branches.</p>
 	{/if}
