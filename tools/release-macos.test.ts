@@ -26,6 +26,7 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { sectionFor } from './release-notes.mjs';
 
 const SIGNING = '.github/actions/macos-signing/action.yml';
 const VERIFY = '.github/actions/macos-verify/action.yml';
@@ -76,17 +77,14 @@ describe('both Mac architectures are built, on runners that exist', () => {
 	});
 
 	/**
-	 * Gate 5 builds no macOS until there is a Developer ID. Its production
-	 * policy refuses an unsigned build, so a Mac entry there fails every `main`
-	 * push and takes the Linux and Windows release down with it. The targets
-	 * above survive only in the comment that says how to turn it back on. This
-	 * test is the one to delete when the Apple secrets exist.
+	 * Gate 5 builds both Mac architectures with the other platforms, so one
+	 * release carries every download. Until a Developer ID exists they are
+	 * signed ad hoc (the author's choice from 1.0.1, over a release with no Mac
+	 * download at all); the signing policy below holds the notes to saying so.
 	 */
-	it('gate 5 runs no macOS runner until a Developer ID exists', () => {
-		// `runners` only matches uncommented `os:` lines, so the re-enable
-		// instructions in the comment do not count.
+	it('gate 5 builds every platform, both Mac architectures included', () => {
 		const lane = runners(read('.github/workflows/gates.yml'));
-		expect(lane).toEqual(['ubuntu-latest', 'windows-latest']);
+		expect(lane).toEqual(['ubuntu-latest', 'macos-latest', 'macos-15-intel', 'windows-latest']);
 	});
 
 	/**
@@ -118,13 +116,23 @@ describe('every lane decides a signing policy before it builds', () => {
 	});
 
 	/**
-	 * The lane that publishes what people are pointed at is the one that may
-	 * not fall back. `interim` exists so a draft can still be cut without an
-	 * Apple account; a release that quietly took the same path would be an
-	 * unsigned build with notes claiming it was signed.
+	 * The lane that publishes what people are pointed at signs ad hoc only
+	 * while no Developer ID exists, and only if the release says so. Its notes
+	 * are the version's changelog section, so that is where the promise is
+	 * checked: a release that took the interim path in silence would be an
+	 * unsigned-looking build with nothing telling a Mac user what to expect.
+	 * When the Apple secrets exist, gate 5 goes back to `production` and this
+	 * test goes back to requiring it.
 	 */
-	it('gate 5 declares itself the production lane', () => {
-		expect(read('.github/workflows/gates.yml')).toMatch(/lane: production/);
+	it('gate 5 signs ad hoc only with notes that say so', () => {
+		expect(read('.github/workflows/gates.yml')).toMatch(/lane: interim/);
+		const version = JSON.parse(read('package.json')).version;
+		const notes = sectionFor(read('CHANGELOG.md'), version) ?? '';
+		expect(notes, `the ${version} notes do not say the Mac build is not notarized`).toMatch(
+			/not notarized/i
+		);
+		expect(notes).toMatch(/Open Anyway/);
+		expect(notes).toMatch(/damaged/i);
 	});
 
 	it.each(['.github/workflows/prerelease.yml', '.github/workflows/draft-release.yml'])(
