@@ -131,6 +131,11 @@ stays backward-compatible.
   lanes past its edge were stacked on one line, and widening the column left
   them there. Now a wider column draws more of them apart; the lanes already
   apart stay exactly where they were.
+- **One monospace face.** Commit ids, counts, ref names and the version were
+  set in your desktop's monospace — Consolas on Windows — beside code set in
+  the face chosen in Settings › Reading. They now use that face too, or
+  Atkinson Hyperlegible Mono if the code face is Lexend, which is not
+  monospaced. In the reflog, "created at" no longer wraps onto two lines.
 - **Pull request descriptions read as written.** Tables, nested lists, task
   lists and the `<details>` blocks bots write are drawn as on GitHub and
   GitLab, and code blocks are coloured. A link to anything but a web or mail

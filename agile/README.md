@@ -203,6 +203,7 @@ rather than an audit.
 | [BUG-046](items/BUG-046-a-console-window-opens-for-git.md) | A console window opens for git | All (Windows) | Fixed |
 | [BUG-047](items/BUG-047-whole-file-scrolls-back-to-the-top.md) | Whole file scrolls back to the top | 1R | Fixed |
 | [BUG-048](items/BUG-048-a-wider-graph-column-draws-no-more-lanes.md) | A wider graph column draws no more lanes | 1A | Fixed |
+| [BUG-049](items/BUG-049-small-monospace-text-ignores-the-reading-font.md) | Small monospace text ignores the reading font | All | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

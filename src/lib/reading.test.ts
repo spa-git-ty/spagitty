@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { click, render } from '../testing/mount';
-import { codeStack, DEFAULTS, normalise, reading } from './reading.svelte';
+import { CODE_FONTS, codeStack, DEFAULTS, monoStack, normalise, reading } from './reading.svelte';
 import { scale } from './scale.svelte';
 import ReadingSection from './settings/ReadingSection.svelte';
 
@@ -100,6 +100,35 @@ describe('reading', () => {
 		expect(token('--font-ui')).toContain('Atkinson Hyperlegible');
 		reading.set({ uiFont: 'system' });
 		expect(token('--font-ui')).toBe('');
+	});
+});
+
+/**
+ * BUG-049 — ids, counts and the version were set in the desktop's monospace,
+ * Consolas on Windows, beside diffs set in the face Settings › Reading chose.
+ */
+describe('the monospace outside the code', () => {
+	it('is the code face', () => {
+		expect(token('--font-mono')).toBe(codeStack('atkinson-mono'));
+		reading.set({ codeFont: 'jetbrains-mono' });
+		expect(token('--font-mono')).toBe(codeStack('jetbrains-mono'));
+		reading.set({ codeFont: 'system' });
+		expect(token('--font-mono')).toContain('Consolas');
+	});
+
+	it('stays monospaced when the code face is not', () => {
+		reading.set({ codeFont: 'lexend' });
+		expect(token('--code-font')).toContain('Lexend');
+		expect(token('--font-mono')).toBe(codeStack(DEFAULTS.codeFont));
+		for (const font of CODE_FONTS) {
+			expect(monoStack(font.id), font.id).not.toContain('Lexend');
+		}
+	});
+
+	it('is the same face in the stylesheet, so the first frame does not change face', async () => {
+		const css = await import('node:fs').then((fs) => fs.readFileSync('src/app.css', 'utf8'));
+		const declared = css.match(/--font-mono:\s*([^;]+);/)?.[1].replace(/\s+/g, ' ').trim();
+		expect(declared).toBe(monoStack(DEFAULTS.codeFont));
 	});
 });
 

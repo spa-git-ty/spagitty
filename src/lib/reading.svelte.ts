@@ -6,7 +6,8 @@
  * Settings › Reading. The choices are published as tokens on the document —
  * `--code-font`, `--fs-code`, `--code-lh`, `--code-ls`, `--font-ui` and the
  * diff colours — so Diff, Working copy, File history and Review all read the
- * same ones, and none of them knows there is a setting.
+ * same ones, and none of them knows there is a setting. `--font-mono` follows
+ * the code face too, so every short id and count is set in it (BUG-049).
  *
  * Kept in `localStorage` beside the theme and the zoom, for the reason
  * `scale.svelte.ts` gives: they decide how the first frame looks, and the boot
@@ -30,6 +31,11 @@ export interface FontChoice<Id extends string> {
 	stack: string;
 	/** What it is for, in one line, shown under the row. */
 	note?: string;
+	/**
+	 * Not monospaced. Code may be set in it, but ids, counts and anything else
+	 * lined up in columns are not (BUG-049) — see [`monoStack`].
+	 */
+	proportional?: boolean;
 }
 
 const MONO_FALLBACK = "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace";
@@ -52,7 +58,8 @@ export const CODE_FONTS: FontChoice<CodeFontId>[] = [
 		id: 'lexend',
 		label: 'Lexend',
 		stack: `'Lexend', ${UI_FALLBACK}`,
-		note: 'Wide and calm. Not monospaced, so columns do not line up.'
+		note: 'Wide and calm. Not monospaced, so columns do not line up.',
+		proportional: true
 	},
 	{
 		id: 'jetbrains-mono',
@@ -180,11 +187,26 @@ export function uiStack(id: UiFontId): string {
 	return (UI_FONTS.find((font) => font.id === id) ?? UI_FONTS[0]).stack;
 }
 
+/**
+ * The face for every short monospace thing outside the code — ids, counts,
+ * the version, ref names (BUG-049).
+ *
+ * The code face, so the window has one monospace rather than the code's beside
+ * the desktop's: on Windows the desktop's is Consolas, which nobody chose. Not
+ * when the code face is proportional, because those things are monospaced so
+ * that they line up; then it is the design's default code face.
+ */
+export function monoStack(id: CodeFontId): string {
+	const font = CODE_FONTS.find((choice) => choice.id === id);
+	return font && !font.proportional ? font.stack : codeStack(DEFAULTS.codeFont);
+}
+
 /** Publish the tokens. The interface face is only set when it is not the system's. */
 function apply(): void {
 	if (typeof document === 'undefined') return;
 	const root = document.documentElement;
 	root.style.setProperty('--code-font', codeStack(current.codeFont));
+	root.style.setProperty('--font-mono', monoStack(current.codeFont));
 	root.style.setProperty('--code-lh', String(current.lineHeight));
 	root.style.setProperty('--code-ls', `${current.letterSpacing}em`);
 	if (current.uiFont === 'system') root.style.removeProperty('--font-ui');

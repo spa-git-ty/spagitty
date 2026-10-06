@@ -261,8 +261,17 @@
 		white-space: nowrap;
 	}
 
+	/* One line, like the cells beside it (BUG-049). "created at" is words, so
+	   it is set as words rather than in the ids' face it used to inherit. */
 	.ids {
 		color: var(--muted);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.ids .note {
+		font-family: var(--font-ui);
 	}
 
 	/* On the row being looked at (FEAT-084), as the file lists' are. */
