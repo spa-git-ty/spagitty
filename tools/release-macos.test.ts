@@ -24,6 +24,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const SIGNING = '.github/actions/macos-signing/action.yml';
@@ -252,5 +253,60 @@ describe('what a person is told', () => {
 	it('publishes checksums for what it publishes', () => {
 		expect(read(COLLECT)).toMatch(/SHA256SUMS/);
 		expect(notes).toMatch(/SHA256SUMS/);
+	});
+});
+
+/**
+ * The local build (TASK-054): the same signature and the same checks as the
+ * draft lane, from `./scripts/build-macos.sh` on a Mac. Read as text, like the
+ * lanes above — only a Mac can run it — except for the one thing every other
+ * machine can check: that it refuses to start.
+ */
+describe('the local Mac build signs and checks like the lane', () => {
+	const SCRIPT = 'scripts/build-macos.sh';
+	const DOC = 'docs/BUILD_MACOS.md';
+	const script = read(SCRIPT);
+
+	it('signs ad-hoc, and asks for no Apple account', () => {
+		expect(script).toMatch(/^export APPLE_SIGNING_IDENTITY="-"$/m);
+		expect(script).not.toMatch(/APPLE_CERTIFICATE|APPLE_ID|APPLE_PASSWORD|APPLE_TEAM_ID/);
+	});
+
+	it('verifies the seal, the architecture and the image, and stops on any failure', () => {
+		expect(script).toMatch(/^set -euo pipefail$/m);
+		expect(script).toMatch(/codesign --verify --deep --strict --verbose=2 "\$app"/);
+		expect(script).toMatch(/codesign -dv --verbose=4 "\$app"/);
+		expect(script).toMatch(/hdiutil verify "\$dmg"/);
+		expect(script).toMatch(/CFBundleExecutable/);
+	});
+
+	it('never disarms Gatekeeper on the machine it runs on', () => {
+		expect(script).not.toMatch(/spctl --master-disable|xattr -c|xattr -d/);
+	});
+
+	it('builds each architecture for its own target', () => {
+		expect(script).toMatch(/arm64\) targets=\(aarch64-apple-darwin\)/);
+		expect(script).toMatch(/intel\) targets=\(x86_64-apple-darwin\)/);
+		expect(script).toMatch(/all\) targets=\(aarch64-apple-darwin x86_64-apple-darwin\)/);
+		expect(script).toMatch(/rustup target add "\$target"/);
+		expect(script).toMatch(/bun run tauri -- build --bundles dmg --target "\$target"/);
+	});
+
+	it.skipIf(process.platform === 'darwin')('refuses to run anywhere but a Mac', () => {
+		const run = spawnSync('bash', [SCRIPT, 'arm64'], { encoding: 'utf8' });
+		if (run.error) return; // No bash on this machine: nothing to run it with.
+		expect(run.status).toBe(1);
+		expect(run.stderr).toMatch(/needs a Mac/);
+		expect(run.stderr).toMatch(/docs\/BUILD_MACOS\.md/);
+	});
+
+	it('is documented, both ways', () => {
+		const doc = read(DOC);
+		expect(doc).toMatch(/draft-release\.yml/);
+		expect(doc).toMatch(/git push origin HEAD:draft\//);
+		expect(doc).toMatch(/draft-macos-arm64/);
+		expect(doc).toMatch(/draft-macos-x86_64/);
+		expect(doc).toMatch(/\.\/scripts\/build-macos\.sh arm64/);
+		expect(doc).toMatch(/not\s+notarized/i);
 	});
 });

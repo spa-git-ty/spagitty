@@ -219,6 +219,9 @@ The automation contract — six gates, coverage floor, three release lanes — i
 [`docs/ci.md`](docs/ci.md). Gates 1 to 3 are what a change is checked against
 before it is committed.
 
+A Mac build — Apple silicon or Intel, ad-hoc signed — is built on GitHub or on
+a Mac, never on Windows or Linux: [`docs/BUILD_MACOS.md`](docs/BUILD_MACOS.md).
+
 ## Architecture
 
 Three layers. Each knows nothing about the one above it.
@@ -245,6 +248,7 @@ mirrored by hand in `src/lib/types.ts`. Detail:
 | [`docs/screens.md`](docs/screens.md) | Every screen (1A–1Q) |
 | [`docs/testing.md`](docs/testing.md) | What is tested and what is deliberately not |
 | [`docs/ci.md`](docs/ci.md) | Gates, coverage floor, release lanes |
+| [`docs/BUILD_MACOS.md`](docs/BUILD_MACOS.md) | A macOS `.dmg`, on GitHub or on a Mac |
 | [`docs/branding.md`](docs/branding.md) | Mark, wordmark, palette, voice |
 | [`docs/AMENDMENTS.md`](docs/AMENDMENTS.md) | Standing project rules |
 | [`agile/`](agile/) | Working record — items, plans, sweeps |
