@@ -15,7 +15,7 @@
  */
 
 import * as api from '../api';
-import type { BranchRow, MergerForecast, MergerLanded, MergerResolution, Tag } from '../types';
+import type { BranchRow, MergerForecast, MergerLandAsk, MergerLanded, MergerResolution, Tag } from '../types';
 import {
 	defaultNewName,
 	effectiveStrategy,
@@ -213,30 +213,40 @@ export const merger = {
 		phase = next;
 	},
 
+	/** What the backend needs to land or replay the merge planned now. */
+	ask(resolutions: MergerResolution[] = []): MergerLandAsk | null {
+		const plan = forecast;
+		if (!plan || !a || !b) return null;
+		const strategy = this.strategy;
+		return {
+			a,
+			b,
+			aTip: plan.a.tip,
+			bTip: plan.b.tip,
+			target: into,
+			newName: into === 'new' ? this.newName : undefined,
+			strategy,
+			message: strategy === 'rebase' || strategy === 'ff' ? undefined : this.message,
+			resolutions
+		};
+	},
+
 	/**
 	 * Write it: commit the result and move the receiving branch. Refused by the
 	 * backend if either branch moved since the forecast was read.
 	 */
 	async land(resolutions: MergerResolution[] = []): Promise<boolean> {
-		const plan = forecast;
+		const ask = this.ask(resolutions);
 		const who = this.roles;
-		if (!plan || !who || !a || !b || landing) return false;
-		const strategy = this.strategy;
+		if (!ask || !who || landing) return false;
+		// A rebase lands from its own worktree once every commit is replayed
+		// (FEAT-103), not in one call.
+		const rebase = ask.strategy === 'rebase';
 		landing = true;
 		landError = null;
 		try {
-			const result = await api.mergerLand({
-				a,
-				b,
-				aTip: plan.a.tip,
-				bTip: plan.b.tip,
-				target: into,
-				newName: into === 'new' ? this.newName : undefined,
-				strategy,
-				message: strategy === 'rebase' || strategy === 'ff' ? undefined : this.message,
-				resolutions
-			});
-			landed = { landed: result, source: who.sourceName, strategy };
+			const result = rebase ? await api.mergerRebaseFinish(ask) : await api.mergerLand(ask);
+			landed = { landed: result, source: who.sourceName, strategy: ask.strategy };
 			phase = 'done';
 			return true;
 		} catch (e) {

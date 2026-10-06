@@ -193,7 +193,7 @@ fn verb(strategy: Strategy) -> &'static str {
 
 /// The branch that receives the result, checked: a branch here, or a new
 /// name nothing has yet.
-fn receiving(repo: &gix::Repository, dir: &Path, ask: &LandAsk) -> Result<String> {
+pub(crate) fn receiving(repo: &gix::Repository, dir: &Path, ask: &LandAsk) -> Result<String> {
     match ask.target {
         Target::A | Target::B => {
             let name = if ask.target == Target::A {
@@ -227,7 +227,7 @@ fn receiving(repo: &gix::Repository, dir: &Path, ask: &LandAsk) -> Result<String
 }
 
 /// Move `target` from `old` to `commit`, or create it there.
-fn move_to(
+pub(crate) fn move_to(
     repo: &gix::Repository,
     dir: &Path,
     how: Target,

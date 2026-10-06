@@ -1662,6 +1662,72 @@ pub fn valid_branch_name(repo: &Path, name: &str) -> Result<bool> {
     Ok(code == 0)
 }
 
+/// Replay `upstream..HEAD` onto `onto` in a scratch worktree, with diff3
+/// markers where it stops (FEAT-103). True when it ran to the end; false when
+/// it stopped — the caller reads the rebase state to tell a stop from a
+/// failure.
+pub fn rebase_replay(scratch: &Path, onto: &str, upstream: &str) -> Result<bool> {
+    let (code, _) = run_extra(
+        scratch,
+        &[
+            "-c",
+            "merge.conflictStyle=diff3",
+            "rebase",
+            "--onto",
+            onto,
+            upstream,
+        ],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok(code == 0)
+}
+
+/// Carry a stopped replay on: `--continue` keeping each commit's message, or
+/// `--skip`. True when it ran to the end, false when it stopped again.
+pub fn rebase_step(scratch: &Path, skip: bool) -> Result<bool> {
+    let scripts = SequenceScripts::write(scratch, "")?;
+    let editor = scripts.message_editor();
+    let env: [(&str, &OsStr); 1] = [("GIT_EDITOR", OsStr::new(&editor))];
+    let (code, _) = run_extra(
+        scratch,
+        &[
+            "-c",
+            "merge.conflictStyle=diff3",
+            "rebase",
+            if skip { "--skip" } else { "--continue" },
+        ],
+        Extra {
+            env: &env,
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok(code == 0)
+}
+
+/// The git directory of a repository or worktree, absolute.
+pub fn absolute_git_dir(repo: &Path) -> Result<PathBuf> {
+    Ok(PathBuf::from(
+        run(repo, &["rev-parse", "--absolute-git-dir"])?.trim(),
+    ))
+}
+
+/// Whether anything is staged that `HEAD` does not have.
+pub fn has_staged(repo: &Path) -> Result<bool> {
+    let (code, _) = run_extra(
+        repo,
+        &["diff", "--cached", "--quiet"],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok(code == 1)
+}
+
 /// Remove `path` from the working tree and the index: how a conflict is
 /// resolved as a deletion.
 pub fn remove_path(repo: &Path, path: &str) -> Result<()> {

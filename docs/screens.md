@@ -981,3 +981,12 @@ here. A pill at the foot steps through every conflict and jumps to the next
 unresolved. The choices are kept in application data per merge, and are only
 applied again to a region whose sides have not changed. Nothing is written to
 either branch until the commit dialog's button.
+
+**A rebase that stops** (FEAT-103). Rebase, then fast-forward replays the
+source's commits in a worktree of Spagitty's own under the git directory,
+named after the merge, so coming back finds it where it stopped. Each stop is
+resolved with the same columns — *Rebasing <source> onto <target> · commit n
+of N* — with Continue, Skip this commit and Abort; git's ours and theirs are
+put back as A and B. Once every commit is replayed, Finish the rebase in the
+commit dialog moves the receiving branch and removes the worktree. Neither
+branch moves before then.

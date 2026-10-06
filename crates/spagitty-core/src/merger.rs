@@ -43,9 +43,11 @@ use crate::shell;
 
 pub mod detail;
 pub mod land;
+pub mod replay;
 
 pub use detail::{conflict_files, FileConflict, MergeConflicts, RegionSource};
 pub use land::{land, LandAsk, Landed, Resolution, Strategy, Target};
+pub use replay::{rebase_abort, rebase_continue, rebase_finish, rebase_open, rebase_skip, Replay};
 
 /// How many of each side's newest commits a card lists.
 pub const NEWEST: usize = 3;

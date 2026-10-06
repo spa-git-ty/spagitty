@@ -30,6 +30,11 @@ stays backward-compatible.
   order, single lines from each, or type the result yourself; every result
   line is marked with where it came from, and the base is a click away.
   Choices made in Merger are kept, so you can leave and come back.
+- **A rebase you can stop and resume.** In Merger, Rebase, then
+  fast-forward replays one commit at a time in a worktree of its own, stops
+  where a commit conflicts, and lets you resolve it, skip it or abort; neither
+  branch moves until you finish, and leaving the screen does not lose your
+  place.
 - **Review, a place to read pull requests.** A new screen beside Pull
   requests, with an eye on the sidebar and a dot while a review is waiting on
   you. Its inbox groups pull requests by what they need from you — asked to

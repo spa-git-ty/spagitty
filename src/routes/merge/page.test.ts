@@ -203,16 +203,20 @@ describe('landing a merge with no conflicts (FEAT-101)', () => {
 		await vi.waitFor(() => expect(view.text()).toContain('main changed since it was read'));
 	});
 
-	it('a rebase keeps each message, and a squash names itself', async () => {
+	it('a rebase replays in its own worktree first, and keeps each message', async () => {
+		vi.mocked(api.mergerRebaseOpen).mockResolvedValue({ state: 'done', tip: 'd'.repeat(40), short: 'ddddddd', written: 5 });
+		vi.mocked(api.mergerRebaseFinish).mockResolvedValue({ target: 'main', commit: 'd'.repeat(40), short: 'ddddddd', written: 5 });
 		view = render(Page, {});
 		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
 		click(view.all('button.strategy').find((b) => text(b).startsWith('Rebase'))!);
 		click(button('Merge now'));
+		await vi.waitFor(() => expect(api.mergerRebaseOpen).toHaveBeenCalled());
 		await vi.waitFor(() => expect(view.text()).toContain('Each replayed commit keeps its own message.'));
 		expect(view.all('#merger-message')).toHaveLength(0);
 		click(button('Finish the rebase'));
-		await vi.waitFor(() => expect(api.mergerLand).toHaveBeenCalled());
-		expect(vi.mocked(api.mergerLand).mock.calls[0][0]).toMatchObject({ strategy: 'rebase', message: undefined });
+		await vi.waitFor(() => expect(api.mergerRebaseFinish).toHaveBeenCalled());
+		expect(vi.mocked(api.mergerRebaseFinish).mock.calls[0][0]).toMatchObject({ strategy: 'rebase', message: undefined });
+		expect(api.mergerLand).not.toHaveBeenCalled();
 	});
 
 	it('into a new branch sends its name', async () => {

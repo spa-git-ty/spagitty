@@ -28,7 +28,7 @@ import {
 	type ResolverFile,
 	type SideKey
 } from '../resolver/model';
-import type { MergerConflicts, MergerResolution } from '../types';
+import type { MergerCommit, MergerConflicts, MergerReplay, MergerResolution } from '../types';
 import type { SummaryRow } from './plan';
 import { merger } from './store.svelte';
 
@@ -41,6 +41,9 @@ let start = $state<string | null>(null);
 let key: string | null = null;
 let seq = 0;
 let saving: ReturnType<typeof setTimeout> | null = null;
+/** Where Merger's rebase stopped, while one is stopped (FEAT-103). */
+let stop = $state<{ step: number; total: number; commit: MergerCommit | null } | null>(null);
+let stepping = $state(false);
 
 /** The resolver's files, from the backend's. */
 export function filesFrom(found: MergerConflicts): ResolverFile[] {
@@ -172,6 +175,107 @@ export const resolving = {
 		const { total, resolved } = this.counts;
 		return total - resolved;
 	},
+	/** The rebase's stop, while one is stopped. */
+	get stop() {
+		return stop;
+	},
+	get stepping(): boolean {
+		return stepping;
+	},
+
+	/**
+	 * Start the rebase, or find where it stopped (FEAT-103). Done at once —
+	 * nothing in the way — goes straight to the commit dialog; a stop is
+	 * resolved here, one commit at a time.
+	 */
+	async openRebase(): Promise<void> {
+		const ask = merger.ask();
+		if (!ask) return;
+		const mine = ++seq;
+		loading = true;
+		error = null;
+		try {
+			const replay = await api.mergerRebaseOpen(ask);
+			if (mine === seq) this.follow(replay);
+		} catch (e) {
+			if (mine === seq) {
+				error = String(e);
+				merger.setPhase('resolve');
+			}
+		} finally {
+			if (mine === seq) loading = false;
+		}
+	},
+
+	/** Show where the rebase is now: its next stop, or the commit dialog. */
+	follow(replay: MergerReplay) {
+		if (replay.state === 'done') {
+			stop = null;
+			files = [];
+			choices = {};
+			// The dialog opens over the plan: the stops are behind it now.
+			merger.openCommit('plan');
+			return;
+		}
+		stop = { step: replay.step, total: replay.total, commit: replay.commit };
+		data = null;
+		key = null;
+		files = filesFrom({ base: '', baseShort: '', aTip: '', bTip: '', files: replay.files });
+		choices = restore(null, files);
+		start = null;
+		merger.setPhase('resolve');
+	},
+
+	/** Settle this stop with what was chosen, and carry the rebase on. */
+	async continueRebase(): Promise<void> {
+		const ask = merger.ask();
+		const resolutions = this.resolutions();
+		if (!ask || !resolutions || stepping) return;
+		stepping = true;
+		error = null;
+		try {
+			this.follow(await api.mergerRebaseContinue(ask, resolutions));
+		} catch (e) {
+			error = String(e);
+		} finally {
+			stepping = false;
+		}
+	},
+
+	/** Drop the commit the rebase stopped on. */
+	async skipRebase(): Promise<void> {
+		const ask = merger.ask();
+		if (!ask || stepping) return;
+		stepping = true;
+		error = null;
+		try {
+			this.follow(await api.mergerRebaseSkip(ask));
+		} catch (e) {
+			error = String(e);
+		} finally {
+			stepping = false;
+		}
+	},
+
+	/** Undo the rebase; back to the plan, and neither branch moved. */
+	async abortRebase(): Promise<void> {
+		const ask = merger.ask();
+		if (!ask || stepping) return;
+		stepping = true;
+		error = null;
+		try {
+			await api.mergerRebaseAbort(ask);
+			stop = null;
+			files = [];
+			choices = {};
+			merger.setPhase('plan');
+		} catch (e) {
+			error = String(e);
+		} finally {
+			stepping = false;
+		}
+	},
+
 	get ready(): boolean {
 		const { total, resolved } = this.counts;
 		return total > 0 && resolved === total;
@@ -185,6 +289,7 @@ export const resolving = {
 		if (!a || !b || !plan) return;
 		const mine = ++seq;
 		start = path;
+		stop = null;
 		merger.setPhase('resolve');
 		const nextKey = keyOf(repo, a, b, plan.base);
 		if (key === nextKey && data && data.aTip === plan.a.tip && data.bTip === plan.b.tip) return;
@@ -299,6 +404,8 @@ export const resolving = {
 		error = null;
 		start = null;
 		key = null;
+		stop = null;
+		stepping = false;
 		seq += 1;
 	}
 };
