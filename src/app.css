@@ -152,6 +152,17 @@
 	   lane colour nothing else in a diff means. */
 	--resolve: var(--lane-5);
 	--resolve-soft: color-mix(in srgb, var(--lane-5) 11%, transparent);
+	/*
+	 * The two sides of a merge in Merger (FEAT-100): A in the palette's blue,
+	 * B in amber, and what was typed by hand in the purple family. Each soft
+	 * tint marks a row; the solid colour is the marker and the badge.
+	 */
+	--side-a: var(--lane-5);
+	--side-b: #a35a00;
+	--side-mine: var(--lane-4);
+	--side-a-soft: color-mix(in srgb, var(--side-a) 13%, transparent);
+	--side-b-soft: color-mix(in srgb, var(--side-b) 13%, transparent);
+	--side-mine-soft: color-mix(in srgb, var(--side-mine) 14%, transparent);
 
 	/*
 	 * Radii.
@@ -224,6 +235,8 @@
 }
 
 :root[data-theme='dark'] {
+	/* B's amber, lighter on a dark ground (FEAT-100). */
+	--side-b: #f0a64a;
 	--bg: #1c1613;
 	--panel: #161110;
 	--ink: #f3e9dd;

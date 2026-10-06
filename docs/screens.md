@@ -30,6 +30,7 @@ under Amendment 11.
 | 1P | Badges | `/badges` | yes | Built | FEAT-072 |
 | 1Q | Farm | `/farm` | yes | Built | FEAT-073 |
 | 1R | Review | `/review` | yes | Built | FEAT-087 |
+| 1S | Merger | `/merge` | yes | Built | FEAT-100 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -924,3 +925,31 @@ warm-tinted under its lines, and sent only by *Finish review* with a verdict
 and the words for the whole pull request. Threads take replies at once and are
 resolved or reopened on the host; comments on the pull request as a whole are
 listed as *whole PR*.
+
+## 1S — Merger
+
+**Built.** `src/routes/merge/+page.svelte`, `src/lib/merger/`, and
+`crates/spagitty-core/src/merger.rs` behind it (FEAT-100).
+
+Any two branches, and what merging them would do, before anything is written.
+The graph's drag still merges into the branch that is checked out; Merger is
+for seeing the result first. Conflicts (1D) stays for operations git stopped
+on by itself.
+
+**The plan is a dry run, and says so.** Branch A on the left, B on the right,
+the raised Result card between them. The receiving card is outlined in its
+colour — A in `--side-a`, B in `--side-b` amber — and the arrow from the side
+whose commits come in is solid with the count. *The result lands* Into A, Into
+B or Into a new branch (`merge/<a>-<b>`, from A), with Swap; only a branch here
+can receive one. *How it lands* offers Merge commit, Squash, Rebase then
+fast-forward and Fast-forward only, disabled with its reason when both sides
+have their own commits; *History after* redraws for each. The Result card says
+what will happen in one sentence, three numbers, and the conflicts: how many,
+in how many files, and where they were measured. *What changes* lists every
+file either branch touched, conflicts first.
+
+**Nothing is written.** The dry run is `git merge-tree --write-tree` (git
+2.38), or for an older git a `merge --no-commit` in a scratch worktree under
+the git directory that is removed afterwards. It is one dry run per pair, A
+merged with B: direction and strategy are worked out from it on screen, and it
+is asked for again when a branch is picked or the refs move.

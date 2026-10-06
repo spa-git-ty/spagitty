@@ -16,6 +16,13 @@ stays backward-compatible.
 
 ### Added
 
+- **Merger: see a merge before it happens.** A new screen on the sidebar.
+  Pick any two branches and where the result lands — into either one, or a
+  new branch — and how: a merge commit, a squash, a rebase, or a
+  fast-forward. Before anything is written it shows which branch receives the
+  result, how many commits come in, every file that changes, and whether and
+  where they conflict, found by a dry run that leaves your repository as it
+  was.
 - **Review, a place to read pull requests.** A new screen beside Pull
   requests, with an eye on the sidebar and a dot while a review is waiting on
   you. Its inbox groups pull requests by what they need from you — asked to

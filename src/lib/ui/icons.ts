@@ -39,6 +39,8 @@ export type IconName =
 	| 'graph'
 	| 'edit'
 	| 'conflict'
+	| 'merge'
+	| 'swap'
 	| 'tag'
 	| 'request'
 	| 'search'
@@ -112,6 +114,10 @@ export const ICONS: Record<IconName, string[]> = {
 	edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z', 'M14 6l4 4'],
 	// Two arrows meeting head on.
 	conflict: ['M4 9h8', 'M9 6 12 9l-3 3', 'M20 15h-8', 'M15 12l-3 3 3 3'],
+	// Two lanes meeting and flowing on down: Merger (FEAT-100).
+	merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3', 'M12 12v9', 'M9 18l3 3 3-3'],
+	// Two arrows passing each other: swap two things' places.
+	swap: ['M4 8h14', 'M15 5l3 3-3 3', 'M20 16H6', 'M9 13l-3 3 3 3'],
 	tag: [
 		'M20.5 12.5 12.5 20.5a2 2 0 0 1-2.83 0l-6.17-6.17a2 2 0 0 1-.5-2L4 4l8.33-1a2 2 0 0 1 1.67.57l6.5 6.5a2 2 0 0 1 0 2.43z',
 		'M8 8.01v-.01'

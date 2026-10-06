@@ -44,6 +44,10 @@ export type CountKey = keyof RepoCounts;
  *
  * 1R is Review (FEAT-087): a place to read a pull request, beside Pull
  * requests, which stays the place to browse, create and merge them.
+ *
+ * 1S is Merger (FEAT-100): any two branches, and what merging them would do
+ * before anything is written. Conflicts (1D) stays for the operations git
+ * stopped on by itself.
  */
 export type ScreenCode =
 	| '1A'
@@ -63,7 +67,8 @@ export type ScreenCode =
 	| '1O'
 	| '1P'
 	| '1Q'
-	| '1R';
+	| '1R'
+	| '1S';
 
 /**
  * What kind of place a destination is (TASK-041).
@@ -175,6 +180,9 @@ export const NAV_ITEMS: NavItem[] = [
 		icon: 'conflict',
 		shows: 'conflicts'
 	},
+	// FEAT-100. Merging two branches, seen first. Always on the rail: it is
+	// where a merge starts, not something that happens to you.
+	{ code: '1S', label: 'Merger', href: '/merge', group: 'work', icon: 'merge' },
 	{
 		code: '1F',
 		label: 'Branches',

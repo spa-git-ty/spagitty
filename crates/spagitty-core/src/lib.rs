@@ -32,6 +32,7 @@ pub mod error;
 pub mod forge;
 pub mod graph;
 pub mod identity;
+pub mod merger;
 pub mod ops;
 pub mod pull;
 pub mod rebase;
