@@ -182,6 +182,11 @@ stays backward-compatible.
 
 ### Fixed
 
+- **The graph's lanes are no longer squeezed together.** A busy history has more
+  room by default, and dragging the graph column wider spreads its lanes back
+  apart.
+- **Branches, Tags, Stash and Reflog show only their own title**, now that each
+  has its own place on the sidebar.
 - **Dragging the Graph column wider shows more of a busy graph.** On a
   history with more branches side by side than the column has room for, the
   lanes past its edge were stacked on one line, and widening the column left

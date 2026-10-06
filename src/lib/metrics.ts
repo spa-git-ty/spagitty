@@ -113,7 +113,7 @@ export const LANE_COLUMNS_MIN = 5;
  * growing and the *pitch* gives instead, so a thirteenth lane is drawn slightly
  * closer to its neighbour rather than on top of it. See [`lanePitch`].
  */
-export const LANE_COLUMNS_MAX = 12;
+export const LANE_COLUMNS_MAX = 16;
 
 /**
  * How far the lanes are laid out across, from lane 0 to the rightmost one.
@@ -537,8 +537,11 @@ export function laneX(
 	// boundary is the dragged span, in either direction: capping at the resting
 	// span as well kept a column dragged wider from drawing anything more
 	// (BUG-048).
+	// The author, 2026-10-06, beside GitKraken: lanes squeezed together read
+	// as clutter. A column dragged wider than its resting span now spreads a
+	// compressed history back out, up to the density's own pitch.
 	const resting = laneSpanOf(density);
-	const pitch = lanePitch(columns, resting, density);
+	const pitch = lanePitch(columns, Math.max(resting, span ?? resting), density);
 	const index = Math.max(0, Math.min(lane, columns - 1));
 	return (LANE_X0 + Math.min(index * pitch, Math.max(0, span ?? resting))) * zoom;
 }

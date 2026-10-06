@@ -186,8 +186,11 @@ export function stats(
 	strategy: Strategy
 ): { value: number; label: string }[] {
 	const count = incoming(forecast, who);
-	const files = changing(forecast, who).length;
+	const files = count === 0 ? 0 : changing(forecast, who).length;
 	const filesChange = { value: files, label: files === 1 ? 'file changes' : 'files change' };
+	if (count === 0) {
+		return [{ value: 0, label: 'commits come in' }, { value: 0, label: 'new commits' }, filesChange];
+	}
 	switch (strategy) {
 		case 'merge':
 			return [{ value: count, label: count === 1 ? 'commit comes in' : 'commits come in' }, { value: 1, label: 'merge commit' }, filesChange];

@@ -118,6 +118,7 @@
 				onclick={() => go({ path: f.path, index: f.regions[0]?.index ?? 0 })}
 			>
 				<span class="name mono">{base(f.path)}</span>
+				{#if split(f.path).dir}<span class="dir mono">{split(f.path).dir}</span>{/if}
 				<span class="dots">
 					{#each f.regions as region (region.index)}
 						<span class="dot" class:resolved={Boolean(choices[f.path]?.[region.index])}></span>
@@ -256,6 +257,17 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* The folder, so two files of one name are told apart. */
+	.dir {
+		font-size: var(--fs-mono);
+		color: var(--muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		direction: rtl;
+		text-align: left;
 	}
 
 	.dots {
