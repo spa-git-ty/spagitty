@@ -187,7 +187,7 @@ describe('laneX under compression', () => {
 	it('lands the last lane exactly on the span while the pitch still gives', () => {
 		// Up to and including the deepest count the floor still allows. One more
 		// than this and the last lanes clamp instead, which is the next test.
-		for (const lanes of [13, 16, 20, LANE_INDEX_MAX + 1]) {
+		for (const lanes of [LANE_COLUMNS_MAX + 1, 20, LANE_INDEX_MAX + 1]) {
 			expect(laneX(lanes - 1, lanes)).toBeCloseTo(LANE_X0 + LANE_SPAN, 6);
 		}
 	});
@@ -276,7 +276,7 @@ describe('the canvas is always wide enough for the lanes it draws', () => {
 	/** The column's width must not depend on how busy the history is past the cap. */
 	it('reserves one width for every history past the cap', () => {
 		const atCap = laneColumnWidth(LANE_COLUMNS_MAX);
-		for (const lanes of [13, 24, 48, 187, 382]) {
+		for (const lanes of [LANE_COLUMNS_MAX + 1, 24, 48, 187, 382]) {
 			expect(laneColumnWidth(lanes)).toBe(atCap);
 		}
 	});
@@ -532,13 +532,27 @@ describe('widening the graph column', () => {
 		expect(laneX(deep - 1, deep, 1, span)).toBe(LANE_X0 + span);
 	});
 
-	it('does not move a lane that was already apart', () => {
+	/**
+	 * Narrowing moves no lane that was apart. Widening spreads a squeezed
+	 * history back out, up to the design pitch and never past it (the author,
+	 * 2026-10-06, beside GitKraken), which reverses that half of BUG-048.
+	 */
+	it('spreads a squeezed history when widened, never past the pitch', () => {
+		const columns = 30;
+		const pitchAt = (span?: number) => laneX(1, columns, 1, span) - laneX(0, columns, 1, span);
+		const resting = pitchAt();
+		expect(resting).toBeLessThan(LANE_PITCH);
+		expect(pitchAt(laneSpanFor(1600))).toBeGreaterThan(resting);
+		expect(pitchAt(laneSpanFor(4000))).toBe(LANE_PITCH);
+	});
+
+	it('does not move a lane that was already apart when narrowed', () => {
 		for (const columns of [3, 8, 12, 20, deep]) {
-			for (const width of [400, 650, 1200]) {
-				const span = laneSpanFor(width);
+			for (const width of [200, 300]) {
+				const span = Math.min(laneSpanFor(width), laneSpanFor(laneColumnWidth(columns)));
 				for (let lane = 0; lane < columns; lane++) {
 					const atRest = laneX(lane, columns);
-					if (atRest < LANE_X0 + laneSpanFor(laneColumnWidth(columns))) {
+					if (atRest <= LANE_X0 + span) {
 						expect(laneX(lane, columns, 1, span), `lane ${lane}/${columns} @${width}px`).toBe(
 							atRest
 						);

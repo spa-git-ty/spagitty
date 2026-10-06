@@ -363,6 +363,15 @@
 		flex: none;
 	}
 
+	/* Rows of the plan keep their content's height: the plan scrolls, its
+	   rows never squeeze under one another. */
+	.head,
+	.stage,
+	.lands,
+	.lower {
+		flex: none;
+	}
+
 	.stage {
 		display: flex;
 		align-items: stretch;
