@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts" generics="T">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 
 	/**
 	 * A scrolling column that draws only the rows near the viewport
@@ -153,6 +153,10 @@
 	 *
 	 * Rows between here and there may not have been measured, so the first
 	 * jump lands by estimate and a second, a frame later, by measurement.
+	 *
+	 * Reads nothing reactively: called from an effect, it would otherwise make
+	 * that effect depend on every row measured, and run it again as the reader
+	 * scrolls (BUG-047).
 	 */
 	export function scrollToIndex(index: number, align: 'start' | 'center' | 'nearest' = 'nearest'): void {
 		const go = () => {
@@ -172,7 +176,7 @@
 				scrollTop = target;
 			}
 		};
-		go();
+		untrack(go);
 		if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(go);
 	}
 
