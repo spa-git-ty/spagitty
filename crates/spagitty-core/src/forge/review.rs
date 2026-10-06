@@ -34,7 +34,7 @@
 use serde_json::Value;
 
 use crate::diff::{DiffLine, FileDiff, FileStatus, Hunk, LineOrigin};
-use crate::forge::{github, http, status_error, Kind, Repo};
+use crate::forge::{github, gitlab, http, status_error, Kind, Repo};
 use crate::{Error, Result};
 
 /// Merge strategies supported across forges (FEAT-071).
@@ -125,13 +125,51 @@ pub struct PullRequestComment {
     pub resolved: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DraftComment {
     pub path: String,
+    /// The line the comment is on — the last, when it covers a range.
     pub line: u32,
+    /// `RIGHT` numbers `line` in the new version, `LEFT` in the old.
     pub side: String,
     pub body: String,
+    /// The first line, when the comment covers a range, and its side.
+    #[serde(default)]
+    pub start_line: Option<u32>,
+    #[serde(default)]
+    pub start_side: Option<String>,
+    /// Where `line` sits in the diff, and where `start_line` does: GitLab
+    /// places a comment by both versions' counters rather than by one side's
+    /// number (FEAT-088). Absent from an older caller, which gets one side.
+    #[serde(default)]
+    pub place: Option<LinePlace>,
+    #[serde(default)]
+    pub start_place: Option<LinePlace>,
+    /// The file's path before the change, when it was renamed.
+    #[serde(default)]
+    pub old_path: Option<String>,
+}
+
+/// One line of a diff, as GitLab counts it (FEAT-088).
+///
+/// `old` and `new` are the two versions' counters at that line: the line's
+/// own number on the side it is on, and on the other side the number of the
+/// next line there. An unchanged line has its number on both.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinePlace {
+    pub kind: LineKind,
+    pub old: u32,
+    pub new: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum LineKind {
+    Added,
+    Removed,
+    Context,
 }
 
 /// `{api_base}/repos/{owner}/{name}/pulls/{number}` — everything here hangs
@@ -148,6 +186,9 @@ fn pull_url(repo: &Repo, number: u64) -> String {
 
 /// The files a pull request changes, with their diffs.
 pub fn pull_request_files(repo: &Repo, token: &str, number: u64) -> Result<Vec<FileDiff>> {
+    if repo.kind == Kind::GitLab {
+        return gitlab::merge_request_files(repo, token, number);
+    }
     let mut files = Vec::new();
 
     for page in 1..=MAX_PAGES {
@@ -184,6 +225,9 @@ pub fn pull_request_commits(
     token: &str,
     number: u64,
 ) -> Result<Vec<PullRequestCommit>> {
+    if repo.kind == Kind::GitLab {
+        return gitlab::merge_request_commits(repo, token, number);
+    }
     let mut commits = Vec::new();
 
     for page in 1..=MAX_PAGES {
@@ -266,6 +310,9 @@ pub fn read_commits(body: &str, host: &str) -> Result<Vec<PullRequestCommit>> {
 
 /// Read the files changed by one specific commit.
 pub fn commit_files(repo: &Repo, token: &str, sha: &str) -> Result<Vec<FileDiff>> {
+    if repo.kind == Kind::GitLab {
+        return gitlab::commit_files(repo, token, sha);
+    }
     let url = format!(
         "{}/repos/{}/{}/commits/{}",
         repo.kind.api_base(&repo.host),
@@ -314,6 +361,9 @@ pub fn pull_request_comments(
     token: &str,
     number: u64,
 ) -> Result<Vec<PullRequestComment>> {
+    if repo.kind == Kind::GitLab {
+        return gitlab::merge_request_comments(repo, token, number);
+    }
     let mut comments = Vec::new();
 
     for page in 1..=MAX_PAGES {
@@ -404,6 +454,9 @@ pub fn reply_comment(
             detail: "reply comment cannot be empty".into(),
         });
     }
+    if repo.kind == Kind::GitLab {
+        return gitlab::reply(repo, token, number, comment_id, body);
+    }
 
     let payload = serde_json::json!({ "body": body }).to_string();
     let response = http::post_json(
@@ -453,16 +506,26 @@ pub fn submit_review_with_comments(
             detail: "this review needs a comment or inline change request to go with it".into(),
         });
     }
+    if repo.kind == Kind::GitLab {
+        return gitlab::submit_review(repo, token, number, verdict, comment, draft_comments);
+    }
 
     let raw_comments: Vec<Value> = draft_comments
         .iter()
         .map(|c| {
-            serde_json::json!({
+            let mut raw = serde_json::json!({
                 "path": c.path,
                 "line": c.line,
                 "side": c.side,
                 "body": c.body
-            })
+            });
+            // A comment over several lines names where it starts as well.
+            if let Some(start) = c.start_line.filter(|start| *start < c.line) {
+                raw["start_line"] = serde_json::json!(start);
+                raw["start_side"] =
+                    serde_json::json!(c.start_side.clone().unwrap_or_else(|| c.side.clone()));
+            }
+            raw
         })
         .collect();
 
@@ -559,7 +622,7 @@ fn send(request: &Request, token: &str, host: &str) -> Result<()> {
 /// GitLab addresses a project by its URL-encoded path rather than by owner and
 /// name, so the slash between them is escaped.
 fn project_path(repo: &Repo) -> String {
-    format!("{}%2F{}", repo.owner, repo.name)
+    repo.encoded_slug()
 }
 
 /// The request that merges a pull request on `repo`'s host (FEAT-071).
@@ -1255,6 +1318,7 @@ mod tests {
             line: 10,
             side: "RIGHT".into(),
             body: "Need change here".into(),
+            ..DraftComment::default()
         };
         // Should not reject if draft_comments is non-empty even if comment is empty
         // (will hit network error in test without real server, but doesn't error on validation)

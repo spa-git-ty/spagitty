@@ -95,6 +95,31 @@ impl Repo {
     pub fn slug(&self) -> String {
         format!("{}/{}", self.owner, self.name)
     }
+
+    /// The slug as one URL path segment, every reserved character escaped
+    /// (FEAT-088).
+    ///
+    /// GitLab addresses a project as `:id`, which is its number or its whole
+    /// path URL-encoded — `group%2Fsub%2Fproject`. Escaping only the one slash
+    /// between owner and name, as this used to, sends a nested group's inner
+    /// slashes raw, and GitLab answers 404.
+    pub fn encoded_slug(&self) -> String {
+        encode_segment(&self.slug())
+    }
+}
+
+/// `text` percent-encoded so it is one path segment: everything but RFC 3986's
+/// unreserved characters is escaped.
+pub fn encode_segment(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
 }
 
 /// Where a pull request sits with its reviewers.
@@ -174,6 +199,30 @@ pub struct PullRequest {
     pub repository: Option<String>,
 }
 
+/// What the Review inbox learns about a pull request after the list (FEAT-088).
+///
+/// GitHub's list already carries all of it; GitLab's carries none, and the
+/// inbox asks for it a few merge requests at a time. Merged into the row by
+/// `number` on the screen.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewSummary {
+    pub number: u64,
+    pub checks: Option<CheckState>,
+    pub open_threads: u32,
+    pub resolved_threads: u32,
+    pub replies_to_you: u32,
+}
+
+/// Checks and thread counts for `numbers` on `repo` (FEAT-088). Empty for a
+/// host whose list already says.
+pub fn review_summaries(repo: &Repo, token: &str, me: &str, numbers: &[u64]) -> Vec<ReviewSummary> {
+    match repo.kind {
+        Kind::GitLab => gitlab::review_summaries(repo, token, me, numbers),
+        Kind::GitHub | Kind::Bitbucket => Vec::new(),
+    }
+}
+
 /// A connected account: a host, and who the token belongs to.
 ///
 /// **The token is not in here.** It lives in the OS keychain and is fetched at
@@ -206,6 +255,15 @@ pub struct Account {
 /// Not every remote is a forge — plenty are a path on a NAS — and a repository
 /// with one of those is not misconfigured.
 pub fn identify(url: &str) -> Option<Repo> {
+    identify_with(url, &[])
+}
+
+/// [`identify`], also trusting the hosts of connected accounts (FEAT-088).
+///
+/// A self-hosted GitLab is often not called `gitlab.` anything. Once somebody
+/// has connected an account for it and said it is GitLab, a remote on that
+/// host is that kind; nothing else is guessed.
+pub fn identify_with(url: &str, known: &[Account]) -> Option<Repo> {
     let url = url.trim();
     let (host, path) = split_host_and_path(url)?;
 
@@ -214,19 +272,29 @@ pub fn identify(url: &str) -> Option<Repo> {
     let host = host.rsplit('@').next()?.to_string();
     let host = host.split(':').next()?.to_lowercase();
 
-    let kind = kind_of(&host)?;
+    let kind = kind_of(&host).or_else(|| {
+        known
+            .iter()
+            .find(|account| account.host == host)
+            .map(|account| account.kind)
+    })?;
 
     let path = path.trim_matches('/');
     let path = path.strip_suffix(".git").unwrap_or(path);
+    let parts: Vec<&str> = path.split('/').filter(|part| !part.is_empty()).collect();
 
     // `owner/name`, and nothing after it. A URL with more segments is not a
-    // repository root and is not something to guess at.
-    let mut parts = path.split('/').filter(|part| !part.is_empty());
-    let owner = parts.next()?.to_string();
-    let name = parts.next()?.to_string();
-    if parts.next().is_some() || owner.is_empty() || name.is_empty() {
-        return None;
-    }
+    // repository root and is not something to guess at — except on GitLab,
+    // where groups nest (`group/sub/project`) and everything before the last
+    // segment is the namespace. A `-` segment is GitLab's mark for a page
+    // about a project (`/-/tree/main`), never part of a project's path.
+    let (owner, name) = match (kind, parts.as_slice()) {
+        (_, [owner, name]) => (owner.to_string(), name.to_string()),
+        (Kind::GitLab, [namespace @ .., name]) if namespace.len() >= 2 && !parts.contains(&"-") => {
+            (namespace.join("/"), name.to_string())
+        }
+        _ => return None,
+    };
 
     Some(Repo {
         kind,
@@ -324,6 +392,25 @@ pub fn create_pull_request(
     }
 }
 
+/// Which kind of forge `host` is, and who the token belongs to there
+/// (FEAT-088).
+///
+/// A host whose name says (`github.`, `gitlab.`) is asked as that. One whose
+/// name does not — a self-hosted GitLab called `code.example.com` — is asked
+/// GitLab's question first: a GitLab answers `/api/v4/user` even to a refused
+/// token, with a 401, so a refusal there means "GitLab, wrong token" and is
+/// reported as that. Anything else is asked as `fallback`.
+pub fn identify_account(host: &str, token: &str, fallback: Kind) -> Result<(Kind, String)> {
+    if let Some(kind) = kind_of(host) {
+        return Ok((kind, whoami(kind, host, token)?));
+    }
+    match gitlab::whoami(host, token) {
+        Ok(user) => Ok((Kind::GitLab, user)),
+        Err(refused @ Error::ForgeUnauthorized { .. }) => Err(refused),
+        Err(_) => Ok((fallback, whoami(fallback, host, token)?)),
+    }
+}
+
 /// Who a token belongs to, asked of the host.
 pub fn whoami(kind: Kind, host: &str, token: &str) -> Result<String> {
     match kind {
@@ -351,12 +438,17 @@ pub fn forge_remote(remotes: &[(String, String)]) -> Option<&(String, String)> {
 
 /// Which repository this git repository's remotes point at.
 pub fn identify_repo(repo: &gix::Repository) -> Result<Option<Repo>> {
+    identify_repo_with(repo, &[])
+}
+
+/// [`identify_repo`], also trusting the hosts of connected accounts (FEAT-088).
+pub fn identify_repo_with(repo: &gix::Repository, known: &[Account]) -> Result<Option<Repo>> {
     let remotes = crate::remotes::remotes(repo)
         .into_iter()
         .map(|remote| (remote.name, remote.url))
         .collect::<Vec<_>>();
 
-    Ok(forge_remote(&remotes).and_then(|(_, url)| identify(url)))
+    Ok(forge_remote(&remotes).and_then(|(_, url)| identify_with(url, known)))
 }
 
 /// Turn a host's HTTP status into an error that says which problem it is.
@@ -549,6 +641,70 @@ mod tests {
         assert_eq!(bitbucket.host, "bitbucket.org");
         assert_eq!(bitbucket.owner, "team");
         assert_eq!(bitbucket.name, "project");
+    }
+
+    // FEAT-088 — GitLab as its API describes it.
+
+    #[test]
+    fn a_gitlab_project_in_a_nested_group_is_identified() {
+        for url in [
+            "git@gitlab.example.com:team/backend/payments.git",
+            "https://gitlab.example.com/team/backend/payments.git",
+            "ssh://git@gitlab.example.com:2222/team/backend/payments.git",
+        ] {
+            let repo = identify(url).unwrap_or_else(|| panic!("could not read {url}"));
+            assert_eq!(repo.kind, Kind::GitLab, "{url}");
+            assert_eq!(repo.owner, "team/backend", "{url}");
+            assert_eq!(repo.name, "payments", "{url}");
+            assert_eq!(repo.slug(), "team/backend/payments");
+        }
+    }
+
+    #[test]
+    fn a_gitlab_page_url_is_not_mistaken_for_a_nested_project() {
+        assert!(identify("https://gitlab.com/team/app/-/tree/main").is_none());
+        assert!(identify("https://gitlab.com/team").is_none());
+    }
+
+    #[test]
+    fn only_gitlab_nests() {
+        assert!(identify("https://github.com/a/b/c").is_none());
+        assert!(identify("https://bitbucket.org/a/b/c").is_none());
+    }
+
+    #[test]
+    fn a_project_path_is_one_segment_with_every_slash_escaped() {
+        let repo = identify("git@gitlab.example.com:team/backend/payments.git").unwrap();
+        assert_eq!(repo.encoded_slug(), "team%2Fbackend%2Fpayments");
+        assert_eq!(encode_segment("a b+c.d_e~f-g"), "a%20b%2Bc.d_e~f-g");
+    }
+
+    #[test]
+    fn a_connected_account_vouches_for_a_host_with_another_name() {
+        let account = Account {
+            kind: Kind::GitLab,
+            host: "code.example.com".into(),
+            user: "me".into(),
+        };
+        let url = "git@code.example.com:team/sub/app.git";
+
+        assert!(identify(url).is_none());
+        let repo = identify_with(url, std::slice::from_ref(&account)).expect("a repository");
+        assert_eq!(repo.kind, Kind::GitLab);
+        assert_eq!(repo.host, "code.example.com");
+        assert_eq!(repo.owner, "team/sub");
+        // A host's own name still wins over an account's say-so.
+        let github = Account {
+            kind: Kind::GitLab,
+            host: "github.com".into(),
+            user: "me".into(),
+        };
+        assert_eq!(
+            identify_with("git@github.com:a/b.git", &[github])
+                .unwrap()
+                .kind,
+            Kind::GitHub
+        );
     }
 
     #[test]

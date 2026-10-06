@@ -14,7 +14,7 @@ import * as api from '../api';
 import type { ReviewKey } from '../api';
 import { repo } from '../repo.svelte';
 import { requests } from '../requests/store.svelte';
-import type { PullRequest } from '../types';
+import type { ForgeKind, PullRequest, ReviewSummary } from '../types';
 import { groupInbox, inboxOrder, type InboxGroup } from './inbox';
 import { keyFor, keyString, normalise, type ReviewRecord } from './record';
 
@@ -25,8 +25,16 @@ let involved = $state<PullRequest[]>([]);
 let involvedLoading = $state(false);
 let involvedError = $state<string | null>(null);
 let involvedLoaded = $state(false);
-/** The host the "All my repos" search ran against. */
+/** The host the "All my repos" search ran against, and what kind it is. */
 let searchHost = $state<string | null>(null);
+let searchKind = $state<ForgeKind | null>(null);
+/**
+ * What GitLab's list does not carry — checks and thread counts — once asked
+ * for (FEAT-088), by repository and number.
+ */
+let summaries = $state<Record<string, ReviewSummary>>({});
+/** Rows already asked about, so a refreshed list does not ask twice. */
+const asked = new Set<string>();
 let selectedId = $state<string | null>(null);
 let records = $state<Record<string, ReviewRecord>>({});
 let room = $state<{ pr: PullRequest; key: ReviewKey } | null>(null);
@@ -58,6 +66,23 @@ function localWrite(key: ReviewKey, record: ReviewRecord | null): void {
 	}
 }
 
+function summaryKey(pr: PullRequest): string {
+	return `${pr.repository ?? ''}#${pr.number}`;
+}
+
+/** A row with what was learnt after the list laid over it. */
+function merged(pr: PullRequest): PullRequest {
+	const summary = summaries[summaryKey(pr)];
+	if (!summary) return pr;
+	return {
+		...pr,
+		checks: summary.checks ?? pr.checks,
+		openThreads: summary.openThreads,
+		resolvedThreads: summary.resolvedThreads,
+		repliesToYou: summary.repliesToYou
+	};
+}
+
 export const review = {
 	get scope(): InboxScope {
 		return scope;
@@ -77,7 +102,36 @@ export const review = {
 
 	/** The rows of the current scope, before grouping. */
 	get list(): PullRequest[] {
-		return scope === 'repo' ? requests.all : involved;
+		return (scope === 'repo' ? requests.all : involved).map(merged);
+	},
+
+	/**
+	 * Ask for the checks and threads GitLab's list leaves out (FEAT-088), for
+	 * the rows not asked about yet. Nothing is asked of a host whose list
+	 * already says.
+	 */
+	async loadSummaries(): Promise<void> {
+		if (!api.inTauri()) return;
+		const kind = scope === 'repo' ? (requests.repo?.kind ?? null) : searchKind;
+		if (kind !== 'gitLab') return;
+		const rows = (scope === 'repo' ? requests.all : involved).filter(
+			(pr) => !asked.has(summaryKey(pr))
+		);
+		if (rows.length === 0) return;
+		for (const pr of rows) asked.add(summaryKey(pr));
+		try {
+			const found = await api.reviewSummaries(
+				rows.map((pr) => ({ repository: pr.repository, number: pr.number }))
+			);
+			const next = { ...summaries };
+			for (const [repository, summary] of found) {
+				next[`${repository ?? ''}#${summary.number}`] = summary;
+			}
+			summaries = next;
+		} catch {
+			// The inbox shows what the list said; asking again is a Refresh.
+			for (const pr of rows) asked.delete(summaryKey(pr));
+		}
 	},
 
 	get groups(): InboxGroup[] {
@@ -183,6 +237,8 @@ export const review = {
 		// open; another one has its own.
 		room = null;
 		selectedId = null;
+		summaries = {};
+		asked.clear();
 		involvedLoaded = false;
 		involved = [];
 		if (repo.info !== null) void requests.load();
@@ -195,13 +251,16 @@ export const review = {
 		involvedError = null;
 		try {
 			let host = requests.repo?.host ?? null;
+			let kind = requests.repo?.kind ?? null;
 			if (!host) {
 				const accounts = await api.forgeAccounts();
 				host = accounts[0]?.host ?? null;
+				kind = accounts[0]?.kind ?? null;
 			}
 			const found = await api.involvedPullRequests();
 			if (mine !== involvedSeq) return;
 			searchHost = host;
+			searchKind = kind;
 			involved = found;
 			involvedLoaded = true;
 		} catch (e) {
@@ -216,6 +275,8 @@ export const review = {
 
 	async refresh(): Promise<void> {
 		records = {};
+		summaries = {};
+		asked.clear();
 		if (scope === 'all') await this.loadInvolved();
 		else await requests.load();
 	},
@@ -279,6 +340,9 @@ export const review = {
 		involvedError = null;
 		involvedLoaded = false;
 		searchHost = null;
+		searchKind = null;
+		summaries = {};
+		asked.clear();
 		selectedId = null;
 		records = {};
 		room = null;

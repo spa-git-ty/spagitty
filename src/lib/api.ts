@@ -56,6 +56,7 @@ import type {
 	ForgeKind,
 	ForgeRepo,
 	GraphOrder,
+	ReviewSummary,
 	ReviewVerdict,
 	Settings,
 	Signing,
@@ -597,6 +598,17 @@ export function setPrDraft(
  */
 export function involvedPullRequests(): Promise<PullRequest[]> {
 	return invoke('involved_pull_requests');
+}
+
+/**
+ * Checks and thread counts the list did not carry (FEAT-088): GitLab's list has
+ * neither. Each answer names the repository it was asked for, or null for the
+ * open one.
+ */
+export function reviewSummaries(
+	asks: { repository: string | null; number: number }[]
+): Promise<[string | null, ReviewSummary][]> {
+	return invoke('review_summaries', { asks });
 }
 
 /** Which repository Spagitty knows is a clone of `slug` on `host`, or null (FEAT-087). */

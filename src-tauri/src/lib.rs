@@ -154,6 +154,7 @@ pub fn run() {
             commands::close_pull_request,
             commands::involved_pull_requests,
             commands::local_clone_of,
+            commands::review_summaries,
             commands::review_state,
             commands::set_review_state,
             commands::set_pr_draft,
