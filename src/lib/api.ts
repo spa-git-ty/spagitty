@@ -592,6 +592,37 @@ export function setPrDraft(
 }
 
 /**
+ * Open pull requests anywhere on the host that involve the person (FEAT-087):
+ * the Review screen's "All my repos". Each row names its `repository`.
+ */
+export function involvedPullRequests(): Promise<PullRequest[]> {
+	return invoke('involved_pull_requests');
+}
+
+/** Which repository Spagitty knows is a clone of `slug` on `host`, or null (FEAT-087). */
+export function localCloneOf(host: string, slug: string): Promise<string | null> {
+	return invoke('local_clone_of', { host, slug });
+}
+
+/** Where one pull request's review state is kept: its host, owner, name and number. */
+export interface ReviewKey {
+	host: string;
+	owner: string;
+	name: string;
+	number: number;
+}
+
+/** What the reviewer has done on one pull request, or null (FEAT-087). */
+export function reviewState(key: ReviewKey): Promise<unknown> {
+	return invoke('review_state', { ...key });
+}
+
+/** Keep what the reviewer has done on one pull request. Null forgets it (FEAT-087). */
+export function setReviewState(key: ReviewKey, state: unknown): Promise<void> {
+	return invoke('set_review_state', { ...key, state });
+}
+
+/**
  * Commit signing as git would resolve it: `commit.gpgsign` and everything that
  * decides whether it can work (FEAT-019).
  */

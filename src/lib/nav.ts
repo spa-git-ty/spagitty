@@ -41,6 +41,9 @@ export type CountKey = keyof RepoCounts;
  * lands rather than eleven rows down among the screens they visit to look
  * something up. The Graph keeps `/` — it is still what the window opens on —
  * and follows immediately, because what the farm produces is read there.
+ *
+ * 1R is Review (FEAT-087): a place to read a pull request, beside Pull
+ * requests, which stays the place to browse, create and merge them.
  */
 export type ScreenCode =
 	| '1A'
@@ -59,7 +62,8 @@ export type ScreenCode =
 	| '1N'
 	| '1O'
 	| '1P'
-	| '1Q';
+	| '1Q'
+	| '1R';
 
 /**
  * What kind of place a destination is (TASK-041).
@@ -181,6 +185,8 @@ export const NAV_ITEMS: NavItem[] = [
 		also: ['/tags', '/stash', '/reflog']
 	},
 	{ code: '1H', label: 'Pull requests', href: '/requests', group: 'work', icon: 'request' },
+	// FEAT-087. Reading a pull request, after browsing them.
+	{ code: '1R', label: 'Review', href: '/review', group: 'work', icon: 'review' },
 	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase', shows: 'open' },
 	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search', shows: 'open' },
 	{

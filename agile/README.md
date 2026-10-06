@@ -140,6 +140,7 @@ rather than an audit.
 | [FEAT-084](items/FEAT-084-the-other-screens-in-the-spatial-language.md) | The other screens in the spatial language | 1F, 1K, 1M, 1N, 1O, 1Q, all | Open |
 | [FEAT-085](items/FEAT-085-a-new-mark-palette-and-wordmark.md) | A new mark, palette and wordmark | brand, chrome, 1J | Open |
 | [FEAT-086](items/FEAT-086-the-pomodoro-theme.md) | The Pomodoro theme | all | Done |
+| [FEAT-087](items/FEAT-087-the-review-screen-and-inbox.md) | The Review screen and its inbox | 1R, chrome | Open |
 
 ## Bugs
 

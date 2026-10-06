@@ -35,6 +35,7 @@
 	import { registerCommands } from '$lib/palette/commands';
 	import { panels } from '$lib/panels.svelte';
 	import { repo } from '$lib/repo.svelte';
+	import { review } from '$lib/review/store.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
 	import DialogHost from '$lib/ui/DialogHost.svelte';
@@ -259,6 +260,13 @@
 			lastGeneration = repo.generation;
 			graph.restart();
 		}
+	});
+
+	// And a fresh read of its pull requests, once, so the rail's Review dot
+	// says whether one is waiting on you before the screen is visited
+	// (FEAT-087). Nothing is read for a repository with no account.
+	$effect(() => {
+		if (repo.info !== null) review.prime(repo.generation);
 	});
 
 	/*

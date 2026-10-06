@@ -329,6 +329,17 @@ export interface PullRequest {
 	removed: number;
 	/** Whether the host says it can merge. Null when the host has not said. */
 	mergeable: boolean | null;
+	/** The commit the head branch points at. Empty when the host did not say (FEAT-087). */
+	headSha: string;
+	/** The person using Spagitty is a requested reviewer (FEAT-087). */
+	reviewRequested: boolean;
+	/** Review threads still open, and resolved ones (FEAT-087). */
+	openThreads: number;
+	resolvedThreads: number;
+	/** Open threads the person started where somebody else spoke last (FEAT-087). */
+	repliesToYou: number;
+	/** `owner/name` when the row came from a search across repositories (FEAT-087). */
+	repository: string | null;
 }
 
 export type ReviewState = 'awaitingReview' | 'changesRequested' | 'approved' | 'noReviewers';

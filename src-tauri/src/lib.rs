@@ -19,6 +19,7 @@ mod platform;
 mod profiles;
 mod rebase_worker;
 mod recents;
+mod review_state;
 mod search_worker;
 mod settings;
 #[cfg(test)]
@@ -151,6 +152,10 @@ pub fn run() {
             commands::reply_comment,
             commands::merge_pull_request,
             commands::close_pull_request,
+            commands::involved_pull_requests,
+            commands::local_clone_of,
+            commands::review_state,
+            commands::set_review_state,
             commands::set_pr_draft,
             commands::check_update,
             commands::signing,

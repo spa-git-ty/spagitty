@@ -102,12 +102,13 @@ impl Repo {
 /// The four states the Pull requests screen already renders. Deliberately not
 /// a host's own vocabulary: GitHub says `CHANGES_REQUESTED`, a different host
 /// says something else, and the screen says "changes requested" either way.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ReviewState {
     AwaitingReview,
     ChangesRequested,
     Approved,
+    #[default]
     NoReviewers,
 }
 
@@ -125,7 +126,11 @@ pub enum CheckState {
 /// FEAT-010 built this shape before there was anything behind it, and it has
 /// not been changed to suit a host — the mapping went the other way, which is
 /// what keeps the vocabulary host-agnostic.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+///
+/// The last six fields were added for the Review screen (FEAT-087) and default
+/// to nothing, so a host that cannot answer them reads as "none" rather than
+/// as a guess.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequest {
     /// The host's own identifier, whatever form it takes.
@@ -152,6 +157,21 @@ pub struct PullRequest {
     pub removed: u64,
     /// Null when the host has not said.
     pub mergeable: Option<bool>,
+    /// The commit the head branch points at. Empty when the host did not say.
+    pub head_sha: String,
+    /// The person using Spagitty is a requested reviewer — the plain "needs
+    /// you", apart from `needs_you`'s second reason (their own pull request
+    /// with changes requested), which is not a review to do.
+    pub review_requested: bool,
+    /// Review threads not yet resolved, and resolved ones.
+    pub open_threads: u32,
+    pub resolved_threads: u32,
+    /// Open threads the person started where somebody else spoke last: the
+    /// author answered them.
+    pub replies_to_you: u32,
+    /// `owner/name` when the row came from a search across repositories rather
+    /// than from one repository's list.
+    pub repository: Option<String>,
 }
 
 /// A connected account: a host, and who the token belongs to.
@@ -264,6 +284,26 @@ pub fn pull_requests(repo: &Repo, token: &str, me: &str) -> Result<Vec<PullReque
         Kind::GitHub => github::pull_requests(repo, token, me),
         Kind::GitLab => gitlab::pull_requests(repo, token, me),
         Kind::Bitbucket => bitbucket::pull_requests(repo, token, me),
+    }
+}
+
+/// The open pull requests on `host` that involve `me`, across every repository
+/// the token can see (FEAT-087): the Review screen's "All my repos".
+///
+/// Each row carries its `repository`, since the rows no longer share one.
+pub fn involved_pull_requests(
+    kind: Kind,
+    host: &str,
+    token: &str,
+    me: &str,
+) -> Result<Vec<PullRequest>> {
+    match kind {
+        Kind::GitHub => github::involved_pull_requests(host, token, me),
+        Kind::GitLab => gitlab::involved_merge_requests(host, token, me),
+        Kind::Bitbucket => Err(Error::Forge {
+            host: host.to_string(),
+            detail: "Bitbucket has no search across repositories".into(),
+        }),
     }
 }
 

@@ -94,6 +94,8 @@ describe('NAV_ITEMS', () => {
 			'/conflicts',
 			'/branches',
 			'/requests',
+			// FEAT-087. Reading a pull request comes after browsing them.
+			'/review',
 			// TASK-045. On the rail only while open: each is started from
 			// somewhere else — the toolbar, Ctrl+F, the tab strip's `+` — and the
 			// rail shows it while it is where you are. Tags, Stash and Reflog are
@@ -191,7 +193,15 @@ describe('isShown', () => {
 		NAV_ITEMS.filter((item) => isShown(item, context)).map((item) => item.href);
 
 	it('shows the everyday rows and Settings on a quiet day', () => {
-		expect(shown(quiet)).toEqual(['/farm', '/', '/changes', '/branches', '/requests', '/settings']);
+		expect(shown(quiet)).toEqual([
+			'/farm',
+			'/',
+			'/changes',
+			'/branches',
+			'/requests',
+			'/review',
+			'/settings'
+		]);
 	});
 
 	it('adds Conflicts while there is something to resolve, and only then', () => {
