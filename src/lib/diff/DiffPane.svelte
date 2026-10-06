@@ -9,6 +9,7 @@
 	import type { BinaryDiff, DiffSide } from '$lib/types';
 	import { detectLanguage, highlightLine } from '$lib/diff/highlight';
 	import { pairWords } from '$lib/diff/words';
+	import { timing } from '$lib/timing.svelte';
 
 	/**
 	 * The hunks of the selected file, unified or side by side.
@@ -51,6 +52,20 @@
 	const language = $derived(detectLanguage(path));
 	/** The changed words in each hunk's changed lines (FEAT-090). */
 	const marks = $derived(file && !file.binary ? file.hunks.map((hunk) => pairWords(hunk.lines)) : []);
+
+	// How long a diff takes from being handed its file to being painted
+	// (TASK-052): the cost the next step of that item sets out to cut.
+	$effect.pre(() => {
+		void view;
+		if (file && !file.binary) {
+			const lines = file.hunks.reduce((sum, hunk) => sum + hunk.lines.length, 0);
+			timing.start('diff', file.path, lines);
+		}
+	});
+	$effect(() => {
+		void view;
+		if (file && !file.binary) timing.settle('diff');
+	});
 
 	let binaryData = $state<BinaryDiff | null>(null);
 	let binaryLoading = $state(false);

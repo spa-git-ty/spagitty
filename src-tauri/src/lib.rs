@@ -24,6 +24,7 @@ mod search_worker;
 mod settings;
 #[cfg(test)]
 mod testing;
+mod timing;
 mod watch;
 
 use tauri::Manager;
@@ -174,6 +175,7 @@ pub fn run() {
             commands::avatar,
             commands::launch_path,
             commands::git_commands,
+            commands::command_timings,
             commands::clear_git_commands,
             // The desktop's own palette (FEAT-080). Its own module rather than
             // more of `commands.rs`: it is filesystem reading and a watcher,

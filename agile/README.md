@@ -255,6 +255,7 @@ of its own.
 | [TASK-049](items/TASK-049-the-record-catches-up-with-what-merged.md) | The record catches up with what merged | — | Done |
 | [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Open |
 | [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
+| [TASK-052](items/TASK-052-nothing-waits-in-line.md) | Nothing waits in line | all | Open |
 
 ## Skipped identifiers
 

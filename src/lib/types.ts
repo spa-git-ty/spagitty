@@ -1327,6 +1327,17 @@ export type CommandOutcome =
  * Reads are absent by design: log walking, refs, diff and status happen
  * in-process and have no command line. Nothing is invented for them.
  */
+/** One hold of the open repository: how long it waited and ran (TASK-052). */
+export interface CommandTiming {
+	seq: number;
+	atMs: number;
+	command: string;
+	/** Microseconds waiting for the repository. */
+	waitUs: number;
+	/** Microseconds holding it: the work. */
+	heldUs: number;
+}
+
 export interface ExecutedCommand {
 	/** Monotonic within the app's run. Used to ask for everything newer. */
 	seq: number;

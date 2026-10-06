@@ -11,6 +11,7 @@
 	import { dialog } from '$lib/ui/dialog.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import { settings } from './store.svelte';
+	import TimingsPanel from './TimingsPanel.svelte';
 
 	/**
 	 * God mode — the delight layer, driven by hand (FEAT-072).
@@ -219,6 +220,12 @@
 				Audio device: <span class="mono">{audio.state}</span>. {audio.note}
 			</p>
 		{/if}
+	</div>
+
+	<!-- 5. What the application spends its time on (TASK-052). -->
+	<div class="group">
+		<h3 class="sub">Timings</h3>
+		<TimingsPanel />
 	</div>
 </section>
 

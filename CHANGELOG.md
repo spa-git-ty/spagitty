@@ -53,6 +53,10 @@ stays backward-compatible.
   across a restart — until *Finish review* sends it all with Approve, Request
   changes or Comment and a note on the whole pull request. Reply to threads,
   and resolve or reopen them on GitHub and GitLab from Spagitty.
+- **Timings in God mode.** Settings › God mode › Timings shows what each
+  command spent holding the open repository and waiting for it, every call
+  from the screen and how long it took, and how long screens and diffs take
+  to paint — so slowness can be measured before it is fixed.
 
 ### Changed
 

@@ -53,6 +53,7 @@ use crate::recents;
 use crate::review_state;
 use crate::search_worker::{self, SearchWorker};
 use crate::settings::Settings;
+use crate::timing;
 use crate::watch::{self, RepoWatcher};
 
 /// One open repository and everything running against it.
@@ -120,10 +121,61 @@ pub struct AppState {
     opened: AtomicU64,
 }
 
+/// The session lock, held, and timed (TASK-052).
+///
+/// How long it took to get and how long it was held are kept when it is let
+/// go, under the command that took it — the two numbers that say whether a
+/// screen waited for its own work or for somebody else's.
+struct Held<'a> {
+    guard: std::sync::MutexGuard<'a, Option<Session>>,
+    command: &'static str,
+    waited: std::time::Duration,
+    since: std::time::Instant,
+}
+
+impl std::ops::Deref for Held<'_> {
+    type Target = Option<Session>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.guard
+    }
+}
+
+impl std::ops::DerefMut for Held<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.guard
+    }
+}
+
+impl Drop for Held<'_> {
+    fn drop(&mut self) {
+        timing::push(self.command, self.waited, self.since.elapsed());
+    }
+}
+
 impl AppState {
-    fn with_session<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
+    /// Take the session lock for `command`, timing the wait and the hold.
+    fn lock_session(&self, command: &'static str) -> Held<'_> {
+        let asked = std::time::Instant::now();
         let guard = self.session.lock().expect("session lock");
-        let session = guard.as_ref().ok_or(Error::NoRepository)?;
+        let since = std::time::Instant::now();
+        Held {
+            guard,
+            command,
+            waited: since - asked,
+            since,
+        }
+    }
+
+    /// Run `f` against the open repository, holding the session lock while
+    /// it runs. `command` names the hold in the timings.
+    fn with_session<T>(
+        &self,
+        command: &'static str,
+        f: impl FnOnce(&Session) -> Result<T>,
+    ) -> Result<T> {
+        let held = self.lock_session(command);
+        let session = held.as_ref().ok_or(Error::NoRepository)?;
         f(session)
     }
 
@@ -223,7 +275,7 @@ fn open_as<R: Runtime>(
     );
     let watcher = watch::watch(app.clone(), &git_dir);
 
-    let mut slot = state.session.lock().expect("session lock");
+    let mut slot = state.lock_session("open_as");
     // Overtaken while it was reading: the worker and watcher it started are
     // dropped, and joined, on the way out.
     if state.opened.load(Ordering::SeqCst) != ticket {
@@ -257,7 +309,7 @@ fn open_as<R: Runtime>(
 /// the `graph-rows` event.
 #[tauri::command(async)]
 pub fn graph_request(state: State<'_, AppState>, token: u64, count: usize) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("graph_request", |session| {
         // A request against a walk that has been replaced is stale, not an
         // error — it just raced a refresh.
         if session.graph.token() == token {
@@ -271,7 +323,7 @@ pub fn graph_request(state: State<'_, AppState>, token: u64, count: usize) -> Re
 /// rows and starts again.
 #[tauri::command(async)]
 pub fn graph_restart<R: Runtime>(app: AppHandle<R>, state: State<'_, AppState>) -> Result<u64> {
-    let mut guard = state.session.lock().expect("session lock");
+    let mut guard = state.lock_session("graph_restart");
     let session = guard.as_mut().ok_or(Error::NoRepository)?;
 
     let token = state.next_token.fetch_add(1, Ordering::Relaxed);
@@ -292,7 +344,7 @@ pub fn graph_visibility<R: Runtime>(
     refs: Vec<String>,
     pinned: Vec<String>,
 ) -> Result<u64> {
-    let mut guard = state.session.lock().expect("session lock");
+    let mut guard = state.lock_session("graph_visibility");
     let session = guard.as_mut().ok_or(Error::NoRepository)?;
 
     session.visible = refs;
@@ -314,7 +366,7 @@ pub fn graph_order<R: Runtime>(
     state: State<'_, AppState>,
     order: GraphOrder,
 ) -> Result<u64> {
-    let mut guard = state.session.lock().expect("session lock");
+    let mut guard = state.lock_session("graph_order");
     let session = guard.as_mut().ok_or(Error::NoRepository)?;
 
     session.order = order;
@@ -338,7 +390,7 @@ fn restart_walk<R: Runtime>(app: AppHandle<R>, session: &mut Session, token: u64
 /// HEAD and the rail counts, re-read. Called after `repo-changed`.
 #[tauri::command(async)]
 pub fn snapshot(state: State<'_, AppState>) -> Result<Snapshot> {
-    state.with_session(|session| {
+    state.with_session("snapshot", |session| {
         let local = session.repo.to_thread_local();
         let refs = RefIndex::build(&local)?;
         Ok(Snapshot {
@@ -351,7 +403,7 @@ pub fn snapshot(state: State<'_, AppState>) -> Result<Snapshot> {
 /// Everything the detail panel shows for one commit.
 #[tauri::command(async)]
 pub fn commit_detail(state: State<'_, AppState>, id: String) -> Result<CommitDetail> {
-    state.with_session(|session| diff::commit_detail(&session.repo.to_thread_local(), &id))
+    state.with_session("commit_detail", |session| diff::commit_detail(&session.repo.to_thread_local(), &id))
 }
 
 /// The Diff screen's file list and header counts.
@@ -360,13 +412,13 @@ pub fn commit_detail(state: State<'_, AppState>, id: String) -> Result<CommitDet
 /// be known without diffing them. It is one call when the screen opens.
 #[tauri::command(async)]
 pub fn commit_diff(state: State<'_, AppState>, id: String) -> Result<CommitDiff> {
-    state.with_session(|session| diff::commit_diff(&session.repo.to_thread_local(), &id))
+    state.with_session("commit_diff", |session| diff::commit_diff(&session.repo.to_thread_local(), &id))
 }
 
 /// The hunks of one file, fetched as that file is selected.
 #[tauri::command(async)]
 pub fn file_diff(state: State<'_, AppState>, id: String, path: String) -> Result<FileDiff> {
-    state.with_session(|session| diff::file_diff(&session.repo.to_thread_local(), &id, &path))
+    state.with_session("file_diff", |session| diff::file_diff(&session.repo.to_thread_local(), &id, &path))
 }
 
 /// The staged, unstaged and conflicted lists behind the Working copy screen.
@@ -375,13 +427,13 @@ pub fn file_diff(state: State<'_, AppState>, id: String, path: String) -> Result
 /// per row.
 #[tauri::command(async)]
 pub fn working_copy(state: State<'_, AppState>) -> Result<WorkingCopy> {
-    state.with_session(|session| status::working_copy(&session.repo.to_thread_local()))
+    state.with_session("working_copy", |session| status::working_copy(&session.repo.to_thread_local()))
 }
 
 /// One working-copy file's hunks, on either side of the index.
 #[tauri::command(async)]
 pub fn working_diff(state: State<'_, AppState>, path: String, side: Side) -> Result<FileDiff> {
-    state.with_session(|session| {
+    state.with_session("working_diff", |session| {
         diff::working_file_diff(&session.repo.to_thread_local(), &path, side)
     })
 }
@@ -394,7 +446,7 @@ pub fn binary_file_diff(
     path: String,
 ) -> Result<diff::BinaryDiff> {
     state
-        .with_session(|session| diff::binary_file_diff(&session.repo.to_thread_local(), &id, &path))
+        .with_session("binary_file_diff", |session| diff::binary_file_diff(&session.repo.to_thread_local(), &id, &path))
 }
 
 /// Detailed binary / image diff metadata for working copy (FEAT-065).
@@ -404,19 +456,19 @@ pub fn binary_working_diff(
     path: String,
     side: Side,
 ) -> Result<diff::BinaryDiff> {
-    state.with_session(|session| {
+    state.with_session("binary_working_diff", |session| {
         diff::binary_working_diff(&session.repo.to_thread_local(), &path, side)
     })
 }
 
 #[tauri::command(async)]
 pub fn stage(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session(|session| work::stage(&session.repo.to_thread_local(), &paths))
+    state.with_session("stage", |session| work::stage(&session.repo.to_thread_local(), &paths))
 }
 
 #[tauri::command(async)]
 pub fn unstage(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session(|session| work::unstage(&session.repo.to_thread_local(), &paths))
+    state.with_session("unstage", |session| work::unstage(&session.repo.to_thread_local(), &paths))
 }
 
 /// Stage one hunk. `header` identifies it, so a stale view is refused rather
@@ -428,7 +480,7 @@ pub fn stage_hunk(
     index: usize,
     header: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("stage_hunk", |session| {
         work::stage_hunk(&session.repo.to_thread_local(), &path, index, &header)
     })
 }
@@ -440,7 +492,7 @@ pub fn unstage_hunk(
     index: usize,
     header: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("unstage_hunk", |session| {
         work::unstage_hunk(&session.repo.to_thread_local(), &path, index, &header)
     })
 }
@@ -452,7 +504,7 @@ pub fn unstage_hunk(
 /// confirmation the caller cannot see the wording of is not a confirmation.
 #[tauri::command(async)]
 pub fn discard(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session(|session| work::discard(&session.repo.to_thread_local(), &paths))
+    state.with_session("discard", |session| work::discard(&session.repo.to_thread_local(), &paths))
 }
 
 /// Throw away one unstaged hunk. `header` identifies it, so a stale view is
@@ -464,7 +516,7 @@ pub fn discard_hunk(
     index: usize,
     header: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("discard_hunk", |session| {
         work::discard_hunk(&session.repo.to_thread_local(), &path, index, &header)
     })
 }
@@ -477,7 +529,7 @@ pub fn commit(
     body: String,
     amend: bool,
 ) -> Result<String> {
-    state.with_session(|session| {
+    state.with_session("commit", |session| {
         work::commit(&session.repo.to_thread_local(), &subject, &body, amend)
     })
 }
@@ -485,7 +537,7 @@ pub fn commit(
 /// The message of the commit HEAD points at, for pre-filling an amend.
 #[tauri::command(async)]
 pub fn head_message(state: State<'_, AppState>) -> Result<String> {
-    state.with_session(|session| work::head_message(&session.repo.to_thread_local()))
+    state.with_session("head_message", |session| work::head_message(&session.repo.to_thread_local()))
 }
 
 /// Every branch, with how far it has drifted. One call per refresh.
@@ -498,12 +550,12 @@ pub fn head_message(state: State<'_, AppState>) -> Result<String> {
 /// directory walk; being quietly wrong about drift costs more.
 #[tauri::command(async)]
 pub fn branches(state: State<'_, AppState>) -> Result<Vec<BranchRow>> {
-    state.with_session(|session| branches::list(&repo::open(&session.path)?))
+    state.with_session("branches", |session| branches::list(&repo::open(&session.path)?))
 }
 
 #[tauri::command(async)]
 pub fn checkout(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session(|session| branches::checkout(&session.repo.to_thread_local(), &name))
+    state.with_session("checkout", |session| branches::checkout(&session.repo.to_thread_local(), &name))
 }
 
 /// Create a branch. `start` empty means `HEAD`.
@@ -514,7 +566,7 @@ pub fn create_branch(
     start: String,
     checkout: bool,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("create_branch", |session| {
         branches::create(&session.repo.to_thread_local(), &name, &start, checkout)
     })
 }
@@ -523,7 +575,7 @@ pub fn create_branch(
 /// see what is in it — a stash is a commit.
 #[tauri::command(async)]
 pub fn stashes(state: State<'_, AppState>) -> Result<Vec<StashEntry>> {
-    state.with_session(|session| stash::list(&session.repo.to_thread_local()))
+    state.with_session("stashes", |session| stash::list(&session.repo.to_thread_local()))
 }
 
 #[tauri::command(async)]
@@ -532,7 +584,7 @@ pub fn stash_push(
     message: String,
     include_untracked: bool,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("stash_push", |session| {
         stash::push(&session.repo.to_thread_local(), &message, include_untracked)
     })
 }
@@ -544,7 +596,7 @@ pub fn stash_push(
 #[tauri::command(async)]
 pub fn rebase_todo(state: State<'_, AppState>, upstream: String) -> Result<Todo> {
     let todo =
-        state.with_session(|session| rebase::todo(&session.repo.to_thread_local(), &upstream))?;
+        state.with_session("rebase_todo", |session| rebase::todo(&session.repo.to_thread_local(), &upstream))?;
 
     *state.rebase_todo.lock().expect("rebase lock") = Some(todo.clone());
     Ok(todo)
@@ -605,7 +657,7 @@ pub fn rebase_run<R: Runtime>(
         return Err(Error::NotStageable("a rebase is already running".into()));
     }
 
-    let (workdir, git_dir) = state.with_session(|session| {
+    let (workdir, git_dir) = state.with_session("rebase_run", |session| {
         let repo = session.repo.to_thread_local();
         Ok((
             spagitty_core::repo::workdir(&repo)?.to_path_buf(),
@@ -626,19 +678,19 @@ pub fn rebase_run<R: Runtime>(
 /// line while Spagitty was open is visible here too.
 #[tauri::command(async)]
 pub fn rebase_progress(state: State<'_, AppState>) -> Result<Option<rebase::Progress>> {
-    state.with_session(|session| Ok(rebase::progress(&session.repo.to_thread_local())))
+    state.with_session("rebase_progress", |session| Ok(rebase::progress(&session.repo.to_thread_local())))
 }
 
 /// Carry on with a rebase that stopped, once its conflicts are resolved.
 #[tauri::command(async)]
 pub fn rebase_continue(state: State<'_, AppState>) -> Result<()> {
-    state.with_session(|session| ops::rebase_continue(&session.repo.to_thread_local()))
+    state.with_session("rebase_continue", |session| ops::rebase_continue(&session.repo.to_thread_local()))
 }
 
 /// Drop the commit a rebase stopped on and carry on with the rest.
 #[tauri::command(async)]
 pub fn rebase_skip(state: State<'_, AppState>) -> Result<()> {
-    state.with_session(|session| ops::rebase_skip(&session.repo.to_thread_local()))
+    state.with_session("rebase_skip", |session| ops::rebase_skip(&session.repo.to_thread_local()))
 }
 
 /// Unwind a rebase and put the branch back where it started.
@@ -649,7 +701,7 @@ pub fn rebase_skip(state: State<'_, AppState>) -> Result<()> {
 #[tauri::command(async)]
 pub fn rebase_abort(state: State<'_, AppState>) -> Result<()> {
     state.rebase.lock().expect("rebase worker lock").take();
-    state.with_session(|session| ops::rebase_abort(&session.repo.to_thread_local()))
+    state.with_session("rebase_abort", |session| ops::rebase_abort(&session.repo.to_thread_local()))
 }
 
 /// Move the current branch to `commit`.
@@ -659,20 +711,20 @@ pub fn rebase_abort(state: State<'_, AppState>) -> Result<()> {
 /// consequences the user read in the menu.
 #[tauri::command(async)]
 pub fn reset(state: State<'_, AppState>, commit: String, mode: ResetMode) -> Result<()> {
-    state.with_session(|session| ops::reset(&session.repo.to_thread_local(), &commit, mode))
+    state.with_session("reset", |session| ops::reset(&session.repo.to_thread_local(), &commit, mode))
 }
 
 /// Commit the inverse of `commit`. Reverting a merge takes the first parent as
 /// the mainline, which is the parent the graph draws as the trunk.
 #[tauri::command(async)]
 pub fn revert(state: State<'_, AppState>, commit: String) -> Result<()> {
-    state.with_session(|session| ops::revert(&session.repo.to_thread_local(), &commit))
+    state.with_session("revert", |session| ops::revert(&session.repo.to_thread_local(), &commit))
 }
 
 /// Replay `commits` onto the current branch, in the order given.
 #[tauri::command(async)]
 pub fn cherry_pick(state: State<'_, AppState>, commits: Vec<String>) -> Result<()> {
-    state.with_session(|session| ops::cherry_pick(&session.repo.to_thread_local(), &commits))
+    state.with_session("cherry_pick", |session| ops::cherry_pick(&session.repo.to_thread_local(), &commits))
 }
 
 /// Merge, fast-forward or rebase `source` into the branch that is checked out.
@@ -681,7 +733,7 @@ pub fn cherry_pick(state: State<'_, AppState>, commits: Vec<String>) -> Result<(
 /// user has picked from the menu that appears.
 #[tauri::command(async)]
 pub fn integrate(state: State<'_, AppState>, source: String, how: Integration) -> Result<()> {
-    state.with_session(|session| ops::integrate(&session.repo.to_thread_local(), &source, how))
+    state.with_session("integrate", |session| ops::integrate(&session.repo.to_thread_local(), &source, how))
 }
 
 /// Replay commits onto `onto`.
@@ -696,7 +748,7 @@ pub fn rebase_onto(
     upstream: String,
     branch: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("rebase_onto", |session| {
         ops::rebase_onto(&session.repo.to_thread_local(), &onto, &upstream, &branch)
     })
 }
@@ -704,19 +756,19 @@ pub fn rebase_onto(
 /// Check out a commit with no branch attached.
 #[tauri::command(async)]
 pub fn checkout_detached(state: State<'_, AppState>, revision: String) -> Result<()> {
-    state.with_session(|session| ops::checkout_detached(&session.repo.to_thread_local(), &revision))
+    state.with_session("checkout_detached", |session| ops::checkout_detached(&session.repo.to_thread_local(), &revision))
 }
 
 /// Rename a local branch.
 #[tauri::command(async)]
 pub fn rename_branch(state: State<'_, AppState>, from: String, to: String) -> Result<()> {
-    state.with_session(|session| ops::rename_branch(&session.repo.to_thread_local(), &from, &to))
+    state.with_session("rename_branch", |session| ops::rename_branch(&session.repo.to_thread_local(), &from, &to))
 }
 
 /// Delete a local branch. `force` is `-D`, and loses unmerged commits.
 #[tauri::command(async)]
 pub fn delete_branch(state: State<'_, AppState>, name: String, force: bool) -> Result<()> {
-    state.with_session(|session| ops::delete_branch(&session.repo.to_thread_local(), &name, force))
+    state.with_session("delete_branch", |session| ops::delete_branch(&session.repo.to_thread_local(), &name, force))
 }
 
 /// Create a tag at `target`. A message makes it annotated.
@@ -727,7 +779,7 @@ pub fn create_tag(
     target: String,
     message: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("create_tag", |session| {
         ops::create_tag(&session.repo.to_thread_local(), &name, &target, &message)
     })
 }
@@ -735,13 +787,13 @@ pub fn create_tag(
 /// Delete a local tag.
 #[tauri::command(async)]
 pub fn delete_tag(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session(|session| ops::delete_tag(&session.repo.to_thread_local(), &name))
+    state.with_session("delete_tag", |session| ops::delete_tag(&session.repo.to_thread_local(), &name))
 }
 
 /// Apply, pop or drop a stash entry.
 #[tauri::command(async)]
 pub fn stash_action(state: State<'_, AppState>, index: usize, action: StashAction) -> Result<()> {
-    state.with_session(|session| ops::stash(&session.repo.to_thread_local(), index, action))
+    state.with_session("stash_action", |session| ops::stash(&session.repo.to_thread_local(), index, action))
 }
 
 /// Fetch. Returns the token its events carry (FEAT-018).
@@ -767,7 +819,7 @@ pub fn fetch<R: Runtime>(
 /// upstream the current branch tracks rather than Spagitty guessing.
 #[tauri::command(async)]
 pub fn pull(state: State<'_, AppState>, remote: String, mode: PullMode) -> Result<String> {
-    state.with_session(|session| ops::pull(&session.repo.to_thread_local(), &remote, mode))
+    state.with_session("pull", |session| ops::pull(&session.repo.to_thread_local(), &remote, mode))
 }
 
 /// Push. `force` is `--force-with-lease`, never a plain force.
@@ -808,7 +860,7 @@ fn start<R: Runtime>(
         ));
     }
 
-    let workdir = state.with_session(|session| {
+    let workdir = state.with_session("start", |session| {
         Ok(spagitty_core::repo::workdir(&session.repo.to_thread_local())?.to_path_buf())
     })?;
 
@@ -839,7 +891,7 @@ pub fn search_start<R: Runtime>(
     state: State<'_, AppState>,
     query: Query,
 ) -> Result<u64> {
-    let path = state.with_session(|session| Ok(session.path.clone()))?;
+    let path = state.with_session("search_start", |session| Ok(session.path.clone()))?;
     let token = state.next_token.fetch_add(1, Ordering::Relaxed);
 
     let worker = search_worker::spawn(app, path, query, token);
@@ -860,7 +912,7 @@ pub fn search_stop(state: State<'_, AppState>) {
 /// `HEAD`.
 #[tauri::command(async)]
 pub fn blame(state: State<'_, AppState>, path: String, revision: String) -> Result<Blame> {
-    state.with_session(|session| blame::file(&session.repo.to_thread_local(), &path, &revision))
+    state.with_session("blame", |session| blame::file(&session.repo.to_thread_local(), &path, &revision))
 }
 
 /// Read commit history for a single file path (FEAT-063).
@@ -870,7 +922,7 @@ pub fn file_history(
     path: String,
     limit: usize,
 ) -> Result<Vec<blame::FileHistoryEntry>> {
-    state.with_session(|session| blame::history(&session.repo.to_thread_local(), &path, limit))
+    state.with_session("file_history", |session| blame::history(&session.repo.to_thread_local(), &path, limit))
 }
 
 /// What operation is in progress, and every conflicted path.
@@ -881,13 +933,13 @@ pub fn file_history(
 /// write path.
 #[tauri::command(async)]
 pub fn conflicts(state: State<'_, AppState>) -> Result<ConflictState> {
-    state.with_session(|session| conflicts::state(&session.repo.to_thread_local()))
+    state.with_session("conflicts", |session| conflicts::state(&session.repo.to_thread_local()))
 }
 
 /// The three index stages of one conflicted path, plus the file on disk.
 #[tauri::command(async)]
 pub fn conflict_sides(state: State<'_, AppState>, path: String) -> Result<ConflictSides> {
-    state.with_session(|session| conflicts::sides(&session.repo.to_thread_local(), &path))
+    state.with_session("conflict_sides", |session| conflicts::sides(&session.repo.to_thread_local(), &path))
 }
 
 /// Every conflict region in a file's merged text, so the screen can offer one
@@ -907,7 +959,7 @@ pub fn conflict_take(
     path: String,
     side: conflicts::Side,
 ) -> Result<()> {
-    state.with_session(|session| conflicts::take(&session.repo.to_thread_local(), &path, side))
+    state.with_session("conflict_take", |session| conflicts::take(&session.repo.to_thread_local(), &path, side))
 }
 
 /// Resolve one marker region, or every region, and write the file back.
@@ -922,7 +974,7 @@ pub fn conflict_resolve_region(
     index: Option<usize>,
     side: conflicts::Side,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("conflict_resolve_region", |session| {
         let repo = session.repo.to_thread_local();
         let current = std::fs::read_to_string(spagitty_core::repo::workdir(&repo)?.join(&path))?;
         let resolved = match index {
@@ -936,7 +988,7 @@ pub fn conflict_resolve_region(
 /// Write the merged pane's text to the file, exactly as given.
 #[tauri::command(async)]
 pub fn conflict_write(state: State<'_, AppState>, path: String, text: String) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("conflict_write", |session| {
         conflicts::write_merged(&session.repo.to_thread_local(), &path, &text)
     })
 }
@@ -944,13 +996,13 @@ pub fn conflict_write(state: State<'_, AppState>, path: String, text: String) ->
 /// Mark paths resolved: `git add`.
 #[tauri::command(async)]
 pub fn conflict_resolve(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session(|session| conflicts::mark_resolved(&session.repo.to_thread_local(), &paths))
+    state.with_session("conflict_resolve", |session| conflicts::mark_resolved(&session.repo.to_thread_local(), &paths))
 }
 
 /// Carry on with whatever the repository is in the middle of.
 #[tauri::command(async)]
 pub fn conflict_continue(state: State<'_, AppState>) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("conflict_continue", |session| {
         let repo = session.repo.to_thread_local();
         conflicts::continue_operation(&repo, conflicts::operation(&repo))
     })
@@ -959,7 +1011,7 @@ pub fn conflict_continue(state: State<'_, AppState>) -> Result<()> {
 /// Abandon it and put the repository back.
 #[tauri::command(async)]
 pub fn conflict_abort(state: State<'_, AppState>) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("conflict_abort", |session| {
         let repo = session.repo.to_thread_local();
         conflicts::abort_operation(&repo, conflicts::operation(&repo))
     })
@@ -968,7 +1020,7 @@ pub fn conflict_abort(state: State<'_, AppState>) -> Result<()> {
 /// Every tag, newest first (FEAT-051).
 #[tauri::command(async)]
 pub fn tags(state: State<'_, AppState>) -> Result<Vec<tags::Tag>> {
-    state.with_session(|session| tags::tags(&session.repo.to_thread_local()))
+    state.with_session("tags", |session| tags::tags(&session.repo.to_thread_local()))
 }
 
 /// Create a tag. A non-empty message makes it annotated.
@@ -979,7 +1031,7 @@ pub fn tag_create(
     target: String,
     message: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("tag_create", |session| {
         tags::create(&session.repo.to_thread_local(), &name, &target, &message)
     })
 }
@@ -987,7 +1039,7 @@ pub fn tag_create(
 /// Delete a local tag.
 #[tauri::command(async)]
 pub fn tag_delete(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session(|session| tags::delete(&session.repo.to_thread_local(), &name))
+    state.with_session("tag_delete", |session| tags::delete(&session.repo.to_thread_local(), &name))
 }
 
 /// Rewrite an annotated tag's message, keeping it on the same commit.
@@ -998,7 +1050,7 @@ pub fn tag_retag(
     target: String,
     message: String,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("tag_retag", |session| {
         tags::retag(&session.repo.to_thread_local(), &name, &target, &message)
     })
 }
@@ -1006,37 +1058,37 @@ pub fn tag_retag(
 /// Where a ref has been (FEAT-050).
 #[tauri::command(async)]
 pub fn reflog(state: State<'_, AppState>, query: reflog::ReflogQuery) -> Result<reflog::Reflog> {
-    state.with_session(|session| reflog::reflog(&session.repo.to_thread_local(), &query))
+    state.with_session("reflog", |session| reflog::reflog(&session.repo.to_thread_local(), &query))
 }
 
 /// Every ref whose reflog is worth offering, `HEAD` first.
 #[tauri::command(async)]
 pub fn reflog_refs(state: State<'_, AppState>) -> Result<Vec<String>> {
-    state.with_session(|session| Ok(reflog::logged_refs(&session.repo.to_thread_local())))
+    state.with_session("reflog_refs", |session| Ok(reflog::logged_refs(&session.repo.to_thread_local())))
 }
 
 /// Every configured remote, in name order.
 #[tauri::command(async)]
 pub fn remotes(state: State<'_, AppState>) -> Result<Vec<remotes::Remote>> {
-    state.with_session(|session| Ok(remotes::remotes(&session.repo.to_thread_local())))
+    state.with_session("remotes", |session| Ok(remotes::remotes(&session.repo.to_thread_local())))
 }
 
 /// Add a remote. Configuration only — nothing is fetched.
 #[tauri::command(async)]
 pub fn remote_add(state: State<'_, AppState>, name: String, url: String) -> Result<()> {
-    state.with_session(|session| remotes::add(&session.repo.to_thread_local(), &name, &url))
+    state.with_session("remote_add", |session| remotes::add(&session.repo.to_thread_local(), &name, &url))
 }
 
 /// Rename a remote, its tracking refs, and every upstream pointing at it.
 #[tauri::command(async)]
 pub fn remote_rename(state: State<'_, AppState>, from: String, to: String) -> Result<()> {
-    state.with_session(|session| remotes::rename(&session.repo.to_thread_local(), &from, &to))
+    state.with_session("remote_rename", |session| remotes::rename(&session.repo.to_thread_local(), &from, &to))
 }
 
 /// List all submodules for the open repository (FEAT-067).
 #[tauri::command(async)]
 pub fn submodules(state: State<'_, AppState>) -> Result<Vec<Submodule>> {
-    state.with_session(|session| submodules::list(&session.repo.to_thread_local()))
+    state.with_session("submodules", |session| submodules::list(&session.repo.to_thread_local()))
 }
 
 /// Update submodules recursively (FEAT-067).
@@ -1047,7 +1099,7 @@ pub fn submodule_update(
     init: bool,
     recursive: bool,
 ) -> Result<String> {
-    state.with_session(|session| {
+    state.with_session("submodule_update", |session| {
         submodules::update(&session.repo.to_thread_local(), &paths, init, recursive)
     })
 }
@@ -1055,13 +1107,13 @@ pub fn submodule_update(
 /// Sync submodule URLs from .gitmodules (FEAT-067).
 #[tauri::command(async)]
 pub fn submodule_sync(state: State<'_, AppState>, recursive: bool) -> Result<String> {
-    state.with_session(|session| submodules::sync(&session.repo.to_thread_local(), recursive))
+    state.with_session("submodule_sync", |session| submodules::sync(&session.repo.to_thread_local(), recursive))
 }
 
 /// De-initialize a submodule (FEAT-067).
 #[tauri::command(async)]
 pub fn submodule_deinit(state: State<'_, AppState>, path: String, force: bool) -> Result<String> {
-    state.with_session(|session| submodules::deinit(&session.repo.to_thread_local(), &path, force))
+    state.with_session("submodule_deinit", |session| submodules::deinit(&session.repo.to_thread_local(), &path, force))
 }
 
 /// Read configured and available external diff/merge tools (FEAT-068).
@@ -1069,7 +1121,7 @@ pub fn submodule_deinit(state: State<'_, AppState>, path: String, force: bool) -
 /// Falls back to global configuration from ~/.gitconfig if no repository is open.
 #[tauri::command(async)]
 pub fn external_tools_config(state: State<'_, AppState>) -> Result<ExternalToolsConfig> {
-    let guard = state.session.lock().expect("session lock");
+    let guard = state.lock_session("external_tools_config");
     match guard.as_ref() {
         Some(session) => tools::get_config(&session.repo.to_thread_local()),
         None => tools::get_config_global(),
@@ -1086,7 +1138,7 @@ pub fn set_external_tool(
     tool_name: Option<String>,
     global: bool,
 ) -> Result<()> {
-    let guard = state.session.lock().expect("session lock");
+    let guard = state.lock_session("set_external_tool");
     match guard.as_ref() {
         Some(session) => tools::set_tool(
             &session.repo.to_thread_local(),
@@ -1111,7 +1163,7 @@ pub fn launch_external_diff(
     tool: Option<String>,
     commit: Option<String>,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("launch_external_diff", |session| {
         tools::launch_diff(
             &session.repo.to_thread_local(),
             &path,
@@ -1128,7 +1180,7 @@ pub fn launch_external_merge(
     path: String,
     tool: Option<String>,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("launch_external_merge", |session| {
         tools::launch_merge(&session.repo.to_thread_local(), &path, tool.as_deref())
     })
 }
@@ -1136,19 +1188,19 @@ pub fn launch_external_merge(
 /// Remove a remote, its tracking refs, and the upstreams pointing at it.
 #[tauri::command(async)]
 pub fn remote_remove(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session(|session| remotes::remove(&session.repo.to_thread_local(), &name))
+    state.with_session("remote_remove", |session| remotes::remove(&session.repo.to_thread_local(), &name))
 }
 
 /// Change where a remote points.
 #[tauri::command(async)]
 pub fn remote_set_url(state: State<'_, AppState>, name: String, url: String) -> Result<()> {
-    state.with_session(|session| remotes::set_url(&session.repo.to_thread_local(), &name, &url))
+    state.with_session("remote_set_url", |session| remotes::set_url(&session.repo.to_thread_local(), &name, &url))
 }
 
 /// List all worktrees for the open repository (FEAT-062).
 #[tauri::command(async)]
 pub fn worktrees(state: State<'_, AppState>) -> Result<Vec<Worktree>> {
-    state.with_session(|session| worktrees::list(&session.repo.to_thread_local()))
+    state.with_session("worktrees", |session| worktrees::list(&session.repo.to_thread_local()))
 }
 
 /// Add a new linked worktree (FEAT-062).
@@ -1160,7 +1212,7 @@ pub fn worktree_add(
     new_branch: Option<String>,
     detach: bool,
 ) -> Result<Worktree> {
-    state.with_session(|session| {
+    state.with_session("worktree_add", |session| {
         worktrees::add(
             &session.repo.to_thread_local(),
             std::path::Path::new(&path),
@@ -1174,7 +1226,7 @@ pub fn worktree_add(
 /// Remove a worktree (FEAT-062).
 #[tauri::command(async)]
 pub fn worktree_remove(state: State<'_, AppState>, path: String, force: bool) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("worktree_remove", |session| {
         worktrees::remove(
             &session.repo.to_thread_local(),
             std::path::Path::new(&path),
@@ -1190,7 +1242,7 @@ pub fn worktree_lock(
     path: String,
     reason: Option<String>,
 ) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("worktree_lock", |session| {
         worktrees::lock(
             &session.repo.to_thread_local(),
             std::path::Path::new(&path),
@@ -1202,7 +1254,7 @@ pub fn worktree_lock(
 /// Unlock a locked worktree (FEAT-062).
 #[tauri::command(async)]
 pub fn worktree_unlock(state: State<'_, AppState>, path: String) -> Result<()> {
-    state.with_session(|session| {
+    state.with_session("worktree_unlock", |session| {
         worktrees::unlock(&session.repo.to_thread_local(), std::path::Path::new(&path))
     })
 }
@@ -1210,7 +1262,7 @@ pub fn worktree_unlock(state: State<'_, AppState>, path: String) -> Result<()> {
 /// Prune stale worktrees (FEAT-062).
 #[tauri::command(async)]
 pub fn worktree_prune(state: State<'_, AppState>) -> Result<()> {
-    state.with_session(|session| worktrees::prune(&session.repo.to_thread_local()))
+    state.with_session("worktree_prune", |session| worktrees::prune(&session.repo.to_thread_local()))
 }
 
 /// Every remembered repository, as a card.
@@ -1293,7 +1345,7 @@ pub fn close_repo(state: State<'_, AppState>) {
     // The ticket is taken under the lock, so an open either installed before
     // this close and is cleared by it, or checks its ticket after it and
     // finds itself overtaken.
-    let mut slot = state.session.lock().expect("session lock");
+    let mut slot = state.lock_session("close_repo");
     state.ticket();
     *slot = None;
 }
@@ -1306,6 +1358,13 @@ pub fn close_repo(state: State<'_, AppState>) {
 #[tauri::command(async)]
 pub fn git_commands(since: u64) -> Vec<Executed> {
     record::recent(since)
+}
+
+/// How long each hold of the open repository waited and ran, after `after`
+/// (TASK-052). God mode's Timings panel asks for what is new.
+#[tauri::command(async)]
+pub fn command_timings(after: u64) -> Vec<timing::Timed> {
+    timing::since(after)
 }
 
 /// Forget the recorded commands. The user's action, from the panel.
@@ -1342,7 +1401,7 @@ pub fn licenses() -> Licenses {
 /// configuration is read on its own and the local scope is reported as absent.
 #[tauri::command(async)]
 pub fn identity(state: State<'_, AppState>) -> Result<Identity> {
-    let guard = state.session.lock().expect("session lock");
+    let guard = state.lock_session("identity");
     match guard.as_ref() {
         Some(session) => Ok(identity::read(&session.repo.to_thread_local())),
         None => identity::read_global(),
@@ -1445,7 +1504,7 @@ pub fn forge_repo<R: Runtime>(
     state: State<'_, AppState>,
 ) -> Result<Option<Repo>> {
     let known = accounts::load(&app);
-    let guard = state.session.lock().expect("session lock");
+    let guard = state.lock_session("forge_repo");
     match guard.as_ref() {
         Some(session) => forge::identify_repo_with(&session.repo.to_thread_local(), &known),
         None => Ok(None),
@@ -1806,7 +1865,7 @@ pub async fn review_checkout<R: Runtime>(
 ) -> Result<pull::PullHead> {
     let known = accounts::load(&app);
     let (dir, shared, remote, kind) = {
-        let guard = state.session.lock().expect("session lock");
+        let guard = state.lock_session("review_checkout");
         let session = guard.as_ref().ok_or(Error::NoRepository)?;
         let repository = session.repo.to_thread_local();
         let listed: Vec<(String, String)> = remotes::remotes(&repository)
@@ -1857,7 +1916,7 @@ pub async fn review_conflicts(
     target: String,
 ) -> Result<remerge::ConflictFixes> {
     let (dir, shared) = {
-        let guard = state.session.lock().expect("session lock");
+        let guard = state.lock_session("review_conflicts");
         let session = guard.as_ref().ok_or(Error::NoRepository)?;
         (session.path.clone(), session.repo.clone())
     };
@@ -1875,7 +1934,7 @@ pub fn review_files(
     from: String,
     to: String,
 ) -> Result<Vec<diff::FileChange>> {
-    state.with_session(|session| diff::changes_between(&session.repo.to_thread_local(), &from, &to))
+    state.with_session("review_files", |session| diff::changes_between(&session.repo.to_thread_local(), &from, &to))
 }
 
 /// One file of a pull request, whole, read from disk (FEAT-089).
@@ -1887,7 +1946,7 @@ pub fn review_file(
     path: String,
     old_path: Option<String>,
 ) -> Result<diff::FullFile> {
-    state.with_session(|session| {
+    state.with_session("review_file", |session| {
         diff::full_file_between(
             &session.repo.to_thread_local(),
             &from,
@@ -1902,7 +1961,7 @@ pub fn review_file(
 /// (FEAT-089).
 #[tauri::command(async)]
 pub fn review_worktree(state: State<'_, AppState>, number: u64, head: String) -> Result<String> {
-    state.with_session(|session| {
+    state.with_session("review_worktree", |session| {
         pull::open_worktree(&session.repo.to_thread_local(), number, &head)
             .map(|path| path.to_string_lossy().into_owned())
     })
@@ -2074,7 +2133,7 @@ where
 /// open, and the global value is the one it can still offer.
 #[tauri::command(async)]
 pub fn signing(state: State<'_, AppState>) -> Result<Signing> {
-    let guard = state.session.lock().expect("session lock");
+    let guard = state.lock_session("signing");
     match guard.as_ref() {
         Some(session) => Ok(signing::read(&session.repo.to_thread_local())),
         None => signing::read_global(),
@@ -2326,6 +2385,44 @@ mod tests {
             graph_order(app.handle().clone(), state, GraphOrder::Branch),
             Err(Error::NoRepository)
         ));
+    }
+
+    /// What TASK-052's step 1 measures, and step 2 is to change: today a
+    /// quick read waits for whatever holds the repository, and the timings
+    /// say so.
+    #[test]
+    fn a_quick_read_waits_for_a_slow_one_and_the_timings_say_how_long() {
+        let fixture = Fixture::woven();
+        let app = app();
+        open(&app, fixture.path()).expect("opening the fixture");
+        let state: &AppState = &app.state::<AppState>();
+
+        std::thread::scope(|scope| {
+            let (holding, held) = std::sync::mpsc::channel();
+            scope.spawn(move || {
+                state
+                    .with_session("a_slow_read", |_| {
+                        holding.send(()).expect("told");
+                        std::thread::sleep(std::time::Duration::from_millis(150));
+                        Ok(())
+                    })
+                    .expect("the slow read");
+            });
+            held.recv().expect("the slow read holds the repository");
+            state.with_session("a_quick_read", |_| Ok(())).expect("the quick read");
+        });
+
+        let kept = crate::timing::since(0);
+        let last = |command: &str| {
+            kept.iter()
+                .rev()
+                .find(|entry| entry.command == command)
+                .cloned()
+                .expect("timed")
+        };
+        assert!(last("a_slow_read").held_us >= 150_000);
+        assert!(last("a_quick_read").wait_us >= 100_000, "{:?}", last("a_quick_read"));
+        assert!(last("a_quick_read").held_us < 100_000);
     }
 
     #[test]
