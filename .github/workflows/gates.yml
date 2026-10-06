@@ -311,27 +311,22 @@ jobs:
         # built one `macos-latest` job, which is Apple silicon, so a `main`
         # release has never carried an Intel download at all.
         #
-        # **macOS is off in this lane until an Apple Developer ID exists.** The
-        # production signing policy refuses to build without a certificate, and
-        # that refusal is correct, but it failed every `main` push. That blocked
-        # the Linux and Windows release along with it. The draft and alpha lanes
-        # still build ad-hoc-signed Mac downloads and say so. Turning macOS back
-        # on means re-adding these two entries once the secrets are in place:
-        #
-        #   - name: macos-arm64
-        #     os: macos-latest
-        #     target: aarch64-apple-darwin
-        #     arch: arm64
-        #   - name: macos-x86_64
-        #     os: macos-15-intel
-        #     target: x86_64-apple-darwin
-        #     arch: x86_64
-        #
-        # The signing and verify steps below stay, guarded by `runner.os`, so
-        # that is the whole edit.
+        # macOS is back in this lane, signed ad hoc and not notarized, until an
+        # Apple Developer ID exists. The author chose this over a release with
+        # no Mac download: every 1.0.x release carries all three platforms, as
+        # the draft lane's ad-hoc builds proved workable (v0.8.1-alpha.1). The
+        # signing step below says how to return to refusing unsigned builds.
         include:
           - name: linux
             os: ubuntu-latest
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+          - name: macos-x86_64
+            os: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x86_64
           - name: windows
             os: windows-latest
     runs-on: ${{ matrix.os }}
@@ -372,17 +367,16 @@ jobs:
         shell: bash
         run: echo "tag=v$(bun -e "console.log(require('./package.json').version)")" >> "$GITHUB_OUTPUT"
 
-      # This is the release lane, so the signing policy is `production`: a
-      # missing certificate fails the gate rather than quietly publishing an
-      # unsigned build with notes claiming otherwise (TASK-040). Until an Apple
-      # Developer account exists this step is what stops `main` shipping a
-      # macOS download at all — which is the correct half of the trade, because
-      # the draft and alpha lanes still produce one and say what it is.
+      # `interim` until an Apple Developer ID exists: with no certificate the
+      # Mac build is signed ad hoc, and the version's changelog section says
+      # what that means on first open. Once APPLE_CERTIFICATE and the
+      # notarization secrets are in place, switch this to `production` so a
+      # release can never again go out unsigned by accident (TASK-040).
       - id: signing
         uses: ./.github/actions/macos-signing
         if: runner.os == 'macOS'
         with:
-          lane: production
+          lane: interim
           certificate: ${{ secrets.APPLE_CERTIFICATE }}
           certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           apple-id: ${{ secrets.APPLE_ID }}

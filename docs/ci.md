@@ -55,8 +55,13 @@ right answer for a draft is the wrong answer for a release and one setting in
 
 | Lane | Policy | What it means |
 | --- | --- | --- |
-| draft, prerelease | `interim` | Developer ID when a certificate is configured; otherwise an **ad-hoc** signature (`APPLE_SIGNING_IDENTITY=-`) |
-| gate 5 | `production` | Developer ID, notarized and stapled. **No certificate fails the gate** |
+| draft, prerelease, gate 5 | `interim` | Developer ID when a certificate is configured; otherwise an **ad-hoc** signature (`APPLE_SIGNING_IDENTITY=-`) |
+
+Gate 5 uses `interim` from 1.0.1 by the author's choice, so every release
+carries macOS downloads before an Apple Developer ID exists. Once the
+certificate and notarization secrets are in place, gate 5 goes back to
+`production`: Developer ID, notarized and stapled, and **no certificate fails
+the gate**.
 
 **These three things are different, and the difference is the whole subject.**
 

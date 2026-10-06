@@ -4389,7 +4389,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "notify",
  "serde",
@@ -4405,7 +4405,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-core"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "gix",
  "keyring",
@@ -4418,7 +4418,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-extensions"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -4434,7 +4434,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-farm"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -4446,7 +4446,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-process"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "libc",
  "tempfile",

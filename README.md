@@ -91,7 +91,7 @@ Download a build from the [latest release](https://github.com/spa-git-ty/spagitt
 | --- | --- |
 | Linux | AppImage, `.deb`, `.rpm` |
 | Windows | Installer (`.exe`, `.msi`) or a portable `.exe` |
-| macOS | `.dmg` for Apple silicon and Intel, on the [pre-release builds](https://github.com/spa-git-ty/spagitty/releases) |
+| macOS | `.dmg` for Apple silicon and Intel |
 
 The macOS builds are signed ad hoc and are not notarized, so Gatekeeper asks
 before the first launch. [`docs/BUILD_MACOS.md`](docs/BUILD_MACOS.md) explains

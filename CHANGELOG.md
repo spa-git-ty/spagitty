@@ -14,6 +14,22 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-06
+
+### Added
+
+- **macOS downloads in the release.** Each release now carries a `.dmg` for
+  Apple silicon (`*-macos-arm64.dmg`) and one for Intel (`*-macos-x86_64.dmg`)
+  beside the Linux and Windows downloads, so one release has every platform.
+
+  The Mac builds are signed ad hoc and are not notarized: they carry a real
+  code signature, but no Apple developer identity. On first open macOS says the
+  developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, the download is corrupt: compare it with
+  `SHA256SUMS-*.txt` and download it again.
+
 ## [1.0.0] - 2026-10-06
 
 ### Added
