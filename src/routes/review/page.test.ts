@@ -58,6 +58,7 @@ beforeEach(() => {
 	]);
 	vi.mocked(api.pullRequests).mockResolvedValue([MINE, ANSWERED, ASKED]);
 	vi.mocked(api.reviewState).mockResolvedValue(null);
+	vi.mocked(api.pullRequestComments).mockResolvedValue([]);
 });
 
 afterEach(() => {

@@ -899,3 +899,13 @@ dot is right before the screen is visited — and on Refresh, never on a timer.
 request under Spagitty's application data, not in the repository: it is the
 reviewer's working state, and the same pull request from another clone is the
 same review.
+
+**The room** (FEAT-091) reads one pull request from its fetched head: the
+touched files with their viewed ticks, the diff, and the Conversation as an
+inset card. A tick is kept against the file's blob, so a file changed after it
+was ticked comes back unticked. The diff is changed parts with folds between,
+or whole files; one file at a time or all of them in one column, of which only
+the rows in view are drawn. A second pill floats at the diff's foot with the
+review's own controls — Changes | Whole file, One | All, the focus ruler, `Aa`
+and *Viewed, next* — and the toolbar under the pane is unchanged. When the
+head cannot be fetched, the room reads the host's patch and says so.

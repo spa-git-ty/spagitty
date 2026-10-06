@@ -185,6 +185,11 @@ export const review = {
 		return key ? (records[keyString(key)] ?? null) : null;
 	},
 
+	/** The saved record kept at `key`, once it has been read. */
+	recordAt(key: ReviewKey): ReviewRecord | null {
+		return records[keyString(key)] ?? null;
+	},
+
 	/** Read the saved records for every row not read yet. */
 	async loadRecords(list: PullRequest[]): Promise<void> {
 		await Promise.all(

@@ -1,21 +1,64 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { codeStack, PLAIN, reading, uiStack } from '$lib/reading.svelte';
 	import { CHECK_LABELS, requests } from '$lib/requests/store.svelte';
+	import { scale } from '$lib/scale.svelte';
+	import RoomConversation from './RoomConversation.svelte';
+	import RoomDiff from './RoomDiff.svelte';
+	import RoomFiles from './RoomFiles.svelte';
+	import RoomPill from './RoomPill.svelte';
+	import { room } from './room.svelte';
 	import { review } from './store.svelte';
 
 	/**
-	 * The review room (FEAT-087): one pull request, read file by file.
+	 * The review room (FEAT-087, FEAT-091): one pull request, read file by
+	 * file — the files it touches on the left with their viewed ticks, the
+	 * diff in the middle with the review pill over it, the conversation on
+	 * the right.
 	 */
 	const opened = $derived(review.room);
 	const pr = $derived(opened?.pr ?? null);
 
 	const HOSTS = { gitHub: 'GitHub', gitLab: 'GitLab', bitbucket: 'Bitbucket' } as const;
+	const host = $derived(requests.repo ? HOSTS[requests.repo.kind] : null);
+
+	$effect(() => {
+		const now = opened;
+		if (now) untrack(() => room.load(now.pr, now.key));
+		return () => room.leave();
+	});
+
+	const viewed = $derived(room.viewedCount);
+	const total = $derived(room.files.length);
+
+	/**
+	 * `Aa`: code and comments in the reading set Settings › Reading chose, or
+	 * as they were set before it. Comments in the reading set take the
+	 * interface face chosen there, or Atkinson Hyperlegible when the
+	 * interface is left on the desktop's.
+	 */
+	const readingStyle = $derived.by(() => {
+		if (room.readingSet) {
+			const face = reading.current.uiFont === 'system' ? 'atkinson' : reading.current.uiFont;
+			return `--read-font: ${uiStack(face)};`;
+		}
+		const size = Math.round(PLAIN.size * scale.zoom * scale.text * 100) / 100;
+		return [
+			`--code-font: ${codeStack(PLAIN.codeFont)}`,
+			`--fs-code: ${size}px`,
+			`--code-lh: ${PLAIN.lineHeight}`,
+			`--code-ls: ${PLAIN.letterSpacing}em`,
+			'--read-font: var(--font-ui)',
+			'--read-size: var(--fs-secondary)'
+		].join('; ');
+	});
 </script>
 
 {#if pr}
-	<div class="screen">
+	<div class="screen" style={readingStyle}>
 		<header class="head">
 			<button class="back" onclick={() => review.close()}>
 				<Icon name="chevron-left" size="0.9em" weight={2} />Review
@@ -24,6 +67,12 @@
 				<span class="number mono">#{pr.number}</span>
 				<span class="title">{pr.title}</span>
 			</span>
+			{#if total > 0}
+				<span class="progress">
+					<span class="note">{viewed} of {total} viewed</span>
+					<span class="bar"><span class="fill" style:width="{(viewed / total) * 100}%"></span></span>
+				</span>
+			{/if}
 			<Btn disabled={review.makingWorktree !== null} onclick={() => review.openWorktree(pr)}>
 				<Icon name="folder" size="1em" />Open in worktree
 			</Btn>
@@ -37,7 +86,30 @@
 				<span>·</span>
 				<span class="checks {pr.checks}">{CHECK_LABELS[pr.checks]}</span>
 			{/if}
-			{#if requests.repo}<span>·</span><span>{HOSTS[requests.repo.kind]}</span>{/if}
+			{#if host}<span>·</span><span>{host}</span>{/if}
+		</div>
+
+		<div class="body">
+			<RoomFiles />
+			<section class="diff" aria-label="Changes">
+				{#if room.fallback}
+					<p class="fallback note" title={room.fallback}>
+						From {host ?? 'the host'}'s patch: the pull request could not be fetched, so there is no
+						whole file.
+					</p>
+				{/if}
+				{#if room.phase === 'reading'}
+					<p class="pad note">Fetching #{pr.number}…</p>
+				{:else if room.phase === 'failed'}
+					<p class="pad note error">{room.error}</p>
+				{:else if room.phase === 'ready' && total === 0}
+					<p class="pad note">This pull request changes no files.</p>
+				{:else if room.phase === 'ready'}
+					<RoomDiff />
+					<RoomPill />
+				{/if}
+			</section>
+			<RoomConversation />
 		</div>
 	</div>
 {/if}
@@ -95,6 +167,28 @@
 		text-overflow: ellipsis;
 	}
 
+	.progress {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.bar {
+		width: 96px;
+		height: 6px;
+		border-radius: var(--r-pill);
+		background: var(--soft);
+		overflow: hidden;
+	}
+
+	.fill {
+		display: block;
+		height: 100%;
+		background: var(--ok);
+		border-radius: var(--r-pill);
+		transition: width var(--t-fast) var(--ease);
+	}
+
 	.meta {
 		flex: none;
 		display: flex;
@@ -121,5 +215,37 @@
 
 	.checks.failing {
 		color: var(--danger);
+	}
+
+	.body {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		gap: 8px;
+		padding: 0 10px;
+	}
+
+	.diff {
+		flex: 1;
+		min-width: 0;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.pad {
+		padding: 10px 16px;
+		margin: 0;
+	}
+
+	.error {
+		color: var(--danger);
+	}
+
+	.fallback {
+		margin: 0 8px 8px;
+		padding: 6px 12px;
+		border-radius: var(--r-panel);
+		background: color-mix(in srgb, var(--warn) 12%, transparent);
 	}
 </style>
