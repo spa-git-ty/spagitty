@@ -549,6 +549,27 @@ struct RawChange {
     new: Option<ObjectId>,
 }
 
+/// The files that differ between two commits — `base` to `head`, as
+/// `git diff --name-status base head` would list them (FEAT-096).
+///
+/// A review of a committed range is described by this list before anything
+/// is sent anywhere, so it is read in-process like every other diff here.
+pub fn range_files(repo: &gix::Repository, base: &str, head: &str) -> Result<Vec<ChangedFile>> {
+    let old = find_commit(repo, base)?
+        .tree()
+        .map_err(|e| Error::Diff(e.to_string()))?;
+    let new = find_commit(repo, head)?
+        .tree()
+        .map_err(|e| Error::Diff(e.to_string()))?;
+    Ok(trees_changes(&old, &new)?
+        .into_iter()
+        .map(|change| ChangedFile {
+            path: change.path,
+            status: change.status,
+        })
+        .collect())
+}
+
 fn find_commit<'repo>(repo: &'repo gix::Repository, id: &str) -> Result<gix::Commit<'repo>> {
     let oid =
         ObjectId::from_hex(id.as_bytes()).map_err(|_| Error::UnknownCommit(id.to_string()))?;
@@ -563,8 +584,6 @@ fn tree_changes(
     commit: &gix::Commit<'_>,
     parent: Option<ObjectId>,
 ) -> Result<Vec<RawChange>> {
-    use gix::object::tree::diff::Change;
-
     let tree = commit.tree().map_err(|e| Error::Diff(e.to_string()))?;
     let parent_tree = match parent {
         Some(pid) => {
@@ -575,13 +594,19 @@ fn tree_changes(
         }
         None => repo.empty_tree(),
     };
+    trees_changes(&parent_tree, &tree)
+}
+
+/// Every changed file between two trees, the older first.
+fn trees_changes(old: &gix::Tree<'_>, new: &gix::Tree<'_>) -> Result<Vec<RawChange>> {
+    use gix::object::tree::diff::Change;
 
     let mut changes: Vec<RawChange> = Vec::new();
 
-    parent_tree
+    old
         .changes()
         .map_err(|e| Error::Diff(e.to_string()))?
-        .for_each_to_obtain_tree(&tree, |change| {
+        .for_each_to_obtain_tree(new, |change| {
             // A changed subtree is reported alongside the blobs inside it. Only
             // the blobs are files; a directory row in the file list would be a
             // row nothing can be done with.

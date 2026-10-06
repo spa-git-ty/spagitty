@@ -19,21 +19,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 
-[target.'cfg(unix)'.dependencies]
-# Two calls: `setpgid` on the child, and `kill` on the *group*.
-#
-# An agent is a process that spawns processes — git, npm, cargo, a language
-# server — and killing only the one Spagitty started leaves the rest alive
-# holding the pipes open, so waiting for the run to end waits for whatever the
-# agent happened to leave behind. Stopping a run has to stop the tree, and on
-# Unix that means a process group. MIT OR Apache-2.0, and already in the tree
-# under gix.
-libc = "0.2"
-
-[target.'cfg(windows)'.dependencies]
-# Windows job objects keep descendants cancellable after their parent exits.
-# MIT OR Apache-2.0; this version is already present through Tauri.
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading"] }
+# Process groups and job objects (FEAT-096 moved them out of this crate so the
+# extension host contains its workers with the same code).
+spagitty-process = { workspace = true }
 
 [features]
 # Fixture repositories for the tests of the crates above this one, mirroring

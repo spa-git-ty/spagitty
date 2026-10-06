@@ -2,7 +2,13 @@
 
 [workspace]
 resolver = "2"
-members = ["crates/spagitty-core", "crates/spagitty-farm", "src-tauri"]
+members = [
+    "crates/spagitty-core",
+    "crates/spagitty-farm",
+    "crates/spagitty-process",
+    "crates/spagitty-extensions",
+    "src-tauri",
+]
 
 [workspace.package]
 version = "0.8.1"
@@ -15,6 +21,8 @@ authors = ["Spagitty contributors"]
 [workspace.dependencies]
 spagitty-core = { path = "crates/spagitty-core" }
 spagitty-farm = { path = "crates/spagitty-farm" }
+spagitty-process = { path = "crates/spagitty-process" }
+spagitty-extensions = { path = "crates/spagitty-extensions" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spagitty.dev/schemas/extensions/manifest.v1.schema.json",
+  "title": "Spagitty extension manifest, version 1",
+  "description": "extension.json at the root of a Spagitty extension package. SPDX-License-Identifier: GPL-3.0-or-later. Additional properties are refused at every level: a field Spagitty does not know is a mistake, not a hint.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifestVersion", "id", "name", "version", "publisher", "engines", "runtime"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifestVersion": { "const": 1 },
+    "id": {
+      "description": "Reverse-DNS identity, two to five lowercase dot-separated labels. The host qualifies every contribution id with it.",
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*){1,4}$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "version": { "$ref": "#/$defs/semver" },
+    "publisher": {
+      "description": "Display text only. It never decides whether an extension is official.",
+      "type": "string", "minLength": 1, "maxLength": 60
+    },
+    "description": { "type": "string", "maxLength": 300 },
+    "license": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "homepage": { "$ref": "#/$defs/httpsUrl" },
+    "engines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spagitty", "extensionApi"],
+      "properties": {
+        "spagitty": { "$ref": "#/$defs/range" },
+        "extensionApi": { "$ref": "#/$defs/range" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "entrypoints"],
+      "properties": {
+        "kind": { "const": "native-process" },
+        "entrypoints": {
+          "description": "One executable per supported target. Listing a target is a claim that this package runs there.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/target" },
+          "additionalProperties": { "$ref": "#/$defs/packagePath" }
+        }
+      }
+    },
+    "activation": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["onCommand", "onReviewProvider", "onPanel"] }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/capability" } },
+        "optional": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/capability" } }
+      }
+    },
+    "externalTools": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/tool" }
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commands": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/command" } },
+        "reviewProviders": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/reviewProvider" } },
+        "panels": { "type": "array", "maxItems": 10, "items": { "$ref": "#/$defs/panel" } },
+        "settings": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/setting" } }
+      }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "range": {
+      "description": "A version requirement in the Cargo dialect: comma-separated comparators (=, >, >=, <, <=, ~, ^, or a bare version meaning ^). Spaces between a comparator and its version are allowed; comparators must be separated by commas.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "target": {
+      "enum": [
+        "x86_64-pc-windows-msvc",
+        "aarch64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-apple-darwin",
+        "aarch64-apple-darwin"
+      ]
+    },
+    "packagePath": {
+      "description": "A relative path inside the package, forward slashes, no '.' or '..' segments.",
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^(?!.*(^|/)\\.{1,2}(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+    },
+    "localId": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+    },
+    "httpsUrl": {
+      "type": "string",
+      "maxLength": 300,
+      "pattern": "^https://[^\\s]+$"
+    },
+    "capability": {
+      "enum": [
+        "repository.read",
+        "review.provide",
+        "tools.execute",
+        "forge.pullRequest.read",
+        "forge.pullRequest.comment"
+      ]
+    },
+    "context": { "enum": ["global", "workingCopy", "farmTask", "pullRequest"] },
+    "predicate": {
+      "enum": [
+        "repositoryOpen",
+        "hasWorkingChanges",
+        "taskSelected",
+        "taskHasCommit",
+        "pullRequestSelected",
+        "forgeConnected"
+      ]
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "executableNames", "profiles"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "maxLength": 60 },
+        "executableNames": {
+          "description": "Names searched for on PATH, in order. A bare file name; never a path.",
+          "type": "array", "minItems": 1, "maxItems": 4,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" }
+        },
+        "versionArgs": {
+          "type": "array", "maxItems": 4,
+          "items": { "$ref": "#/$defs/literalArg" }
+        },
+        "minimumVersion": { "$ref": "#/$defs/semver" },
+        "installUrl": { "$ref": "#/$defs/httpsUrl" },
+        "profiles": {
+          "type": "array", "minItems": 1, "maxItems": 16,
+          "items": { "$ref": "#/$defs/profile" }
+        }
+      }
+    },
+    "literalArg": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\s\\x00]+$"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "args"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "args": {
+          "description": "The fixed argv after the executable.",
+          "type": "array", "maxItems": 16,
+          "items": { "$ref": "#/$defs/literalArg" }
+        },
+        "options": {
+          "type": "object",
+          "maxProperties": 8,
+          "propertyNames": { "$ref": "#/$defs/localId" },
+          "additionalProperties": { "$ref": "#/$defs/option" }
+        },
+        "workdir": {
+          "description": "Where the tool runs. 'operation' is the directory the host approved for the operation; 'none' is the package directory.",
+          "enum": ["operation", "none"]
+        },
+        "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 7200000 }
+      }
+    },
+    "option": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "values"],
+          "properties": {
+            "type": { "const": "enum" },
+            "values": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 16,
+              "propertyNames": { "$ref": "#/$defs/localId" },
+              "additionalProperties": {
+                "type": "array", "maxItems": 4,
+                "items": { "$ref": "#/$defs/literalArg" }
+              }
+            },
+            "required": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "flag"],
+          "properties": {
+            "type": { "enum": ["revision", "commit"] },
+            "flag": { "type": "string", "pattern": "^--?[A-Za-z0-9][A-Za-z0-9-]{0,40}$" },
+            "required": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "context": { "$ref": "#/$defs/context" },
+        "when": { "type": "array", "uniqueItems": true, "maxItems": 6, "items": { "$ref": "#/$defs/predicate" } },
+        "menu": { "type": "boolean" },
+        "palette": { "type": "boolean" },
+        "reviewProvider": {
+          "description": "When set, running the command starts a review with this provider instead of sending command.execute.",
+          "$ref": "#/$defs/localId"
+        }
+      }
+    },
+    "reviewProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "targets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "maxLength": 60 },
+        "targets": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["workingCopy", "farmTask", "pullRequest"] }
+        },
+        "scopes": {
+          "type": "array", "uniqueItems": true,
+          "items": { "enum": ["committed", "uncommitted", "tracked", "includeUntracked"] }
+        },
+        "configurationFiles": {
+          "description": "Repository files whose content is part of a review's identity: changing one makes a result stale.",
+          "type": "array", "maxItems": 16,
+          "items": { "$ref": "#/$defs/packagePath" }
+        },
+        "sendsCodeTo": {
+          "description": "Shown to the user before the first review in a repository.",
+          "type": "string", "maxLength": 120
+        }
+      }
+    },
+    "panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "renderer"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "renderer": { "enum": ["reviewFindings", "reviewStatus", "summary"] },
+        "location": { "$ref": "#/$defs/context" },
+        "provider": { "$ref": "#/$defs/localId" }
+      }
+    },
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "type"],
+      "properties": {
+        "key": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 200 },
+        "type": { "enum": ["boolean", "enum", "text", "number", "executable"] },
+        "scope": { "enum": ["user", "repository"] },
+        "default": {},
+        "values": {
+          "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$" }
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "maxLength": 60 }
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "tool": { "$ref": "#/$defs/localId" }
+      }
+    }
+  }
+}
