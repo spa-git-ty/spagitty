@@ -145,6 +145,15 @@ export function suggestedBases(workdir: string): Promise<string[]> {
 	return invoke('extensions_suggested_bases', { workdir });
 }
 
+export function sendFindings(
+	id: string,
+	workdir: string,
+	review: string,
+	findings: string[]
+): Promise<{ task: string; message: string }> {
+	return invoke('extensions_send_findings', { id, workdir, review, findings });
+}
+
 export function confirm(id: string, approved: boolean): Promise<void> {
 	return invoke('extensions_confirm', { id, approved });
 }

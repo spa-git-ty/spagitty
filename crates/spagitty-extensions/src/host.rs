@@ -80,6 +80,7 @@ pub trait Services: Send + Sync {
         number: u64,
         body: &str,
         extension_name: &str,
+        cancel: &AtomicBool,
     ) -> std::result::Result<Value, RpcError>;
 }
 
@@ -919,6 +920,16 @@ impl Inner {
     // ── Ending operations ──────────────────────────────────────────────────
 
     fn conclude(&self, op: Operation, conclusion: Conclusion) {
+        // A tool timeout or completion can race the supervisor's next tick.
+        // A late worker answer cannot turn an expired deadline into success.
+        let conclusion = if matches!(&conclusion, Conclusion::Worker { .. })
+            && !op.is_cancelling()
+            && Instant::now() >= op.deadline
+        {
+            Conclusion::Failed("It ran past its time limit and was stopped.".into())
+        } else {
+            conclusion
+        };
         op.cancel.store(true, Ordering::Release);
         self.forget_operation_handles(&op.id);
         match &op.kind {
@@ -1911,6 +1922,7 @@ impl ExtensionHost {
             progress: None,
             findings: Vec::new(),
             dropped_findings: 0,
+            host_work: 0,
         });
         self.inner.emit(HostEvent::OperationStarted {
             operation: operation.clone(),
@@ -2050,6 +2062,7 @@ impl ExtensionHost {
             progress: None,
             findings: Vec::new(),
             dropped_findings: 0,
+            host_work: 0,
         });
         inner.emit(HostEvent::OperationStarted {
             operation: operation.clone(),
@@ -2145,6 +2158,74 @@ impl ExtensionHost {
                 .expect("finished reviews")
                 .0;
         }
+    }
+
+    /// Check local provider availability before accepting persisted gate evidence.
+    pub fn check_provider(&self, id: &str, provider: &str, workdir: &Path) -> Result<Value> {
+        let repo = repository(workdir)?;
+        let entry = self.check_usable(id, Some(&repo))?;
+        let declared = entry
+            .manifest
+            .contributes
+            .review_providers
+            .iter()
+            .find(|p| p.id == provider)
+            .ok_or_else(|| Error::Refused("That provider is not declared.".into()))?;
+        let granted = self.inner.granted(id, &entry.manifest.version, &repo.id);
+        if !granted.contains(&Capability::ReviewProvide)
+            || (declared.sends_code_to.is_some()
+                && !self.inner.store.read(|s| s.consented(id, &repo.id)))
+        {
+            return Err(Error::Refused(
+                "The review grant or consent was revoked.".into(),
+            ));
+        }
+        if self.inner.operations.count_for(id) >= operations::MAX_PER_EXTENSION {
+            return Err(Error::Refused("The review provider is busy.".into()));
+        }
+        let (worker, session) = self
+            .inner
+            .ensure_active(id, Some(&repo), "reviewProvider")?;
+        let operation = self.inner.next("op");
+        let now = Instant::now();
+        self.inner.operations.insert(Operation {
+            id: operation.clone(),
+            extension: id.into(),
+            extension_version: entry.manifest.version.clone(),
+            session: session.clone(),
+            kind: Kind::Command {
+                command: "review.check".into(),
+            },
+            repository: None,
+            started: now,
+            started_at: snapshot::now_iso(),
+            last_activity: now,
+            deadline: now + REQUEST_TIMEOUT,
+            cancel_requested: None,
+            cancel: Arc::new(AtomicBool::new(false)),
+            progress: None,
+            findings: Vec::new(),
+            dropped_findings: 0,
+            host_work: 0,
+        });
+        let repository = self.inner.mint_repo(id, &session, &repo);
+        let response = worker.request(
+            "review.check",
+            json!({"operationId":operation,"provider":provider,"repository":repository}),
+            REQUEST_TIMEOUT,
+        );
+        let op = self
+            .inner
+            .operations
+            .finish(&operation)
+            .ok_or_else(|| Error::Worker("Provider check timed out.".into()))?;
+        op.cancel.store(true, Ordering::Release);
+        if Instant::now() >= op.deadline || op.is_cancelling() {
+            return Err(Error::Worker(
+                "Provider check timed out or was cancelled.".into(),
+            ));
+        }
+        response.map_err(|e| Error::Worker(format!("Could not check the review provider: {e}")))
     }
 
     /// The review history of `id` in the repository at `workdir`, newest first.
@@ -2562,9 +2643,24 @@ impl Link {
                     .entry(&self.extension)
                     .map(|e| e.manifest.name)
                     .unwrap_or_default();
-                inner
-                    .services
-                    .post_pull_request_comment(&handle.workdir, number, body, &name)
+                {
+                    let cancel = match params.get("operationId").and_then(Value::as_str) {
+                        Some(op) => inner
+                            .operations
+                            .with(op, &self.extension, &self.session, |o| o.cancel.clone())
+                            .ok_or_else(|| {
+                                rpc(code::BAD_OPERATION, "That operation was stopped.")
+                            })?,
+                        None => Arc::new(AtomicBool::new(false)),
+                    };
+                    inner.services.post_pull_request_comment(
+                        &handle.workdir,
+                        number,
+                        body,
+                        &name,
+                        &cancel,
+                    )
+                }
             }
             "storage.get" | "storage.set" => self.storage(inner, method, params),
             "ui.notify" => {
@@ -2646,6 +2742,17 @@ impl Link {
             .get("operationId")
             .and_then(Value::as_str)
             .map(str::to_string);
+        // Count the entire callback, including version detection and failures.
+        // Multiple callbacks can wait concurrently; each owns its own guard.
+        let _host_work = match &operation {
+            Some(op) => Some(
+                inner
+                    .operations
+                    .host_work(op, &self.extension, &self.session)
+                    .ok_or_else(|| rpc(code::BAD_OPERATION, "that operation is not running"))?,
+            ),
+            None => None,
+        };
         let (cancel, op_repository) = match &operation {
             Some(op) => inner
                 .operations
@@ -3045,6 +3152,15 @@ impl Inbound for Link {
         if !self.current(&inner) {
             return Err(rpc(code::NOT_ACTIVE, "this extension is not active"));
         }
+        let _host_work = match params.get("operationId").and_then(Value::as_str) {
+            Some(op) => Some(
+                inner
+                    .operations
+                    .host_work(op, &self.extension, &self.session)
+                    .ok_or_else(|| rpc(code::BAD_OPERATION, "That operation is not running."))?,
+            ),
+            None => None,
+        };
         self.handle_request(&inner, method, &params)
     }
 

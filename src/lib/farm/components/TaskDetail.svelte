@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import Btn from '$lib/ui/Btn.svelte';
+	import * as farmApi from '../api';
+	import { farmStore } from '../store.svelte';
+	import { notice } from '$lib/ui/notice.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import TaskChip from './TaskChip.svelte';
 	import ContributedActions from '$lib/extensions/ContributedActions.svelte';
@@ -57,6 +60,18 @@
 		onopenDiff
 	}: Props = $props();
 
+	let checkingExtra = $state(false);
+    async function checkExtra() {
+        checkingExtra = true;
+        try {
+            const result = await farmApi.reviewSupplemental(task.id);
+            if (result.outcome === 'pass') notice.ok('Additional review completed', result.summary);
+            else notice.failed('Additional review needs attention', result.summary);
+            await farmStore.refresh();
+        }
+        catch (error) { notice.failed('Additional review failed', error); }
+        finally { checkingExtra = false; }
+    }
 	const task = $derived(detail.task);
 	/** A task something was cut out of: a heading, and never run itself. */
 	const container = $derived((children?.total ?? 0) > 0);
@@ -127,6 +142,9 @@
 		{/if}
 		<Btn disabled={busy} onclick={onedit}>Edit</Btn>
 		<Btn danger disabled={busy || running} onclick={ondelete}>Delete</Btn>
+        {#if task.status === 'review'}
+            <Btn disabled={busy || checkingExtra} onclick={checkExtra}>{checkingExtra ? 'Reviewing…' : 'Review for the additional gate'}</Btn>
+        {/if}
 		<ContributedActions context="farmTask" />
 	</div>
 
@@ -143,6 +161,9 @@
 		</div>
 	{/if}
 
+    {#if farmStore.farm?.supplementalEvidence?.[task.id]}
+        <p class="note">Additional review: {farmStore.farm.supplementalEvidence[task.id].summary}</p>
+    {/if}
 	<dl class="facts">
 		<dt>Asked for by</dt>
 		<dd>{originLine(task.origin)}</dd>
@@ -239,7 +260,7 @@
 		</section>
 	{/if}
 
-	<ExtensionPanels location="farmTask" revision={task.id} />
+	<ExtensionPanels location="farmTask" revision={task.id} onsend={async (extension, record, findings) => { await extensions.send(extension, record, findings); await farmStore.refresh(); }} />
 
 	{#if detail.handoff && detail.handoff.summary}
 		<section class="block">

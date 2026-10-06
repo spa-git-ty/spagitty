@@ -24,6 +24,7 @@ mod recents;
 mod review_state;
 mod search_worker;
 mod settings;
+mod supplemental;
 #[cfg(test)]
 mod testing;
 mod timing;
@@ -214,6 +215,7 @@ pub fn run() {
             farm::farm_task_detail,
             farm::farm_transcript,
             farm::farm_merge_task,
+            farm::farm_review_supplemental,
             farm::farm_review_task,
             farm::farm_verify_task,
             farm::farm_plan,
@@ -246,6 +248,7 @@ pub fn run() {
             extensions::extensions_suggested_bases,
             extensions::extensions_confirm,
             extensions::extensions_location,
+            extensions::extensions_send_findings,
         ])
         .setup(|app| {
             if let (Some(window), Some(icon)) =

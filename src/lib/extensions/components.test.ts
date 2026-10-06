@@ -161,6 +161,24 @@ describe('the extension card', () => {
 		bundled.destroy();
 	});
 
+	it('shows its own setup panel only when asked, so opening Settings starts nothing', async () => {
+		const ext = extension({
+			manifest: {
+				...extension().manifest,
+				contributes: { panels: [{ id: 'connection', title: 'Setup', renderer: 'summary', location: 'global' }] }
+			}
+		});
+		vi.mocked(api.list).mockResolvedValue(listing([ext]));
+		await extensions.refresh();
+		const view = render(ExtensionCard, { extension: ext, workdir: '/repo', onupdate: vi.fn() });
+		await settle();
+		expect(api.panel).not.toHaveBeenCalled();
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Show')!);
+		await settle();
+		expect(api.panel).toHaveBeenCalledWith('com.example.hello', 'connection', expect.anything());
+		view.destroy();
+	});
+
 	it('keeps diagnostics behind an explicit action', () => {
 		const view = render(ExtensionCard, {
 			extension: extension({ diagnostics: { stderr: 'boom', logs: [], toolRuns: [], error: null, program: null } }),

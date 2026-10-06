@@ -396,6 +396,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "coderabbit-extension"
+version = "1.0.0"
+dependencies = [
+ "serde_json",
+ "sha2",
+ "spagitty-core",
+ "spagitty-extensions",
+ "tempfile",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -334,7 +334,7 @@
 					{/if}
 				</div>
 				<div class="extension-panels">
-					<ExtensionPanels location="pullRequest" revision={request.number} />
+					<ExtensionPanels location="pullRequest" revision={request} />
 				</div>
 			</aside>
 

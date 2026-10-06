@@ -204,6 +204,10 @@ export class FakeHost {
 		return this.timeout(done, `review ${provider}`);
 	}
 
+	checkReview(provider: string, repository = 'repo:1'): Promise<unknown> {
+		return this.peer.call('review.check', { provider, repository, operationId: 'check-' + this.next++ });
+	}
+
 	panel(panel: string, context: InvocationContext = { kind: 'global' }): Promise<unknown> {
 		return this.timeout(this.peer.call('panel.resolve', { panel, context }), `panel ${panel}`);
 	}

@@ -1,0 +1,2 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"error","message":"The selected scope has too many files to review.","candidates":[{"command":"coderabbit review --committed","estimatedFiles":40,"fits":true},{"command":"coderabbit review --dir src","estimatedFiles":120,"fits":false}],"candidatesNote":"Choose one narrower scope and run it again."}

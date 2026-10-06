@@ -1,0 +1,284 @@
+{
+  "manifestVersion": 1,
+  "id": "spagitty.coderabbit",
+  "name": "CodeRabbit",
+  "version": "1.0.0",
+  "publisher": "Spagitty",
+  "description": "Review changes with your CodeRabbit CLI and bring the findings into Spagitty.",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://docs.coderabbit.ai/cli",
+  "engines": {
+    "spagitty": ">=0.8.1, <1.0.0",
+    "extensionApi": "^1.0.0"
+  },
+  "runtime": {
+    "kind": "native-process",
+    "entrypoints": {
+      "x86_64-pc-windows-msvc": "bin/x86_64-pc-windows-msvc/coderabbit-extension.exe",
+      "x86_64-unknown-linux-gnu": "bin/x86_64-unknown-linux-gnu/coderabbit-extension",
+      "x86_64-apple-darwin": "bin/x86_64-apple-darwin/coderabbit-extension",
+      "aarch64-apple-darwin": "bin/aarch64-apple-darwin/coderabbit-extension"
+    }
+  },
+  "activation": [
+    "onCommand",
+    "onReviewProvider",
+    "onPanel"
+  ],
+  "capabilities": {
+    "required": [
+      "repository.read",
+      "review.provide",
+      "tools.execute"
+    ],
+    "optional": [
+      "forge.pullRequest.read",
+      "forge.pullRequest.comment"
+    ]
+  },
+  "externalTools": [
+    {
+      "id": "coderabbit",
+      "name": "CodeRabbit CLI",
+      "executableNames": [
+        "coderabbit",
+        "cr"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "minimumVersion": "0.7.7",
+      "installUrl": "https://docs.coderabbit.ai/cli",
+      "profiles": [
+        {
+          "id": "review",
+          "args": [
+            "review",
+            "--agent"
+          ],
+          "options": {
+            "scope": {
+              "type": "enum",
+              "required": true,
+              "values": {
+                "uncommitted": [
+                  "--uncommitted"
+                ],
+                "includeUntracked": [
+                  "--uncommitted",
+                  "--include-untracked"
+                ],
+                "committed": [
+                  "--committed"
+                ],
+                "tracked": []
+              }
+            },
+            "baseCommit": {
+              "type": "commit",
+              "flag": "--base-commit"
+            }
+          },
+          "workdir": "operation",
+          "timeoutMs": 3600000
+        },
+        {
+          "id": "authStatus",
+          "args": [
+            "auth",
+            "status",
+            "--agent"
+          ],
+          "workdir": "none",
+          "timeoutMs": 60000
+        },
+        {
+          "id": "authLogin",
+          "args": [
+            "auth",
+            "login",
+            "--agent"
+          ],
+          "options": {
+            "region": {
+              "type": "enum",
+              "values": {
+                "us": [
+                  "--region",
+                  "us"
+                ],
+                "eu": [
+                  "--region",
+                  "eu"
+                ]
+              }
+            }
+          },
+          "workdir": "none",
+          "timeoutMs": 900000
+        },
+        {
+          "id": "doctor",
+          "args": [
+            "doctor"
+          ],
+          "workdir": "none",
+          "timeoutMs": 120000
+        }
+      ]
+    }
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "id": "reviewChanges",
+        "title": "Review changes with CodeRabbit",
+        "context": "workingCopy",
+        "reviewProvider": "review"
+      },
+      {
+        "id": "reviewTask",
+        "title": "Review task with CodeRabbit",
+        "context": "farmTask",
+        "when": [
+          "taskHasCommit"
+        ],
+        "reviewProvider": "review"
+      },
+      {
+        "id": "checkSetup",
+        "title": "Check CodeRabbit sign-in",
+        "menu": false
+      },
+      {
+        "id": "signIn",
+        "title": "Sign in to CodeRabbit",
+        "menu": false
+      },
+      {
+        "id": "runDiagnostics",
+        "title": "Run CodeRabbit diagnostics",
+        "menu": false
+      },
+      {
+        "id": "requestIncremental",
+        "title": "Request incremental CodeRabbit review",
+        "context": "pullRequest",
+        "when": [
+          "forgeConnected"
+        ]
+      },
+      {
+        "id": "requestFull",
+        "title": "Request full CodeRabbit review",
+        "context": "pullRequest",
+        "when": [
+          "forgeConnected"
+        ]
+      }
+    ],
+    "reviewProviders": [
+      {
+        "id": "review",
+        "title": "CodeRabbit",
+        "targets": [
+          "workingCopy",
+          "farmTask"
+        ],
+        "scopes": [
+          "uncommitted",
+          "includeUntracked",
+          "committed",
+          "tracked"
+        ],
+        "configurationFiles": [
+          ".coderabbit.yaml",
+          ".coderabbit.yml",
+          "coderabbit.yaml",
+          "coderabbit.yml",
+          ".coderabbit.config.ts"
+        ],
+        "sendsCodeTo": "CodeRabbit's service, under your CodeRabbit account"
+      }
+    ],
+    "panels": [
+      {
+        "id": "findings",
+        "title": "CodeRabbit",
+        "renderer": "reviewFindings",
+        "location": "workingCopy",
+        "provider": "review"
+      },
+      {
+        "id": "taskFindings",
+        "title": "CodeRabbit",
+        "renderer": "reviewFindings",
+        "location": "farmTask",
+        "provider": "review"
+      },
+      {
+        "id": "connection",
+        "title": "CodeRabbit setup",
+        "renderer": "summary",
+        "location": "global"
+      },
+      {
+        "id": "pullRequest",
+        "title": "CodeRabbit",
+        "renderer": "reviewStatus",
+        "location": "pullRequest"
+      }
+    ],
+    "settings": [
+      {
+        "key": "cli",
+        "title": "CodeRabbit CLI",
+        "type": "executable",
+        "tool": "coderabbit"
+      },
+      {
+        "key": "region",
+        "title": "Region",
+        "description": "The CodeRabbit region your account is in. Used when signing in.",
+        "type": "enum",
+        "values": [
+          "us",
+          "eu"
+        ],
+        "labels": {
+          "us": "United States",
+          "eu": "Europe"
+        },
+        "default": "us"
+      },
+      {
+        "key": "githubBotLogin",
+        "title": "GitHub bot login",
+        "type": "text",
+        "scope": "repository",
+        "default": "coderabbitai[bot]"
+      },
+      {
+        "key": "githubBotId",
+        "title": "GitHub bot or service account ID",
+        "type": "text",
+        "scope": "repository",
+        "default": ""
+      },
+      {
+        "key": "githubAppSlug",
+        "title": "GitHub app slug",
+        "type": "text",
+        "scope": "repository",
+        "default": "coderabbitai"
+      },
+      {
+        "key": "githubAppId",
+        "title": "GitHub app ID",
+        "type": "text",
+        "scope": "repository",
+        "default": ""
+      }
+    ]
+  }
+}

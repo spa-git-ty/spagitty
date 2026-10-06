@@ -129,6 +129,17 @@ pub enum FarmEvent {
         summary: String,
     },
 
+    SupplementalPolicyChanged {
+        mode: crate::supplemental::Mode,
+        revision: u64,
+        actor: String,
+    },
+    SupplementalReview {
+        task: TaskId,
+        state: String,
+        provider: String,
+        summary: String,
+    },
     MergeRequested {
         task: TaskId,
         branch: String,
@@ -179,11 +190,14 @@ impl FarmEvent {
             | FarmEvent::VerificationFinished { task, .. }
             | FarmEvent::ReviewRequested { task, .. }
             | FarmEvent::ReviewCompleted { task, .. }
+            | FarmEvent::SupplementalReview { task, .. }
             | FarmEvent::MergeRequested { task, .. }
             | FarmEvent::MergeCompleted { task, .. }
             | FarmEvent::WorkspaceChanged { task, .. }
             | FarmEvent::TaskProposed { from: task, .. } => Some(task),
-            FarmEvent::FarmStatusChanged { .. } | FarmEvent::Failed { .. } => None,
+            FarmEvent::FarmStatusChanged { .. }
+            | FarmEvent::Failed { .. }
+            | FarmEvent::SupplementalPolicyChanged { .. } => None,
         }
     }
 

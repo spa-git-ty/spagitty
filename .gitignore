@@ -23,3 +23,10 @@ src-tauri/gen/schemas/windows-schema.json
 /examples/extensions/*/bin/
 /examples/extensions/*/dist/
 *.spagitty-extension
+
+# The official extension is staged before Tauri reads its resources.
+/extensions/coderabbit/bundle/*
+!/extensions/coderabbit/bundle/.gitkeep
+
+# Generated macOS extension sidecars
+/extensions/coderabbit/sidecar/

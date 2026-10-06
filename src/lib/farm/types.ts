@@ -172,7 +172,12 @@ export interface Goal {
 	createdMs: number;
 }
 
+export interface SupplementalPolicy { mode: 'off' | 'advisory' | 'required'; provider: string; threshold: 'critical' | 'high' | 'medium' | 'low'; maxRepairs: number; revision: number; }
+export interface SupplementalEvidence { task: string; head: string; policy: SupplementalPolicy; outcome: 'pass' | 'changesRequested' | 'blocked' | 'cancelled'; summary: string; }
+
 export interface Farm {
+	supplemental?: SupplementalPolicy;
+	supplementalEvidence?: Record<string, SupplementalEvidence>;
 	id: string;
 	repository: string;
 	status: FarmStatus;
@@ -314,6 +319,8 @@ export type FarmEvent =
 			approved: boolean;
 			summary: string;
 	  }
+	| { kind: 'supplementalPolicyChanged'; mode: SupplementalPolicy['mode']; revision: number; actor: string }
+	| { kind: 'supplementalReview'; task: string; state: string; provider: string; summary: string }
 	| { kind: 'mergeRequested'; task: string; branch: string }
 	| { kind: 'mergeCompleted'; task: string; branch: string; ok: boolean; error: string | null }
 	| { kind: 'workspaceChanged'; task: string; path: string; created: boolean }
@@ -371,6 +378,7 @@ export interface TaskDraft {
 }
 
 export interface FarmSettings {
+	supplemental?: SupplementalPolicy;
 	autonomy?: Autonomy;
 	permissions?: Permissions;
 	maxParallel?: number;

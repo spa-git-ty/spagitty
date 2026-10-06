@@ -2485,7 +2485,10 @@ mod tests {
 
         // The old repository is gone: a command reads the new one.
         let info = snapshot(app.state::<AppState>()).expect("a snapshot");
-        assert_eq!(info.info.path, second.path().canonicalize().unwrap());
+        assert_eq!(
+            info.info.path.canonicalize().unwrap(),
+            second.path().canonicalize().unwrap()
+        );
     }
 
     #[test]
@@ -2570,7 +2573,7 @@ mod tests {
 
         let still_there = snapshot(app.state::<AppState>()).expect("the first repository");
         assert_eq!(
-            still_there.info.path,
+            still_there.info.path.canonicalize().unwrap(),
             fixture.path().canonicalize().unwrap()
         );
     }
@@ -2598,7 +2601,10 @@ mod tests {
         assert!(matches!(overtaken, Err(Error::Superseded(_))));
 
         let open_now = snapshot(app.state::<AppState>()).expect("the later repository");
-        assert_eq!(open_now.info.path, second.path().canonicalize().unwrap());
+        assert_eq!(
+            open_now.info.path.canonicalize().unwrap(),
+            second.path().canonicalize().unwrap()
+        );
     }
 
     #[test]

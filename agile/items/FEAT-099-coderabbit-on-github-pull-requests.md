@@ -2,8 +2,8 @@
 
 # FEAT-099 — CodeRabbit on GitHub pull requests
 
-**Status:** Backlog
-**Branch:** `feature/FEAT-099-coderabbit-on-github-pull-requests`
+**Status:** Open
+**Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** Pull requests (1H).
 **Raised by:** the author, through
 [`docs/proposals/extensions-and-coderabbit.md`](../../docs/proposals/extensions-and-coderabbit.md),

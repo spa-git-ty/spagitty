@@ -54,7 +54,8 @@ problem at once, each with the field it is about.
   pass a command line: you declare executable names (looked up on `PATH`, or
   chosen by the user), and **profiles** — fixed arguments plus typed options
   (`enum` values that map to fixed flags; `revision` and `commit` values that
-  are validated before they reach argv). Spagitty runs the tool in the
+  are validated before they reach argv; options are appended in the order of
+  their names). Spagitty runs the tool in the
   directory it approved for the operation and ends its whole process tree on
   cancellation.
 - **`contributes`** — `commands` (with a `context` and finite `when`
@@ -146,3 +147,18 @@ move independently. Spagitty refuses a package whose `engines` it does not
 satisfy, and refuses a worker whose handshake answers another API major
 version. Additive protocol fields may appear within API 1; ignore the ones you
 do not know.
+
+## Persisted review gates and forge receipts
+
+Implement the optional SDK `checkReview` handler (protocol `review.check`) if your
+provider's saved results can be used by Required farm policy. Return explicit
+`ready`, a reason when unavailable, and the same provider version as your review.
+This is a local availability/authentication check, not a new uploaded review.
+Unsupported or unprovable readiness blocks a required gate after restart.
+
+The SDK's PR snapshot preserves platform actor/app IDs, revision attribution,
+nullable resolution and per-list completeness. PR comment callbacks return
+`status: posted | uncertain`, never a review approval. Pass your operation ID
+to `commentOnPullRequest` so cancellation also covers the host confirmation.
+Store uncertainty before sending, including crash recovery, and never retry an
+ambiguous write automatically. The CodeRabbit worker demonstrates this path.

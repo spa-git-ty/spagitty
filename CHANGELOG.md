@@ -72,6 +72,24 @@ stays backward-compatible.
   packs and inspects extensions, with a TypeScript SDK, a fake Spagitty to test
   against, and a published manifest schema and protocol any language can
   implement. `examples/extensions/hello` is the whole path.
+- **CodeRabbit reviews, in Spagitty.** The first official extension reviews
+  your uncommitted or committed changes with your own CodeRabbit CLI and
+  account, after showing exactly which files would be sent. Findings arrive as
+  the review runs, with their severity and location as CodeRabbit gave them;
+  a review can be cancelled, is marked out of date if the code changes under
+  it, and is never mistaken for approval. A billing confirmation is shown and
+  never answered for you. Findings on a committed change can be sent to the
+  farm as a draft repair task. It is off until you turn it on per repository,
+  and needs the CodeRabbit CLI 0.7.7 or newer, installed separately.
+
+- **Additional farm reviews.** Off, Advisory and Required policy, exact committed
+  evidence, live provider checks on manual and automatic merges, and bounded
+  repairs through the existing task flow preserve independent review and autonomy.
+- **CodeRabbit on GitHub PRs.** Attributed summaries, findings and review/check
+  status, explicit incremental/full requests, revision staleness and uncertain
+  delivery handling use backend-owned forge credentials.
+- **Bundled official worker.** Target-specific native packages are built before
+  Tauri bundles them; macOS workers use its sidecar signing path.
 
 ### Changed
 
@@ -160,7 +178,10 @@ stays backward-compatible.
 - **GitLab no longer says every merge request needs you, or that it passed.**
   A merge request needs you when you are one of its reviewers, and its checks
   are its latest pipeline's — shown once read, never assumed.
-
+- Extension operations waiting on host-owned tools no longer trigger inactivity
+  expiry; absolute deadlines and cancellation still apply, including completion races.
+- Expired PR confirmations close, and late review responses cannot replace another
+  repository’s dialog or history. Windows desktop tests and releases share one manifest.
 - **A self-hosted forge behind a company certificate connects.** Spagitty
   checked certificates against a bundled list of public authorities and
   ignored the ones your computer trusts, so a GitLab signed by an internal CA

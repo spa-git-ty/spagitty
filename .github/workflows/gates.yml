@@ -79,7 +79,7 @@ jobs:
           ship=false
           for f in "${files[@]}"; do
             case "$f" in
-              src/*|src-tauri/*|crates/*) ship=true ;;
+              src/*|src-tauri/*|crates/*|extensions/*|packages/extension-sdk/*|tools/extensions/*|schemas/extensions/*) ship=true ;;
               package.json|Cargo.toml|Cargo.lock|bun.lock|bun.lockb) ship=true ;;
               vite.config.ts|vite.config.js|svelte.config.js|svelte.config.ts|tsconfig.json) ship=true ;;
               */Cargo.toml) ship=true ;;
@@ -232,7 +232,9 @@ jobs:
           cargo test -p spagitty-process
           cargo test -p spagitty-farm --lib verification::command::tests
       - name: Extension workers, tools and packages on this OS
-        run: cargo test -p spagitty-extensions
+        run: |
+          cargo test -p spagitty-extensions -p coderabbit-extension
+          cargo test -p spagitty-farm --test supplemental
 
   # --- Gate 4 -------------------------------------------------------------
   security:

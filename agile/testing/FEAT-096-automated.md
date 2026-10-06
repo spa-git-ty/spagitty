@@ -96,3 +96,10 @@ $ bun run ext test examples/extensions/hello
 Run on Windows 11 (x86_64-pc-windows-msvc) on 2026-10-06. The host tests
 exercise the Windows Job Object path; the Unix process-group path runs in CI's
 `farm processes` lane, which now includes this crate.
+
+## Continuation verification — 2026-10-06
+
+The subsequent host deadline/callback fixes and complete farm/PR/distribution work
+are recorded in [extensions-continuation-review.md](extensions-continuation-review.md).
+This includes current full-suite coverage, real package lifecycle evidence,
+Windows production builds, dependency checks and explicitly unverified live sweeps.

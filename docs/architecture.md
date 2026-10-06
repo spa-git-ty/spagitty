@@ -396,3 +396,34 @@ previous item's branch, in item order. When a remote exists they merge into
 
 CI is six ordered gates, described in [ci.md](ci.md). They have not run yet:
 there is no remote to run them on.
+
+## Supplemental reviews and PR evidence
+
+The farm declares `supplemental::Provider`; `src-tauri/src/supplemental.rs`
+composes it with the generic extension host. Policy, evidence and repair counts
+are durable farm data. The common merge boundary checks current clean work,
+policy, provider/package/tool versions, settings and public snapshot identity.
+It checks the task again after the provider's potentially slow readiness call.
+Automatic verification and independent review checks remain separate. Findings
+are untrusted evidence in the existing rules-first repair prompt.
+
+`forge/snapshot.rs` reads GitHub metadata, discussion comments, inline findings,
+reviews and check runs through `forge/http.rs`. Lists are paginated to bounded
+limits and preserve partial errors. Actor IDs/types and app IDs/slugs survive
+mapping. Resolution stays unknown. A metadata re-read detects a pushed revision.
+The typed discussion POST makes one attempt, retains uncertainty and checks
+cancellation again after preflight metadata. Tokens stay behind the desktop's
+account/keychain seam; workers receive public evidence and delivery receipts.
+
+Worker supervision excludes host-owned callback waits from inactivity, including
+parallel waits and version detection. Absolute deadlines and cancellation still
+apply. Completion also checks the deadline to close a race with supervisor ticks.
+UTF-8 frame sizes are measured in bytes in both implementations.
+
+Tauri build hooks stage a target-specific CodeRabbit worker and manifest before
+bundling. Windows/Linux workers live in resources/extensions; macOS uses a Tauri
+sidecar so its temporary signing keychain signs the worker with the app. Only
+bundled provenance can use the existing executable-directory fallback. The CLI
+is not redistributed. Production gate 5 currently releases Linux and Windows;
+macOS builds are in the draft/alpha lanes and require their existing signing
+policy. Other-platform signing still needs a platform runner to verify it.

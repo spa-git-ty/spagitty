@@ -114,3 +114,45 @@ describe('farm screen actions', () => {
   await vi.waitFor(() => expect(api.detectAgents).toHaveBeenCalled());
  });
 });
+
+it('saves explicit supplemental severity and bounded repair choices without granting autonomy', async () => {
+ await show([], 'settings');
+ const selects=view.all('select');
+ const policy=selects.find(x=>x.textContent?.includes('Advisory')) as HTMLSelectElement;
+ policy.value='required';fire(policy,'change');
+ await vi.waitFor(()=>expect(api.configure).toHaveBeenCalledWith({supplemental:expect.objectContaining({mode:'required',threshold:'medium',maxRepairs:2})}));
+ await vi.waitFor(()=>expect(policy.disabled).toBe(false));
+ const threshold=selects.find(x=>x.textContent?.includes('Critical')) as HTMLSelectElement;
+ threshold.value='high';fire(threshold,'change');
+ await vi.waitFor(()=>expect(api.configure).toHaveBeenCalledWith({supplemental:expect.objectContaining({mode:'off',threshold:'high'})}));
+ await vi.waitFor(()=>expect(threshold.disabled).toBe(false));
+ const budget=view.get('input[type="number"][max="10"]') as HTMLInputElement;
+ budget.value='99';fire(budget,'change');
+ await vi.waitFor(()=>expect(api.configure).toHaveBeenCalledWith({supplemental:expect.objectContaining({maxRepairs:10})}));
+ expect(vi.mocked(api.configure).mock.calls.every(([c])=>!('autonomy' in c)&&!('permissions' in c))).toBe(true);
+});
+it('reports a refused supplemental policy edit and restores the controls', async () => {
+ await show([], 'settings');vi.mocked(api.configure).mockRejectedValueOnce(new Error('farm unavailable'));
+ const policy=view.all('select').find(x=>x.textContent?.includes('Advisory')) as HTMLSelectElement;
+ policy.value='advisory';fire(policy,'change');
+ await vi.waitFor(()=>expect(notice.failed).toHaveBeenCalled());
+ expect(policy.disabled).toBe(false);
+});
+
+it.each(['pass','blocked','cancelled','changesRequested'] as const)('shows supplemental %s as evidence and preserves manual merge authority', async outcome => {
+ const task=sampleTask('T1',{status:'review',worktree:'/test/task',branch:'task/T1'});
+ await show([task]);await select(task);
+ vi.mocked(api.reviewSupplemental).mockResolvedValueOnce({outcome,summary:'Exact review result'} as never);
+ click(button('Review for the additional gate'));
+ await vi.waitFor(()=>expect(api.reviewSupplemental).toHaveBeenCalledWith('T1'));
+ await vi.waitFor(()=>expect(outcome==='pass'?notice.ok:notice.failed).toHaveBeenCalledWith(outcome==='pass'?'Additional review completed':'Additional review needs attention','Exact review result'));
+ expect(api.mergeTask).not.toHaveBeenCalled();
+ await vi.waitFor(()=>expect((button('Review for the additional gate') as HTMLButtonElement).disabled).toBe(false));
+});
+it('shows a crashed supplemental request and leaves the task available', async()=>{
+ const task=sampleTask('T1',{status:'review',worktree:'/test/task'});await show([task]);await select(task);
+ vi.mocked(api.reviewSupplemental).mockRejectedValueOnce(new Error('provider crashed'));
+ click(button('Review for the additional gate'));
+ await vi.waitFor(()=>expect(notice.failed).toHaveBeenCalledWith('Additional review failed',expect.any(Error)));
+ expect(api.mergeTask).not.toHaveBeenCalled();expect((button('Review for the additional gate') as HTMLButtonElement).disabled).toBe(false);
+});

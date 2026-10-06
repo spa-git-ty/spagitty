@@ -17,15 +17,24 @@
 	 */
 	interface Props {
 		location: ContextKind;
+		/** Only this extension's panels. */
+		only?: string | null;
+		/**
+		 * Ask for data on mount. Off where looking must not start a worker —
+		 * Settings — so the panel waits for its button.
+		 */
+		auto?: boolean;
 		/** Bumped by the screen when what it shows changed, to ask again. */
 		revision?: unknown;
 		onsend?: (extension: string, record: ReviewRecord, findings: string[]) => Promise<void> | void;
 		onopen?: (path: string, line: number | null) => void;
 	}
 
-	let { location, revision = null, onsend, onopen }: Props = $props();
+	let { location, only = null, auto = true, revision = null, onsend, onopen }: Props = $props();
 
-	const placed = $derived(panelsFor(extensions.all, location));
+	const placed = $derived(
+		panelsFor(extensions.all, location).filter((entry) => only === null || entry.extension.id === only)
+	);
 	let data = $state<Record<string, { value?: unknown; error?: string; loading: boolean }>>({});
 
 	const target: ReviewTarget = $derived(
@@ -49,6 +58,7 @@
 
 	$effect(() => {
 		void revision;
+		if (!auto) return;
 		const wanted = placed.filter((entry) => entry.panel.renderer !== 'reviewFindings');
 		// Loading writes `data`; untracked so the effect does not depend on it.
 		untrack(() => {
@@ -72,7 +82,9 @@
 		{:else if entry.panel.renderer !== 'reviewFindings'}
 			<div class="head">
 				<span class="title">{entry.panel.title}</span>
-				<Btn disabled={data[entry.key]?.loading} onclick={() => load(entry)}>Refresh</Btn>
+				<Btn disabled={data[entry.key]?.loading} onclick={() => load(entry)}>
+					{data[entry.key] ? 'Refresh' : 'Show'}
+				</Btn>
 			</div>
 			{#if data[entry.key]?.error}
 				<p class="error">{data[entry.key]?.error}</p>
@@ -82,7 +94,7 @@
 				{:else}
 					<SummaryPanel data={data[entry.key]?.value as SummaryData} />
 				{/if}
-			{:else}
+			{:else if data[entry.key]?.loading}
 				<p class="muted">Loading…</p>
 			{/if}
 		{/if}

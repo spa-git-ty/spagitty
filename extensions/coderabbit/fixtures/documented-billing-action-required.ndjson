@@ -1,0 +1,2 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"action_required","status":"awaiting_confirmation","billableFileCount":12,"maxPrice":"$1.20","confirmationHeadCommitId":"0000000000000000000000000000000000000000","command":"coderabbit review --use-credits"}

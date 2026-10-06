@@ -284,3 +284,7 @@ copies its address.
 | Findings per review | 2000 |
 | Storage value | 64 KiB, 256 keys |
 | Concurrent host callbacks per worker | 8 |
+
+### Provider availability for required gates
+
+The host may request `review.check` with `provider`, `operationId` and an owned `repository` handle. Return `{ready: boolean, reason: string, providerVersion: string}`. Inspect local authentication through declared profiles without uploading code. Unsupported, false, unknown or timed-out answers block required gates.

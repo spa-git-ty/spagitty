@@ -20,7 +20,8 @@ vi.mock('./api', () => ({
 	startReview: vi.fn(() => Promise.resolve({ operation: 'op-2', reviewId: 'rv-2' })),
 	cancel: vi.fn(() => Promise.resolve()),
 	reviews: vi.fn(() => Promise.resolve([])),
-	confirm: vi.fn(() => Promise.resolve())
+	confirm: vi.fn(() => Promise.resolve()),
+	sendFindings: vi.fn(() => Promise.resolve({ task: 'TASK-0004', message: 'TASK-0004 is in the farm as a draft.' }))
 }));
 
 import * as api from './api';
@@ -184,7 +185,29 @@ describe('running a command', () => {
 	});
 });
 
+describe('sending findings to an agent', () => {
+	it('reports the draft task it made, and the refusal when it made none', async () => {
+		list.mockResolvedValueOnce(listing());
+		await extensions.setRepository('/repo');
+		const record = { result: { reviewId: 'rv-1' } } as never;
+		await extensions.send('com.example.hello', record, ['f-1']);
+		expect(api.sendFindings).toHaveBeenCalledWith('com.example.hello', '/repo', 'rv-1', ['f-1']);
+		expect(notice.current?.detail).toContain('TASK-0004');
+		vi.mocked(api.sendFindings).mockRejectedValueOnce({ kind: 'refused', message: 'These findings are about uncommitted changes.' });
+		await extensions.send('com.example.hello', record, ['f-1']);
+		expect(notice.current?.tone).toBe('error');
+		expect(notice.current?.detail).toContain('uncommitted');
+	});
+});
+
 describe('confirmations from the backend', () => {
+	it('removes an expired or cancelled confirmation without posting', async () => {
+		await extensions.start();
+		handlers['extension-confirm']({ payload: { id: 'ended', extension: 'x', kind: 'pullRequestComment', title: 'Post?', target: 'o/r#1', body: 'hi' } });
+		handlers['extension-confirm-ended']({ payload: 'ended' });
+		expect(extensions.confirmations).toEqual([]);
+		expect(api.confirm).not.toHaveBeenCalled();
+	});
 	it('queues them and answers each once', async () => {
 		await extensions.start();
 		handlers['extension-confirm']({
@@ -195,4 +218,84 @@ describe('confirmations from the backend', () => {
 		expect(api.confirm).toHaveBeenCalledWith('c1', true);
 		expect(extensions.confirmations).toEqual([]);
 	});
+});
+
+it('an older scope preview cannot overwrite the newer scope or reopen a closed dialog', async () => {
+ list.mockResolvedValue(listing());await extensions.setRepository('/repo');
+ let resolveOld!: (p: never)=>void;
+ vi.mocked(api.previewReview).mockImplementationOnce(()=>new Promise(resolve=>{resolveOld=resolve as never;}));
+ const old=extensions.beginReview('com.example.hello','review','workingCopy');
+ await vi.waitFor(()=>expect(api.previewReview).toHaveBeenCalled());
+ vi.mocked(api.previewReview).mockResolvedValueOnce({scope:'committed',files:[{path:'new',status:'modified',origin:'committed'}]} as never);
+ await extensions.updateDraft({scope:'committed'});
+ resolveOld({scope:'uncommitted',files:[{path:'old'}]} as never);await old;
+ expect(extensions.draft?.preview?.files[0].path).toBe('new');
+ extensions.closeDraft();expect(extensions.draft).toBeNull();
+});
+it('preview, start, cancellation and history failures stay visible and never imply success', async () => {
+ list.mockResolvedValue(listing());await extensions.setRepository('/repo');
+ vi.mocked(api.previewReview).mockRejectedValueOnce(new Error('preview changed'));
+ await extensions.beginReview('com.example.hello','review','workingCopy');
+ expect(extensions.draft?.error).toContain('preview changed');
+ await extensions.confirmDraft();expect(api.startReview).not.toHaveBeenCalled();
+ vi.mocked(api.previewReview).mockResolvedValueOnce({scope:'committed',files:[]} as never);
+ await extensions.updateDraft({scope:'committed'});
+ vi.mocked(api.startReview).mockRejectedValueOnce(new Error('consent revoked'));
+ await extensions.confirmDraft();expect(extensions.draft?.error).toContain('consent revoked');expect(extensions.draft?.busy).toBe(false);
+ vi.mocked(api.cancel).mockRejectedValueOnce(new Error('already stopped'));
+ await extensions.cancel('gone');expect(notice.current?.detail).toContain('already stopped');
+ vi.mocked(api.reviews).mockRejectedValueOnce(new Error('history unavailable'));
+ await extensions.loadReviews('com.example.hello');expect(extensions.error).toContain('history unavailable');
+ await extensions.setRepository('/other');expect(extensions.draft).toBeNull();
+});
+
+it.each(['success', 'failure'])('a %s from an old repository cannot replace review history or errors', async (outcome) => {
+	list.mockResolvedValue(listing());
+	await extensions.setRepository('/repo');
+	let complete!: (value: never) => void;
+	let fail!: (error: Error) => void;
+	vi.mocked(api.reviews).mockImplementationOnce(() => new Promise((resolve, reject) => {
+		complete = resolve as never;
+		fail = reject;
+	}));
+	const pending = extensions.loadReviews('com.example.hello');
+	await extensions.setRepository('/other');
+	if (outcome === 'success') complete([{ result: { reviewId: 'old' } }] as never);
+	else fail(new Error('old repository unavailable'));
+	await pending;
+	expect(extensions.reviewsOf('com.example.hello')).toEqual([]);
+	expect(extensions.error).toBeNull();
+});
+it.each(['success', 'failure'])('an old review start %s cannot close or reopen another repository dialog', async (outcome) => {
+	list.mockResolvedValue(listing());
+	vi.mocked(api.previewReview).mockResolvedValue({ scope: 'uncommitted', files: [] } as never);
+	await extensions.setRepository('/repo');
+	await extensions.beginReview('com.example.hello', 'review', 'workingCopy');
+	let complete!: (value: never) => void;
+	let fail!: (error: Error) => void;
+	vi.mocked(api.startReview).mockImplementationOnce(() => new Promise((resolve, reject) => {
+		complete = resolve as never;
+		fail = reject;
+	}));
+	const pending = extensions.confirmDraft();
+	await extensions.setRepository('/other');
+	await extensions.beginReview('com.example.hello', 'review', 'workingCopy');
+	if (outcome === 'success') complete({ operation: 'old', reviewId: 'old' } as never);
+	else fail(new Error('old start failed'));
+	await pending;
+	expect(extensions.draft?.workdir).toBe('/other');
+	expect(extensions.draft?.error).toBeNull();
+	expect(extensions.draft?.busy).toBe(false);
+});
+it('a delayed base lookup cannot reopen a closed review dialog', async () => {
+	list.mockResolvedValue(listing());
+	await extensions.setRepository('/repo');
+	let complete!: (bases: string[]) => void;
+	vi.mocked(api.suggestedBases).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+	const pending = extensions.beginReview('com.example.hello', 'review', 'workingCopy');
+	extensions.closeDraft();
+	complete(['main']);
+	await pending;
+	expect(extensions.draft).toBeNull();
+	expect(api.previewReview).not.toHaveBeenCalled();
 });

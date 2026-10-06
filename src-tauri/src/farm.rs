@@ -82,6 +82,20 @@ pub struct FarmState {
 }
 
 impl FarmState {
+    /// The open farm, when it belongs to the repository at `repo` — for the
+    /// extension bridge, which adds repair tasks to it (FEAT-097) and supplies
+    /// its supplemental reviewer (FEAT-098).
+    pub(crate) fn service_for(&self, repo: &std::path::Path) -> Option<Arc<FarmService>> {
+        let path = self.path.lock().expect("farm path lock").clone()?;
+        let same = |a: &std::path::Path, b: &std::path::Path| {
+            std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
+        };
+        if !same(&path, repo) {
+            return None;
+        }
+        self.service.lock().expect("farm service lock").clone()
+    }
+
     fn service(&self) -> Result<Arc<FarmService>> {
         self.service
             .lock()
@@ -216,6 +230,9 @@ pub fn farm_open<R: Runtime>(
         Arc::new(Emit { app: app.clone() }),
     ));
 
+    if let Ok(host) = app.state::<crate::extensions::ExtensionsState>().host() {
+        service.set_supplemental_provider(Arc::new(crate::supplemental::ExtensionReviewer(host)));
+    }
     *state.service.lock().expect("farm service lock") = Some(service.clone());
     *state.path.lock().expect("farm path lock") = Some(path);
 
@@ -339,6 +356,7 @@ pub fn farm_create(
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FarmSettings {
+    pub supplemental: Option<spagitty_farm::supplemental::Policy>,
     pub autonomy: Option<Autonomy>,
     pub permissions: Option<Permissions>,
     pub max_parallel: Option<usize>,
@@ -352,6 +370,9 @@ pub struct FarmSettings {
 #[tauri::command(async)]
 pub fn farm_configure(state: State<'_, FarmState>, settings: FarmSettings) -> Result<Farm> {
     Ok(state.service()?.configure(|farm| {
+        if let Some(policy) = settings.supplemental {
+            farm.supplemental = policy;
+        }
         if let Some(autonomy) = settings.autonomy {
             farm.autonomy = autonomy;
         }
@@ -712,4 +733,12 @@ pub fn farm_close(state: State<'_, FarmState>) -> Result<()> {
 /// Register the farm's state on the application.
 pub fn manage<R: Runtime>(app: &AppHandle<R>) {
     app.manage(FarmState::default());
+}
+
+#[tauri::command(async)]
+pub fn farm_review_supplemental(
+    state: State<'_, FarmState>,
+    id: TaskId,
+) -> Result<spagitty_farm::supplemental::Evidence> {
+    Ok(state.service()?.review_supplemental(&id)?)
 }

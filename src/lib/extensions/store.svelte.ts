@@ -89,6 +89,7 @@ let error = $state<string | null>(null);
 let running = $state<Running[]>([]);
 let finished = $state<Record<string, { status: string; message: string; reviewId: string | null }>>({});
 let confirmations = $state<Confirmation[]>([]);
+let previewGeneration = 0;
 let reviews = $state<Record<string, ReviewRecord[]>>({});
 let draft = $state<ReviewDraft | null>(null);
 let contexts = $state<Partial<Record<ContextKind, ScreenContext>>>({});
@@ -266,6 +267,9 @@ export const extensions = {
 				confirmations = [...confirmations, e.payload];
 			})
 		);
+		unlisteners.push(await listen<string>('extension-confirm-ended', (e) => {
+			confirmations = confirmations.filter((c) => c.id !== e.payload);
+		}));
 	},
 
 	stop(): void {
@@ -277,6 +281,8 @@ export const extensions = {
 	async setRepository(next: string | null): Promise<void> {
 		if (untrack(() => next === workdir && listing !== null)) return;
 		workdir = next;
+		draft = null;
+		previewGeneration++;
 		reviews = {};
 		await this.refresh();
 	},
@@ -344,12 +350,14 @@ export const extensions = {
 				: declared?.scopes?.length
 					? declared.scopes
 					: ['uncommitted', 'includeUntracked', 'committed'];
+		const generation = ++previewGeneration;
 		let bases: string[] = [];
 		try {
 			bases = await api.suggestedBases(dir);
 		} catch {
 			bases = [];
 		}
+		if (generation !== previewGeneration) return;
 		const firstUpload = this.reviewsOf(id).length === 0 && (declared?.sendsCodeTo ?? null) !== null;
 		draft = {
 			extension,
@@ -381,18 +389,20 @@ export const extensions = {
 	async previewDraft(): Promise<void> {
 		const open = draft;
 		if (!open) return;
-		const needsBase = open.request.scope !== 'uncommitted';
+		const generation = ++previewGeneration;
+		const needsBase = open.request.scope === 'committed' || open.request.scope === 'tracked';
 		const request = needsBase && !open.request.base ? { ...open.request, base: open.bases[0] ?? null } : open.request;
 		draft = { ...open, request, busy: true, error: null };
 		try {
 			const preview = await api.previewReview(open.extension.id, open.provider, request, open.workdir);
-			if (draft?.extension.id === open.extension.id) draft = { ...draft, preview, busy: false };
+			if (generation === previewGeneration && draft?.extension.id === open.extension.id) draft = { ...draft, preview, busy: false };
 		} catch (failure) {
-			if (draft) draft = { ...draft, preview: null, error: describe(failure), busy: false };
+			if (generation === previewGeneration && draft) draft = { ...draft, preview: null, error: describe(failure), busy: false };
 		}
 	},
 
 	closeDraft(): void {
+		previewGeneration++;
 		draft = null;
 	},
 
@@ -400,12 +410,13 @@ export const extensions = {
 	async confirmDraft(): Promise<void> {
 		const open = draft;
 		if (!open || !open.preview) return;
+		const mine = previewGeneration;
 		draft = { ...open, busy: true };
 		try {
 			await api.startReview(open.extension.id, open.provider, open.request, open.workdir);
-			draft = null;
+			if (mine === previewGeneration) draft = null;
 		} catch (failure) {
-			draft = { ...open, busy: false, error: describe(failure) };
+			if (mine === previewGeneration) draft = { ...open, busy: false, error: describe(failure) };
 		}
 	},
 
@@ -420,11 +431,25 @@ export const extensions = {
 
 	async loadReviews(id: string): Promise<void> {
 		if (!workdir) return;
+		const mine = generation;
+		const directory = workdir;
 		try {
-			const records = await api.reviews(id, workdir);
-			reviews = { ...reviews, [id]: records };
+			const records = await api.reviews(id, directory);
+			if (mine === generation) reviews = { ...reviews, [id]: records };
 		} catch (failure) {
-			error = describe(failure);
+			if (mine === generation) error = describe(failure);
+		}
+	},
+
+	/** Send selected findings to an agent (FEAT-097). */
+	async send(id: string, record: ReviewRecord, findings: string[]): Promise<void> {
+		if (!workdir) return;
+		try {
+			const sent = await api.sendFindings(id, workdir, record.result.reviewId, findings);
+			notice.ok(`Sent ${findings.length} to an agent`, sent.message);
+			await this.loadReviews(id);
+		} catch (failure) {
+			notice.failed('Not sent', describe(failure));
 		}
 	},
 
@@ -452,6 +477,7 @@ export const extensions = {
 		if (registered.length) palette.unregister(...registered);
 		registered = [];
 		generation += 1;
+		previewGeneration++;
 	},
 
 	/** Test seam: feed an event as if it came from the host. */

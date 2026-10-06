@@ -4,9 +4,9 @@
   "version": "0.8.1",
   "identifier": "dev.spagitty.app",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "bun tools/extensions/bundle.ts --debug && bun run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "bun tools/extensions/bundle.ts && bun run build",
     "frontendDist": "../build"
   },
   "app": {
@@ -46,6 +46,9 @@
       "wix": {
         "version": "0.8.1.0"
       }
+    },
+    "resources": {
+      "../extensions/coderabbit/bundle/spagitty.coderabbit/": "extensions/spagitty.coderabbit/"
     }
   }
 }

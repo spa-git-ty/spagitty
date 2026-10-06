@@ -202,6 +202,13 @@ pub struct Farm {
     /// identifiers, for the same reason.
     #[serde(default)]
     task_sequence: u32,
+    /// Additional review policy and durable evidence; old farms default to Off.
+    #[serde(default)]
+    pub supplemental: crate::supplemental::Policy,
+    #[serde(default)]
+    pub supplemental_evidence: std::collections::BTreeMap<TaskId, crate::supplemental::Evidence>,
+    #[serde(default)]
+    pub supplemental_repairs: std::collections::BTreeMap<TaskId, u32>,
     pub created_ms: u64,
     #[serde(default)]
     pub updated_ms: u64,
@@ -238,6 +245,9 @@ impl Farm {
             max_parallel: default_parallelism(),
             max_attempts: default_attempts(),
             task_sequence: 0,
+            supplemental: crate::supplemental::Policy::default(),
+            supplemental_evidence: Default::default(),
+            supplemental_repairs: Default::default(),
             created_ms: now,
             updated_ms: now,
         }

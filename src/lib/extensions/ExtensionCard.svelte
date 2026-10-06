@@ -3,6 +3,7 @@
 	import { open as openDialog } from '@tauri-apps/plugin-dialog';
 	import * as api from './api';
 	import { PROVENANCE_LABELS, STATE_LABELS } from './contributions';
+	import ExtensionPanels from './ExtensionPanels.svelte';
 	import SettingField from './SettingField.svelte';
 	import { extensions } from './store.svelte';
 	import type { Capability, ExtensionView } from './types';
@@ -240,6 +241,10 @@
 				{/each}
 			</div>
 		{/if}
+	{/if}
+
+	{#if extension.enabled && extension.state !== 'failed'}
+		<ExtensionPanels location="global" only={extension.id} auto={false} />
 	{/if}
 
 	<details class="diagnostics">

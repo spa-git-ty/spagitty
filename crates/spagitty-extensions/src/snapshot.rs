@@ -111,8 +111,11 @@ pub fn take(
         .ok_or_else(empty_tree_commitless)?;
 
     let (base_ref, base_commit) = match request.scope {
-        ReviewScope::Uncommitted => (Some("HEAD".to_string()), head.clone()),
-        ReviewScope::Committed | ReviewScope::Tracked | ReviewScope::IncludeUntracked => {
+        // What is not committed is compared with HEAD, untracked files or not.
+        ReviewScope::Uncommitted | ReviewScope::IncludeUntracked => {
+            (Some("HEAD".to_string()), head.clone())
+        }
+        ReviewScope::Committed | ReviewScope::Tracked => {
             let base = request.base.as_deref().ok_or_else(|| {
                 Error::Refused("Choose the branch or commit to compare against.".into())
             })?;
@@ -133,7 +136,8 @@ pub fn take(
         request.scope
     ));
 
-    if request.scope != ReviewScope::Uncommitted && base_commit != head {
+    let committed = matches!(request.scope, ReviewScope::Committed | ReviewScope::Tracked);
+    if committed && base_commit != head {
         for file in spagitty_core::diff::range_files(&repo, &base_commit, &head)? {
             files.push(ScopeFile {
                 path: file.path,
@@ -398,11 +402,15 @@ mod tests {
         let fixture = Fixture::dirty();
         let (_, preview) = take(
             fixture.path(),
-            &request(ReviewScope::IncludeUntracked, Some("HEAD")),
+            &request(ReviewScope::IncludeUntracked, None),
             &[],
         )
         .unwrap();
         assert!(preview.files.iter().any(|f| f.origin == Origin::Untracked));
+        assert!(
+            !preview.files.iter().any(|f| f.origin == Origin::Committed),
+            "it is the uncommitted scope plus untracked files, as `--uncommitted --include-untracked` is"
+        );
         assert!(preview.excluded.is_empty());
     }
 

@@ -205,3 +205,18 @@ export function isMessage(value: unknown): value is Message {
 	if (!('id' in v)) return false;
 	return ('result' in v) !== ('error' in v);
 }
+
+/** Public forge evidence. Resolution is unknown unless the platform supplied it. */
+export interface ForgeReviewItem {
+ id: number; author: { id: number | null; login: string; kind: string }; body: string; url: string;
+ commitSha: string | null; path: string | null; line: number | null; originalLine: number | null;
+ side: string | null; resolved: boolean | null; state: string | null; conclusion: string | null;
+ createdAt: string | null; appId: number | null; appSlug: string | null; title: string | null;
+}
+export interface ForgeReviewCollection { items: ForgeReviewItem[]; complete: boolean; error: string | null }
+export interface PullRequestSnapshot {
+ forge: 'gitHub' | 'gitLab' | 'bitbucket'; host: string; number: number; url: string; headSha: string; baseSha: string;
+ discussion: ForgeReviewCollection; findings: ForgeReviewCollection; reviews: ForgeReviewCollection; checks: ForgeReviewCollection; revisionCurrent: boolean;
+}
+export type CommentReceipt = { status: 'posted'; headSha: string; commentId: number; url?: string } | { status: 'uncertain'; headSha: string; message: string };
+export interface ReviewReadiness { ready: boolean; reason?: string; providerVersion?: string }

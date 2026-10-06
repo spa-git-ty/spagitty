@@ -33,6 +33,9 @@ import {
 	ErrorCode,
 	MAX_MESSAGE_BYTES,
 	type CommandParams,
+	type CommentReceipt,
+	type PullRequestSnapshot,
+	type ReviewReadiness,
 	type Detected,
 	type Finding,
 	type InitializeParams,
@@ -118,13 +121,13 @@ export class Host {
 		}
 	}
 
-	pullRequestSnapshot(repository: string, number: number): Promise<unknown> {
-		return this.peer.call('forge.pullRequest.snapshot', { repository, number });
+	pullRequestSnapshot(repository: string, number: number): Promise<PullRequestSnapshot> {
+		return this.peer.call('forge.pullRequest.snapshot', { repository, number }) as Promise<PullRequestSnapshot>;
 	}
 
 	/** Ask to post `body`. The person sees it first and may say no (`ErrorCode.Declined`). */
-	commentOnPullRequest(repository: string, number: number, body: string): Promise<{ posted: boolean; url?: string }> {
-		return this.peer.call('forge.pullRequest.comment', { repository, number, body }) as Promise<never>;
+	commentOnPullRequest(repository: string, number: number, body: string, operationId?: string): Promise<CommentReceipt> {
+		return this.peer.call('forge.pullRequest.comment', { repository, number, body, operationId }) as Promise<CommentReceipt>;
 	}
 
 	async storageGet<T = unknown>(key: string, repository?: string): Promise<T | null> {
@@ -179,6 +182,7 @@ export interface Definition {
 	deactivate?(): Promise<void> | void;
 	settingsChanged?(settings: Record<string, unknown>): void;
 	commands?: Record<string, (ctx: CommandContext) => Promise<CommandResult | void> | CommandResult | void>;
+	checkReview?(ctx: OperationContext & { provider: string; repository: string }): Promise<ReviewReadiness> | ReviewReadiness;
 	reviewProviders?: Record<string, (ctx: ReviewContext) => Promise<ReviewOutcome> | ReviewOutcome>;
 	panels?: Record<string, (params: { context: InvocationContext; host: Host; settings: Record<string, unknown> }) => Promise<SummaryPanel | ReviewStatusPanel> | SummaryPanel | ReviewStatusPanel>;
 }
@@ -217,7 +221,7 @@ export class Peer {
 
 	send(message: Message): void {
 		const line = JSON.stringify(message);
-		if (line.length > MAX_MESSAGE_BYTES) throw new ExtensionError(ErrorCode.Limit, 'message too large');
+		if (Buffer.byteLength(line, 'utf8') > MAX_MESSAGE_BYTES) throw new ExtensionError(ErrorCode.Limit, 'message too large');
 		this.channel.write(line);
 	}
 
@@ -230,7 +234,8 @@ export class Peer {
 		const id: string | number = this.prefix ? `${this.prefix}${this.next++}` : this.next++;
 		return new Promise((resolve, reject) => {
 			this.pending.set(String(id), { resolve, reject });
-			this.send({ jsonrpc: '2.0', id, method, params });
+			try { this.send({ jsonrpc: '2.0', id, method, params }); }
+			catch (error) { this.pending.delete(String(id)); reject(error as Error); }
 		});
 	}
 
@@ -352,6 +357,14 @@ export function serve(definition: Definition, channel: Channel): Peer {
 				});
 				return { accepted: true };
 			}
+			case 'review.check': {
+				if (!definition.checkReview) throw new ExtensionError(ErrorCode.MethodNotFound, 'This provider has no readiness check.');
+				const p = params as { operationId: string; provider: string; repository: string };
+				const controller = new AbortController();
+				operations.set(p.operationId, controller);
+				try { return await definition.checkReview({ ...base(p.operationId, controller), provider: p.provider, repository: p.repository }); }
+				finally { operations.delete(p.operationId); }
+			}
 			case 'review.start': {
 				const p = params as ReviewStartParams;
 				const handler = definition.reviewProviders?.[p.provider];
@@ -416,7 +429,7 @@ export function streamChannel(input: NodeJS.ReadableStream, output: { write(chun
 			buffer = buffer.slice(at + 1);
 			for (const handler of lineHandlers) handler(line);
 		}
-		if (buffer.length > MAX_MESSAGE_BYTES) buffer = '';
+		if (Buffer.byteLength(buffer, 'utf8') > MAX_MESSAGE_BYTES) buffer = '';
 	});
 	input.on('end', () => closeHandlers.forEach((h) => h()));
 	return {

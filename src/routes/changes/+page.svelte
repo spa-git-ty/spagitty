@@ -110,7 +110,12 @@
 
 	{#if repo.info !== null && reviewPanels}
 		<aside class="extension-panels" aria-label="Reviews">
-			<ExtensionPanels location="workingCopy" revision={repo.generation} onopen={(path) => openFinding(path)} />
+			<ExtensionPanels
+				location="workingCopy"
+				revision={repo.generation}
+				onopen={(path) => openFinding(path)}
+				onsend={(id, record, findings) => extensions.send(id, record, findings)}
+			/>
 		</aside>
 	{/if}
 

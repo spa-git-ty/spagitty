@@ -1,0 +1,3 @@
+{"type":"review_context","workingDirectory":"/repo","currentBranch":"work","baseBranch":"main"}
+{"type":"status","status":"review_skipped"}
+{"type":"complete","status":"review_skipped","findings":0,"message":"No changes detected"}

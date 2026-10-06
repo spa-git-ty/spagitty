@@ -3,13 +3,13 @@
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ErrorCode, isMessage } from './protocol';
 import { parseManifest, validate } from './manifest';
 import { inspect, pack } from './package';
 import { FakeHost } from './testing/index';
 import { satisfies } from './version';
-import { defineExtension, HostError } from './worker';
+import { defineExtension, HostError, Peer } from './worker';
 import { crc32, readZip, writeZip } from './zip';
 
 const fixtures = join(process.cwd(), 'schemas/extensions/fixtures');
@@ -71,6 +71,14 @@ describe('version requirements, as the host reads them', () => {
 });
 
 describe('a worker written with the SDK', () => {
+	it('checks local readiness through callbacks and refuses unsupported providers', async () => {
+		const host = FakeHost.inMemory(defineExtension({ checkReview: async (ctx) => ({ ready: (await ctx.host.detectTool('tool')).found, providerVersion: '1' }) }), { services: { 'tools.detect': () => ({ found: true }) } });
+		await host.start();
+		expect(await host.checkReview('review')).toEqual({ ready: true, providerVersion: '1' });
+		const unsupported = FakeHost.inMemory(defineExtension({}));
+		await unsupported.start();
+		await expect(unsupported.checkReview('review')).rejects.toMatchObject({ code: ErrorCode.MethodNotFound });
+	});
 	const extension = defineExtension({
 		activate: () => ({ unavailable: [{ id: 'later', reason: 'not yet' }] }),
 		commands: {
@@ -232,4 +240,37 @@ describe('packages', () => {
 		const entries = readZip(packed.bytes).map((e) => (e.name === 'bin/x' ? { ...e, data: new Uint8Array([0x7f, 0x45, 0x4c, 0x46, 9]) } : e));
 		expect(inspect(writeZip(entries)).problems).toContain('bin/x does not match integrity.json');
 	});
+});
+
+describe('public SDK callbacks and transport boundaries', () => {
+ it('preserves uncertain comment receipts, operation ownership and settings changes', async () => {
+  let sent: unknown;const changed=vi.fn();
+  const h=FakeHost.inMemory(defineExtension({settingsChanged:changed,commands:{request:async ctx=>{
+   ctx.heartbeat();ctx.log('requesting');
+   const snapshot=await ctx.host.pullRequestSnapshot('repo:1',7);
+   const receipt=await ctx.host.commentOnPullRequest('repo:1',snapshot.number,'@coderabbitai review',ctx.operationId);
+   return {message:receipt.status+' '+ctx.settings.region};
+  }}}),{settings:{region:'us'},services:{'forge.pullRequest.snapshot':()=>({number:7}),'forge.pullRequest.comment':p=>{sent=p;return{status:'uncertain',headSha:'head',message:'Refresh before sending again'};}}});
+  await h.start();h.changeSettings({region:'eu'});
+  expect((await h.command('request')).message).toBe('uncertain eu');
+  expect(sent).toMatchObject({repository:'repo:1',number:7,operationId:expect.stringMatching(/^op-/)});
+  expect(changed).toHaveBeenCalledWith({region:'eu'});expect(h.logs).toContain('[info] requesting');
+  await h.stop();
+ });
+ it('a missing tool fails the operation instead of reporting a successful run', async () => {
+  const h=FakeHost.inMemory(defineExtension({commands:{check:async ctx=>{await ctx.host.runTool({operationId:ctx.operationId,tool:'cli',profile:'inspect'},()=>{});}}}));
+  await h.start();expect((await h.command('check')).status).toBe('failed');expect(h.toolCalls).toHaveLength(1);
+  await expect(h.panel('missing')).rejects.toMatchObject({code:ErrorCode.MethodNotFound});
+  await expect(h.review('missing')).rejects.toMatchObject({code:ErrorCode.MethodNotFound});
+  await h.stop();
+ });
+ it('a closed channel rejects waiting callbacks, malformed and late answers cannot resolve them', async () => {
+  let receive!: (line:string)=>void;let close!: ()=>void;const writes:string[]=[];
+  const peer=new Peer({onLine:h=>{receive=h;},onClose:h=>{close=h;},write:l=>writes.push(l)},'w',async()=>({}),()=>{});
+  const waiting=peer.call('repository.describe',{});
+  receive('not json');receive('');receive(JSON.stringify({jsonrpc:'2.0',id:'foreign',result:{}}));
+  close();await expect(waiting).rejects.toMatchObject({code:ErrorCode.NotActive});
+  receive(JSON.stringify({jsonrpc:'2.0',id:JSON.parse(writes[0]).id,result:{}}));
+  expect(()=>peer.notify('log',{message:'😀'.repeat(300_000)})).toThrow('message too large');
+ });
 });

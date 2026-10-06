@@ -211,3 +211,5 @@ export function failure(error: unknown): FarmFailure {
 	}
 	return { kind: 'unknown', message: String(error) };
 }
+
+export function reviewSupplemental(id: string): Promise<import('./types').SupplementalEvidence> { return invoke('farm_review_supplemental', { id }); }

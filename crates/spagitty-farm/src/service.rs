@@ -250,6 +250,8 @@ pub struct FarmService {
     recent: Mutex<VecDeque<Recorded>>,
     verification_stops: Mutex<HashMap<TaskId, Arc<AtomicBool>>>,
     merge_lock: Mutex<()>,
+    supplemental: Mutex<Option<Arc<dyn crate::supplemental::Provider>>>,
+    supplemental_stops: Mutex<HashMap<TaskId, Arc<AtomicBool>>>,
 }
 
 impl FarmService {
@@ -271,10 +273,21 @@ impl FarmService {
         let repo_for_events = repo.clone();
         let registry: AgentRegistry = store::load_registry(&repo).unwrap_or_default();
         let farm = store::load_farm(&repo);
+        let change_requests = farm
+            .as_ref()
+            .map(|f| {
+                f.supplemental_evidence
+                    .iter()
+                    .filter(|(_, e)| e.outcome == crate::supplemental::Outcome::ChangesRequested)
+                    .map(|(id, e)| (id.clone(), e.change_request.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
         let service = FarmService {
             repo,
             state: Mutex::new(State {
                 farm,
+                change_requests,
                 ..State::default()
             }),
             registry: Mutex::new(registry),
@@ -284,6 +297,8 @@ impl FarmService {
             recent: Mutex::new(store::load_events(&repo_for_events).into()),
             verification_stops: Mutex::new(HashMap::new()),
             merge_lock: Mutex::new(()),
+            supplemental: Mutex::new(None),
+            supplemental_stops: Mutex::new(HashMap::new()),
         };
         service.recover();
         service
@@ -393,10 +408,25 @@ impl FarmService {
     pub fn configure(&self, apply: impl FnOnce(&mut Farm)) -> Result<Farm> {
         let mut state = self.state.lock().expect("farm lock");
         let farm = state.farm.as_mut().ok_or(Error::NoFarm)?;
+        let previous = farm.supplemental.clone();
         apply(farm);
+        farm.supplemental.revision = previous.revision;
+        let changed = farm.supplemental != previous;
+        if changed {
+            farm.supplemental.revision = previous.revision.saturating_add(1);
+            farm.supplemental.max_repairs = farm.supplemental.max_repairs.min(10);
+        }
         farm.updated_ms = now_ms();
         let updated = farm.clone();
         self.persist(&state)?;
+        drop(state);
+        if changed {
+            self.emit(FarmEvent::SupplementalPolicyChanged {
+                mode: updated.supplemental.mode,
+                revision: updated.supplemental.revision,
+                actor: "person".into(),
+            });
+        }
         Ok(updated)
     }
 
@@ -613,6 +643,14 @@ impl FarmService {
         {
             stop.store(true, Ordering::Release);
         }
+        if let Some(stop) = self
+            .supplemental_stops
+            .lock()
+            .expect("supplemental stops")
+            .get(id)
+        {
+            stop.store(true, Ordering::Release);
+        }
         self.stop_session(id);
         Ok(())
     }
@@ -773,6 +811,14 @@ impl FarmService {
             .verification_stops
             .lock()
             .expect("verification stop lock")
+            .values()
+        {
+            stop.store(true, Ordering::Release);
+        }
+        for stop in self
+            .supplemental_stops
+            .lock()
+            .expect("supplemental stops")
             .values()
         {
             stop.store(true, Ordering::Release);
@@ -1400,7 +1446,311 @@ impl FarmService {
         if !verification.passed && !verification.unverified {
             return self.after_rejection(id, verification.summary());
         }
+        let farm = self.farm().ok_or(Error::NoFarm)?;
+        if farm.supplemental.mode != crate::supplemental::Mode::Off
+            && farm.autonomy.reviews()
+            && verification.passed
+            && !verification.unverified
+        {
+            let extra = self.review_supplemental(id)?;
+            if farm.supplemental.mode == crate::supplemental::Mode::Required
+                && extra.outcome != crate::supplemental::Outcome::Pass
+            {
+                return self.reject_supplemental(id, &extra);
+            }
+        }
         self.request_review(id)
+    }
+
+    pub fn set_supplemental_provider(&self, provider: Arc<dyn crate::supplemental::Provider>) {
+        *self.supplemental.lock().expect("supplemental provider") = Some(provider);
+    }
+
+    fn supplemental_input(&self, task: &Task) -> Result<crate::supplemental::Input> {
+        let farm = self.farm().ok_or(Error::NoFarm)?;
+        let workdir = task
+            .worktree
+            .as_ref()
+            .map(PathBuf::from)
+            .ok_or_else(|| Error::Refused("This task has no worktree to review.".into()))?;
+        Ok(crate::supplemental::Input {
+            task: task.id.clone(),
+            repository: self.repo.clone(),
+            head: evidence::clean_commit(&workdir)?,
+            workdir,
+            base: task
+                .merge_target
+                .clone()
+                .ok_or_else(|| Error::Refused("This task has no recorded base branch.".into()))?,
+            policy: farm.supplemental,
+        })
+    }
+
+    pub fn review_supplemental(&self, id: &TaskId) -> Result<crate::supplemental::Evidence> {
+        use crate::supplemental::{Evidence, Outcome};
+        let task = self
+            .farm()
+            .and_then(|f| f.task(id).cloned())
+            .ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+        if !matches!(
+            task.status,
+            TaskStatus::Verification | TaskStatus::Review | TaskStatus::Blocked
+        ) {
+            return Err(Error::Refused(
+                "Finish the task's implementation before requesting a supplemental review.".into(),
+            ));
+        }
+        let input = self.supplemental_input(&task)?;
+        let stop = Arc::new(AtomicBool::new(false));
+        {
+            let mut stops = self.supplemental_stops.lock().expect("supplemental stops");
+            if stops.contains_key(id) {
+                return Err(Error::Refused(
+                    "A supplemental review is already running.".into(),
+                ));
+            }
+            stops.insert(id.clone(), stop.clone());
+        }
+        // Keep merges and duplicate starts blocked through persistence and
+        // completion events, and release the registration on every error path.
+        struct PendingReview<'a> {
+            service: &'a FarmService,
+            id: &'a TaskId,
+        }
+        impl Drop for PendingReview<'_> {
+            fn drop(&mut self) {
+                self.service
+                    .supplemental_stops
+                    .lock()
+                    .expect("supplemental stops")
+                    .remove(self.id);
+            }
+        }
+        let _pending = PendingReview { service: self, id };
+        self.emit(FarmEvent::SupplementalReview {
+            task: id.clone(),
+            state: "started".into(),
+            provider: input.policy.provider.clone(),
+            summary: "Reviewing the committed task change.".into(),
+        });
+        let provider = self
+            .supplemental
+            .lock()
+            .expect("supplemental provider")
+            .clone();
+        let result = provider
+            .as_ref()
+            .ok_or_else(|| "The supplemental review provider is unavailable.".to_string())
+            .and_then(|p| p.review(&input, &stop));
+        let mut extra = result.unwrap_or_else(|summary| Evidence {
+            task: id.clone(),
+            head: input.head.clone(),
+            policy: input.policy.clone(),
+            identity: String::new(),
+            outcome: Outcome::Blocked,
+            summary,
+            change_request: String::new(),
+            record: serde_json::Value::Null,
+        });
+        if stop.load(Ordering::Acquire) {
+            extra.outcome = Outcome::Cancelled;
+            extra.summary = "Supplemental review cancelled.".into();
+        }
+        let current = self
+            .farm()
+            .and_then(|f| f.task(id).cloned())
+            .ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+        if current.status == TaskStatus::Cancelled {
+            extra.outcome = Outcome::Cancelled;
+            self.emit(FarmEvent::SupplementalReview {
+                task: id.clone(),
+                state: "cancelled".into(),
+                provider: input.policy.provider,
+                summary: "Supplemental review cancelled.".into(),
+            });
+            return Ok(extra);
+        }
+        if self.supplemental_input(&current).is_err()
+            || self
+                .farm()
+                .map(|f| f.supplemental != input.policy)
+                .unwrap_or(true)
+            || evidence::clean_commit(&input.workdir).ok().as_ref() != Some(&input.head)
+        {
+            extra.outcome = Outcome::Blocked;
+            extra.summary = "The task or policy changed during the supplemental review.".into();
+        }
+        {
+            let mut state = self.state.lock().expect("farm lock");
+            let farm = state.farm.as_mut().ok_or(Error::NoFarm)?;
+            let now = farm.task(id).ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+            // Cancellation and policy edits take this same lock. Do not publish
+            // a pass if either arrived after the external snapshot checks.
+            if now.status == TaskStatus::Cancelled || stop.load(Ordering::Acquire) {
+                extra.outcome = Outcome::Cancelled;
+                extra.summary = "Supplemental review cancelled.".into();
+            } else {
+                if farm.supplemental != input.policy
+                    || now.worktree != task.worktree
+                    || now.branch != task.branch
+                    || now.merge_target != task.merge_target
+                    || !matches!(
+                        now.status,
+                        TaskStatus::Verification | TaskStatus::Review | TaskStatus::Blocked
+                    )
+                {
+                    extra.outcome = Outcome::Blocked;
+                    extra.summary =
+                        "The task or policy changed during the supplemental review.".into();
+                }
+                farm.supplemental_evidence.insert(id.clone(), extra.clone());
+            }
+            self.persist(&state)?;
+        }
+        self.emit(FarmEvent::SupplementalReview {
+            task: id.clone(),
+            state: match extra.outcome {
+                Outcome::Pass => "completed",
+                Outcome::ChangesRequested => "changesRequested",
+                Outcome::Blocked => "failed",
+                Outcome::Cancelled => "cancelled",
+            }
+            .into(),
+            provider: input.policy.provider,
+            summary: extra.summary.clone(),
+        });
+        Ok(extra)
+    }
+
+    /// A person selected findings on this task's current committed review.
+    /// The desktop supplies the verified record; only the farm changes state.
+    pub fn request_supplemental_changes(&self, extra: crate::supplemental::Evidence) -> Result<()> {
+        let farm = self.farm().ok_or(Error::NoFarm)?;
+        let task = farm
+            .task(&extra.task)
+            .ok_or_else(|| Error::NoSuchTask(extra.task.clone()))?;
+        if task.status != TaskStatus::Review
+            || self.supplemental_input(task)?.head != extra.head
+            || farm.supplemental != extra.policy
+            || extra.outcome != crate::supplemental::Outcome::ChangesRequested
+        {
+            return Err(Error::Refused(
+                "Send findings only from the current committed task while it is in review.".into(),
+            ));
+        }
+        {
+            let mut state = self.state.lock().expect("farm lock");
+            state
+                .farm
+                .as_mut()
+                .ok_or(Error::NoFarm)?
+                .supplemental_evidence
+                .insert(extra.task.clone(), extra.clone());
+            self.persist(&state)?;
+        }
+        self.reject_supplemental(&extra.task, &extra)
+    }
+
+    fn reject_supplemental(
+        &self,
+        id: &TaskId,
+        extra: &crate::supplemental::Evidence,
+    ) -> Result<()> {
+        if extra.outcome != crate::supplemental::Outcome::ChangesRequested {
+            return self.set_status(id, TaskStatus::Blocked, Some(extra.summary.clone()));
+        }
+        let exhausted = {
+            let mut state = self.state.lock().expect("farm lock");
+            let farm = state.farm.as_mut().ok_or(Error::NoFarm)?;
+            let used = farm.supplemental_repairs.entry(id.clone()).or_default();
+            let exhausted = *used >= farm.supplemental.max_repairs;
+            if !exhausted {
+                *used += 1;
+            }
+            state
+                .change_requests
+                .insert(id.clone(), extra.change_request.clone());
+            self.persist(&state)?;
+            exhausted
+        };
+        self.emit(FarmEvent::SupplementalReview {
+            task: id.clone(),
+            state: "handedBack".into(),
+            provider: extra.policy.provider.clone(),
+            summary: extra.summary.clone(),
+        });
+        if exhausted {
+            self.set_status(
+                id,
+                TaskStatus::Blocked,
+                Some(
+                    "The supplemental review repair budget is exhausted; a person must decide."
+                        .into(),
+                ),
+            )
+        } else {
+            self.after_rejection(id, extra.summary.clone())
+        }
+    }
+
+    fn check_supplemental(&self, task: &Task) -> Result<()> {
+        let farm = self.farm().ok_or(Error::NoFarm)?;
+        if farm.supplemental.mode != crate::supplemental::Mode::Required {
+            return Ok(());
+        }
+        if self
+            .supplemental_stops
+            .lock()
+            .expect("supplemental stops")
+            .contains_key(&task.id)
+        {
+            return Err(Error::Refused(
+                "Wait for the supplemental review to finish.".into(),
+            ));
+        }
+        let input = self.supplemental_input(task)?;
+        let extra = farm.supplemental_evidence.get(&task.id).ok_or_else(|| {
+            Error::Refused(
+                "This task requires a current supplemental review before merging.".into(),
+            )
+        })?;
+        crate::supplemental::matching(&input, extra).map_err(Error::Refused)?;
+        let provider = self
+            .supplemental
+            .lock()
+            .expect("supplemental provider")
+            .clone()
+            .ok_or_else(|| {
+                Error::Refused("The required supplemental review provider is unavailable.".into())
+            })?;
+        if let Err(reason) = provider.validate(&input, extra) {
+            self.emit(FarmEvent::SupplementalReview {
+                task: task.id.clone(),
+                state: "stale".into(),
+                provider: input.policy.provider,
+                summary: reason.clone(),
+            });
+            return Err(Error::Refused(reason));
+        }
+        if evidence::clean_commit(&input.workdir).ok().as_ref() != Some(&input.head)
+            || self
+                .farm()
+                .map(|f| {
+                    f.supplemental != input.policy
+                        || f.task(&task.id).map_or(true, |now| {
+                            now.status != TaskStatus::Review
+                                || now.worktree != task.worktree
+                                || now.branch != task.branch
+                                || now.merge_target != task.merge_target
+                        })
+                })
+                .unwrap_or(true)
+        {
+            return Err(Error::Refused(
+                "The task or review policy changed while merging; check again.".into(),
+            ));
+        }
+        Ok(())
     }
 
     // ── Review ───────────────────────────────────────────────────────────
@@ -1628,6 +1978,7 @@ impl FarmService {
                 "This older task has no recorded merge destination; merge it by hand.".into(),
             ));
         }
+        self.check_supplemental(&task)?;
         if automatic {
             self.check_merge_evidence(&task, &commit)?;
         }
