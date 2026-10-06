@@ -3,7 +3,6 @@
 
 	import { appWindow } from '$lib/chrome/window';
 	import RepoTabs from '$lib/chrome/RepoTabs.svelte';
-	import { workspace } from '$lib/workspace.svelte';
 	import { isMac } from '$lib/platform';
 	import BrandMark from '$lib/ui/BrandMark.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -48,7 +47,6 @@
      title bar is expected to. Controls stop the event so they don't drag. -->
 <div
 	class="titlebar"
-	class:tabbed={workspace.tabs.length > 0}
 	data-tauri-drag-region
 	ondblclick={() => appWindow.toggleMaximize()}
 	role="toolbar"
@@ -59,22 +57,18 @@
 		One row above the pane (FEAT-082). The tabs were a row of their own
 		(FEAT-044), under a title bar that held nothing but the program's name and
 		three window controls: two full-width bands for one row's worth of
-		content. They are pills on the left of this row now, and the name shows
-		only when there is no tab to say what is open.
+		content. They are pills on the left of this row now, and the name stays
+		in the middle: it gave way to the tabs once, and was missed (BUG-045).
 
-		Still three columns with equal outer tracks (TASK-021), so the name, when
-		it shows, is centred in the window rather than in what the controls leave.
+		Still three columns with equal outer tracks (TASK-021), so the name is
+		centred in the window rather than in what the tabs and controls leave.
 	-->
 	<div class="lead" data-tauri-drag-region>
 		<span class="side" class:traffic={mac} aria-hidden="true"></span>
 		<RepoTabs />
 	</div>
 
-	{#if workspace.tabs.length === 0}
-		<span class="name" role="img" aria-label="Spagitty"><BrandMark size={18} /><Wordmark size={15} /></span>
-	{:else}
-		<span class="gap" data-tauri-drag-region aria-hidden="true"></span>
-	{/if}
+	<span class="name" role="img" aria-label="Spagitty"><BrandMark size={18} /><Wordmark size={15} /></span>
 
 	<div class="controls">
 		{#each mac ? [] : CONTROLS as control (control.kind)}
@@ -126,21 +120,12 @@
 		font-size: var(--fs-secondary);
 	}
 
-	/* With tabs open the middle column is empty, and the tabs take the room. */
-	.titlebar.tabbed {
-		grid-template-columns: minmax(0, 1fr) 0 auto;
-	}
-
 	.lead {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 		min-width: 0;
 		height: 100%;
-	}
-
-	.gap {
-		min-width: 0;
 	}
 
 	/* Hard against the right edge, whatever its column has been given. */

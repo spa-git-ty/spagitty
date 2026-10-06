@@ -113,17 +113,17 @@ describe('TitleBar', () => {
 	/**
 	 * FEAT-044 gave the tabs a row of their own, under a title bar holding only
 	 * the name and three controls. FEAT-082 puts them back in the one row above
-	 * the pane, as pills, and the name gives way to them.
+	 * the pane, as pills. The name gave way to them there, and the author missed
+	 * it (BUG-045): it stays, centred, beside them.
 	 */
-	it('carries the tabs as pills, and the name only when there are none (FEAT-082)', () => {
+	it('carries the tabs as pills, and the name beside them (FEAT-082, BUG-045)', () => {
 		workspace.clear();
 		workspace.opened('/repos/fixture');
 
 		const view = render(TitleBar, {});
 
 		expect(view.all('.tab').map((tab) => tab.textContent?.trim())).toEqual(['fixture']);
-		expect(view.find('.name')).toBeNull();
-		expect(view.get('.titlebar').classList.contains('tabbed')).toBe(true);
+		expect(view.get('.name').getAttribute('aria-label')).toBe('Spagitty');
 
 		workspace.clear();
 		view.destroy();
