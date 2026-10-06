@@ -916,3 +916,11 @@ followed to the head. A changed part holding them is a sky card (`--resolve`,
 the fifth lane colour) naming the merge, with each side of the conflict a
 click away; the files list marks such files and filters by Author and
 Conflict fixes.
+
+**Writing is held until Finish review** (FEAT-093). A `+` on each line, and a
+shift-click on a line number for a range, open a box; what is written is kept
+in the pull request's record against the head it was written on, drawn
+warm-tinted under its lines, and sent only by *Finish review* with a verdict
+and the words for the whole pull request. Threads take replies at once and are
+resolved or reopened on the host; comments on the pull request as a whole are
+listed as *whole PR*.

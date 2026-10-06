@@ -1676,6 +1676,31 @@ pub async fn reply_comment<R: Runtime>(
     off_thread(move || forge::review::reply_comment(&repo, &token, number, comment_id, &body)).await
 }
 
+/// Every comment the Review room shows, with threads and the comments on the
+/// pull request as a whole (FEAT-093).
+#[tauri::command]
+pub async fn review_comments<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    number: u64,
+) -> Result<Vec<forge::review::PullRequestComment>> {
+    let (repo, token, _) = forge_credentials(&app, state)?;
+    off_thread(move || forge::review::review_comments(&repo, &token, number)).await
+}
+
+/// Resolve a thread on the host, or open it again (FEAT-093).
+#[tauri::command]
+pub async fn resolve_thread<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    number: u64,
+    thread_id: String,
+    resolved: bool,
+) -> Result<()> {
+    let (repo, token, _) = forge_credentials(&app, state)?;
+    off_thread(move || forge::review::resolve_thread(&repo, &token, number, &thread_id, resolved)).await
+}
+
 /// Merge a pull request on the configured forge (FEAT-071).
 #[tauri::command]
 pub async fn merge_pull_request<R: Runtime>(

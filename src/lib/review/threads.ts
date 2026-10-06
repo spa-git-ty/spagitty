@@ -19,6 +19,10 @@ export interface Thread {
 	line: number | null;
 	side: 'LEFT' | 'RIGHT';
 	resolved: boolean;
+	/** How the host names it to resolve (FEAT-093); null when it cannot be. */
+	threadId: string | null;
+	/** On the pull request as a whole rather than on a line (FEAT-093). */
+	general: boolean;
 	/** Oldest first. */
 	comments: PullRequestComment[];
 }
@@ -57,11 +61,15 @@ export function threadsOf(comments: PullRequestComment[]): Thread[] {
 				line: root.line,
 				side: root.side === 'LEFT' ? 'LEFT' : 'RIGHT',
 				resolved: root.resolved,
+				threadId: root.threadId ?? null,
+				general: root.path === '',
 				comments: []
 			};
 			threads.set(root.id, thread);
 		}
 		thread.comments.push(comment);
+		// A reply posted from here comes back without the thread's id.
+		thread.threadId ??= comment.threadId ?? null;
 	}
 	for (const thread of threads.values()) {
 		thread.comments.sort((a, b) => a.createdAt - b.createdAt || a.id - b.id);
@@ -89,8 +97,9 @@ export function threadsByPlace(threads: Thread[]): Map<string, Thread[]> {
 	return out;
 }
 
-/** `name.rs:20`, or `name.rs` when the thread has no line. */
+/** `name.rs:20`, `name.rs` when the thread has no line, or `whole PR`. */
 export function whereOf(thread: Thread): string {
+	if (thread.general) return 'whole PR';
 	const name = thread.path.slice(thread.path.lastIndexOf('/') + 1);
 	return thread.line === null ? name : `${name}:${thread.line}`;
 }

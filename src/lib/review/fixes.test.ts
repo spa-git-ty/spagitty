@@ -59,3 +59,27 @@ it('leaves a part alone that a fix wrote no added line of', () => {
 	const rows = rowsOf([{ path: 'a.rs', lines, blocks: blocksOf(lines, 'changes'), fixes: [elsewhere] }]);
 	expect(rows.some((row) => row.kind === 'head' && row.tone === 'conflict')).toBe(false);
 });
+
+it('never puts a fix and the author’s own change in one card, however close', () => {
+	// Edits at 10 and 16: close enough to be one part, but 16 is a fix.
+	const lines: DiffLine[] = [];
+	for (let n = 1; n <= 30; n++) {
+		if (n === 10 || n === 16) {
+			lines.push({ origin: 'removed', old: n, new: null, text: `old ${n}` });
+			lines.push({ origin: 'added', old: null, new: n, text: `new ${n}` });
+		} else {
+			lines.push({ origin: 'context', old: n, new: n, text: `line ${n}` });
+		}
+	}
+	expect(blocksOf(lines, 'changes').filter((block) => block.kind === 'hunk')).toHaveLength(1);
+
+	const split = blocksOf(lines, 'changes', new Set(), new Set([16]));
+	const hunks = split.filter((block) => block.kind === 'hunk');
+	expect(hunks).toHaveLength(2);
+	// Back to back: the context between them is shared out, not folded.
+	expect(hunks[0].to).toBe(hunks[1].from);
+
+	const rows = rowsOf([{ path: 'a.rs', lines, blocks: split, fixes: [{ ...FIX, lines: [16] }] }]);
+	const tones = rows.filter((row) => row.kind === 'head').map((row) => row.kind === 'head' && row.tone);
+	expect(tones).toEqual(['hunk', 'conflict']);
+});

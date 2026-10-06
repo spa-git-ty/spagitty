@@ -158,6 +158,8 @@ pub fn run() {
             commands::review_checkout,
             commands::review_files,
             commands::review_conflicts,
+            commands::review_comments,
+            commands::resolve_thread,
             commands::review_file,
             commands::review_worktree,
             commands::review_state,

@@ -91,9 +91,9 @@ function comment(id: number, extra: Partial<PullRequestComment>): PullRequestCom
 }
 
 const COMMENTS = [
-	comment(1, { body: 'Write to a temp file, then rename?' }),
-	comment(2, { inReplyTo: 1, author: 'yasser-dev', body: 'Good catch.' }),
-	comment(3, { line: 2, body: 'Is anything else still reading memo?', resolved: true })
+	comment(1, { body: 'Write to a temp file, then rename?', threadId: 'T1' }),
+	comment(2, { inReplyTo: 1, author: 'yasser-dev', body: 'Good catch.', threadId: 'T1' }),
+	comment(3, { line: 2, body: 'Is anything else still reading memo?', resolved: true, threadId: 'T3' })
 ];
 
 beforeEach(() => {
@@ -117,7 +117,7 @@ beforeEach(() => {
 	vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'h1', base: 'b1', mergeBase: 'm1' });
 	vi.mocked(api.reviewFiles).mockResolvedValue(LISTED);
 	vi.mocked(api.reviewFile).mockImplementation(async (_from, _to, path) => whole(path));
-	vi.mocked(api.pullRequestComments).mockResolvedValue(COMMENTS);
+	vi.mocked(api.reviewComments).mockResolvedValue(COMMENTS);
 	vi.mocked(api.reviewConflicts).mockResolvedValue({ fixes: [], files: [], merges: [], truncated: false });
 });
 
@@ -361,4 +361,170 @@ it('says when conflict fixes could not be looked for', async () => {
 	await openRoom();
 	await vi.waitFor(() => expect(files().textContent).toContain('Conflict fixes could not be looked for.'));
 	expect(view.text()).not.toContain('Conflict fix, not');
+});
+
+// --- Writing (FEAT-093) -------------------------------------------------------
+
+const lastSaved = () => vi.mocked(api.setReviewState).mock.calls.at(-1)![1] as Record<string, unknown>;
+const typeInto = (element: Element, text: string) => {
+	(element as HTMLTextAreaElement).value = text;
+	fire(element, 'input');
+};
+const numberOf = (text: string) =>
+	view.all('.line').find((line) => line.textContent?.includes(text))!.querySelectorAll('button.num')[1] as HTMLElement;
+
+it('keeps a comment written on a line until Finish review', async () => {
+	await openRoom();
+	await vi.waitFor(() => expect(view.find('.line.focused .plus')).not.toBeNull());
+	click(view.get('.line.focused .plus'));
+	expect(view.text()).toContain('Line 15 · shift-click a line number to cover a range');
+
+	typeInto(view.get('#composer'), 'Fall through to the fetch instead?');
+	click(button('Add to review'));
+	await vi.waitFor(() => expect(view.text()).toContain('Pending · goes out with Finish review'));
+
+	const drafts = lastSaved().drafts as Record<string, unknown>[];
+	expect(drafts).toHaveLength(1);
+	expect(drafts[0]).toMatchObject({
+		path: AVATARS,
+		line: 15,
+		side: 'LEFT',
+		body: 'Fall through to the fetch instead?',
+		headSha: 'h1',
+		place: { kind: 'removed', old: 15, new: 15 }
+	});
+	expect(api.submitReview).not.toHaveBeenCalled();
+	expect(button('Finish review · 1')).toBeTruthy();
+	expect(conversation().textContent).toContain('Your pending · 1');
+	expect(conversation().textContent).toContain('avatars.rs:15');
+
+	click(view.get('.pending .delete'));
+	await vi.waitFor(() => expect(view.text()).not.toContain('Pending · goes out'));
+	expect(lastSaved().drafts).toEqual([]);
+});
+
+it('covers a range on a shift-click, across both sides', async () => {
+	await openRoom();
+	await vi.waitFor(() => expect(view.find('.line.focused .plus')).not.toBeNull());
+	click(view.get('.line.focused .plus'));
+	click(numberOf('line 17'), { shiftKey: true });
+	expect(view.text()).toContain('Lines 15–17');
+	expect(view.all('.line.covered')).toHaveLength(4);
+
+	typeInto(view.get('#composer'), 'This whole block.');
+	click(button('Add to review'));
+	await vi.waitFor(() => expect(view.text()).toContain('Pending · goes out'));
+	expect((lastSaved().drafts as unknown[])[0]).toMatchObject({
+		line: 17,
+		side: 'RIGHT',
+		startLine: 15,
+		startSide: 'LEFT',
+		startPlace: { kind: 'removed', old: 15, new: 15 },
+		place: { kind: 'context', old: 17, new: 17 }
+	});
+});
+
+it('brings pending comments back after a restart, and keeps older ones aside', async () => {
+	const draft = {
+		id: 'd1',
+		path: AVATARS,
+		line: 15,
+		side: 'RIGHT',
+		startLine: null,
+		startSide: null,
+		body: 'Written yesterday.',
+		createdAt: 1,
+		place: null,
+		startPlace: null,
+		oldPath: null
+	};
+	vi.mocked(api.reviewState).mockResolvedValue({
+		headSha: 'h1',
+		drafts: [
+			{ ...draft, headSha: 'h1' },
+			{ ...draft, id: 'd0', body: 'Before the push.', headSha: 'h0' }
+		]
+	});
+	await openRoom();
+
+	await vi.waitFor(() => expect(view.all('.pending .body').map((b) => b.textContent)).toEqual(['Written yesterday.']));
+	expect(button('Finish review · 1')).toBeTruthy();
+	expect(conversation().textContent).toContain('Written before the last push · 1');
+	expect(conversation().textContent).toContain('Before the push.');
+});
+
+it('sends the review with its verdict, the pending comments and the words for the whole', async () => {
+	vi.mocked(api.submitReview).mockResolvedValue(undefined);
+	await openRoom();
+	await vi.waitFor(() => expect(view.find('.line.focused .plus')).not.toBeNull());
+	click(view.get('.line.focused .plus'));
+	typeInto(view.get('#composer'), 'Fall through?');
+	click(button('Add to review'));
+	await vi.waitFor(() => expect(button('Finish review · 1')).toBeTruthy());
+
+	typeInto(conversation().querySelector('textarea')!, 'Close; one question.');
+	await vi.waitFor(() => expect(lastSaved().body).toBe('Close; one question.'));
+
+	click(button('Finish review · 1'));
+	expect(view.text()).toContain('1 line comment goes with it.');
+	click(button('Approve'));
+	click(button('Send review'));
+	await vi.waitFor(() => expect(api.submitReview).toHaveBeenCalled());
+	const [number, verdict, body, comments] = vi.mocked(api.submitReview).mock.calls[0];
+	expect([number, verdict, body]).toEqual([214, 'approve', 'Close; one question.']);
+	expect(comments).toEqual([expect.objectContaining({ path: AVATARS, line: 15, side: 'LEFT', body: 'Fall through?' })]);
+
+	await vi.waitFor(() => expect(button('Finish review · 0')).toBeTruthy());
+	expect(lastSaved().drafts).toEqual([]);
+	expect(lastSaved().body).toBe('');
+	expect(api.reviewComments).toHaveBeenCalledTimes(2);
+});
+
+it('will not send changes asked for with nothing said', async () => {
+	await openRoom();
+	click(button('Finish review · 0'));
+	click(button('Request changes'));
+	expect(button('Send review').hasAttribute('disabled')).toBe(true);
+	click(button('Approve'));
+	expect(button('Send review').hasAttribute('disabled')).toBe(false);
+});
+
+it('resolves a thread on the host, and puts it back when the host refuses', async () => {
+	vi.mocked(api.resolveThread).mockResolvedValueOnce(undefined).mockRejectedValueOnce('forbidden');
+	await openRoom();
+	await vi.waitFor(() => expect(view.text()).toContain('Good catch.'));
+
+	click(button('Resolve'));
+	expect(api.resolveThread).toHaveBeenCalledWith(214, 'T1', true);
+	expect(conversation().textContent).toContain('Resolved 2');
+
+	click(button('Reopen'));
+	expect(api.resolveThread).toHaveBeenLastCalledWith(214, 'T1', false);
+	await vi.waitFor(() => expect(conversation().textContent).toContain('Resolved 2'));
+});
+
+it('answers a thread at once', async () => {
+	vi.mocked(api.replyComment).mockResolvedValue(
+		comment(4, { inReplyTo: 1, author: 'mahmoud', body: 'Agreed, tempfile it is.' })
+	);
+	await openRoom();
+	await vi.waitFor(() => expect(view.text()).toContain('Good catch.'));
+
+	const reply = view.get('.part .thread input[aria-label="Reply"]');
+	typeInto(reply, 'Agreed, tempfile it is.');
+	click(button('Reply'));
+	await vi.waitFor(() => expect(view.text()).toContain('mahmoud'));
+	expect(api.replyComment).toHaveBeenCalledWith(214, 1, 'Agreed, tempfile it is.');
+	expect(conversation().textContent).toContain('2 replies');
+});
+
+it('lists comments on the whole pull request', async () => {
+	vi.mocked(api.reviewComments).mockResolvedValue([
+		...COMMENTS,
+		comment(9, { path: '', line: null, body: 'Should the cache have a size cap?' })
+	]);
+	await openRoom();
+	await vi.waitFor(() => expect(conversation().textContent).toContain('whole PR'));
+	expect(conversation().textContent).toContain('Should the cache have a size cap?');
+	expect(conversation().textContent).toContain('Open 2');
 });

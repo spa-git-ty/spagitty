@@ -449,8 +449,21 @@ pub fn merge_request_comments(
     Ok(comments_of(&discussions(repo, token, number)?))
 }
 
+/// Every comment the Review room shows (FEAT-093): the line comments and the
+/// notes on the merge request as a whole, each with its discussion's id.
+pub fn review_comments(repo: &Repo, token: &str, number: u64) -> Result<Vec<PullRequestComment>> {
+    Ok(notes_of(&discussions(repo, token, number)?, true))
+}
+
 /// Discussions as line comments. Makes no request.
 pub fn comments_of(discussions: &[Value]) -> Vec<PullRequestComment> {
+    notes_of(discussions, false)
+}
+
+/// Discussions as comments: those on a line, and with `general` those on the
+/// merge request as a whole, with an empty path. System notes — "added 2
+/// commits" — are left out. Makes no request.
+fn notes_of(discussions: &[Value], general: bool) -> Vec<PullRequestComment> {
     let mut comments = Vec::new();
     for discussion in discussions {
         let Some(notes) = discussion["notes"].as_array() else {
@@ -462,12 +475,15 @@ pub fn comments_of(discussions: &[Value]) -> Vec<PullRequestComment> {
             .collect();
         let Some(first) = notes.first() else { continue };
         let position = &first["position"];
-        let Some(path) = position["new_path"]
+        let path = match position["new_path"]
             .as_str()
             .or_else(|| position["old_path"].as_str())
-        else {
-            continue;
+        {
+            Some(path) => path,
+            None if general => "",
+            None => continue,
         };
+        let thread_id = discussion["id"].as_str().map(str::to_string);
         let (line, side) = match (position["new_line"].as_u64(), position["old_line"].as_u64()) {
             (Some(new), _) => (Some(new as u32), "RIGHT"),
             (None, Some(old)) => (Some(old as u32), "LEFT"),
@@ -493,10 +509,38 @@ pub fn comments_of(discussions: &[Value]) -> Vec<PullRequestComment> {
                     .to_string(),
                 created_at: timestamp(note["created_at"].as_str()),
                 resolved,
+                thread_id: thread_id.clone(),
             });
         }
     }
     comments
+}
+
+/// Resolve a discussion, or open it again (FEAT-093): the spec's
+/// `PUT …/discussions/:discussion_id` with `resolved`.
+pub fn resolve_discussion(
+    repo: &Repo,
+    token: &str,
+    number: u64,
+    discussion: &str,
+    resolved: bool,
+) -> Result<()> {
+    let url = format!(
+        "{}/discussions/{}",
+        merge_request_url(repo, number),
+        crate::forge::encode_segment(discussion)
+    );
+    let body = serde_json::json!({ "resolved": resolved }).to_string();
+    let response = http::put_json(&url, token, &repo.host, &body)?;
+    if response.status < 200 || response.status >= 300 {
+        return Err(status_error(
+            &repo.host,
+            response.status,
+            &response.body,
+            response.retry_after.as_deref(),
+        ));
+    }
+    Ok(())
 }
 
 /// A thread is resolved when every note that can be resolved is.
@@ -674,7 +718,7 @@ pub fn reply(
 
     // The answer is the note alone; its place is the thread's first note's.
     let first = thread["notes"][0].clone();
-    comments_of(&[serde_json::json!({ "notes": [first, note] })])
+    notes_of(&[serde_json::json!({ "id": thread["id"], "notes": [first, note] })], true)
         .pop()
         .ok_or_else(|| Error::Forge {
             host: repo.host.clone(),
@@ -1243,5 +1287,32 @@ mod tests {
     #[test]
     fn no_merge_requests_asks_nothing() {
         assert!(review_summaries(&repo(), "token", "me", &[]).is_empty());
+    }
+
+    #[test]
+    fn the_review_room_reads_notes_on_the_whole_merge_request_too() {
+        let discussions: Vec<Value> = serde_json::from_str(
+            r#"[
+              {"id":"d1","notes":[{"id":1,"body":"On a line","author":{"username":"nour"},"created_at":"2026-10-04T10:00:00Z",
+                "resolvable":true,"resolved":true,
+                "position":{"new_path":"src/a.rs","old_path":"src/a.rs","new_line":20,"old_line":null}}]},
+              {"id":"d2","individual_note":true,"notes":[{"id":2,"body":"Should the cache have a cap?","author":{"username":"nour"},
+                "created_at":"2026-10-04T10:05:00Z","resolvable":false}]},
+              {"id":"d3","individual_note":true,"notes":[{"id":3,"system":true,"body":"added 2 commits"}]}
+            ]"#,
+        )
+        .unwrap();
+
+        let all = notes_of(&discussions, true);
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].thread_id.as_deref(), Some("d1"));
+        assert!(all[0].resolved);
+        assert_eq!((all[1].path.as_str(), all[1].line), ("", None));
+        assert_eq!(all[1].thread_id.as_deref(), Some("d2"));
+
+        // The Pull requests screen still reads the line comments alone.
+        let lines = comments_of(&discussions);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].path, "src/a.rs");
     }
 }

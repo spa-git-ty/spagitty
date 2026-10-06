@@ -381,6 +381,8 @@ export interface PullRequestComment {
 	author: string;
 	createdAt: number;
 	resolved: boolean;
+	/** The thread as the host names it to resolve (FEAT-093); null when it cannot be. */
+	threadId?: string | null;
 }
 
 /** A local draft inline comment waiting to be published with a review (FEAT-059). */

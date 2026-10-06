@@ -123,6 +123,11 @@ pub struct PullRequestComment {
     pub author: String,
     pub created_at: i64,
     pub resolved: bool,
+    /// The thread it is in, as the host names it to resolve: a review
+    /// thread's node id on GitHub, a discussion's id on GitLab (FEAT-093).
+    /// None where there is nothing to resolve.
+    #[serde(default)]
+    pub thread_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -437,7 +442,126 @@ fn comment_item(entry: &Value) -> Option<PullRequestComment> {
         author,
         created_at,
         resolved: false,
+        thread_id: None,
     })
+}
+
+/// Every comment the Review room shows (FEAT-093): the line comments with the
+/// thread each is in and whether it is resolved, and the comments on the pull
+/// request as a whole, which have an empty path and no line.
+///
+/// The Pull requests screen reads [`pull_request_comments`], which has
+/// neither; this is a separate read so that screen stays as it is.
+pub fn review_comments(repo: &Repo, token: &str, number: u64) -> Result<Vec<PullRequestComment>> {
+    match repo.kind {
+        Kind::GitLab => gitlab::review_comments(repo, token, number),
+        Kind::GitHub => {
+            let mut comments = pull_request_comments(repo, token, number)?;
+            let threads = super::github::review_threads(repo, token, number)?;
+            let by_comment: std::collections::HashMap<u64, &super::github::ReviewThread> = threads
+                .iter()
+                .flat_map(|thread| thread.comments.iter().map(move |id| (*id, thread)))
+                .collect();
+            for comment in &mut comments {
+                if let Some(thread) = by_comment.get(&comment.id) {
+                    comment.thread_id = Some(thread.id.clone());
+                    comment.resolved = thread.resolved;
+                }
+            }
+            comments.extend(issue_comments(repo, token, number)?);
+            Ok(comments)
+        }
+        Kind::Bitbucket => Err(Error::Forge {
+            host: repo.host.clone(),
+            detail: "Bitbucket review comments are not read yet".into(),
+        }),
+    }
+}
+
+/// A GitHub pull request's comments as a whole — its conversation, which the
+/// API keeps on the issue every pull request also is.
+fn issue_comments(repo: &Repo, token: &str, number: u64) -> Result<Vec<PullRequestComment>> {
+    let mut comments = Vec::new();
+    for page in 1..=MAX_PAGES {
+        let url = format!(
+            "{}/repos/{}/{}/issues/{}/comments?per_page={PER_PAGE}&page={page}",
+            repo.kind.api_base(&repo.host),
+            repo.owner,
+            repo.name,
+            number
+        );
+        let response = http::get_json(&url, token, &repo.host)?;
+        if response.status < 200 || response.status >= 300 {
+            return Err(status_error(
+                &repo.host,
+                response.status,
+                &response.body,
+                response.retry_after.as_deref(),
+            ));
+        }
+        let batch = read_issue_comments(&response.body, &repo.host)?;
+        let full = batch.len() == PER_PAGE;
+        comments.extend(batch);
+        if !full {
+            break;
+        }
+    }
+    Ok(comments)
+}
+
+/// Comments on the issue a pull request is, as comments with no path.
+pub fn read_issue_comments(body: &str, host: &str) -> Result<Vec<PullRequestComment>> {
+    let json: Value = serde_json::from_str(body).map_err(|_| Error::Forge {
+        host: host.to_string(),
+        detail: "sent something that is not JSON".into(),
+    })?;
+    let Some(entries) = json.as_array() else {
+        return Err(Error::Forge {
+            host: host.to_string(),
+            detail: "did not send a list of comments".into(),
+        });
+    };
+    Ok(entries
+        .iter()
+        .filter_map(|entry| {
+            Some(PullRequestComment {
+                id: entry["id"].as_u64()?,
+                in_reply_to: None,
+                path: String::new(),
+                line: None,
+                side: "RIGHT".into(),
+                body: entry["body"].as_str().unwrap_or("").to_string(),
+                author: entry["user"]["login"].as_str().unwrap_or("").to_string(),
+                created_at: super::github::timestamp(entry["created_at"].as_str()),
+                resolved: false,
+                thread_id: None,
+            })
+        })
+        .collect())
+}
+
+/// Resolve a thread on the host, or open it again (FEAT-093).
+pub fn resolve_thread(
+    repo: &Repo,
+    token: &str,
+    number: u64,
+    thread_id: &str,
+    resolved: bool,
+) -> Result<()> {
+    if thread_id.is_empty() {
+        return Err(Error::Forge {
+            host: repo.host.clone(),
+            detail: "that thread cannot be resolved".into(),
+        });
+    }
+    match repo.kind {
+        Kind::GitLab => gitlab::resolve_discussion(repo, token, number, thread_id, resolved),
+        Kind::GitHub => super::github::resolve_thread(&repo.host, token, thread_id, resolved),
+        Kind::Bitbucket => Err(Error::Forge {
+            host: repo.host.clone(),
+            detail: "Bitbucket threads cannot be resolved from here".into(),
+        }),
+    }
 }
 
 /// Reply to an existing review comment.
@@ -1588,5 +1712,20 @@ mod tests {
             Err(Error::Forge { detail, .. }) => assert!(detail.contains("no draft")),
             other => panic!("expected a refusal, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn comments_on_the_whole_pull_request_have_no_path_and_no_line() {
+        let body = r#"[
+          {"id":7,"body":"Should the disk cache have a size cap?","user":{"login":"nour.h"},"created_at":"2026-10-04T10:00:00Z"},
+          {"body":"no id"}
+        ]"#;
+        let comments = read_issue_comments(body, "github.com").unwrap();
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].id, 7);
+        assert_eq!((comments[0].path.as_str(), comments[0].line), ("", None));
+        assert_eq!(comments[0].author, "nour.h");
+        assert_eq!(comments[0].thread_id, None);
+        assert!(read_issue_comments(r#"{"message":"Not Found"}"#, "github.com").is_err());
     }
 }

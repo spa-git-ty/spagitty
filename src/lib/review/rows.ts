@@ -15,6 +15,7 @@
  */
 
 import type { ConflictFix, DiffLine, Hunk } from '../types';
+import type { PendingComment } from './record';
 import { placeOf, type Thread } from './threads';
 
 export type Scope = 'changes' | 'whole';
@@ -36,24 +37,66 @@ export interface Block {
 	to: number;
 }
 
-/** The changed parts of `lines`, with a little context, as index ranges. */
-function changedRanges(lines: DiffLine[]): [number, number][] {
-	const ranges: [number, number][] = [];
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].origin === 'context') continue;
-		const from = Math.max(0, i - CONTEXT);
-		const to = Math.min(lines.length, i + CONTEXT + 1);
+interface Range {
+	from: number;
+	to: number;
+	/** Where its first change starts and its last one ends. */
+	first: number;
+	end: number;
+	/** Written while fixing a merge conflict (FEAT-092). */
+	fixed: boolean;
+}
+
+/**
+ * The changed parts of `lines`, with a little context, as index ranges.
+ *
+ * Changes close together are one part. A conflict fix and the author's own
+ * change are never one part, however close: the card is what says who wrote
+ * it. Two such that would have shared their context split it between them
+ * instead, with nothing folded in between.
+ */
+function changedRanges(lines: DiffLine[], fixed: ReadonlySet<number>): [number, number][] {
+	const ranges: Range[] = [];
+	let i = 0;
+	while (i < lines.length) {
+		if (lines[i].origin === 'context') {
+			i++;
+			continue;
+		}
+		const first = i;
+		let isFix = false;
+		while (i < lines.length && lines[i].origin !== 'context') {
+			const line = lines[i];
+			if (line.origin === 'added' && line.new !== null && fixed.has(line.new)) isFix = true;
+			i++;
+		}
+		const range: Range = {
+			from: Math.max(0, first - CONTEXT),
+			to: Math.min(lines.length, i + CONTEXT),
+			first,
+			end: i,
+			fixed: isFix
+		};
 		const last = ranges[ranges.length - 1];
-		// Close enough that the gap would be too short to fold: one part.
-		if (last && from - last[1] < MIN_FOLD) last[1] = to;
-		else ranges.push([from, to]);
+		if (last && range.from - last.to < MIN_FOLD) {
+			if (last.fixed === range.fixed) {
+				// Close enough that the gap would be too short to fold: one part.
+				last.to = range.to;
+				last.end = range.end;
+				continue;
+			}
+			const boundary = last.end + Math.ceil((range.first - last.end) / 2);
+			last.to = boundary;
+			range.from = boundary;
+		}
+		ranges.push(range);
 	}
 	if (ranges.length > 0) {
-		if (ranges[0][0] < MIN_FOLD) ranges[0][0] = 0;
+		if (ranges[0].from < MIN_FOLD) ranges[0].from = 0;
 		const last = ranges[ranges.length - 1];
-		if (lines.length - last[1] < MIN_FOLD) last[1] = lines.length;
+		if (lines.length - last.to < MIN_FOLD) last.to = lines.length;
 	}
-	return ranges;
+	return ranges.map((range) => [range.from, range.to]);
 }
 
 /**
@@ -63,13 +106,21 @@ function changedRanges(lines: DiffLine[]): [number, number][] {
  * where it starts, and stay shown once expanded. In `whole` nothing is folded.
  * A file whose text did not change — a rename — is one fold, or one plain
  * block: its lines are there to read, but nothing in them is news.
+ *
+ * `fixed` are the new line numbers conflict fixes wrote, which are kept out of
+ * the author's parts.
  */
-export function blocksOf(lines: DiffLine[], scope: Scope, expanded: ReadonlySet<number> = new Set()): Block[] {
+export function blocksOf(
+	lines: DiffLine[],
+	scope: Scope,
+	expanded: ReadonlySet<number> = new Set(),
+	fixed: ReadonlySet<number> = new Set()
+): Block[] {
 	if (lines.length === 0) return [];
 	const unchanged = (from: number, to: number): Block =>
 		scope === 'whole' || expanded.has(from) ? { kind: 'plain', from, to } : { kind: 'fold', from, to };
 
-	const ranges = changedRanges(lines);
+	const ranges = changedRanges(lines, fixed);
 	if (ranges.length === 0) return [unchanged(0, lines.length)];
 
 	const blocks: Block[] = [];
@@ -186,9 +237,44 @@ export type Row =
 			tone: Tone;
 			thread: Thread;
 			last: boolean;
+	  }
+	| {
+			/** A comment written here and not sent yet (FEAT-093). */
+			kind: 'draft';
+			key: string;
+			path: string;
+			chunk: string;
+			tone: Tone;
+			draft: PendingComment;
+			last: boolean;
+	  }
+	| {
+			/** The box a comment is being written in, under the last line it covers. */
+			kind: 'composer';
+			key: string;
+			path: string;
+			chunk: string;
+			tone: Tone;
+			from: number;
+			to: number;
+			last: boolean;
 	  };
 
 export type LineRow = Extract<Row, { kind: 'line' }>;
+
+/** Where a comment is being written: a file and the lines it covers, by index. */
+export interface Composing {
+	path: string;
+	from: number;
+	to: number;
+}
+
+/** What is written on lines besides the host's threads (FEAT-093). */
+export interface Notes {
+	/** Pending comments by where they sit (`draftsByPlace`). */
+	drafts?: Map<string, PendingComment[]>;
+	composer?: Composing | null;
+}
 
 /** One file, ready to be laid out. */
 export interface Laid {
@@ -239,8 +325,11 @@ function placesOf(path: string, line: DiffLine): string[] {
 export function rowsOf(
 	files: Laid[],
 	threads: Map<string, Thread[]> = new Map(),
-	sides: ReadonlyMap<string, SideName> = new Map()
+	sides: ReadonlyMap<string, SideName> = new Map(),
+	notes: Notes = {}
 ): Row[] {
+	const drafts = notes.drafts ?? new Map<string, PendingComment[]>();
+	const composer = notes.composer ?? null;
 	const rows: Row[] = [];
 	for (const file of files) {
 		const { path } = file;
@@ -300,9 +389,20 @@ export function rowsOf(
 						});
 					}
 				}
+				for (const place of placesOf(path, line)) {
+					for (const draft of drafts.get(place) ?? []) {
+						rows.push({ kind: 'draft', key: `${path}\ndraft\n${draft.id}`, path, chunk, tone, draft, last: false });
+					}
+				}
+				if (composer && composer.path === path && index === Math.max(composer.from, composer.to)) {
+					const { from, to } = composer;
+					rows.push({ kind: 'composer', key: `${path}\ncomposer`, path, chunk, tone, from, to, last: false });
+				}
 			}
 			const end = rows[rows.length - 1];
-			if (end.kind === 'line' || end.kind === 'thread') end.last = true;
+			if (end.kind === 'line' || end.kind === 'thread' || end.kind === 'draft' || end.kind === 'composer') {
+				end.last = true;
+			}
 		}
 	}
 	return rows;

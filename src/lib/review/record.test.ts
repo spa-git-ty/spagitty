@@ -27,7 +27,10 @@ describe('normalise', () => {
 					startSide: 'RIGHT',
 					body: 'Write to a temp file?',
 					headSha: 'abc',
-					createdAt: 5
+					createdAt: 5,
+					place: { kind: 'added', old: 19, new: 20 },
+					startPlace: { kind: 'context', old: 18, new: 18 },
+					oldPath: null
 				}
 			],
 			body: 'Looks close.',
