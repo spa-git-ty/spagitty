@@ -861,7 +861,11 @@ impl Inner {
         {
             let mut slots = self.slots.lock().expect("slots");
             let slot = slots.entry(id.to_string()).or_default();
-            if slot.session == session {
+            // Already failed in this session means the worker's reader got
+            // there first and recorded the cause, such as a protocol
+            // violation. This start only failed because of it, so its
+            // message would replace the cause with its echo.
+            if slot.session == session && slot.run() != Run::Failed {
                 slot.run = Some(Run::Failed);
                 slot.error = Some(message.to_string());
                 slot.crashes.push_back(Instant::now());
