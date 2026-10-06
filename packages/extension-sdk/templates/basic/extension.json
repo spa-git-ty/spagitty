@@ -6,7 +6,7 @@
   "publisher": "{{publisher}}",
   "description": "{{name}} for Spagitty.",
   "license": "{{license}}",
-  "engines": { "spagitty": ">=0.9.0, <1.0.0", "extensionApi": "^1.0.0" },
+  "engines": { "spagitty": ">=0.9.0, <2.0.0", "extensionApi": "^1.0.0" },
   "runtime": {
     "kind": "native-process",
     "entrypoints": {

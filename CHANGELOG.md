@@ -9,10 +9,12 @@ it with `tools/release-notes.mjs` and refuses to release without it.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
-Spagitty is at `0.x`: the surface is not yet stable, MINOR may break, PATCH
-stays backward-compatible.
+From 1.0.0, MAJOR is the only bump that may break what came before; MINOR
+adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-10-06
 
 ### Added
 
