@@ -8,7 +8,7 @@
   "license": "GPL-3.0-or-later",
   "homepage": "https://docs.coderabbit.ai/cli",
   "engines": {
-    "spagitty": ">=0.8.1, <1.0.0",
+    "spagitty": ">=0.8.1, <2.0.0",
     "extensionApi": "^1.0.0"
   },
   "runtime": {

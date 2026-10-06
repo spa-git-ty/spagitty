@@ -398,14 +398,23 @@ pub fn read_review_threads(body: &str, host: &str) -> Result<(Vec<ReviewThread>,
     let next = connection["pageInfo"]["hasNextPage"]
         .as_bool()
         .unwrap_or(false)
-        .then(|| connection["pageInfo"]["endCursor"].as_str().map(str::to_string))
+        .then(|| {
+            connection["pageInfo"]["endCursor"]
+                .as_str()
+                .map(str::to_string)
+        })
         .flatten();
     Ok((threads, next))
 }
 
 /// Resolve a review thread, or open it again (FEAT-093).
 pub fn resolve_thread(host: &str, token: &str, id: &str, resolved: bool) -> Result<()> {
-    let response = http::post_json(&graphql_url(host), token, host, &resolve_mutation(id, resolved))?;
+    let response = http::post_json(
+        &graphql_url(host),
+        token,
+        host,
+        &resolve_mutation(id, resolved),
+    )?;
     if response.status < 200 || response.status >= 300 {
         return Err(status_error(
             host,
@@ -1217,14 +1226,25 @@ mod tests {
         assert_eq!(
             threads,
             vec![
-                ReviewThread { id: "PRRT_1".into(), resolved: false, comments: vec![11, 12] },
-                ReviewThread { id: "PRRT_2".into(), resolved: true, comments: vec![13] },
+                ReviewThread {
+                    id: "PRRT_1".into(),
+                    resolved: false,
+                    comments: vec![11, 12]
+                },
+                ReviewThread {
+                    id: "PRRT_2".into(),
+                    resolved: true,
+                    comments: vec![13]
+                },
             ]
         );
         assert_eq!(next.as_deref(), Some("Y3Vyc29y"));
 
         let last = r#"{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":"x"},"nodes":[]}}}}}"#;
-        assert_eq!(read_review_threads(last, "github.com").unwrap(), (vec![], None));
+        assert_eq!(
+            read_review_threads(last, "github.com").unwrap(),
+            (vec![], None)
+        );
         let refused = r#"{"errors":[{"message":"Resource not accessible by integration"}]}"#;
         assert!(read_review_threads(refused, "github.com").is_err());
     }
@@ -1232,12 +1252,18 @@ mod tests {
     #[test]
     fn a_thread_is_resolved_and_reopened_by_its_own_mutation() {
         let resolve: Value = serde_json::from_str(&resolve_mutation("PRRT_1", true)).unwrap();
-        assert!(resolve["query"].as_str().unwrap().contains("resolveReviewThread(input: { threadId: $id })"));
+        assert!(resolve["query"]
+            .as_str()
+            .unwrap()
+            .contains("resolveReviewThread(input: { threadId: $id })"));
         assert!(!resolve["query"].as_str().unwrap().contains("unresolve"));
         assert_eq!(resolve["variables"]["id"], "PRRT_1");
 
         let reopen: Value = serde_json::from_str(&resolve_mutation("PRRT_1", false)).unwrap();
-        assert!(reopen["query"].as_str().unwrap().contains("unresolveReviewThread"));
+        assert!(reopen["query"]
+            .as_str()
+            .unwrap()
+            .contains("unresolveReviewThread"));
     }
 
     #[test]

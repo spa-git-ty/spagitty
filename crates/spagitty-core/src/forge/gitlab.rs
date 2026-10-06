@@ -718,12 +718,15 @@ pub fn reply(
 
     // The answer is the note alone; its place is the thread's first note's.
     let first = thread["notes"][0].clone();
-    notes_of(&[serde_json::json!({ "id": thread["id"], "notes": [first, note] })], true)
-        .pop()
-        .ok_or_else(|| Error::Forge {
-            host: repo.host.clone(),
-            detail: "failed to parse comment from response".into(),
-        })
+    notes_of(
+        &[serde_json::json!({ "id": thread["id"], "notes": [first, note] })],
+        true,
+    )
+    .pop()
+    .ok_or_else(|| Error::Forge {
+        host: repo.host.clone(),
+        detail: "failed to parse comment from response".into(),
+    })
 }
 
 /// The three commits a comment's position is pinned to: the latest diff

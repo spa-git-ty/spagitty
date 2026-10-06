@@ -469,7 +469,8 @@ fn anything_on_stdout_that_is_not_the_protocol_stops_the_worker() {
     }
     assert_eq!(h.state(), State::Failed);
     let view = h.host.list(Some(h.repo.path())).extensions.remove(0);
-    assert!(view.state_reason.unwrap().contains("protocol"));
+    let reason = view.state_reason.unwrap();
+    assert!(reason.contains("protocol"), "{reason}");
 }
 
 #[test]

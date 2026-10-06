@@ -47,11 +47,11 @@ use crate::about::{About, Licenses};
 use crate::accounts;
 use crate::clone_worker::{self, CloneWorker};
 use crate::graph_worker::{self, GraphWorker};
+use crate::merger_state;
 use crate::network_worker::{self, NetworkWorker};
 use crate::profiles;
 use crate::rebase_worker::{self, RebaseWorker};
 use crate::recents;
-use crate::merger_state;
 use crate::review_state;
 use crate::search_worker::{self, SearchWorker};
 use crate::settings::Settings;
@@ -405,7 +405,9 @@ pub fn snapshot(state: State<'_, AppState>) -> Result<Snapshot> {
 /// Everything the detail panel shows for one commit.
 #[tauri::command(async)]
 pub fn commit_detail(state: State<'_, AppState>, id: String) -> Result<CommitDetail> {
-    state.with_session("commit_detail", |session| diff::commit_detail(&session.repo.to_thread_local(), &id))
+    state.with_session("commit_detail", |session| {
+        diff::commit_detail(&session.repo.to_thread_local(), &id)
+    })
 }
 
 /// The Diff screen's file list and header counts.
@@ -414,13 +416,17 @@ pub fn commit_detail(state: State<'_, AppState>, id: String) -> Result<CommitDet
 /// be known without diffing them. It is one call when the screen opens.
 #[tauri::command(async)]
 pub fn commit_diff(state: State<'_, AppState>, id: String) -> Result<CommitDiff> {
-    state.with_session("commit_diff", |session| diff::commit_diff(&session.repo.to_thread_local(), &id))
+    state.with_session("commit_diff", |session| {
+        diff::commit_diff(&session.repo.to_thread_local(), &id)
+    })
 }
 
 /// The hunks of one file, fetched as that file is selected.
 #[tauri::command(async)]
 pub fn file_diff(state: State<'_, AppState>, id: String, path: String) -> Result<FileDiff> {
-    state.with_session("file_diff", |session| diff::file_diff(&session.repo.to_thread_local(), &id, &path))
+    state.with_session("file_diff", |session| {
+        diff::file_diff(&session.repo.to_thread_local(), &id, &path)
+    })
 }
 
 /// The staged, unstaged and conflicted lists behind the Working copy screen.
@@ -429,7 +435,9 @@ pub fn file_diff(state: State<'_, AppState>, id: String, path: String) -> Result
 /// per row.
 #[tauri::command(async)]
 pub fn working_copy(state: State<'_, AppState>) -> Result<WorkingCopy> {
-    state.with_session("working_copy", |session| status::working_copy(&session.repo.to_thread_local()))
+    state.with_session("working_copy", |session| {
+        status::working_copy(&session.repo.to_thread_local())
+    })
 }
 
 /// One working-copy file's hunks, on either side of the index.
@@ -447,8 +455,9 @@ pub fn binary_file_diff(
     id: String,
     path: String,
 ) -> Result<diff::BinaryDiff> {
-    state
-        .with_session("binary_file_diff", |session| diff::binary_file_diff(&session.repo.to_thread_local(), &id, &path))
+    state.with_session("binary_file_diff", |session| {
+        diff::binary_file_diff(&session.repo.to_thread_local(), &id, &path)
+    })
 }
 
 /// Detailed binary / image diff metadata for working copy (FEAT-065).
@@ -465,12 +474,16 @@ pub fn binary_working_diff(
 
 #[tauri::command(async)]
 pub fn stage(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session("stage", |session| work::stage(&session.repo.to_thread_local(), &paths))
+    state.with_session("stage", |session| {
+        work::stage(&session.repo.to_thread_local(), &paths)
+    })
 }
 
 #[tauri::command(async)]
 pub fn unstage(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session("unstage", |session| work::unstage(&session.repo.to_thread_local(), &paths))
+    state.with_session("unstage", |session| {
+        work::unstage(&session.repo.to_thread_local(), &paths)
+    })
 }
 
 /// Stage one hunk. `header` identifies it, so a stale view is refused rather
@@ -506,7 +519,9 @@ pub fn unstage_hunk(
 /// confirmation the caller cannot see the wording of is not a confirmation.
 #[tauri::command(async)]
 pub fn discard(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session("discard", |session| work::discard(&session.repo.to_thread_local(), &paths))
+    state.with_session("discard", |session| {
+        work::discard(&session.repo.to_thread_local(), &paths)
+    })
 }
 
 /// Throw away one unstaged hunk. `header` identifies it, so a stale view is
@@ -539,7 +554,9 @@ pub fn commit(
 /// The message of the commit HEAD points at, for pre-filling an amend.
 #[tauri::command(async)]
 pub fn head_message(state: State<'_, AppState>) -> Result<String> {
-    state.with_session("head_message", |session| work::head_message(&session.repo.to_thread_local()))
+    state.with_session("head_message", |session| {
+        work::head_message(&session.repo.to_thread_local())
+    })
 }
 
 /// Every branch, with how far it has drifted. One call per refresh.
@@ -552,12 +569,16 @@ pub fn head_message(state: State<'_, AppState>) -> Result<String> {
 /// directory walk; being quietly wrong about drift costs more.
 #[tauri::command(async)]
 pub fn branches(state: State<'_, AppState>) -> Result<Vec<BranchRow>> {
-    state.with_session("branches", |session| branches::list(&repo::open(&session.path)?))
+    state.with_session("branches", |session| {
+        branches::list(&repo::open(&session.path)?)
+    })
 }
 
 #[tauri::command(async)]
 pub fn checkout(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session("checkout", |session| branches::checkout(&session.repo.to_thread_local(), &name))
+    state.with_session("checkout", |session| {
+        branches::checkout(&session.repo.to_thread_local(), &name)
+    })
 }
 
 /// Create a branch. `start` empty means `HEAD`.
@@ -577,7 +598,9 @@ pub fn create_branch(
 /// see what is in it — a stash is a commit.
 #[tauri::command(async)]
 pub fn stashes(state: State<'_, AppState>) -> Result<Vec<StashEntry>> {
-    state.with_session("stashes", |session| stash::list(&session.repo.to_thread_local()))
+    state.with_session("stashes", |session| {
+        stash::list(&session.repo.to_thread_local())
+    })
 }
 
 #[tauri::command(async)]
@@ -597,8 +620,9 @@ pub fn stash_push(
 /// would start a rebase, which is the thing the Rebase screen exists to avoid.
 #[tauri::command(async)]
 pub fn rebase_todo(state: State<'_, AppState>, upstream: String) -> Result<Todo> {
-    let todo =
-        state.with_session("rebase_todo", |session| rebase::todo(&session.repo.to_thread_local(), &upstream))?;
+    let todo = state.with_session("rebase_todo", |session| {
+        rebase::todo(&session.repo.to_thread_local(), &upstream)
+    })?;
 
     *state.rebase_todo.lock().expect("rebase lock") = Some(todo.clone());
     Ok(todo)
@@ -680,19 +704,25 @@ pub fn rebase_run<R: Runtime>(
 /// line while Spagitty was open is visible here too.
 #[tauri::command(async)]
 pub fn rebase_progress(state: State<'_, AppState>) -> Result<Option<rebase::Progress>> {
-    state.with_session("rebase_progress", |session| Ok(rebase::progress(&session.repo.to_thread_local())))
+    state.with_session("rebase_progress", |session| {
+        Ok(rebase::progress(&session.repo.to_thread_local()))
+    })
 }
 
 /// Carry on with a rebase that stopped, once its conflicts are resolved.
 #[tauri::command(async)]
 pub fn rebase_continue(state: State<'_, AppState>) -> Result<()> {
-    state.with_session("rebase_continue", |session| ops::rebase_continue(&session.repo.to_thread_local()))
+    state.with_session("rebase_continue", |session| {
+        ops::rebase_continue(&session.repo.to_thread_local())
+    })
 }
 
 /// Drop the commit a rebase stopped on and carry on with the rest.
 #[tauri::command(async)]
 pub fn rebase_skip(state: State<'_, AppState>) -> Result<()> {
-    state.with_session("rebase_skip", |session| ops::rebase_skip(&session.repo.to_thread_local()))
+    state.with_session("rebase_skip", |session| {
+        ops::rebase_skip(&session.repo.to_thread_local())
+    })
 }
 
 /// Unwind a rebase and put the branch back where it started.
@@ -703,7 +733,9 @@ pub fn rebase_skip(state: State<'_, AppState>) -> Result<()> {
 #[tauri::command(async)]
 pub fn rebase_abort(state: State<'_, AppState>) -> Result<()> {
     state.rebase.lock().expect("rebase worker lock").take();
-    state.with_session("rebase_abort", |session| ops::rebase_abort(&session.repo.to_thread_local()))
+    state.with_session("rebase_abort", |session| {
+        ops::rebase_abort(&session.repo.to_thread_local())
+    })
 }
 
 /// Move the current branch to `commit`.
@@ -713,20 +745,26 @@ pub fn rebase_abort(state: State<'_, AppState>) -> Result<()> {
 /// consequences the user read in the menu.
 #[tauri::command(async)]
 pub fn reset(state: State<'_, AppState>, commit: String, mode: ResetMode) -> Result<()> {
-    state.with_session("reset", |session| ops::reset(&session.repo.to_thread_local(), &commit, mode))
+    state.with_session("reset", |session| {
+        ops::reset(&session.repo.to_thread_local(), &commit, mode)
+    })
 }
 
 /// Commit the inverse of `commit`. Reverting a merge takes the first parent as
 /// the mainline, which is the parent the graph draws as the trunk.
 #[tauri::command(async)]
 pub fn revert(state: State<'_, AppState>, commit: String) -> Result<()> {
-    state.with_session("revert", |session| ops::revert(&session.repo.to_thread_local(), &commit))
+    state.with_session("revert", |session| {
+        ops::revert(&session.repo.to_thread_local(), &commit)
+    })
 }
 
 /// Replay `commits` onto the current branch, in the order given.
 #[tauri::command(async)]
 pub fn cherry_pick(state: State<'_, AppState>, commits: Vec<String>) -> Result<()> {
-    state.with_session("cherry_pick", |session| ops::cherry_pick(&session.repo.to_thread_local(), &commits))
+    state.with_session("cherry_pick", |session| {
+        ops::cherry_pick(&session.repo.to_thread_local(), &commits)
+    })
 }
 
 /// Merge, fast-forward or rebase `source` into the branch that is checked out.
@@ -735,7 +773,9 @@ pub fn cherry_pick(state: State<'_, AppState>, commits: Vec<String>) -> Result<(
 /// user has picked from the menu that appears.
 #[tauri::command(async)]
 pub fn integrate(state: State<'_, AppState>, source: String, how: Integration) -> Result<()> {
-    state.with_session("integrate", |session| ops::integrate(&session.repo.to_thread_local(), &source, how))
+    state.with_session("integrate", |session| {
+        ops::integrate(&session.repo.to_thread_local(), &source, how)
+    })
 }
 
 /// Replay commits onto `onto`.
@@ -758,19 +798,25 @@ pub fn rebase_onto(
 /// Check out a commit with no branch attached.
 #[tauri::command(async)]
 pub fn checkout_detached(state: State<'_, AppState>, revision: String) -> Result<()> {
-    state.with_session("checkout_detached", |session| ops::checkout_detached(&session.repo.to_thread_local(), &revision))
+    state.with_session("checkout_detached", |session| {
+        ops::checkout_detached(&session.repo.to_thread_local(), &revision)
+    })
 }
 
 /// Rename a local branch.
 #[tauri::command(async)]
 pub fn rename_branch(state: State<'_, AppState>, from: String, to: String) -> Result<()> {
-    state.with_session("rename_branch", |session| ops::rename_branch(&session.repo.to_thread_local(), &from, &to))
+    state.with_session("rename_branch", |session| {
+        ops::rename_branch(&session.repo.to_thread_local(), &from, &to)
+    })
 }
 
 /// Delete a local branch. `force` is `-D`, and loses unmerged commits.
 #[tauri::command(async)]
 pub fn delete_branch(state: State<'_, AppState>, name: String, force: bool) -> Result<()> {
-    state.with_session("delete_branch", |session| ops::delete_branch(&session.repo.to_thread_local(), &name, force))
+    state.with_session("delete_branch", |session| {
+        ops::delete_branch(&session.repo.to_thread_local(), &name, force)
+    })
 }
 
 /// Create a tag at `target`. A message makes it annotated.
@@ -789,13 +835,17 @@ pub fn create_tag(
 /// Delete a local tag.
 #[tauri::command(async)]
 pub fn delete_tag(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session("delete_tag", |session| ops::delete_tag(&session.repo.to_thread_local(), &name))
+    state.with_session("delete_tag", |session| {
+        ops::delete_tag(&session.repo.to_thread_local(), &name)
+    })
 }
 
 /// Apply, pop or drop a stash entry.
 #[tauri::command(async)]
 pub fn stash_action(state: State<'_, AppState>, index: usize, action: StashAction) -> Result<()> {
-    state.with_session("stash_action", |session| ops::stash(&session.repo.to_thread_local(), index, action))
+    state.with_session("stash_action", |session| {
+        ops::stash(&session.repo.to_thread_local(), index, action)
+    })
 }
 
 /// Fetch. Returns the token its events carry (FEAT-018).
@@ -821,7 +871,9 @@ pub fn fetch<R: Runtime>(
 /// upstream the current branch tracks rather than Spagitty guessing.
 #[tauri::command(async)]
 pub fn pull(state: State<'_, AppState>, remote: String, mode: PullMode) -> Result<String> {
-    state.with_session("pull", |session| ops::pull(&session.repo.to_thread_local(), &remote, mode))
+    state.with_session("pull", |session| {
+        ops::pull(&session.repo.to_thread_local(), &remote, mode)
+    })
 }
 
 /// Push. `force` is `--force-with-lease`, never a plain force.
@@ -914,7 +966,9 @@ pub fn search_stop(state: State<'_, AppState>) {
 /// `HEAD`.
 #[tauri::command(async)]
 pub fn blame(state: State<'_, AppState>, path: String, revision: String) -> Result<Blame> {
-    state.with_session("blame", |session| blame::file(&session.repo.to_thread_local(), &path, &revision))
+    state.with_session("blame", |session| {
+        blame::file(&session.repo.to_thread_local(), &path, &revision)
+    })
 }
 
 /// Read commit history for a single file path (FEAT-063).
@@ -924,7 +978,9 @@ pub fn file_history(
     path: String,
     limit: usize,
 ) -> Result<Vec<blame::FileHistoryEntry>> {
-    state.with_session("file_history", |session| blame::history(&session.repo.to_thread_local(), &path, limit))
+    state.with_session("file_history", |session| {
+        blame::history(&session.repo.to_thread_local(), &path, limit)
+    })
 }
 
 /// What operation is in progress, and every conflicted path.
@@ -935,13 +991,17 @@ pub fn file_history(
 /// write path.
 #[tauri::command(async)]
 pub fn conflicts(state: State<'_, AppState>) -> Result<ConflictState> {
-    state.with_session("conflicts", |session| conflicts::state(&session.repo.to_thread_local()))
+    state.with_session("conflicts", |session| {
+        conflicts::state(&session.repo.to_thread_local())
+    })
 }
 
 /// The three index stages of one conflicted path, plus the file on disk.
 #[tauri::command(async)]
 pub fn conflict_sides(state: State<'_, AppState>, path: String) -> Result<ConflictSides> {
-    state.with_session("conflict_sides", |session| conflicts::sides(&session.repo.to_thread_local(), &path))
+    state.with_session("conflict_sides", |session| {
+        conflicts::sides(&session.repo.to_thread_local(), &path)
+    })
 }
 
 /// Every conflict region in a file's merged text, so the screen can offer one
@@ -961,7 +1021,9 @@ pub fn conflict_take(
     path: String,
     side: conflicts::Side,
 ) -> Result<()> {
-    state.with_session("conflict_take", |session| conflicts::take(&session.repo.to_thread_local(), &path, side))
+    state.with_session("conflict_take", |session| {
+        conflicts::take(&session.repo.to_thread_local(), &path, side)
+    })
 }
 
 /// Resolve one marker region, or every region, and write the file back.
@@ -998,7 +1060,9 @@ pub fn conflict_write(state: State<'_, AppState>, path: String, text: String) ->
 /// Mark paths resolved: `git add`.
 #[tauri::command(async)]
 pub fn conflict_resolve(state: State<'_, AppState>, paths: Vec<String>) -> Result<()> {
-    state.with_session("conflict_resolve", |session| conflicts::mark_resolved(&session.repo.to_thread_local(), &paths))
+    state.with_session("conflict_resolve", |session| {
+        conflicts::mark_resolved(&session.repo.to_thread_local(), &paths)
+    })
 }
 
 /// Settle one file with what was chosen for it and mark it resolved
@@ -1011,7 +1075,12 @@ pub fn conflict_settle(
     take: Option<conflicts::Side>,
 ) -> Result<()> {
     state.with_session("conflict_settle", |session| {
-        conflicts::settle(&session.repo.to_thread_local(), &path, text.as_deref(), take)
+        conflicts::settle(
+            &session.repo.to_thread_local(),
+            &path,
+            text.as_deref(),
+            take,
+        )
     })
 }
 
@@ -1058,7 +1127,9 @@ pub async fn merger_forecast(
 /// It writes, so it holds the session like every other write.
 #[tauri::command(async)]
 pub fn merger_land(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Landed> {
-    state.with_session("merger_land", |session| merger::land(&session.repo.to_thread_local(), &ask))
+    state.with_session("merger_land", |session| {
+        merger::land(&session.repo.to_thread_local(), &ask)
+    })
 }
 
 /// Every conflict of merging two branches, each side whole, read from a dry
@@ -1080,8 +1151,13 @@ pub async fn merger_conflicts(
 /// Start Merger's rebase in its own worktree, or find the one already
 /// running for this merge (FEAT-103): where it stopped, or that it is done.
 #[tauri::command(async)]
-pub fn merger_rebase_open(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Replay> {
-    state.with_session("merger_rebase_open", |session| merger::rebase_open(&session.repo.to_thread_local(), &ask))
+pub fn merger_rebase_open(
+    state: State<'_, AppState>,
+    ask: merger::LandAsk,
+) -> Result<merger::Replay> {
+    state.with_session("merger_rebase_open", |session| {
+        merger::rebase_open(&session.repo.to_thread_local(), &ask)
+    })
 }
 
 /// Settle the stop's files with what was chosen and carry the rebase on.
@@ -1098,20 +1174,32 @@ pub fn merger_rebase_continue(
 
 /// Drop the commit Merger's rebase stopped on, and carry on.
 #[tauri::command(async)]
-pub fn merger_rebase_skip(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Replay> {
-    state.with_session("merger_rebase_skip", |session| merger::rebase_skip(&session.repo.to_thread_local(), &ask))
+pub fn merger_rebase_skip(
+    state: State<'_, AppState>,
+    ask: merger::LandAsk,
+) -> Result<merger::Replay> {
+    state.with_session("merger_rebase_skip", |session| {
+        merger::rebase_skip(&session.repo.to_thread_local(), &ask)
+    })
 }
 
 /// Undo Merger's rebase and remove its worktree. Neither branch moved.
 #[tauri::command(async)]
 pub fn merger_rebase_abort(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<()> {
-    state.with_session("merger_rebase_abort", |session| merger::rebase_abort(&session.repo.to_thread_local(), &ask))
+    state.with_session("merger_rebase_abort", |session| {
+        merger::rebase_abort(&session.repo.to_thread_local(), &ask)
+    })
 }
 
 /// Move the receiving branch to the replayed commits.
 #[tauri::command(async)]
-pub fn merger_rebase_finish(state: State<'_, AppState>, ask: merger::LandAsk) -> Result<merger::Landed> {
-    state.with_session("merger_rebase_finish", |session| merger::rebase_finish(&session.repo.to_thread_local(), &ask))
+pub fn merger_rebase_finish(
+    state: State<'_, AppState>,
+    ask: merger::LandAsk,
+) -> Result<merger::Landed> {
+    state.with_session("merger_rebase_finish", |session| {
+        merger::rebase_finish(&session.repo.to_thread_local(), &ask)
+    })
 }
 
 /// The choices kept for one merge, or null (FEAT-102).
@@ -1140,7 +1228,9 @@ pub fn set_merger_state<R: Runtime>(
 /// Every tag, newest first (FEAT-051).
 #[tauri::command(async)]
 pub fn tags(state: State<'_, AppState>) -> Result<Vec<tags::Tag>> {
-    state.with_session("tags", |session| tags::tags(&session.repo.to_thread_local()))
+    state.with_session("tags", |session| {
+        tags::tags(&session.repo.to_thread_local())
+    })
 }
 
 /// Create a tag. A non-empty message makes it annotated.
@@ -1159,7 +1249,9 @@ pub fn tag_create(
 /// Delete a local tag.
 #[tauri::command(async)]
 pub fn tag_delete(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session("tag_delete", |session| tags::delete(&session.repo.to_thread_local(), &name))
+    state.with_session("tag_delete", |session| {
+        tags::delete(&session.repo.to_thread_local(), &name)
+    })
 }
 
 /// Rewrite an annotated tag's message, keeping it on the same commit.
@@ -1178,37 +1270,49 @@ pub fn tag_retag(
 /// Where a ref has been (FEAT-050).
 #[tauri::command(async)]
 pub fn reflog(state: State<'_, AppState>, query: reflog::ReflogQuery) -> Result<reflog::Reflog> {
-    state.with_session("reflog", |session| reflog::reflog(&session.repo.to_thread_local(), &query))
+    state.with_session("reflog", |session| {
+        reflog::reflog(&session.repo.to_thread_local(), &query)
+    })
 }
 
 /// Every ref whose reflog is worth offering, `HEAD` first.
 #[tauri::command(async)]
 pub fn reflog_refs(state: State<'_, AppState>) -> Result<Vec<String>> {
-    state.with_session("reflog_refs", |session| Ok(reflog::logged_refs(&session.repo.to_thread_local())))
+    state.with_session("reflog_refs", |session| {
+        Ok(reflog::logged_refs(&session.repo.to_thread_local()))
+    })
 }
 
 /// Every configured remote, in name order.
 #[tauri::command(async)]
 pub fn remotes(state: State<'_, AppState>) -> Result<Vec<remotes::Remote>> {
-    state.with_session("remotes", |session| Ok(remotes::remotes(&session.repo.to_thread_local())))
+    state.with_session("remotes", |session| {
+        Ok(remotes::remotes(&session.repo.to_thread_local()))
+    })
 }
 
 /// Add a remote. Configuration only — nothing is fetched.
 #[tauri::command(async)]
 pub fn remote_add(state: State<'_, AppState>, name: String, url: String) -> Result<()> {
-    state.with_session("remote_add", |session| remotes::add(&session.repo.to_thread_local(), &name, &url))
+    state.with_session("remote_add", |session| {
+        remotes::add(&session.repo.to_thread_local(), &name, &url)
+    })
 }
 
 /// Rename a remote, its tracking refs, and every upstream pointing at it.
 #[tauri::command(async)]
 pub fn remote_rename(state: State<'_, AppState>, from: String, to: String) -> Result<()> {
-    state.with_session("remote_rename", |session| remotes::rename(&session.repo.to_thread_local(), &from, &to))
+    state.with_session("remote_rename", |session| {
+        remotes::rename(&session.repo.to_thread_local(), &from, &to)
+    })
 }
 
 /// List all submodules for the open repository (FEAT-067).
 #[tauri::command(async)]
 pub fn submodules(state: State<'_, AppState>) -> Result<Vec<Submodule>> {
-    state.with_session("submodules", |session| submodules::list(&session.repo.to_thread_local()))
+    state.with_session("submodules", |session| {
+        submodules::list(&session.repo.to_thread_local())
+    })
 }
 
 /// Update submodules recursively (FEAT-067).
@@ -1227,13 +1331,17 @@ pub fn submodule_update(
 /// Sync submodule URLs from .gitmodules (FEAT-067).
 #[tauri::command(async)]
 pub fn submodule_sync(state: State<'_, AppState>, recursive: bool) -> Result<String> {
-    state.with_session("submodule_sync", |session| submodules::sync(&session.repo.to_thread_local(), recursive))
+    state.with_session("submodule_sync", |session| {
+        submodules::sync(&session.repo.to_thread_local(), recursive)
+    })
 }
 
 /// De-initialize a submodule (FEAT-067).
 #[tauri::command(async)]
 pub fn submodule_deinit(state: State<'_, AppState>, path: String, force: bool) -> Result<String> {
-    state.with_session("submodule_deinit", |session| submodules::deinit(&session.repo.to_thread_local(), &path, force))
+    state.with_session("submodule_deinit", |session| {
+        submodules::deinit(&session.repo.to_thread_local(), &path, force)
+    })
 }
 
 /// Read configured and available external diff/merge tools (FEAT-068).
@@ -1308,19 +1416,25 @@ pub fn launch_external_merge(
 /// Remove a remote, its tracking refs, and the upstreams pointing at it.
 #[tauri::command(async)]
 pub fn remote_remove(state: State<'_, AppState>, name: String) -> Result<()> {
-    state.with_session("remote_remove", |session| remotes::remove(&session.repo.to_thread_local(), &name))
+    state.with_session("remote_remove", |session| {
+        remotes::remove(&session.repo.to_thread_local(), &name)
+    })
 }
 
 /// Change where a remote points.
 #[tauri::command(async)]
 pub fn remote_set_url(state: State<'_, AppState>, name: String, url: String) -> Result<()> {
-    state.with_session("remote_set_url", |session| remotes::set_url(&session.repo.to_thread_local(), &name, &url))
+    state.with_session("remote_set_url", |session| {
+        remotes::set_url(&session.repo.to_thread_local(), &name, &url)
+    })
 }
 
 /// List all worktrees for the open repository (FEAT-062).
 #[tauri::command(async)]
 pub fn worktrees(state: State<'_, AppState>) -> Result<Vec<Worktree>> {
-    state.with_session("worktrees", |session| worktrees::list(&session.repo.to_thread_local()))
+    state.with_session("worktrees", |session| {
+        worktrees::list(&session.repo.to_thread_local())
+    })
 }
 
 /// Add a new linked worktree (FEAT-062).
@@ -1382,7 +1496,9 @@ pub fn worktree_unlock(state: State<'_, AppState>, path: String) -> Result<()> {
 /// Prune stale worktrees (FEAT-062).
 #[tauri::command(async)]
 pub fn worktree_prune(state: State<'_, AppState>) -> Result<()> {
-    state.with_session("worktree_prune", |session| worktrees::prune(&session.repo.to_thread_local()))
+    state.with_session("worktree_prune", |session| {
+        worktrees::prune(&session.repo.to_thread_local())
+    })
 }
 
 /// Every remembered repository, as a card.
@@ -1877,7 +1993,8 @@ pub async fn resolve_thread<R: Runtime>(
     resolved: bool,
 ) -> Result<()> {
     let (repo, token, _) = forge_credentials(&app, state)?;
-    off_thread(move || forge::review::resolve_thread(&repo, &token, number, &thread_id, resolved)).await
+    off_thread(move || forge::review::resolve_thread(&repo, &token, number, &thread_id, resolved))
+        .await
 }
 
 /// Merge a pull request on the configured forge (FEAT-071).
@@ -2054,7 +2171,9 @@ pub fn review_files(
     from: String,
     to: String,
 ) -> Result<Vec<diff::FileChange>> {
-    state.with_session("review_files", |session| diff::changes_between(&session.repo.to_thread_local(), &from, &to))
+    state.with_session("review_files", |session| {
+        diff::changes_between(&session.repo.to_thread_local(), &from, &to)
+    })
 }
 
 /// One file of a pull request, whole, read from disk (FEAT-089).
@@ -2545,7 +2664,9 @@ mod tests {
                     .expect("the slow read");
             });
             held.recv().expect("the slow read holds the repository");
-            state.with_session("a_quick_read", |_| Ok(())).expect("the quick read");
+            state
+                .with_session("a_quick_read", |_| Ok(()))
+                .expect("the quick read");
         });
 
         let kept = crate::timing::since(0);
@@ -2557,7 +2678,11 @@ mod tests {
                 .expect("timed")
         };
         assert!(last("a_slow_read").held_us >= 150_000);
-        assert!(last("a_quick_read").wait_us >= 100_000, "{:?}", last("a_quick_read"));
+        assert!(
+            last("a_quick_read").wait_us >= 100_000,
+            "{:?}",
+            last("a_quick_read")
+        );
         assert!(last("a_quick_read").held_us < 100_000);
     }
 

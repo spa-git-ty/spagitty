@@ -93,13 +93,19 @@ mod tests {
     fn holds_are_kept_in_order_and_read_from_where_the_reader_left_off() {
         push("first", Duration::from_micros(5), Duration::from_millis(2));
         let mark = since(0).last().expect("kept").seq;
-        push("second", Duration::from_millis(1), Duration::from_micros(30));
+        push(
+            "second",
+            Duration::from_millis(1),
+            Duration::from_micros(30),
+        );
 
         let after = since(mark);
         assert_eq!(after.len(), 1);
         assert_eq!(after[0].command, "second");
         assert_eq!((after[0].wait_us, after[0].held_us), (1000, 30));
-        assert!(since(0).iter().any(|entry| entry.command == "first" && entry.held_us == 2000));
+        assert!(since(0)
+            .iter()
+            .any(|entry| entry.command == "first" && entry.held_us == 2000));
     }
 
     #[test]
