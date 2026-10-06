@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Settings, Reading</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;family=JetBrains+Mono:wght@400;600&amp;family=Lexend:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--resolve:var(--lane-5);--resolve-soft:color-mix(in srgb,var(--lane-5) 11%,transparent);--add-bg:color-mix(in srgb,var(--ok) 8%,transparent);--del-bg:color-mix(in srgb,var(--danger) 6%,transparent);--add-hl:color-mix(in srgb,var(--ok) 24%,transparent);--del-hl:color-mix(in srgb,var(--danger) 18%,transparent);--ruler:color-mix(in srgb,var(--warn) 22%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="{{rootVars}} height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 4px">Settings</span>
+<button class="chip">You</button><button class="chip">Remotes</button><button class="chip">External tools</button><button class="chip">Behaviour</button><button class="chip">Appearance</button><button class="chip on">Reading</button><button class="chip">License</button>
+</header>
+<div style="flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 10px 10px 10px">
+<div style="flex: 1; min-width: 0; overflow: auto; padding: 6px 10px 20px">
+<section style="display: flex; flex-direction: column; gap: 12px; max-width: 640px">
+<h2 style="margin: 0; font-size: var(--fs-ui); font-weight: 400">Reading</h2>
+<span class="note" style="line-height: 1.6">How code, diffs and comments are set on Review, Diff, Working copy and History.</span>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Code font</span>
+<sc-for list="{{codeFonts}}" as="f" hint-placeholder-count="5"><button class="chip {{f.cls}}" onClick="{{f.pick}}" title="{{f.note}}" style="font-family: {{f.css}}; font-size: 13px">{{f.label}}</button></sc-for>
+</div>
+<span class="note" style="padding-left: 118px; font-size: var(--fs-mono)">{{codeNote}}</span>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Interface font</span>
+<sc-for list="{{uiFonts}}" as="f" hint-placeholder-count="3"><button class="chip {{f.cls}}" onClick="{{f.pick}}" style="font-family: {{f.css}}; font-size: 13px">{{f.label}}</button></sc-for>
+</div>
+
+<div style="height: 1px; background: var(--soft)"></div>
+
+<label style="display: flex; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Code size</span><input type="range" min="12" max="20" step="0.5" value="{{size}}" onChange="{{setSize}}" style="flex: 1; max-width: 260px; accent-color: var(--accent)"><span class="note" style="font-family: var(--font-mono); width: 54px">{{sizeTxt}}</span></label>
+<label style="display: flex; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Line spacing</span><input type="range" min="1.3" max="2.2" step="0.05" value="{{lh}}" onChange="{{setLh}}" style="flex: 1; max-width: 260px; accent-color: var(--accent)"><span class="note" style="font-family: var(--font-mono); width: 54px">{{lh}}</span></label>
+<label style="display: flex; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Letter spacing</span><input type="range" min="0" max="0.08" step="0.01" value="{{ls}}" onChange="{{setLs}}" style="flex: 1; max-width: 260px; accent-color: var(--accent)"><span class="note" style="font-family: var(--font-mono); width: 54px">{{lsTxt}}</span></label>
+
+<div style="height: 1px; background: var(--soft)"></div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Focus ruler</span>
+<sc-for list="{{rulers}}" as="r" hint-placeholder-count="3"><button class="chip {{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button></sc-for>
+</div>
+<span class="note" style="padding-left: 118px; font-size: var(--fs-mono)">{{rulerNote}} Move it with j and k.</span>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span class="note" style="width: 110px; flex: none">Diff colours</span>
+<sc-for list="{{palettes}}" as="r" hint-placeholder-count="2"><button class="chip {{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button></sc-for>
+<button class="chip {{wordCls}}" onClick="{{toggleWord}}">Highlight changed words</button>
+</div>
+<span class="note" style="padding-left: 118px; font-size: var(--fs-mono)">{{paletteNote}}</span>
+</section>
+</div>
+
+<aside aria-label="Preview" style="width: 420px; flex: none; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px; overflow: auto">
+<span class="note">Preview</span>
+<div class="card" style="overflow: hidden; background: var(--bg)">
+<div style="padding: 5px 12px; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); background: var(--sunken)">avatars.rs · @@ -13,8 +13,10 @@</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+<div style="{{r.rowStyle}} display: grid; grid-template-columns: 3px 36px 18px minmax(0, 1fr)">
+<span style="{{r.marker}}"></span>
+<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); text-align: right; padding-right: 6px; line-height: {{lh}}">{{r.num}}</span>
+<span style="{{r.signStyle}} font-family: {{codeCss}}; font-size: {{sizeTxt}}; line-height: {{lh}}; text-align: center">{{r.sign}}</span>
+<span style="{{r.textStyle}} font-family: {{codeCss}}; font-size: {{sizeTxt}}; line-height: {{lh}}; letter-spacing: {{lsCss}}; white-space: pre-wrap; padding-right: 10px"><sc-for list="{{r.segs}}" as="s" hint-placeholder-count="1"><span style="{{s.style}}">{{s.t}}</span></sc-for></span>
+</div>
+</sc-for>
+</div>
+<div style="padding: 12px 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--pane-edge); display: flex; gap: 10px">
+<span style="width: 26px; height: 26px; border-radius: 50%; background: #6c4fa3; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; flex: none">NH</span>
+<span style="display: flex; flex-direction: column; gap: 3px"><span class="note"><span style="color: var(--ink); font-weight: 600">nour.h</span> · 2 h ago</span><span style="font-family: {{uiCss}}; font-size: 15.6px; line-height: 1.65; letter-spacing: {{lsCss}}">A crash mid-write leaves half a PNG on disk. Write to a temp file, then rename?</span></span>
+</div>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · working copy clean · fetched 4 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · Submodules 0 · <span style="font-family: var(--font-mono); font-size: var(--fs-mono)">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var ACTIVE = 'settings';
+var CODE = [
+ ['amono', 'Atkinson Hyperlegible Mono', 'Made for low vision: b d p q and I l 1 all have different shapes.', "'Atkinson Hyperlegible Mono', monospace"],
+ ['odys', 'OpenDyslexic Mono', 'Heavier letter bottoms stop letters flipping. Ships inside Spagitty.', "'OpenDyslexic Mono', 'Atkinson Hyperlegible Mono', monospace"],
+ ['lexend', 'Lexend', 'Wide and calm. Not monospaced, so indents use tab stops.', "'Lexend', sans-serif"],
+ ['jb', 'JetBrains Mono', 'A common coding font.', "'JetBrains Mono', ui-monospace, monospace"],
+ ['sys', 'System monospace', 'Whatever your desktop uses.', 'ui-monospace, monospace']
+];
+var UI = [
+ ['sys', 'System', 'system-ui, sans-serif'],
+ ['atk', 'Atkinson Hyperlegible', "'Atkinson Hyperlegible', system-ui, sans-serif"],
+ ['lexend', 'Lexend', "'Lexend', system-ui, sans-serif"]
+];
+var LINES = [
+ [' ', 13, 'pub fn avatar(email: &str, size: u32) -> Result<Avatar> {'],
+ [' ', 14, '    let key = cache_key(email, size);'],
+ ['-', 15, '    if let Some(hit) = ⟦MEMORY.lock().get(&key)⟧ {'],
+ ['+', 15, '    let path = cache_dir()?.join(format!("{key}.png"));'],
+ ['+', 16, '    if ⟦path.exists() && !is_stale(&path, MAX_AGE)?⟧ {'],
+ ['+', 17, '        return ⟦Avatar::from_file(&path)⟧;'],
+ [' ', 18, '    }']
+];
+var DEF = { code: 'amono', ui: 'atk', size: 15, lh: 1.85, ls: 0.02, ruler: 'line', palette: 'calm', word: true };
+class Component extends DCLogic {
+ st() { return Object.assign({}, DEF, this.state || {}); }
+ set(p) { this.setState(Object.assign({}, this.st(), p)); }
+ renderVals() {
+  var s = this.st(), self = this;
+  var code = CODE.filter(function (c) { return c[0] === s.code; })[0];
+  var ui = UI.filter(function (c) { return c[0] === s.ui; })[0];
+  var calm = s.palette === 'calm';
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === ACTIVE ? 'on' : '', dot: k === 'review' };
+  });
+  var tools = TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; });
+  var rows = LINES.map(function (l, i) {
+   var k = l[0];
+   var bg = calm ? (k === '+' ? 'var(--add-bg)' : k === '-' ? 'var(--del-bg)' : 'transparent')
+                 : (k === '+' ? 'color-mix(in srgb, var(--ok) 22%, transparent)' : k === '-' ? 'color-mix(in srgb, var(--danger) 20%, transparent)' : 'transparent');
+   if (s.ruler === 'line' && i === 4) bg = 'var(--ruler)';
+   var dim = s.ruler === 'hunk' && i < 2 ? 0.42 : 1;
+   var segs = l[2].split(/[⟦⟧]/).map(function (p, j) {
+    var hl = j % 2 === 1 && s.word;
+    return { t: p, style: hl ? (k === '+' ? 'background: var(--add-hl); border-radius: 4px;' : 'background: var(--del-hl); border-radius: 4px;') : '' };
+   }).filter(function (x) { return x.t !== ''; });
+   return { num: String(l[1]), sign: k === '+' ? '+' : k === '-' ? '−' : '', segs: segs,
+    rowStyle: 'background: ' + bg + '; opacity: ' + dim + ';',
+    marker: 'background: ' + (k === '+' ? 'var(--ok)' : k === '-' ? 'var(--danger)' : 'transparent') + ';',
+    signStyle: k === '+' ? 'color: var(--ok); font-weight: 700;' : k === '-' ? 'color: var(--danger); font-weight: 700;' : '',
+    textStyle: k === '-' && calm ? 'color: var(--muted);' : '' };
+  });
+  var chipRow = function (list, key) { return list.map(function (r) { var o = {}; o[key] = r[0]; return { label: r[1], cls: s[key] === r[0] ? 'on' : '', pick: function () { self.set(o); } }; }); };
+  return {
+   theme: this.props.theme || 'dark', rail: rail, tools: tools,
+   rootVars: "--read-font: " + ui[2] + "; --read-size: 15.6px; --code-ls: " + s.ls + "em;",
+   uiCss: ui[2], codeCss: code[3], codeNote: code[2],
+   codeFonts: CODE.map(function (c) { return { label: c[1], note: c[2], css: c[3], cls: s.code === c[0] ? 'on' : '', pick: function () { self.set({ code: c[0] }); } }; }),
+   uiFonts: UI.map(function (c) { return { label: c[1], css: c[2], cls: s.ui === c[0] ? 'on' : '', pick: function () { self.set({ ui: c[0] }); } }; }),
+   size: s.size, sizeTxt: s.size + 'px', setSize: function (e) { self.set({ size: parseFloat(e.target.value) }); },
+   lh: s.lh, setLh: function (e) { self.set({ lh: parseFloat(e.target.value) }); },
+   ls: s.ls, lsCss: s.ls + 'em', lsTxt: s.ls.toFixed(2) + 'em', setLs: function (e) { self.set({ ls: parseFloat(e.target.value) }); },
+   rulers: chipRow([['off', 'Off'], ['line', 'One line'], ['hunk', 'Whole chunk']], 'ruler'),
+   rulerNote: s.ruler === 'off' ? 'Every line at full strength.' : s.ruler === 'line' ? 'A soft band sits under the line you are reading.' : 'Chunks other than yours fade back.',
+   palettes: chipRow([['calm', 'Calm'], ['classic', 'Classic']], 'palette'),
+   paletteNote: calm ? 'Thin side markers and faint tints; removed lines go quiet.' : 'Full red and green rows, as on GitHub.',
+   wordCls: s.word ? 'on' : '', toggleWord: function () { self.set({ word: !s.word }); },
+   rows: rows
+  };
+ }
+}
+</script>
+</body>
+</html>

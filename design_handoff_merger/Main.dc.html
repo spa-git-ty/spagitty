@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Merger</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--lane-2:#2f8a52;--lane-3:#a86a00;--lane-4:#6c4fa3;--a:#2f6fb0;--b:#a35a00;--mine:#6c4fa3;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--lane-2:#7cc68d;--lane-3:#f0b54a;--lane-4:#a58bd8;--a:#6aa7e0;--b:#f0a64a;--mine:#b99af0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--a-soft:color-mix(in srgb,var(--a) 13%,transparent);--b-soft:color-mix(in srgb,var(--b) 13%,transparent);--mine-soft:color-mix(in srgb,var(--mine) 14%,transparent);--danger-soft:color-mix(in srgb,var(--danger) 10%,transparent);--ok-soft:color-mix(in srgb,var(--ok) 12%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+button:disabled{cursor:not-allowed}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn{border-radius:9px;padding:6px 13px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover,.row-btn:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.label{font-size:var(--fs-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.badge{width:18px;height:18px;border-radius:6px;display:inline-grid;place-items:center;font-size:11px;font-weight:700;color:var(--bg);flex:none;font-family:var(--font-ui)}
+.code{font-family:var(--font-mono);font-size:12.5px;line-height:1.6}
+.tok-keyword{color:var(--lane-3);font-weight:500}.tok-string{color:var(--ok)}.tok-number{color:var(--warn)}.tok-comment{color:var(--muted);font-style:italic}.tok-fn{color:var(--lane-1)}.tok-type{color:var(--lane-2)}.tok-operator{color:var(--lane-4)}.tok-punctuation{color:var(--muted)}
+@supports not selector(::-webkit-scrollbar){.app *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 24%,transparent) transparent}}
+.app ::-webkit-scrollbar{width:11px;height:11px}
+.app ::-webkit-scrollbar-button{display:none;width:0;height:0}
+.app ::-webkit-scrollbar-track{background:transparent}
+.app ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent);border:3px solid transparent;background-clip:padding-box;border-radius:999px}
+.app ::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink) 38%,transparent);background-clip:padding-box}
+.app ::-webkit-scrollbar-corner{background:transparent}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="12">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<sc-if value="{{isPlan}}" hint-placeholder-val="{{true}}">
+<div style="flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 20px">
+
+<header style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<span style="width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><path d="M12 12v9"></path><path d="M9 18l3 3 3-3"></path></svg></span>
+<div style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 420px; min-width: 0">
+<span style="font-size: var(--fs-title); font-weight: 600">Merger</span>
+<span class="note">Pick two branches and where the result lands. You see the outcome, and every conflict, before anything is written.</span>
+</div>
+<span class="chip" style="color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); font-size: var(--fs-secondary); padding: 4px 12px"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--ok)"></span>Dry run · nothing written yet</span>
+</header>
+
+<div style="display: flex; align-items: stretch; min-height: 300px">
+
+<div class="card" style="{{cardA.boxStyle}} flex: 0 0 286px; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 18px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="badge" style="background: var(--a)">A</span>
+<button class="row-btn" style="display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 8px; font-family: var(--font-mono); font-size: 14px; font-weight: 600">main<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 9.5l6 6 6-6"></path></svg></button>
+<span style="flex: 1"></span>
+<span class="chip" style="{{cardA.roleStyle}}">{{cardA.role}}</span>
+</div>
+<span class="note">{{cardA.countTxt}}</span>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px">
+<sc-for list="{{cardA.commits}}" as="c" hint-placeholder-count="3">
+<li style="display: flex; gap: 9px; align-items: baseline; font-size: var(--fs-secondary)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--a); flex: none; transform: translateY(-1px)"></span><span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); flex: none">{{c.h}}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.m}}</span></li>
+</sc-for>
+</ul>
+<span class="note" style="font-size: var(--fs-mono)">{{cardA.moreTxt}}</span>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: var(--fs-mono)">{{cardA.foot}}</span>
+</div>
+
+<div aria-hidden="true" style="flex: 1 1 60px; min-width: 76px; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 6px">
+<span style="{{conA.labelStyle}} font-size: var(--fs-mono); text-align: center; line-height: 1.25">{{conA.label}}</span>
+<span style="display: flex; align-items: center"><span style="{{conA.lineStyle}} flex: 1; height: 0"></span><svg width="10" height="12" viewBox="0 0 10 12" style="{{conA.headStyle}} flex: none"><path d="M0 0 10 6 0 12z"></path></svg></span>
+</div>
+
+<div style="flex: 0 1 460px; min-width: 360px; padding: 18px 20px; border-radius: 22px; display: flex; flex-direction: column; gap: 13px; background: var(--surface-2); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); box-shadow: var(--ornament-shadow)">
+<div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap">
+<span class="label">Result</span>
+<span style="{{tgtStyle}} font-family: var(--font-mono); font-size: 17px; font-weight: 700">{{tgtName}}</span>
+<span class="note">{{afterTxt}}</span>
+</div>
+<sc-if value="{{isNew}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="new-branch" class="note" style="flex: none">New branch</label>
+<input id="new-branch" value="{{newName}}" onChange="{{typeNewName}}" style="flex: 1; min-width: 0; font-family: var(--font-mono); font-size: var(--fs-secondary); border: 1px solid var(--pane-edge); background: var(--sunken); border-radius: 8px; padding: 6px 10px">
+</div>
+</sc-if>
+<p style="margin: 0; font-size: 14.4px; line-height: 1.55">{{forecast}}</p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{stats}}" as="st" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--sunken) 60%, transparent)"><span style="font-size: 22px; font-weight: 650; line-height: 1.1">{{st.v}}</span><span class="note" style="font-size: var(--fs-mono)">{{st.l}}</span></div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; border-radius: 14px; background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent)">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h8"></path><path d="M9 6 12 9l-3 3"></path><path d="M20 15h-8"></path><path d="M15 12l-3 3 3 3"></path></svg><span style="font-weight: 650; color: var(--danger)">{{conflictTitle}}</span><span style="flex: 1"></span><span class="note" style="font-size: var(--fs-mono)">{{cleanTxt}}</span></div>
+<div style="display: flex; gap: 3px; height: 6px"><sc-for list="{{meter}}" as="m" hint-placeholder-count="6"><span style="{{m}} flex: 1; border-radius: 999px"></span></sc-for></div>
+<span class="note" style="font-size: var(--fs-mono)">{{conflictNote}}</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+<button class="btn primary" onClick="{{startResolve}}" style="padding: 8px 16px">Resolve {{hunkCount}} conflicts<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg></button>
+<button class="btn" disabled="{{true}}" title="Resolve the conflicts first" style="opacity: .55">Merge now</button>
+</div>
+</div>
+
+<div aria-hidden="true" style="flex: 1 1 60px; min-width: 76px; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 6px">
+<span style="{{conB.labelStyle}} font-size: var(--fs-mono); text-align: center; line-height: 1.25">{{conB.label}}</span>
+<span style="display: flex; align-items: center"><svg width="10" height="12" viewBox="0 0 10 12" style="{{conB.headStyle}} flex: none"><path d="M10 0 0 6 10 12z"></path></svg><span style="{{conB.lineStyle}} flex: 1; height: 0"></span></span>
+</div>
+
+<div class="card" style="{{cardB.boxStyle}} flex: 0 0 286px; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 18px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="badge" style="background: var(--b)">B</span>
+<button class="row-btn" style="display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 8px; font-family: var(--font-mono); font-size: 14px; font-weight: 600">feat/tab-drag<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 9.5l6 6 6-6"></path></svg></button>
+<span style="flex: 1"></span>
+<span class="chip" style="{{cardB.roleStyle}}">{{cardB.role}}</span>
+</div>
+<span class="note">{{cardB.countTxt}}</span>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px">
+<sc-for list="{{cardB.commits}}" as="c" hint-placeholder-count="3">
+<li style="display: flex; gap: 9px; align-items: baseline; font-size: var(--fs-secondary)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--b); flex: none; transform: translateY(-1px)"></span><span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); flex: none">{{c.h}}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.m}}</span></li>
+</sc-for>
+</ul>
+<span class="note" style="font-size: var(--fs-mono)">{{cardB.moreTxt}}</span>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: var(--fs-mono)">{{cardB.foot}}</span>
+</div>
+</div>
+
+<div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap">
+<span class="note">The result lands</span>
+<span role="group" aria-label="Where the result lands" style="display: flex; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); border: 1px solid var(--pane-edge)">
+<sc-for list="{{dirs}}" as="d" hint-placeholder-count="3"><button class="tool" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="{{d.style}} height: 32px"><sc-for list="{{d.badges}}" as="bg" hint-placeholder-count="1"><span class="badge" style="{{bg.style}}">{{bg.l}}</span></sc-for>{{d.label}}</button></sc-for>
+</span>
+<button class="btn" onClick="{{swap}}" aria-label="Swap the two branches' roles"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"></path><path d="M15 5l3 3-3 3"></path><path d="M20 16H6"></path><path d="M9 13l-3 3 3 3"></path></svg>Swap</button>
+</div>
+
+<div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: stretch">
+
+<section class="card" aria-label="How it lands" style="flex: 0 0 330px; padding: 14px; display: flex; flex-direction: column; gap: 4px; border-radius: 16px">
+<span class="label" style="padding: 0 4px 6px">How it lands</span>
+<sc-for list="{{strats}}" as="st" hint-placeholder-count="4">
+<button onClick="{{st.pick}}" aria-pressed="{{st.on}}" disabled="{{st.disabled}}" class="row-btn" style="{{st.style}} text-align: left; display: flex; gap: 10px; padding: 9px 10px; border-radius: 12px; align-items: flex-start">
+<span style="{{st.dotStyle}} width: 16px; height: 16px; border-radius: 50%; flex: none; margin-top: 2px; box-sizing: border-box"></span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-weight: 600; font-size: var(--fs-secondary)">{{st.label}}</span><span class="note" style="font-size: var(--fs-mono); line-height: 1.4">{{st.desc}}</span></span>
+</button>
+</sc-for>
+</section>
+
+<section class="card" aria-label="History after" style="flex: 0 0 250px; padding: 14px; display: flex; flex-direction: column; gap: 6px; border-radius: 16px">
+<span class="label" style="padding: 0 4px">History after</span>
+<svg width="222" height="250" viewBox="0 0 222 250" role="img" aria-label="{{graphLabel}}" style="font-family: var(--font-mono)">
+<sc-if value="{{gMerge}}" hint-placeholder-val="{{true}}">
+<g fill="none" stroke-width="2.5">
+<path d="M40 232V44" style="{{tgtStroke}}"></path>
+<path d="M40 232C40 214 110 220 110 200V112C110 86 40 76 40 50" style="{{srcStroke}}"></path>
+</g>
+<g>
+<circle cx="40" cy="190" r="5" style="{{tgtFill}}"></circle><circle cx="40" cy="160" r="5" style="{{tgtFill}}"></circle><circle cx="40" cy="130" r="5" style="{{tgtFill}}"></circle>
+<circle cx="110" cy="190" r="5" style="{{srcFill}}"></circle><circle cx="110" cy="160" r="5" style="{{srcFill}}"></circle><circle cx="110" cy="130" r="5" style="{{srcFill}}"></circle>
+<circle cx="40" cy="40" r="9" style="fill: var(--bg); stroke: var(--ok); stroke-width: 3"></circle>
+<circle cx="40" cy="232" r="5" style="fill: var(--bg); stroke: var(--muted); stroke-width: 2"></circle>
+<text x="56" y="44" font-size="11" style="fill: var(--ok)">new merge commit</text>
+</g>
+</sc-if>
+<sc-if value="{{gSquash}}" hint-placeholder-val="{{false}}">
+<g fill="none" stroke-width="2.5">
+<path d="M40 232V44" style="{{tgtStroke}}"></path>
+<path d="M40 232C40 214 110 220 110 200V120" style="{{srcStroke}} opacity: .45; stroke-dasharray: 4 4"></path>
+<path d="M110 112C110 80 70 60 52 46" style="stroke: var(--ok); stroke-width: 1.5; stroke-dasharray: 3 4"></path>
+</g>
+<g>
+<circle cx="40" cy="190" r="5" style="{{tgtFill}}"></circle><circle cx="40" cy="160" r="5" style="{{tgtFill}}"></circle><circle cx="40" cy="130" r="5" style="{{tgtFill}}"></circle>
+<circle cx="110" cy="190" r="5" style="{{srcFill}} opacity: .45"></circle><circle cx="110" cy="160" r="5" style="{{srcFill}} opacity: .45"></circle><circle cx="110" cy="130" r="5" style="{{srcFill}} opacity: .45"></circle>
+<circle cx="40" cy="40" r="9" style="fill: var(--ok)"></circle>
+<circle cx="40" cy="232" r="5" style="fill: var(--bg); stroke: var(--muted); stroke-width: 2"></circle>
+<text x="56" y="38" font-size="11" style="fill: var(--ok)">1 squashed commit</text>
+</g>
+</sc-if>
+<sc-if value="{{gRebase}}" hint-placeholder-val="{{false}}">
+<g fill="none" stroke-width="2.5">
+<path d="M40 232V30" style="{{tgtStroke}}"></path>
+<path d="M40 232C40 214 130 220 130 200V140" style="{{srcStroke}} opacity: .4; stroke-dasharray: 4 4"></path>
+</g>
+<g>
+<circle cx="40" cy="205" r="5" style="{{tgtFill}}"></circle><circle cx="40" cy="180" r="5" style="{{tgtFill}}"></circle><circle cx="40" cy="155" r="5" style="{{tgtFill}}"></circle>
+<circle cx="40" cy="120" r="6" style="fill: var(--bg); stroke-width: 2.5; {{srcStrokeOnly}}"></circle><circle cx="40" cy="95" r="6" style="fill: var(--bg); stroke-width: 2.5; {{srcStrokeOnly}}"></circle><circle cx="40" cy="70" r="6" style="fill: var(--bg); stroke-width: 2.5; {{srcStrokeOnly}}"></circle><circle cx="40" cy="45" r="6" style="fill: var(--bg); stroke-width: 2.5; {{srcStrokeOnly}}"></circle>
+<circle cx="130" cy="185" r="5" style="{{srcFill}} opacity: .4"></circle><circle cx="130" cy="160" r="5" style="{{srcFill}} opacity: .4"></circle>
+<circle cx="40" cy="232" r="5" style="fill: var(--bg); stroke: var(--muted); stroke-width: 2"></circle>
+<text x="56" y="86" font-size="11" style="fill: var(--ok)">replayed, new hashes</text>
+<text x="142" y="176" font-size="11" style="fill: var(--muted)">old copies</text>
+</g>
+</sc-if>
+<text x="54" y="236" font-size="11" style="fill: var(--muted)">split · 29c36a1</text>
+</svg>
+<div style="display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-mono)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="{{tgtFill}} width: 9px; height: 9px; border-radius: 50%; background: currentColor"></span><span style="{{tgtStyle}} font-family: var(--font-mono)">{{tgtName}}</span></span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="{{srcDot}} width: 9px; height: 9px; border-radius: 50%"></span><span style="font-family: var(--font-mono); color: var(--muted)">{{srcName}}</span></span>
+</div>
+</section>
+
+<section class="card" aria-label="What changes" style="flex: 1 1 380px; min-width: 0; padding: 14px; display: flex; flex-direction: column; gap: 6px; border-radius: 16px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 6px"><span class="label">What changes</span><span class="note" style="font-size: var(--fs-mono)">{{filesTxt}}</span></div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{planFiles}}" as="f" hint-placeholder-count="7">
+<li><button class="row-btn" onClick="{{f.open}}" disabled="{{f.inert}}" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border-radius: 10px; text-align: left; cursor: {{f.cursor}}">
+<span style="{{f.dotStyle}} width: 8px; height: 8px; border-radius: 50%; flex: none"></span>
+<span style="font-family: var(--font-mono); font-size: var(--fs-secondary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"><span style="color: var(--muted)">{{f.dir}}</span>{{f.name}}</span>
+<span style="flex: 1"></span>
+<span class="chip" style="{{f.chipStyle}}">{{f.status}}</span>
+<sc-if value="{{f.isConflict}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.2" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg></sc-if>
+</button></li>
+</sc-for>
+</ul>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isResolve}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px 4px">
+<button class="chip" onClick="{{backToPlan}}" style="font-size: var(--fs-secondary); padding: 4px 12px 4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 6 8.5 12l6 6"></path></svg>Plan</button>
+<div style="flex: 1 1 420px; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<span style="font-size: var(--fs-title)">Merging</span>
+<span class="chip" style="{{srcChip}} font-family: var(--font-mono); font-size: var(--fs-secondary)">{{srcName}}</span>
+<span style="font-size: var(--fs-title)">into</span>
+<span class="chip" style="{{tgtChip}} font-family: var(--font-mono); font-size: var(--fs-secondary)">{{tgtName}}</span>
+<span class="note">· {{strategyLabel}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="note">{{resolvedCount}} of {{hunkCount}} resolved</span>
+<span style="width: 96px; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden"><span style="display: block; height: 100%; width: {{progressPct}}; background: var(--ok); border-radius: 999px"></span></span>
+</div>
+<button class="btn" onClick="{{abort}}">Abort</button>
+<button class="btn primary" onClick="{{toCommit}}" disabled="{{notReady}}" style="{{completeStyle}}">{{completeLabel}}</button>
+</header>
+<div class="note" style="flex: none; padding: 0 18px 12px 92px">Nothing is written to either branch until you commit. Your choices live in a scratch worktree, so you can leave and come back.</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 8px; padding: 0 10px">
+<aside aria-label="Files" style="width: 250px; flex: none; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: auto; padding-bottom: 12px">
+<span class="label" style="padding: 4px 10px 6px">Conflicted files</span>
+<sc-for list="{{rFiles}}" as="f" hint-placeholder-count="3">
+<button class="row-btn" onClick="{{f.pick}}" style="{{f.rowStyle}} text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 9px 10px; border-radius: 12px">
+<span style="font-family: var(--font-mono); font-size: var(--fs-secondary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.name}}</span>
+<span style="display: flex; align-items: center; gap: 5px"><sc-for list="{{f.dots}}" as="d" hint-placeholder-count="2"><span style="{{d}} width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box"></span></sc-for><span class="note" style="font-size: var(--fs-mono); margin-left: 4px">{{f.txt}}</span></span>
+</button>
+</sc-for>
+<span class="label" style="padding: 16px 10px 6px">Merge on their own</span>
+<sc-for list="{{cleanFiles}}" as="f" hint-placeholder-count="4">
+<span style="display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: var(--fs-mono)"><span style="{{f.dotStyle}} width: 7px; height: 7px; border-radius: 50%; flex: none"></span><span style="font-family: var(--font-mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.name}}</span></span>
+</sc-for>
+<span style="flex: 1"></span>
+<div class="note" style="padding: 14px 10px 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-mono)">
+<span style="display: flex; align-items: center; gap: 7px"><span class="badge" style="background: var(--a)">A</span>main</span>
+<span style="display: flex; align-items: center; gap: 7px"><span class="badge" style="background: var(--b)">B</span>feat/tab-drag</span>
+<span style="display: flex; align-items: center; gap: 7px"><span class="badge" style="background: var(--mine)">✎</span>Typed by you</span>
+</div>
+</aside>
+
+<section aria-label="Conflicts" style="flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column">
+<div style="flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 8px 10px">
+<span style="font-family: var(--font-mono); font-size: var(--fs-secondary)"><span style="color: var(--muted)">{{selDir}}</span>{{selName}}</span>
+<span class="note" style="font-size: var(--fs-mono)">{{selCount}}</span>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: var(--fs-mono)">Whole file:</span>
+<button class="chip" onClick="{{takeAllA}}"><span class="badge" style="background: var(--a)">A</span>All from main</button>
+<button class="chip" onClick="{{takeAllB}}"><span class="badge" style="background: var(--b)">B</span>All from feat/tab-drag</button>
+</div>
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 10px; padding: 0 21px 8px">
+<span style="display: flex; align-items: center; gap: 7px; font-size: var(--fs-secondary); font-weight: 600"><span class="badge" style="background: var(--a)">A</span>main<span class="note" style="font-weight: 400">· {{aRole}}</span></span>
+<span style="display: flex; align-items: center; gap: 7px; font-size: var(--fs-secondary); font-weight: 600; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><path d="M12 12v9"></path></svg>Result<span class="note" style="font-weight: 400">· lands in {{tgtName}}</span></span>
+<span style="display: flex; align-items: center; gap: 7px; font-size: var(--fs-secondary); font-weight: 600; justify-content: flex-end"><span class="note" style="font-weight: 400">{{bRole}} ·</span>feat/tab-drag<span class="badge" style="background: var(--b)">B</span></span>
+</div>
+
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 0 8px 100px; display: flex; flex-direction: column; gap: 14px">
+<sc-for list="{{hunks}}" as="h" hint-placeholder-count="2">
+<div class="card" style="{{h.boxStyle}} padding: 10px 12px 12px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<button onClick="{{h.focus}}" style="font-weight: 650; font-size: var(--fs-secondary)">Conflict {{h.num}}</button>
+<span class="note" style="font-family: var(--font-mono); font-size: var(--fs-mono)">{{h.where}}</span>
+<span class="chip" style="{{h.statusStyle}}">{{h.statusLabel}}</span>
+<span class="note" style="flex: 1 1 260px; min-width: 0; font-size: var(--fs-mono)">{{h.why}}</span>
+<sc-if value="{{h.resolved}}" hint-placeholder-val="{{false}}"><button class="chip" onClick="{{h.reset}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8"></path><path d="M4 4v4h4"></path></svg>Reset</button></sc-if>
+</div>
+<sc-if value="{{showBase}}" hint-placeholder-val="{{false}}">
+<div style="border: 1px dashed var(--line); border-radius: 10px; padding: 6px 8px; background: color-mix(in srgb, var(--sunken) 60%, transparent); display: flex; flex-direction: column; gap: 2px">
+<span class="note" style="font-size: var(--fs-mono)">Base · 29c36a1 · how it looked before either branch</span>
+<sc-for list="{{h.baseLines}}" as="l" hint-placeholder-count="1"><span class="code" style="white-space: pre-wrap; tab-size: 4; padding-left: 39px; opacity: .8"><sc-for list="{{l.segs}}" as="g" hint-placeholder-count="3"><span class="{{g.c}}">{{g.t}}</span></sc-for></span></sc-for>
+</div>
+</sc-if>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 10px; align-items: start">
+
+<div class="code" style="border-radius: 10px; background: color-mix(in srgb, var(--sunken) 45%, transparent); padding: 4px 0; overflow: hidden">
+<sc-for list="{{h.colA}}" as="l" hint-placeholder-count="4">
+<div style="{{l.rowStyle}} display: flex; align-items: flex-start; gap: 8px; padding: 0 8px 0 0">
+<span style="{{l.markStyle}} width: 3px; align-self: stretch; flex: none"></span>
+<span style="width: 24px; flex: none; text-align: right; color: var(--muted); opacity: .75">{{l.n}}</span>
+<sc-if value="{{l.hasCheck}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="Keep main line {{l.n}}" checked="{{l.checked}}" onChange="{{l.toggle}}" style="margin: 4px 0 0; width: 14px; height: 14px; flex: none; accent-color: var(--a)"></sc-if>
+<span style="{{l.textStyle}} white-space: pre-wrap; word-break: break-word; tab-size: 4; flex: 1; min-width: 0"><sc-for list="{{l.segs}}" as="g" hint-placeholder-count="3"><span class="{{g.c}}">{{g.t}}</span></sc-for></span>
+</div>
+</sc-for>
+</div>
+
+<div class="code" style="{{h.resultBox}} border-radius: 10px; padding: 4px 0; overflow: hidden">
+<sc-for list="{{h.rBefore}}" as="l" hint-placeholder-count="2">
+<div style="display: flex; align-items: flex-start; gap: 8px; padding: 0 8px 0 0; opacity: .72"><span style="width: 3px; flex: none"></span><span style="width: 24px; flex: none; text-align: right; opacity: .75">{{l.n}}</span><span style="white-space: pre-wrap; word-break: break-word; tab-size: 4; flex: 1; min-width: 0"><sc-for list="{{l.segs}}" as="g" hint-placeholder-count="3"><span class="{{g.c}}">{{g.t}}</span></sc-for></span></div>
+</sc-for>
+<sc-if value="{{h.showLines}}" hint-placeholder-val="{{false}}">
+<sc-for list="{{h.rLines}}" as="l" hint-placeholder-count="2">
+<div style="{{l.rowStyle}} display: flex; align-items: flex-start; gap: 8px; padding: 0 8px 0 0">
+<span style="{{l.markStyle}} width: 3px; align-self: stretch; flex: none"></span>
+<span style="width: 24px; flex: none; text-align: right; color: var(--muted); opacity: .75">{{l.n}}</span>
+<span style="white-space: pre-wrap; word-break: break-word; tab-size: 4; flex: 1; min-width: 0"><sc-for list="{{l.segs}}" as="g" hint-placeholder-count="3"><span class="{{g.c}}">{{g.t}}</span></sc-for></span>
+<span class="badge" style="{{l.tagStyle}} width: 16px; height: 16px; font-size: 10px; margin-top: 2px">{{l.tag}}</span>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{h.showPlaceholder}}" hint-placeholder-val="{{true}}">
+<div style="margin: 4px 8px 4px 11px; padding: 12px; border-radius: 10px; border: 1.5px dashed color-mix(in srgb, var(--danger) 55%, transparent); background: var(--danger-soft); display: flex; flex-direction: column; gap: 3px; font-family: var(--font-ui)">
+<span style="font-size: var(--fs-secondary); font-weight: 600; color: var(--danger)">Choose what lands here</span>
+<span class="note" style="font-size: var(--fs-mono)">{{h.placeholderTxt}}</span>
+</div>
+</sc-if>
+<sc-if value="{{h.showEmpty}}" hint-placeholder-val="{{false}}">
+<div class="note" style="margin: 4px 8px 4px 11px; padding: 8px 10px; border-radius: 8px; border: 1px dashed var(--line); font-family: var(--font-ui); font-size: var(--fs-mono)">Nothing kept. This region will be empty.</div>
+</sc-if>
+<sc-if value="{{h.isEdit}}" hint-placeholder-val="{{false}}">
+<div style="margin: 4px 8px 4px 11px; display: flex; flex-direction: column; gap: 4px">
+<label class="note" for="edit-{{h.id}}" style="font-family: var(--font-ui); font-size: var(--fs-mono); color: var(--mine)">Edit freely. This text is what lands.</label>
+<textarea id="edit-{{h.id}}" rows="{{h.rows}}" value="{{h.text}}" onChange="{{h.type}}" spellcheck="false" style="font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; tab-size: 4; border: 1.5px solid var(--mine); background: var(--mine-soft); border-radius: 8px; padding: 6px 8px; resize: vertical; white-space: pre"></textarea>
+</div>
+</sc-if>
+<sc-for list="{{h.rAfter}}" as="l" hint-placeholder-count="1">
+<div style="display: flex; align-items: flex-start; gap: 8px; padding: 0 8px 0 0; opacity: .72"><span style="width: 3px; flex: none"></span><span style="width: 24px; flex: none; text-align: right; opacity: .75">{{l.n}}</span><span style="white-space: pre-wrap; word-break: break-word; tab-size: 4; flex: 1; min-width: 0"><sc-for list="{{l.segs}}" as="g" hint-placeholder-count="3"><span class="{{g.c}}">{{g.t}}</span></sc-for></span></div>
+</sc-for>
+</div>
+
+<div class="code" style="border-radius: 10px; background: color-mix(in srgb, var(--sunken) 45%, transparent); padding: 4px 0; overflow: hidden">
+<sc-for list="{{h.colB}}" as="l" hint-placeholder-count="4">
+<div style="{{l.rowStyle}} display: flex; align-items: flex-start; gap: 8px; padding: 0 8px 0 0">
+<span style="{{l.markStyle}} width: 3px; align-self: stretch; flex: none"></span>
+<span style="width: 24px; flex: none; text-align: right; color: var(--muted); opacity: .75">{{l.n}}</span>
+<sc-if value="{{l.hasCheck}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="Keep feat/tab-drag line {{l.n}}" checked="{{l.checked}}" onChange="{{l.toggle}}" style="margin: 4px 0 0; width: 14px; height: 14px; flex: none; accent-color: var(--b)"></sc-if>
+<span style="{{l.textStyle}} white-space: pre-wrap; word-break: break-word; tab-size: 4; flex: 1; min-width: 0"><sc-for list="{{l.segs}}" as="g" hint-placeholder-count="3"><span class="{{g.c}}">{{g.t}}</span></sc-for></span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div role="group" aria-label="Resolve conflict {{h.num}}" style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center">
+<sc-for list="{{h.choices}}" as="c" hint-placeholder-count="6">
+<button class="chip" onClick="{{c.pick}}" aria-pressed="{{c.on}}" aria-label="{{c.aria}}" style="{{c.style}} padding: 5px 12px 5px 7px; font-size: var(--fs-secondary); height: 32px"><sc-for list="{{c.badges}}" as="bg" hint-placeholder-count="1"><span class="badge" style="{{bg.style}}">{{bg.l}}</span></sc-for>{{c.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{h.isMix}}" hint-placeholder-val="{{false}}"><span class="note" style="text-align: center; font-size: var(--fs-mono)">Tick the lines to keep on either side. main's lines come first; switch to Edit by hand to reorder or reword.</span></sc-if>
+<div style="display: flex; justify-content: space-between; gap: 10px; font-size: var(--fs-mono)" class="note"><span>from {{h.aFrom}}</span><span>from {{h.bFrom}}</span></div>
+</div>
+</sc-for>
+</div>
+
+<div class="ornament" role="toolbar" aria-label="Conflict controls" style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; height: 52px; padding: 0 9px; border-radius: 999px; white-space: nowrap; max-width: calc(100% - 16px)">
+<button class="tool" onClick="{{prev}}" aria-label="Previous conflict" style="width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M14.5 6 8.5 12l6 6"></path></svg></button>
+<span style="display: flex; flex-direction: column; line-height: 1.15; min-width: 0; max-width: 170px"><span style="font-size: var(--fs-mono); font-weight: 600">Conflict {{curNum}} of {{hunkCount}}</span><span class="note" style="font-size: 11px; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis">{{curWhere}}</span></span>
+<button class="tool" onClick="{{next}}" aria-label="Next conflict" style="width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg></button>
+<span class="vr"></span>
+<button class="tool" onClick="{{toggleBase}}" aria-pressed="{{showBase}}" style="{{baseStyle}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 18h16"></path><path d="M7 14l5-8 5 8"></path></svg>Base</button>
+<button class="tool" onClick="{{curA}}" style="color: var(--muted)"><span class="badge" style="background: var(--a)">A</span>Take</button>
+<button class="tool" onClick="{{curB}}" style="color: var(--muted)"><span class="badge" style="background: var(--b)">B</span>Take</button>
+<span class="vr"></span>
+<button class="tool" onClick="{{nextUnresolved}}" style="{{nextStyle}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5 10 17.5 19 7"></path></svg>{{nextLabel}}</button>
+</div>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showOverlay}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 0; background: color-mix(in srgb, var(--umbra) 38%, transparent); display: grid; place-items: center; z-index: 5">
+<div class="ornament" role="dialog" aria-modal="true" aria-label="Land the merge" style="width: 540px; max-width: calc(100% - 32px); border-radius: 24px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{isCommit}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: var(--fs-title); font-weight: 600">Ready to land on <span style="{{tgtStyle}} font-family: var(--font-mono)">{{tgtName}}</span></span>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{summary}}" as="r" hint-placeholder-count="4">
+<li style="display: flex; align-items: center; gap: 10px; font-size: var(--fs-secondary)"><span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.where}}</span><span class="chip" style="{{r.style}}"><sc-for list="{{r.badges}}" as="bg" hint-placeholder-count="1"><span class="badge" style="{{bg.style}} width: 15px; height: 15px; font-size: 9px">{{bg.l}}</span></sc-for>{{r.label}}</span></li>
+</sc-for>
+</ul>
+<sc-if value="{{needsMsg}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="merge-msg" class="note">Commit message</label>
+<textarea id="merge-msg" rows="3" value="{{msg}}" onChange="{{typeMsg}}" style="font-family: var(--font-mono); font-size: var(--fs-secondary); border: 1px solid var(--pane-edge); background: var(--sunken); border-radius: 10px; padding: 8px 10px; resize: vertical"></textarea>
+</div>
+</sc-if>
+<sc-if value="{{isRebase}}" hint-placeholder-val="{{false}}"><span class="note">Each replayed commit keeps its own message. Your resolutions are applied to the commits that touched each region.</span></sc-if>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button class="btn" onClick="{{backToResolve}}">Back</button>
+<button class="btn primary" onClick="{{commit}}" style="padding: 8px 16px">{{commitLabel}}</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start">
+<span style="width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></span>
+<span style="font-size: var(--fs-title); font-weight: 600"><span style="{{tgtStyle}} font-family: var(--font-mono)">{{tgtName}}</span> now includes {{srcName}}</span>
+<span class="note">{{doneTxt}}</span>
+<div style="display: flex; gap: 8px">
+<button class="btn primary">Open in Graph</button>
+<button class="btn" onClick="{{again}}">Merge another</button>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="{{stateDot}} width: 6px; height: 6px; border-radius: 50%"></span>{{stateTxt}}</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · Submodules 0 · <span style="font-family: var(--font-mono); font-size: var(--fs-mono)">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"startPhase":{"editor":"enum","options":["plan","resolve"],"default":"plan"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','merge','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var BASE = '29c36a1';
+var A = {key:'a', name:'main', count:4, when:'last commit 3 h ago', commits:[['e41c0b7','fix(chrome): hidden repositories leave the tab row'],['b7d2a19','feat(chrome): pinned tabs'],['a698930','fix(forge): a GitLab token is proved against GitLab'],['5c3e8f0','chore(changelog): pinned tabs, BUG-043']]};
+var B = {key:'b', name:'feat/tab-drag', count:5, when:'last commit 40 min ago', commits:[['9e1b2c4','feat(chrome): tabs reorder by dragging'],['51d0a7e','feat(chrome): a dragged tab shows where it lands'],['0c7f3aa','test(chrome): the order survives a restart'],['77ab210','docs(screens): the tab row reorders'],['2f90e1d','chore(changelog): tab reorder']]};
+var FILES = [
+ {id:'tabs', dir:'src/lib/chrome/', name:'Tabs.svelte', kind:'conflict', lang:'ts'},
+ {id:'metrics', dir:'src/lib/', name:'metrics.ts', kind:'conflict', lang:'ts'},
+ {id:'changelog', dir:'', name:'CHANGELOG.md', kind:'conflict', lang:'md'},
+ {id:'repo', dir:'crates/spagitty-core/src/', name:'repo.rs', kind:'clean'},
+ {id:'tabstest', dir:'src/lib/chrome/', name:'Tabs.test.ts', kind:'b', added:true},
+ {id:'nav', dir:'src/lib/', name:'nav.ts', kind:'b'},
+ {id:'gitlab', dir:'crates/spagitty-core/src/forge/', name:'gitlab.rs', kind:'a'}
+];
+var H = [
+ {id:'h1', file:'tabs', aStart:1, bStart:1,
+  why:'main hides archived repositories; feat/tab-drag turns the list into state it can reorder.',
+  before:['<script lang="ts">', "\timport { repos } from '$lib/repos';"],
+  base:['\tlet tabs = $derived(repos.open);'],
+  a:['\tlet tabs = $derived(repos.open.filter((r) => !r.hidden));'],
+  b:['\tlet tabs = $state([...repos.open]);', '\tlet dragging = $state<string | null>(null);'],
+  after:['<\/script>'], aFrom:'e41c0b7', bFrom:'9e1b2c4'},
+ {id:'h2', file:'tabs', aStart:20, bStart:21,
+  why:'Both rewrote the same line: main adds pinned, feat/tab-drag adds dragging. Keeping both needs a hand edit.',
+  before:['<div role="tablist" aria-label="Open repositories">', '\t{#each tabs as tab (tab.id)}'],
+  base:['\t\t<Tab {tab} onclose={() => repos.close(tab.id)} />'],
+  a:['\t\t<Tab {tab} pinned={tab.pinned}', '\t\t\tonclose={() => repos.close(tab.id)} />'],
+  b:['\t\t<Tab {tab} draggable="true"', '\t\t\tondragstart={() => (dragging = tab.id)}', '\t\t\tonclose={() => repos.close(tab.id)} />'],
+  after:['\t{/each}', '</div>'], aFrom:'b7d2a19', bFrom:'51d0a7e'},
+ {id:'h3', file:'metrics', aStart:8, bStart:8,
+  why:'Both changed tabHeight and each added its own key right under it.',
+  before:['export const metrics = {', '\trailWidth: 62,'],
+  base:['\ttabHeight: 28,'],
+  a:['\ttabHeight: 30,', '\ttabGap: 4,'],
+  b:['\ttabHeight: 28,', '\ttabDragThreshold: 6,'],
+  after:['\tpaneRadius: 18,', '};'], aFrom:'b7d2a19', bFrom:'51d0a7e'},
+ {id:'h4', file:'changelog', aStart:3, bStart:3,
+  why:'Both added a line at the same spot. Usually you want both.',
+  before:['## Unreleased', ''],
+  base:[],
+  a:['- Hidden repositories leave the tab row, and tabs can be pinned.'],
+  b:['- Tabs reorder by dragging, and the order survives a restart.'],
+  after:['', '### Fixed'], aFrom:'5c3e8f0', bFrom:'2f90e1d'}
+];
+var KW = {'const':1,'let':1,'var':1,'import':1,'from':1,'export':1,'return':1,'if':1,'else':1,'function':1,'true':1,'false':1,'null':1,'undefined':1,'string':1,'number':1,'boolean':1,'as':1,'new':1,'typeof':1,'lang':0};
+function tok(text, lang) {
+ if (text === '') return [{ t: ' ', c: '' }];
+ if (lang === 'md') {
+  if (/^#+\s/.test(text)) return [{ t: text, c: 'tok-keyword' }];
+  var m = text.match(/^(\s*-\s)(.*)$/);
+  if (m) return [{ t: m[1], c: 'tok-punctuation' }, { t: m[2], c: '' }];
+  return [{ t: text, c: '' }];
+ }
+ var re = /(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)|(\b\d+(?:\.\d+)?\b)|([#$A-Za-z_][\w$]*)|(=>|===|!==|==|!=|<=|>=|&&|\|\||[=!+\-*?|&])|([{}()\[\];,.:<>\/])|(\s+|.)/g;
+ var out = [], g;
+ while ((g = re.exec(text)) !== null) {
+  var c = '';
+  if (g[1]) c = 'tok-comment';
+  else if (g[2]) c = 'tok-string';
+  else if (g[3]) c = 'tok-number';
+  else if (g[4]) {
+   var w = g[4];
+   if (KW[w] || w.charAt(0) === '#') c = 'tok-keyword';
+   else if (text.charAt(re.lastIndex) === '(') c = 'tok-fn';
+   else if (/^[A-Z]/.test(w)) c = 'tok-type';
+  }
+  else if (g[5]) c = 'tok-operator';
+  else if (g[6]) c = 'tok-punctuation';
+  var prev = out[out.length - 1];
+  if (prev && prev.c === c) prev.t += g[0]; else out.push({ t: g[0], c: c });
+ }
+ return out;
+}
+var DEF = { phase:'plan', dir:'intoA', strategy:'merge', newName:'merge/main-tab-drag', sel:'tabs', cur:'h1', res:{}, base:false, msg:null };
+var DEMO = { phase:'resolve', sel:'tabs', cur:'h2', res:{ h1:{mode:'a'}, h3:{mode:'mix', pa:{0:true,1:true}, pb:{0:false,1:true}}, h4:{mode:'ab'} } };
+
+class Component extends DCLogic {
+ st() { return Object.assign({}, DEF, this.props.startPhase === 'resolve' ? DEMO : {}, this.state || {}); }
+ set(p) { this.setState(Object.assign({}, this.st(), p)); }
+ renderVals() {
+  var s = this.st(), self = this;
+  var col = function (k) { return k === 'a' ? 'var(--a)' : 'var(--b)'; };
+  var seg = function (on) { return on ? 'background: var(--surface-2); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-1);' : 'color: var(--muted);'; };
+  var badge = function (k) { return { l: k === 'a' ? 'A' : 'B', style: 'background: ' + col(k) + ';' }; };
+  var commitMsg = {}; A.commits.concat(B.commits).forEach(function (c) { commitMsg[c[0]] = c[1]; });
+
+  var isNew = s.dir === 'intoNew';
+  var tgtKey = s.dir === 'intoB' ? 'b' : 'a';
+  var srcKey = tgtKey === 'a' ? 'b' : 'a';
+  var src = srcKey === 'a' ? A : B, tgt = tgtKey === 'a' ? A : B;
+  var tgtName = isNew ? (s.newName || 'new-branch') : tgt.name;
+  var tgtColor = isNew ? 'var(--ok)' : col(tgtKey);
+  var srcColor = col(srcKey);
+  var strat = s.strategy;
+
+  var MODE = { a:'Took main', b:'Took feat/tab-drag', ab:'Both, main first', ba:'Both, feat/tab-drag first', mix:'Picked lines', edit:'Edited by hand' };
+  var MODE_BADGES = { a:['a'], b:['b'], ab:['a','b'], ba:['b','a'], mix:[], edit:[] };
+
+  var resOf = function (h) { return s.res[h.id] || null; };
+  var linesOf = function (h, r) {
+   if (!r) return null;
+   var L = function (arr, o) { return arr.map(function (t) { return { t: t, o: o }; }); };
+   if (r.mode === 'a') return L(h.a, 'a');
+   if (r.mode === 'b') return L(h.b, 'b');
+   if (r.mode === 'ab') return L(h.a, 'a').concat(L(h.b, 'b'));
+   if (r.mode === 'ba') return L(h.b, 'b').concat(L(h.a, 'a'));
+   if (r.mode === 'mix') return L(h.a, 'a').filter(function (x, i) { return r.pa[i]; }).concat(L(h.b, 'b').filter(function (x, i) { return r.pb[i]; }));
+   if (r.mode === 'edit') return r.text === '' ? [] : r.text.split('\n').map(function (t) { return { t: t, o: 'edit' }; });
+   return null;
+  };
+  var setRes = function (hid, r) { var m = Object.assign({}, s.res); if (r) m[hid] = r; else delete m[hid]; self.set({ res: m, cur: hid }); };
+  var choose = function (h, mode) {
+   return function () {
+    var r = resOf(h);
+    if (r && r.mode === mode) return;
+    if (mode === 'mix') {
+     var pa = {}, pb = {};
+     h.a.forEach(function (x, i) { pa[i] = true; }); h.b.forEach(function (x, i) { pb[i] = true; });
+     setRes(h.id, { mode: 'mix', pa: pa, pb: pb });
+    } else if (mode === 'edit') {
+     var cur = linesOf(h, r) || h.a.map(function (t) { return { t: t }; }).concat(h.b.map(function (t) { return { t: t }; }));
+     setRes(h.id, { mode: 'edit', text: cur.map(function (x) { return x.t; }).join('\n') });
+    } else setRes(h.id, { mode: mode });
+   };
+  };
+  var kept = function (r, side, i) {
+   if (!r) return null;
+   if (r.mode === 'ab' || r.mode === 'ba') return true;
+   if (r.mode === 'a') return side === 'a';
+   if (r.mode === 'b') return side === 'b';
+   if (r.mode === 'mix') return !!(side === 'a' ? r.pa[i] : r.pb[i]);
+   return null;
+  };
+  var resolvedCount = H.filter(function (h) { return !!resOf(h); }).length;
+  var ready = resolvedCount === H.length;
+
+  /* ---------- rail, tools ---------- */
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'merge' ? 'on' : '', dot: k === 'merge' && s.phase === 'resolve' && !ready };
+  });
+  var tools = TOOLS.map(function (t) {
+   if (t === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] };
+  });
+
+  /* ---------- plan ---------- */
+  var card = function (X) {
+   var role, roleStyle = '', boxStyle = '';
+   var c = col(X.key);
+   if (isNew) { role = X.key === 'a' ? 'Starting point' : 'Comes in'; roleStyle = 'color: var(--muted);'; }
+   else if (X.key === tgtKey) { role = 'Lands here'; roleStyle = 'color: ' + c + '; border-color: ' + c + '; font-weight: 600;'; boxStyle = 'border: 1.5px solid ' + c + '; background: color-mix(in srgb, ' + c + ' 7%, var(--surface));'; }
+   else { role = 'Comes in · stays as is'; roleStyle = 'color: var(--muted);'; }
+   return { role: role, roleStyle: roleStyle, boxStyle: boxStyle,
+    countTxt: X.count + ' commits since they split at ' + BASE,
+    commits: X.commits.slice(0, 3).map(function (k) { return { h: k[0], m: k[1] }; }),
+    moreTxt: X.count > 3 ? '+ ' + (X.count - 3) + ' more' : ' ', foot: X.when };
+  };
+  var connector = function (k) {
+   var isSrc = k === srcKey;
+   var c = isSrc ? col(k) : 'var(--muted)';
+   var X = k === 'a' ? A : B;
+   var label = isSrc ? X.count + ' commits come in' : (isNew ? 'starts from' : 'continues as');
+   return { label: label, labelStyle: 'color: ' + c + ';' + (isSrc ? ' font-weight: 600;' : ''),
+    lineStyle: 'border-top: ' + (isSrc ? '2.5px solid ' : '2px dashed ') + c + ';',
+    headStyle: 'fill: ' + c + ';' };
+  };
+  var changedFiles = FILES.filter(function (f) { return f.kind === 'conflict' || f.kind === 'clean' || f.kind === srcKey; }).length;
+  var conflictFiles = FILES.filter(function (f) { return f.kind === 'conflict'; });
+  var cleanCount = FILES.length - conflictFiles.length;
+  var forecast;
+  var pre = isNew ? 'A new branch starts from main. ' : '';
+  if (strat === 'merge') forecast = pre + tgtName + ' gets ' + src.count + ' commits from ' + src.name + ', tied together by one merge commit. ' + src.name + ' stays as it is.';
+  else if (strat === 'squash') forecast = pre + tgtName + ' gets one new commit holding everything ' + src.name + ' changed. Its ' + src.count + ' commits are not carried over.';
+  else forecast = pre + src.name + '’s ' + src.count + ' commits are replayed on top of ' + tgtName + ' as new commits, then ' + tgtName + ' moves forward to them. No merge commit.';
+  var stats = strat === 'merge' ? [[src.count, 'commits come in'], ['1', 'merge commit'], [changedFiles, 'files change']]
+   : strat === 'squash' ? [['1', 'new commit'], [src.count, 'commits folded in'], [changedFiles, 'files change']]
+   : [[src.count, 'commits replayed'], ['0', 'merge commits'], [changedFiles, 'files change']];
+  var meter = [];
+  FILES.forEach(function (f) { meter.push(f.kind === 'conflict' ? 'background: var(--danger);' : 'background: color-mix(in srgb, var(--ok) 70%, transparent);'); });
+  var startResolve = function (fid) { return function () { var h = H.filter(function (x) { return x.file === fid; })[0]; self.set({ phase: 'resolve', sel: fid, cur: h.id }); }; };
+
+  var STRATS = [
+   ['merge', 'Merge commit', 'Keeps both histories and ties them with one new commit.'],
+   ['squash', 'Squash', 'Everything ' + src.name + ' changed, as one new commit on ' + tgtName + '.'],
+   ['rebase', 'Rebase, then fast-forward', 'Replays ' + src.name + '’s commits on top of ' + tgtName + '. A straight line, new hashes.'],
+   ['ff', 'Fast-forward only', 'Not possible here: both branches have commits the other lacks.']
+  ];
+  var strats = STRATS.map(function (x) {
+   var on = strat === x[0], dis = x[0] === 'ff';
+   return { label: x[1], desc: x[2], on: on, disabled: dis,
+    style: on ? 'background: color-mix(in srgb, var(--accent) 12%, transparent);' : dis ? 'opacity: .5;' : '',
+    dotStyle: on ? 'border: 5px solid var(--accent);' : 'border: 1.5px solid var(--line);',
+    pick: function () { if (!dis) self.set({ strategy: x[0] }); } };
+  });
+  var dirs = [['intoA', 'Into main', ['a']], ['intoB', 'Into feat/tab-drag', ['b']], ['intoNew', 'Into a new branch', []]].map(function (d) {
+   return { label: d[1], on: s.dir === d[0], style: seg(s.dir === d[0]), badges: d[2].map(badge), pick: function () { self.set({ dir: d[0] }); } };
+  });
+  var planFiles = FILES.map(function (f) {
+   var n = H.filter(function (h) { return h.file === f.id; }).length;
+   var status, chipStyle, dotStyle, isC = f.kind === 'conflict';
+   if (isC) { status = n + (n === 1 ? ' conflict' : ' conflicts'); chipStyle = 'color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); font-weight: 600;'; dotStyle = 'background: var(--danger);'; }
+   else if (f.kind === 'clean') { status = 'Both changed · merges cleanly'; chipStyle = 'color: var(--ok);'; dotStyle = 'background: var(--ok);'; }
+   else {
+    var X = f.kind === 'a' ? A : B;
+    dotStyle = 'background: ' + col(f.kind) + ';';
+    if (f.kind === srcKey) { status = (f.added ? 'New file from ' : 'Comes in from ') + X.name; chipStyle = 'color: ' + col(f.kind) + ';'; }
+    else { status = 'Already on ' + X.name + ' · untouched'; chipStyle = 'color: var(--muted);'; }
+   }
+   return { dir: f.dir, name: f.name, status: status, chipStyle: chipStyle, dotStyle: dotStyle, isConflict: isC, inert: !isC, cursor: isC ? 'pointer' : 'default', open: isC ? startResolve(f.id) : function () {} };
+  });
+
+  /* ---------- resolve ---------- */
+  var selFile = FILES.filter(function (f) { return f.id === s.sel; })[0] || FILES[0];
+  var fileHunks = H.filter(function (h) { return h.file === selFile.id; });
+  var lang = selFile.lang || 'ts';
+  var ctx = function (t, n) { return { n: String(n), t: t === '' ? ' ' : t, segs: tok(t, lang) }; };
+  var sideCol = function (h, side, r) {
+   var arr = side === 'a' ? h.a : h.b, n = side === 'a' ? h.aStart : h.bStart, out = [];
+   var c = col(side), soft = side === 'a' ? 'var(--a-soft)' : 'var(--b-soft)';
+   h.before.forEach(function (t) { out.push({ n: String(n++), t: t === '' ? ' ' : t, segs: tok(t, lang), rowStyle: '', markStyle: '', textStyle: 'opacity: .72;', hasCheck: false, checked: false, toggle: null }); });
+   arr.forEach(function (t, i) {
+    var k = kept(r, side, i);
+    out.push({ n: String(n++), t: t === '' ? ' ' : t, segs: tok(t, lang),
+     rowStyle: 'background: ' + soft + '; opacity: ' + (k === false ? '.4' : '1') + ';',
+     markStyle: 'background: ' + c + ';', textStyle: 'color: var(--ink);',
+     hasCheck: !!(r && r.mode === 'mix'), checked: k === true,
+     toggle: function () {
+      var nr = Object.assign({}, r); var key = side === 'a' ? 'pa' : 'pb';
+      nr[key] = Object.assign({}, r[key]); nr[key][i] = !r[key][i]; setRes(h.id, nr);
+     } });
+   });
+   h.after.forEach(function (t) { out.push({ n: String(n++), t: t === '' ? ' ' : t, segs: tok(t, lang), rowStyle: '', markStyle: '', textStyle: 'opacity: .72;', hasCheck: false, checked: false, toggle: null }); });
+   return out;
+  };
+  var hunks = fileHunks.map(function (h) {
+   var r = resOf(h), lines = linesOf(h, r);
+   var gi = H.indexOf(h);
+   var offset = 0;
+   fileHunks.forEach(function (o) { if (H.indexOf(o) < gi) { var ol = linesOf(o, resOf(o)); if (ol) offset += ol.length - o.a.length; } });
+   var rn = h.aStart + offset;
+   var rBefore = h.before.map(function (t) { return ctx(t, rn++); });
+   var rLines = (lines || []).map(function (x) {
+    var c = x.o === 'edit' ? 'var(--mine)' : col(x.o);
+    var soft = x.o === 'edit' ? 'var(--mine-soft)' : x.o === 'a' ? 'var(--a-soft)' : 'var(--b-soft)';
+    return { n: String(rn++), t: x.t === '' ? ' ' : x.t, segs: tok(x.t, lang), rowStyle: 'background: ' + soft + ';', markStyle: 'background: ' + c + ';', tag: x.o === 'edit' ? '✎' : x.o.toUpperCase(), tagStyle: 'background: ' + c + ';' };
+   });
+   var rAfter = h.after.map(function (t) { return ctx(t, rn++); });
+   var isEdit = !!(r && r.mode === 'edit');
+   var isCur = s.cur === h.id;
+   var choices = [['a', 'Take main', ['a'], 'Take main'], ['b', 'Take feat/tab-drag', ['b'], 'Take feat/tab-drag'], ['ab', 'Both', ['a', 'b'], 'Both, main first'], ['ba', 'Both', ['b', 'a'], 'Both, feat/tab-drag first'], ['mix', 'Pick lines', [], 'Pick lines from each side'], ['edit', 'Edit by hand', [], 'Edit the result by hand']].map(function (c) {
+    var on = !!(r && r.mode === c[0]);
+    var onStyle = c[0] === 'edit' ? 'border-color: var(--mine); color: var(--mine);' : 'border-color: var(--accent); color: var(--ink);';
+    return { label: c[1], aria: c[3], on: on, badges: c[2].map(badge), pick: choose(h, c[0]),
+     style: on ? onStyle + ' background: color-mix(in srgb, var(--accent) 12%, var(--surface)); font-weight: 600;' : '' };
+   });
+   return { id: h.id, num: gi + 1, where: selFile.name + ':' + (h.aStart + h.before.length), why: h.why,
+    statusLabel: r ? MODE[r.mode] : 'Unresolved',
+    statusStyle: r ? 'color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent);' : 'color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); font-weight: 600;',
+    resolved: !!r, reset: function () { setRes(h.id, null); },
+    boxStyle: isCur ? 'border: 1.5px solid var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent), var(--shadow-1);' : (!r ? 'border-color: color-mix(in srgb, var(--danger) 35%, transparent);' : ''),
+    focus: function () { self.set({ cur: h.id }); },
+    baseLines: h.base.length ? h.base.map(function (t) { return { segs: tok(t, lang) }; }) : [{ segs: [{ t: '(nothing: both sides added lines here)', c: 'tok-comment' }] }],
+    colA: sideCol(h, 'a', r), colB: sideCol(h, 'b', r),
+    rBefore: rBefore, rAfter: rAfter, rLines: rLines,
+    showLines: !!lines && !isEdit && lines.length > 0,
+    showEmpty: !!lines && !isEdit && lines.length === 0,
+    showPlaceholder: !r,
+    placeholderTxt: h.a.length + (h.a.length === 1 ? ' line' : ' lines') + ' from main, ' + h.b.length + (h.b.length === 1 ? ' line' : ' lines') + ' from feat/tab-drag. Pick below, or type your own.',
+    isEdit: isEdit, text: isEdit ? r.text : '', rows: isEdit ? Math.max(3, r.text.split('\n').length + 1) : 3,
+    type: function (e) { setRes(h.id, { mode: 'edit', text: e.target.value }); },
+    resultBox: !r ? 'background: color-mix(in srgb, var(--sunken) 45%, transparent);' : 'background: color-mix(in srgb, var(--ok) 5%, var(--surface-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent);',
+    isMix: !!(r && r.mode === 'mix'), choices: choices,
+    aFrom: h.aFrom + ' · ' + commitMsg[h.aFrom], bFrom: h.bFrom + ' · ' + commitMsg[h.bFrom] };
+  });
+  var rFiles = conflictFiles.map(function (f) {
+   var hs = H.filter(function (h) { return h.file === f.id; });
+   var done = hs.filter(function (h) { return !!resOf(h); }).length;
+   return { name: f.name, txt: done === hs.length ? 'all resolved' : done + ' of ' + hs.length,
+    dots: hs.map(function (h) { return resOf(h) ? 'background: var(--ok);' : 'border: 1.5px solid var(--danger);'; }),
+    rowStyle: f.id === selFile.id ? 'background: color-mix(in srgb, var(--accent) 14%, transparent);' : '',
+    pick: function () { self.set({ sel: f.id, cur: hs[0].id }); } };
+  });
+  var cleanFiles = FILES.filter(function (f) { return f.kind !== 'conflict'; }).map(function (f) {
+   return { name: f.name, dotStyle: f.kind === 'clean' ? 'background: var(--ok);' : 'background: ' + col(f.kind) + ';' };
+  });
+  var curIdx = Math.max(0, H.map(function (h) { return h.id; }).indexOf(s.cur));
+  var go = function (i) { var h = H[(i + H.length) % H.length]; self.set({ cur: h.id, sel: h.file }); };
+  var takeAll = function (side) { return function () { var m = Object.assign({}, s.res); fileHunks.forEach(function (h) { m[h.id] = { mode: side }; }); self.set({ res: m }); }; };
+  var curH = H[curIdx];
+  var curFile = FILES.filter(function (f) { return f.id === curH.file; })[0];
+
+  /* ---------- commit ---------- */
+  var defaultMsg = strat === 'squash' ? 'Squash ' + src.name + ' into ' + tgtName : 'Merge branch ‘' + src.name + '’ into ' + tgtName;
+  var summary = H.map(function (h) {
+   var r = resOf(h); var f = FILES.filter(function (x) { return x.id === h.file; })[0];
+   return { where: 'Conflict ' + (H.indexOf(h) + 1) + ' · ' + f.name + ':' + (h.aStart + h.before.length), label: r ? MODE[r.mode] : 'Unresolved',
+    badges: r ? MODE_BADGES[r.mode].map(badge) : [],
+    style: r && r.mode === 'edit' ? 'color: var(--mine);' : '' };
+  });
+  var doneTxt = strat === 'merge' ? 'One merge commit, 4f2c9d1. ' + src.name + ' is unchanged; delete it from Branches when you no longer need it.'
+   : strat === 'squash' ? 'One squashed commit, 4f2c9d1. ' + src.name + '’s own commits are still on that branch.'
+   : src.count + ' commits replayed with new hashes. The old copies on ' + src.name + ' are in the Reflog.';
+
+  var stateTxt = s.phase === 'plan' ? 'Repository ready · working copy clean · fetched 4 min ago'
+   : s.phase === 'done' ? 'Merged · working copy clean'
+   : 'Merge in progress · ' + (H.length - resolvedCount) + ' conflicts left · nothing written yet';
+
+  return {
+   theme: this.props.theme || 'dark', rail: rail, tools: tools,
+   isPlan: s.phase === 'plan', isResolve: s.phase !== 'plan',
+   showOverlay: s.phase === 'commit' || s.phase === 'done', isCommit: s.phase === 'commit', isDone: s.phase === 'done',
+   stateTxt: stateTxt, stateDot: s.phase === 'plan' || s.phase === 'done' ? 'background: var(--ok);' : 'background: var(--danger);',
+   cardA: card(A), cardB: card(B), conA: connector('a'), conB: connector('b'),
+   isNew: isNew, newName: s.newName, typeNewName: function (e) { self.set({ newName: e.target.value }); },
+   tgtName: tgtName, srcName: src.name, tgtStyle: 'color: ' + tgtColor + ';',
+   tgtChip: 'color: ' + tgtColor + '; border-color: ' + tgtColor + ';', srcChip: 'color: ' + srcColor + '; border-color: ' + srcColor + ';',
+   afterTxt: strat === 'merge' ? 'after the merge' : strat === 'squash' ? 'after the squash' : 'after the rebase',
+   forecast: forecast, stats: stats.map(function (x) { return { v: String(x[0]), l: x[1] }; }),
+   conflictTitle: H.length + ' conflicts in ' + conflictFiles.length + ' files', cleanTxt: cleanCount + ' files merge on their own',
+   conflictNote: strat === 'rebase' ? 'Rebase applies one commit at a time, so it may stop on up to 3 of them. The regions are the same four.' : 'Found by a dry run against ' + BASE + ', where the two branches split.',
+   meter: meter, hunkCount: H.length, startResolve: startResolve('tabs'),
+   dirs: dirs, swap: function () { self.set({ dir: s.dir === 'intoB' ? 'intoA' : 'intoB' }); },
+   strats: strats,
+   gMerge: strat === 'merge', gSquash: strat === 'squash', gRebase: strat === 'rebase',
+   graphLabel: 'History of ' + tgtName + ' after the ' + strat,
+   tgtStroke: 'stroke: ' + tgtColor + ';', srcStroke: 'stroke: ' + srcColor + ';', srcStrokeOnly: 'stroke: ' + srcColor + ';',
+   tgtFill: 'fill: ' + tgtColor + '; color: ' + tgtColor + ';', srcFill: 'fill: ' + srcColor + ';', srcDot: 'background: ' + srcColor + ';',
+   filesTxt: FILES.length + ' files touched by either branch · ' + changedFiles + ' change on ' + tgtName,
+   planFiles: planFiles,
+   strategyLabel: strat === 'merge' ? 'merge commit' : strat === 'squash' ? 'squash' : 'rebase',
+   resolvedCount: resolvedCount, progressPct: Math.round(resolvedCount / H.length * 100) + '%',
+   notReady: !ready, completeLabel: ready ? 'Complete merge' : 'Complete merge · ' + (H.length - resolvedCount) + ' left',
+   completeStyle: ready ? '' : 'opacity: .55;',
+   toCommit: function () { if (ready) self.set({ phase: 'commit' }); },
+   backToPlan: function () { self.set({ phase: 'plan' }); },
+   abort: function () { self.set({ phase: 'plan', res: {} }); },
+   aRole: isNew ? 'starting point' : tgtKey === 'a' ? 'lands here' : 'comes in',
+   bRole: isNew ? 'comes in' : tgtKey === 'b' ? 'lands here' : 'comes in',
+   rFiles: rFiles, cleanFiles: cleanFiles,
+   selDir: selFile.dir, selName: selFile.name,
+   selCount: fileHunks.length + (fileHunks.length === 1 ? ' conflict' : ' conflicts'),
+   takeAllA: takeAll('a'), takeAllB: takeAll('b'),
+   hunks: hunks, showBase: s.base, toggleBase: function () { self.set({ base: !s.base }); },
+   baseStyle: s.base ? 'background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent);' : 'color: var(--muted);',
+   curNum: curIdx + 1, curWhere: curFile.name,
+   prev: function () { go(curIdx - 1); }, next: function () { go(curIdx + 1); },
+   curA: function () { choose(curH, 'a')(); }, curB: function () { choose(curH, 'b')(); },
+   nextLabel: ready ? 'All resolved' : 'Next unresolved',
+   nextStyle: ready ? 'color: var(--ok); font-weight: 600;' : 'background: var(--ok); color: #fff; font-weight: 600;',
+   nextUnresolved: function () {
+    for (var i = 1; i <= H.length; i++) { var h = H[(curIdx + i) % H.length]; if (!resOf(h)) { self.set({ cur: h.id, sel: h.file }); return; } }
+   },
+   summary: summary, needsMsg: strat !== 'rebase', isRebase: strat === 'rebase',
+   msg: s.msg === null ? defaultMsg : s.msg, typeMsg: function (e) { self.set({ msg: e.target.value }); },
+   commitLabel: strat === 'merge' ? 'Create merge commit' : strat === 'squash' ? 'Commit the squash' : 'Finish the rebase',
+   backToResolve: function () { self.set({ phase: 'resolve' }); },
+   commit: function () { self.set({ phase: 'done' }); },
+   doneTxt: doneTxt, again: function () { self.setState(Object.assign({}, DEF)); }
+  };
+ }
+}
+</script>
+</body>
+</html>

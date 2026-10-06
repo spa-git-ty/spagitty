@@ -17,3 +17,4 @@ run_claude_job.sh
 .idea/
 __pycache__/
 /.spagitty/
+src-tauri/gen/schemas/windows-schema.json

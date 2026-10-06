@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Review inbox</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;family=JetBrains+Mono:wght@400;600&amp;family=Lexend:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--resolve:var(--lane-5);--resolve-soft:color-mix(in srgb,var(--lane-5) 11%,transparent);--add-bg:color-mix(in srgb,var(--ok) 8%,transparent);--del-bg:color-mix(in srgb,var(--danger) 6%,transparent);--add-hl:color-mix(in srgb,var(--ok) 24%,transparent);--del-hl:color-mix(in srgb,var(--danger) 18%,transparent);--ruler:color-mix(in srgb,var(--warn) 22%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="{{rootVars}} height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 4px">Review</span>
+<button class="chip on">This repo</button>
+<button class="chip">All my repos</button>
+<span style="flex: 1"></span>
+<span class="note">spagitty · GitHub · signed in as mahmoud</span>
+<button class="btn">Refresh</button>
+</header>
+<div style="flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 10px 10px 10px">
+<div style="flex: 1; min-width: 0; overflow: auto; padding: 4px 8px 20px; display: flex; flex-direction: column; gap: 22px">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 class="note" style="margin: 0; font-weight: 400; padding: 0 4px">{{g.title}} <span style="opacity: .7">· {{g.hint}}</span></h2>
+<sc-for list="{{g.items}}" as="p" hint-placeholder-count="2">
+<a href="Review Room.dc.html" class="card" style="{{p.selStyle}} text-decoration: none; color: inherit; display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 14px 16px">
+<div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 7px">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: var(--font-mono); color: var(--muted); font-size: var(--fs-secondary)">{{p.num}}</span><span style="font-family: var(--read-font); font-size: 16.5px; line-height: 1.4">{{p.title}}</span></div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px" class="note">
+<span><span style="color: var(--ink)">{{p.author}}</span> · {{p.when}}</span>
+<span class="chip" style="font-family: var(--font-mono)">{{p.branch}}</span>
+<sc-if value="{{p.hasResolve}}" hint-placeholder-val="{{false}}"><span class="chip" style="color: var(--resolve); border-color: color-mix(in srgb, var(--resolve) 50%, transparent); background: var(--resolve-soft)">{{p.resolve}}</span></sc-if>
+<sc-if value="{{p.hasOpen}}" hint-placeholder-val="{{false}}"><span class="chip on">{{p.open}}</span></sc-if>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 5px; width: 110px">
+<div style="display: flex; gap: 3px"><span style="flex: 1; height: 6px; border-radius: 999px; background: {{p.s1}}"></span><span style="flex: 1; height: 6px; border-radius: 999px; background: {{p.s2}}"></span><span style="flex: 1; height: 6px; border-radius: 999px; background: {{p.s3}}"></span></div>
+<span class="note" style="font-size: var(--fs-mono)">{{p.files}} · {{p.lines}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 5px; width: 120px">
+<span style="height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden"><span style="display: block; height: 100%; width: {{p.pct}}; background: var(--ok)"></span></span>
+<span class="note" style="font-size: var(--fs-mono)">{{p.progress}}</span>
+</div>
+</a>
+</sc-for>
+</section>
+</sc-for>
+</div>
+
+<aside aria-label="Pull request preview" style="width: 330px; flex: none; display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px; overflow: auto">
+<span class="note" style="font-family: var(--font-mono)">#214 · feat/avatar-disk-cache → main</span>
+<span style="font-family: var(--read-font); font-size: 18px; line-height: 1.4">Cache avatars on disk instead of in memory</span>
+<p style="margin: 0; font-family: var(--read-font); font-size: var(--read-size); line-height: 1.7; letter-spacing: var(--code-ls)">Avatars used to live in a Map that emptied on every launch. They are now PNGs under the cache folder and refetch after a week.</p>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span class="note">Before you start</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--resolve)"></span><span>2 files carry conflict fixes from merge 7c1e9a0</span></span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span><span>2 open threads, 1 resolved</span></span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--ok)"></span><span>Checks passing</span></span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warn)"></span><span>1 pending comment of yours</span></span>
+</div>
+<span style="flex: 1"></span>
+<a href="Review Room.dc.html" class="btn primary" style="justify-content: center; text-decoration: none; padding: 9px 14px">Continue review · 3 of 6 viewed</a>
+<button class="btn" style="justify-content: center; padding: 8px 14px">Open in worktree</button>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · working copy clean · fetched 4 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · Submodules 0 · <span style="font-family: var(--font-mono); font-size: var(--fs-mono)">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var ACTIVE = 'review';
+class Component extends DCLogic {
+ renderVals() {
+  var on = 'var(--ink)', off = 'var(--soft)';
+  var mk = function (o) { return Object.assign({ hasResolve: !!o.resolve, hasOpen: !!o.open, s1: on, s2: o.size > 1 ? on : off, s3: o.size > 2 ? on : off, selStyle: o.sel ? 'border-color: color-mix(in srgb, var(--accent) 55%, transparent);' : '' }, o); };
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === ACTIVE ? 'on' : '', dot: k === 'review' };
+  });
+  var tools = TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; });
+  return {
+   theme: this.props.theme || 'dark', rail: rail, tools: tools,
+   rootVars: "--read-font: 'Atkinson Hyperlegible', system-ui, sans-serif; --read-size: 15.6px; --code-ls: 0.02em;",
+   groups: [
+    { title: 'Needs you', hint: 'you are a requested reviewer', items: [
+     mk({ sel: true, num: '#214', title: 'Cache avatars on disk instead of in memory', author: 'yasser-dev', when: '1 h ago', branch: 'feat/avatar-disk-cache', resolve: 'conflict fixes', open: '2 open threads', size: 1, files: '6 files', lines: '+16 −8', pct: '50%', progress: '3 of 6 viewed' }),
+     mk({ num: '#209', title: 'Farm: retry an agent run after a lock timeout', author: 'nour.h', when: 'yesterday', branch: 'fix/farm-lock-retry', size: 2, files: '11 files', lines: '+240 −61', pct: '0%', progress: 'not started' })
+    ]},
+    { title: 'Back with you', hint: 'the author answered you', items: [
+     mk({ num: '#201', title: 'Rebase screen: keep the todo list when the window loses focus', author: 'omar.k', when: '3 h ago', branch: 'fix/rebase-focus', open: '1 reply to you', size: 1, files: '3 files', lines: '+34 −12', pct: '100%', progress: '2 files changed since' })
+    ]},
+    { title: 'Open on this repo', hint: 'nobody asked you yet', items: [
+     mk({ num: '#198', title: 'Split diff.rs into hunks and word diff', author: 'yasser-dev', when: '4 days ago', branch: 'refactor/diff-split', resolve: 'conflict fixes', size: 3, files: '23 files', lines: '+1,210 −980', pct: '0%', progress: 'not started' })
+    ]}
+   ]
+  };
+ }
+}
+</script>
+</body>
+</html>
