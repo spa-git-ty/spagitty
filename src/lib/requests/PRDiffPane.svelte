@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import type { DiffView } from '$lib/diff/store.svelte';
 	import { splitRows } from '$lib/diff/split';
 	import { relativeTime } from '$lib/format';
@@ -107,7 +108,7 @@
 	{:else if path === null}
 		<div class="pad note">Select a file.</div>
 	{:else if file === null}
-		<div class="pad note">{loading ? 'Reading diff…' : ''}</div>
+		<div class="pad note">{#if loading}<Loader label="Reading diff…" />{:else}{/if}</div>
 	{:else if file.binary}
 		<div class="pad note">Binary file. There are no lines to show.</div>
 	{:else if file.tooLarge}

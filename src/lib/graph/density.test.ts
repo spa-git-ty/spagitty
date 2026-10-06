@@ -26,6 +26,7 @@ import {
 	laneColumns,
 	laneNodeRadius,
 	lanePitch,
+	COMPACT_PITCH_MIN,
 	laneSpanFor,
 	laneSpanOf,
 	laneX,
@@ -186,7 +187,7 @@ describe('the geometry stays consistent with itself', () => {
 	 * history in compact mode with nothing left to give.
 	 */
 	it('leaves compact room to compress', () => {
-		expect(COMPACT.pitch).toBeGreaterThan(LANE_PITCH_MIN);
+		expect(COMPACT.pitch).toBeGreaterThan(COMPACT_PITCH_MIN);
 	});
 
 	it('floors the column at its own minimum, not the other one', () => {
@@ -202,7 +203,7 @@ describe('the geometry stays consistent with itself', () => {
 		expect(lanePitch(2, span, COMPACT)).toBe(COMPACT.pitch);
 		expect(lanePitch(LANE_COLUMNS_MAX, span, COMPACT)).toBe(COMPACT.pitch);
 		expect(lanePitch(40, span, COMPACT)).toBeLessThan(COMPACT.pitch);
-		expect(lanePitch(40, span, COMPACT)).toBeGreaterThanOrEqual(LANE_PITCH_MIN);
+		expect(lanePitch(40, span, COMPACT)).toBeGreaterThanOrEqual(COMPACT_PITCH_MIN);
 	});
 
 	it('draws its own node size at every depth, and never a merge dot’s', () => {

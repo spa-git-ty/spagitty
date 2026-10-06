@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { onMount, untrack } from 'svelte';
 	import * as api from '$lib/api';
@@ -57,7 +58,7 @@
 			{/if}
 		</div>
 		<div class="right">
-			{#if reflog.loading}<span class="note">Reading…</span>{/if}
+			{#if reflog.loading}<Loader size="inline" label="Reading…" />{/if}
 			<input
 				class="field"
 				type="text"
@@ -94,7 +95,7 @@
 		{:else if reflog.error}
 			<div class="empty"><p class="note error">{reflog.error}</p></div>
 		{:else if !reflog.loaded}
-			<div class="empty"><span class="note">Reading…</span></div>
+			<div class="empty"><Loader label="Reading…" /></div>
 		{:else if reflog.absent}
 			<div class="empty">
 				<p class="note">This ref has no reflog.</p>

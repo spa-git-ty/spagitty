@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 
@@ -160,7 +161,7 @@
 			>
 				<span class="label">{tab.name}</span>
 				{#if workspace.isActive(tab.path) && repo.busy}
-					<span class="note" aria-label="Opening">…</span>
+					<Loader size="inline" label="Opening" />
 				{/if}
 				<button
 					class="close"

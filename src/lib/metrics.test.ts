@@ -143,7 +143,7 @@ describe('lanePitch', () => {
 		// which is where sharing actually happens. Past the floor it clamps, and
 		// that is the test below.
 		expect(lanePitch(LANE_COLUMNS_MAX + 1)).toBeCloseTo(LANE_SPAN / LANE_COLUMNS_MAX, 10);
-		expect(lanePitch(20)).toBeCloseTo(LANE_SPAN / 19, 10);
+		expect(lanePitch(18)).toBeCloseTo(LANE_SPAN / 17, 10);
 	});
 
 	it('narrows monotonically as lanes are added', () => {
@@ -169,7 +169,7 @@ describe('lanePitch', () => {
 
 describe('laneX under compression', () => {
 	it('gives every lane past the cap a distinct x, where it used to stack them', () => {
-		const lanes = 20;
+		const lanes = LANE_INDEX_MAX + 1;
 		const xs = Array.from({ length: lanes }, (_, lane) => laneX(lane, lanes));
 
 		expect(new Set(xs).size).toBe(lanes);
@@ -524,10 +524,10 @@ describe('widening the graph column', () => {
 		expect(span).toBeGreaterThan(resting);
 
 		// At rest everything past the span's end stacks on it.
-		expect(laneX(30, deep, 1, resting)).toBe(LANE_X0 + resting);
-		// Wider, lane 30 has its own x, a floor's pitch from lane 29.
-		expect(laneX(30, deep, 1, span)).toBe(LANE_X0 + 30 * LANE_PITCH_MIN);
-		expect(laneX(30, deep, 1, span) - laneX(29, deep, 1, span)).toBe(LANE_PITCH_MIN);
+		expect(laneX(20, deep, 1, resting)).toBe(LANE_X0 + resting);
+		// Wider, lane 20 has its own x, a floor's pitch from lane 19.
+		expect(laneX(20, deep, 1, span)).toBe(LANE_X0 + 20 * LANE_PITCH_MIN);
+		expect(laneX(20, deep, 1, span) - laneX(19, deep, 1, span)).toBe(LANE_PITCH_MIN);
 		// And the deepest still fold, onto the new boundary rather than the old one.
 		expect(laneX(deep - 1, deep, 1, span)).toBe(LANE_X0 + span);
 	});

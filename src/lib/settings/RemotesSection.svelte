@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { onMount } from 'svelte';
 	import { remotes } from '$lib/remotes/store.svelte';
 	import { removeRemote, renameRemote, retargetRemote } from '$lib/remotes/actions';
@@ -51,7 +52,7 @@
 		{#if remotes.error}
 			<p class="note error">{remotes.error}</p>
 		{:else if !remotes.loaded}
-			<p class="note">Reading…</p>
+			<Loader label="Reading…" />
 		{:else if remotes.list.length === 0}
 			<p class="note">No remotes.</p>
 		{:else}

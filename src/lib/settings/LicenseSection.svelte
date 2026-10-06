@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import BrandMark from '$lib/ui/BrandMark.svelte';
 	import { version } from '$lib/version';
 	import { describeLicense, matching, undeclared } from './describe';
@@ -47,7 +48,7 @@
 	<h3 class="heading">Dependency licenses</h3>
 
 	{#if licenses === null}
-		<p class="note">Reading the list…</p>
+		<Loader label="Reading the list…" />
 	{:else if !licenses.generated}
 		<p class="note">This build did not generate a dependency license list.</p>
 		{#each licenses.notes as note (note)}

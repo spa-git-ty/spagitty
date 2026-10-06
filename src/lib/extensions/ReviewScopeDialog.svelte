@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import Modal from './Modal.svelte';
 	import type { ReviewDraft } from './store.svelte';
 	import { extensions } from './store.svelte';
@@ -91,7 +92,7 @@
 			</p>
 		{/if}
 	{:else}
-		<p class="muted">Reading the changes…</p>
+		<Loader label="Reading the changes…" />
 	{/if}
 
 	{#snippet actions()}

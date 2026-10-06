@@ -129,7 +129,7 @@
 			{#if merger.landError}<p class="note error" role="alert">{merger.landError}</p>{/if}
 			<div class="buttons">
 				<Btn disabled={merger.landing} onclick={() => merger.back()}>Back</Btn>
-				<Btn primary disabled={merger.landing} onclick={oncommit}>
+				<Btn primary busy={merger.landing} onclick={oncommit}>
 					{merger.landing ? 'Writing…' : strategy === 'ff' ? `${LABELS.ff} ${who.targetName}` : LABELS[strategy]}
 				</Btn>
 			</div>

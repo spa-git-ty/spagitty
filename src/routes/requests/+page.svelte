@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { repo } from '$lib/repo.svelte';
@@ -55,7 +56,7 @@
 				{/if}
 			</div>
 			<div class="right">
-				{#if requests.loading}<span class="note">Reading…</span>{/if}
+				{#if requests.loading}<Loader size="inline" label="Reading…" />{/if}
 				{#if requests.connected}
 					<Btn primary onclick={() => requests.openCreateModal()}>+ Create PR</Btn>
 				{/if}

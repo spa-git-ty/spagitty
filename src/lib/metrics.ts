@@ -151,7 +151,15 @@ export const LANE_SPAN = (LANE_COLUMNS_MAX - 1) * LANE_PITCH;
  * The difference is that the twenty-one which *are* drawn can now be told
  * apart.
  */
-export const LANE_PITCH_MIN = 14;
+export const LANE_PITCH_MIN = 22;
+
+/**
+ * The compact density's own floor, 14: its resting pitch is 16, so the
+ * comfortable floor would make it wider than it rests. The author found 14
+ * too tight for the comfortable graph beside GitKraken (BUG-052) and the floor
+ * there rose to 22; compact is the choice of somebody who wants it tight.
+ */
+export const COMPACT_PITCH_MIN = 14;
 
 /** Highest lane index the span can still draw at a distinct x. */
 export const LANE_INDEX_MAX = Math.floor(LANE_SPAN / LANE_PITCH_MIN);
@@ -237,7 +245,8 @@ export function lanePitch(
 	density: Density = COMFORTABLE
 ): number {
 	if (needed <= 1) return density.pitch;
-	return Math.max(LANE_PITCH_MIN, Math.min(density.pitch, span / (needed - 1)));
+	const floor = density.pitch < LANE_PITCH_MIN ? COMPACT_PITCH_MIN : LANE_PITCH_MIN;
+	return Math.max(floor, Math.min(density.pitch, span / (needed - 1)));
 }
 
 /**

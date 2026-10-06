@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { describeOrigin, describeSigningFormat, describeSigningProblem } from './describe';
@@ -57,7 +58,7 @@
 	</header>
 
 	{#if signing === null}
-		<p class="note">Reading the git configuration…</p>
+		<Loader label="Reading the git configuration…" />
 	{:else}
 		<div class="row">
 			<Chip

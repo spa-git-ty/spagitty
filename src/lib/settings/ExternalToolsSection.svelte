@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { onMount } from 'svelte';
 	import * as api from '$lib/api';
 	import { notice } from '$lib/ui/notice.svelte';
@@ -63,7 +64,7 @@
 	</div>
 
 	{#if loading && !config}
-		<div class="note">Reading…</div>
+		<Loader label="Reading…" />
 	{:else if config}
 		<div class="tool-settings">
 			<!-- Diff Tool -->

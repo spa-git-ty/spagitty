@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { untrack } from 'svelte';
 	import { changes } from '$lib/changes/store.svelte';
 	import FileColumn from '$lib/changes/FileColumn.svelte';
@@ -83,7 +84,7 @@
 		</div>
 		<div class="right">
 			<ContributedActions context="workingCopy" />
-			{#if changes.loading}<span class="note">Reading…</span>{/if}
+			{#if changes.loading}<Loader size="inline" label="Reading…" />{/if}
 			<Btn disabled={changes.busy} onclick={() => changes.load()}>Refresh</Btn>
 		</div>
 	</header>
@@ -93,7 +94,7 @@
 	{:else if changes.error}
 		<div class="empty"><p class="note error">{changes.error}</p></div>
 	{:else if !changes.loaded}
-		<div class="empty"><span class="note">Reading the working copy…</span></div>
+		<div class="empty"><Loader label="Reading the working copy…" /></div>
 	{:else if clean}
 		<div class="empty">
 			<p class="note">Nothing to commit.</p>

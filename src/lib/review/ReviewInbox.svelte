@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { goto } from '$app/navigation';
 	import { requests } from '$lib/requests/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -57,7 +58,7 @@
 		<Chip active={review.scope === 'repo'} onclick={() => review.setScope('repo')}>This repo</Chip>
 		<Chip active={review.scope === 'all'} onclick={() => review.setScope('all')}>All my repos</Chip>
 		<span class="grow"></span>
-		{#if review.loading}<span class="note">Reading…</span>{/if}
+		{#if review.loading}<Loader size="inline" label="Reading…" />{/if}
 		{#if signedIn}<span class="note">{signedIn}</span>{/if}
 		<Btn disabled={review.loading} onclick={() => review.refresh()}>Refresh</Btn>
 	</header>

@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { onMount } from 'svelte';
 	import * as api from '$lib/api';
 	import { abortOperation, continueOperation } from '$lib/conflicts/actions';
@@ -44,7 +45,7 @@
 			{/if}
 		</div>
 		<div class="right">
-			{#if conflicts.loading}<span class="note">Reading…</span>{/if}
+			{#if conflicts.loading}<Loader size="inline" label="Reading…" />{/if}
 			{#if conflicts.writeError}<span class="note error" role="alert">{conflicts.writeError}</span>{/if}
 			<Btn disabled={conflicts.busy} onclick={() => conflicts.load()}>Refresh</Btn>
 			{#if conflicts.operation !== 'none'}
@@ -73,7 +74,7 @@
 		{#if conflicts.error}
 			<p class="note error pad">{conflicts.error}</p>
 		{:else if !conflicts.loaded}
-			<p class="note pad">Reading…</p>
+			<Loader label="Reading…" />
 		{:else if conflicts.files.length === 0}
 			<p class="note pad">
 				{#if conflicts.operation === 'none'}
@@ -95,7 +96,8 @@
 				{#snippet fileActions(file)}
 					<Btn
 						primary
-						disabled={conflicts.busy || !conflicts.settleable(file.path)}
+						busy={conflicts.busy}
+						disabled={!conflicts.settleable(file.path)}
 						title={conflicts.settleable(file.path) ? 'Write the result and stage it — git add' : 'Resolve every conflict in this file first'}
 						onclick={() => conflicts.settle(file.path)}
 					>

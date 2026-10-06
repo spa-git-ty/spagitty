@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { goto } from '$app/navigation';
 	import { clockTime, fullDate } from '$lib/format';
 	import { cherryPick, revertCommit } from '$lib/graph/actions';
@@ -88,7 +89,7 @@
 		{#if graph.detailError}
 			<div class="pad error note">{graph.detailError}</div>
 		{:else if detail === null}
-			<div class="pad note">Loading…</div>
+			<Loader label="Loading…" />
 		{:else}
 			<div class="pad column">
 				<div class="message">

@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import type { DiffView } from '$lib/diff/store.svelte';
 	import { splitRows } from '$lib/diff/split';
 	import type { DiffLine, FileDiff } from '$lib/types';
@@ -116,14 +117,14 @@
 	{:else if path === null}
 		<div class="pad note">Select a file.</div>
 	{:else if file === null}
-		<div class="pad note">{loading ? 'Reading…' : ''}</div>
+		<div class="pad note">{#if loading}<Loader label="Reading…" />{:else}{/if}</div>
 	{:else if file.binary}
 		{#if binaryData?.isImage}
 			<ImageDiff diff={binaryData} />
 		{:else if binaryData}
 			<BinaryDiffView diff={binaryData} />
 		{:else if binaryLoading}
-			<div class="pad note">Reading binary metadata…</div>
+			<Loader label="Reading binary metadata…" />
 		{:else}
 			<div class="pad note">Binary file. There are no lines to show.</div>
 		{/if}

@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { untrack } from 'svelte';
 	import { relativeTime } from '$lib/format';
 	import DiffPane from '$lib/diff/DiffPane.svelte';
@@ -139,7 +140,7 @@
 				<p class="note error">{requests.filesError}</p>
 				<Btn onclick={() => requests.loadFiles()}>Try again</Btn>
 			{:else if requests.filesLoading && requests.files.length === 0}
-				<p class="note">Reading the files…</p>
+				<Loader label="Reading the files…" />
 			{:else if requests.files.length === 0}
 				<p class="note">This pull request changes no files.</p>
 			{:else}

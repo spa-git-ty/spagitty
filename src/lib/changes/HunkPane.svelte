@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Loader from '$lib/ui/Loader.svelte';
 	import { changes } from '$lib/changes/store.svelte';
 	import { discardHunk } from '$lib/changes/discard';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -39,7 +40,7 @@
 	{:else if changes.selection === null}
 		<div class="pad note">Select a file to see what changed in it.</div>
 	{:else if file === null}
-		<div class="pad note">{changes.fileLoading ? 'Reading…' : 'Could not read this diff.'}</div>
+		<div class="pad note">{#if changes.fileLoading}<Loader label="Reading…" />{:else}Could not read this diff.{/if}</div>
 	{:else if file.binary}
 		<div class="pad note">Binary file. There are no hunks to stage individually.</div>
 	{:else if file.tooLarge}
