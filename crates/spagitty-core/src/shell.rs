@@ -1662,6 +1662,13 @@ pub fn valid_branch_name(repo: &Path, name: &str) -> Result<bool> {
     Ok(code == 0)
 }
 
+/// Remove `path` from the working tree and the index: how a conflict is
+/// resolved as a deletion.
+pub fn remove_path(repo: &Path, path: &str) -> Result<()> {
+    run(repo, &["rm", "-q", "--ignore-unmatch", "--", path])?;
+    Ok(())
+}
+
 /// Merge `source` into what is checked out in a scratch worktree, stopping
 /// before the commit. The dry run for a git older than 2.38, which has no
 /// `merge-tree --write-tree`. Returns whether it merged cleanly.

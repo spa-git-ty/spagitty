@@ -75,7 +75,8 @@ import type {
 	CheckedOut,
 	MergerForecast,
 	MergerLandAsk,
-	MergerLanded
+	MergerLanded,
+	MergerConflicts
 } from './types';
 
 /**
@@ -347,6 +348,11 @@ export function conflictAbort(): Promise<void> {
 	return invoke('conflict_abort');
 }
 
+/** Settle a conflicted file with its text, or one side whole, and mark it resolved (FEAT-102). */
+export function conflictSettle(path: string, text: string | null, take: ConflictSideName | null): Promise<void> {
+	return invoke('conflict_settle', { path, text, take });
+}
+
 /** What merging `a` and `b` would do, worked out without writing it (FEAT-100). */
 export function mergerForecast(a: string, b: string): Promise<MergerForecast> {
 	return invoke('merger_forecast', { a, b });
@@ -355,6 +361,21 @@ export function mergerForecast(a: string, b: string): Promise<MergerForecast> {
 /** Commit what Merger planned and move the receiving branch to it (FEAT-101). */
 export function mergerLand(ask: MergerLandAsk): Promise<MergerLanded> {
 	return invoke('merger_land', { ask });
+}
+
+/** Every conflict of merging `a` and `b`, each side whole, from a dry run (FEAT-102). */
+export function mergerConflicts(a: string, b: string): Promise<MergerConflicts> {
+	return invoke('merger_conflicts', { a, b });
+}
+
+/** The choices kept for one merge, or null (FEAT-102). */
+export function mergerState(key: string): Promise<unknown> {
+	return invoke('merger_state', { key });
+}
+
+/** Keep one merge's choices; null forgets them (FEAT-102). */
+export function setMergerState(key: string, state: unknown): Promise<void> {
+	return invoke('set_merger_state', { key, state });
 }
 
 /** Every tag, newest first (FEAT-051). */

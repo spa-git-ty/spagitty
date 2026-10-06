@@ -1471,3 +1471,33 @@ export interface MergerLanded {
 	/** Commits written: 1, the replayed ones, or 0 for a fast-forward. */
 	written: number;
 }
+
+/** Where one region came from on each side (FEAT-102). */
+export interface MergerRegionSource {
+	index: number;
+	aLine: number | null;
+	bLine: number | null;
+	aCommit: MergerCommit | null;
+	bCommit: MergerCommit | null;
+}
+
+/** One conflicted file of a dry run, every side of it. */
+export interface MergerFileConflict {
+	path: string;
+	kind: ConflictKind;
+	base: ConflictSide | null;
+	a: ConflictSide | null;
+	b: ConflictSide | null;
+	/** The merged file with diff3 markers, when the conflict is in its lines. */
+	merged: ConflictSide | null;
+	regions: MergerRegionSource[];
+}
+
+/** Every conflict of merging A and B. */
+export interface MergerConflicts {
+	base: string;
+	baseShort: string;
+	aTip: string;
+	bTip: string;
+	files: MergerFileConflict[];
+}

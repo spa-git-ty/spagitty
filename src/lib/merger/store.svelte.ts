@@ -172,6 +172,10 @@ export const merger = {
 	get landing(): boolean {
 		return landing;
 	},
+	/** Where the commit dialog was opened from. */
+	get returnTo(): 'plan' | 'resolve' {
+		return returnTo;
+	},
 	get landError(): string | null {
 		return landError;
 	},
