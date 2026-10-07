@@ -161,12 +161,12 @@ rather than an audit.
 | [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Done |
 | [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Done |
 | [FEAT-107](items/FEAT-107-hooks-you-can-see-and-skip.md) | Hooks you can see and skip | 1C, Settings | Done |
-| [FEAT-108](items/FEAT-108-farm-shared-journey.md) | Farm shared journey | 1Q | Open |
-| [FEAT-109](items/FEAT-109-farm-building.md) | Farm building board | 1Q | Open |
-| [FEAT-110](items/FEAT-110-farm-task-journey.md) | Farm task journey | 1Q | Open |
-| [FEAT-111](items/FEAT-111-farm-plan-journey.md) | Farm setup and planning | 1Q | Open |
-| [FEAT-112](items/FEAT-112-farm-crew-activity.md) | Farm crew and activity | 1Q | Open |
-| [FEAT-113](items/FEAT-113-farm-wrap-up.md) | Farm wrap up and evidence | 1Q | Open |
+| [FEAT-108](items/FEAT-108-farm-shared-journey.md) | Farm shared journey | 1Q | Done |
+| [FEAT-109](items/FEAT-109-farm-building.md) | Farm building board | 1Q | Done |
+| [FEAT-110](items/FEAT-110-farm-task-journey.md) | Farm task journey | 1Q | Done |
+| [FEAT-111](items/FEAT-111-farm-plan-journey.md) | Farm setup and planning | 1Q | Done |
+| [FEAT-112](items/FEAT-112-farm-crew-activity.md) | Farm crew and activity | 1Q | Done |
+| [FEAT-113](items/FEAT-113-farm-wrap-up.md) | Farm wrap up and evidence | 1Q | Done |
 
 ## Bugs
 
@@ -228,7 +228,7 @@ rather than an audit.
 | [BUG-053](items/BUG-053-what-the-author-found-sweeping.md) | What the author found sweeping | 1H, 1A, chrome | Fixed |
 | [BUG-054](items/BUG-054-review-loader-conversation-panel-and-scrollbars.md) | Review's loader, its Conversation card, and scrollbars at rest | 1R, all | Fixed |
 | [BUG-055](items/BUG-055-branch-where-you-point.md) | Branch where you point, stash in place, and a working copy that is noticed | chrome, 1A, 1R, 1H, 1C | Fixed |
-| [BUG-056](items/BUG-056-review-requests-and-profile-navigation.md) | Review and Pull requests align, and profiles open in Settings | chrome, 1R, 1H | Open |
+| [BUG-056](items/BUG-056-review-requests-and-profile-navigation.md) | Review and Pull requests align, and profiles open in Settings | chrome, 1R, 1H | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

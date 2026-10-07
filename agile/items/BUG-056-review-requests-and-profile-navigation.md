@@ -2,7 +2,7 @@
 
 # BUG-056 — Review and Pull requests align, and profiles open in Settings
 
-**Status:** Open — implementation, automated checks and browser sweep passed; not merged.
+**Status:** Fixed — merged 2026-10-07.
 **Screens:** chrome, 1R, 1H.
 **Raised by:** the author, 2026-10-07, resuming the interrupted changes to the shared header, no-account state and Manage Profiles link.
 

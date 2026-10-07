@@ -2,7 +2,7 @@
 
 # FEAT-111 — Farm setup and planning
 
-**Status:** Open — built and swept against the handoff in a browser fixture; not yet run in the native app; unmerged.
+**Status:** Done — merged 2026-10-07. Swept against the handoff in a browser fixture; the native sweep row is still to run.
 **Branch:** `codex/farm-journey` (integration branch for the six handoff slices).
 **Screens:** 1Q.
 **Raised by:** the author, 2026-10-07, from the Farm design handoff.
