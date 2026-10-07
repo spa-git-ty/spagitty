@@ -187,8 +187,8 @@
 			</span>
 		{/if}
 
-		<span class="note mono license" title={version.license}>
-			{version.licenseShort} · v{version.number}
+		<span class="note mono license" title="Spagitty {settings.about?.version ?? version.number} · {version.license}">
+			v{settings.about?.version ?? version.number}
 		</span>
 		</div>
 	</div>

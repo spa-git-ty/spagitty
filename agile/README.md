@@ -215,6 +215,7 @@ rather than an audit.
 | [BUG-050](items/BUG-050-the-mac-check-waits-for-a-licence-agreement.md) | The Mac check waits for a licence agreement | CI | Fixed |
 | [BUG-051](items/BUG-051-what-the-author-saw-on-first-run.md) | What the author saw on first run | 1S, 1D, 1F, 1A | Fixed |
 | [BUG-052](items/BUG-052-squeezed-lanes-silent-waits-and-striped-notices.md) | Squeezed lanes, silent waits and striped notices | 1A, all, chrome | Fixed |
+| [BUG-053](items/BUG-053-what-the-author-found-sweeping.md) | What the author found sweeping | 1H, 1A, chrome | Open |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

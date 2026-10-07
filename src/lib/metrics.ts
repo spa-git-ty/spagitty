@@ -22,9 +22,9 @@ export const ROW_PITCH = 30;
  *
  * This number is set by the node, not the other way round: a lane closer than
  * a node is wide draws lines through faces. FEAT-023 put an author's portrait
- * on the node, so `2 × NODE_R + LANE_STROKE` is 24.5 and the pitch has to clear
- * it — 26 leaves a pixel and a half of background between two adjacent heads at
- * 100%.
+ * on the node, so `2 × NODE_R + LANE_STROKE` is 26.5 and the pitch has to clear
+ * it — 28 leaves a pixel and a half of background between two adjacent heads at
+ * 100%. (26 until BUG-053, when the author asked for bigger nodes.)
  *
  * It was 15 while nodes were 11px initials discs, itself retuned down from 24
  * after measuring Spagitty against GitKraken on the same repository, then 22
@@ -32,10 +32,10 @@ export const ROW_PITCH = 30;
  * deliberate: a graph whose nodes say *who* earns the pixels, and the message
  * column is still the wider of the two at five lanes.
  */
-export const LANE_PITCH = 26;
+export const LANE_PITCH = 28;
 
 /**
- * x of lane 0. Lanes therefore sit at 16, 42, 68, 94, 120.
+ * x of lane 0. Lanes therefore sit at 16, 44, 72, 100, 128.
  *
  * At least `NODE_R`, or the first lane's portrait is clipped by the column's
  * own left edge.
@@ -45,13 +45,14 @@ export const LANE_X0 = 16;
 /**
  * Radius of a commit node — the author's portrait.
  *
- * Twenty-two pixels across, plus a 2px ring in the column's own colour: large
+ * Twenty-four pixels across (twenty-two until BUG-053, which the author found
+ * small), plus a 2px ring in the column's own colour: large
  * enough that a generated face reads as a face at a glance rather than as a
  * coloured dot, while still leaving daylight between two stacked heads at the
  * 30px row pitch. A pixel larger and the column reads as a solid stripe of
  * faces.
  */
-export const NODE_R = 11;
+export const NODE_R = 12;
 
 /**
  * Radius of a merge node.
@@ -63,7 +64,7 @@ export const NODE_R = 11;
  * kind of event; it did not grow with the portrait, because a merge dot large
  * enough to match would start competing with the faces around it.
  */
-export const MERGE_R = 4.5;
+export const MERGE_R = 5.5;
 
 /**
  * Stroke width of a lane line.
@@ -461,6 +462,16 @@ export const FARM_LOG_H = 180;
  * corner rather than to a bulge.
  */
 export const ELBOW_RADIUS = 6;
+
+/**
+ * How round the turn is where a lane leaves or reaches a node sideways
+ * (BUG-053): a merge's line to its other parent, a branch's line home.
+ *
+ * That turn has the whole band to itself — straight out of the dot, one
+ * quarter-turn, straight along the lane — so it is rounder than the elbow a
+ * passing lane makes in the middle of a band, which GitKraken's merges are too.
+ */
+export const NODE_TURN_RADIUS = 12;
 
 // --- Derived --------------------------------------------------------------
 

@@ -143,12 +143,12 @@ describe('what compact buys', () => {
 		const comfortable = laneColumnWidth(3, 1, COMFORTABLE);
 		const compact = laneColumnWidth(3, 1, COMPACT);
 
-		// 16 + 2 x 26 + 11 + 18, against 16 + 2 x 16 + 6 + 18.
-		expect(comfortable).toBe(149);
+		// Five lanes at rest, 16 + 4 x 28 + 12 + 18, against 16 + 2 x 16 + 6 + 18.
+		expect(comfortable).toBe(158);
 		expect(compact).toBe(72);
-		// Seventy-seven pixels, straight into the commit subject on a screen
+		// Eighty-six pixels, straight into the commit subject on a screen
 		// whose whole job is reading commit subjects.
-		expect(comfortable - compact).toBe(77);
+		expect(comfortable - compact).toBe(86);
 	});
 
 	it('still holds five lanes in less room than comfortable holds three', () => {

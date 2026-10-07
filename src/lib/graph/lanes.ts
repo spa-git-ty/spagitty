@@ -14,6 +14,7 @@
 import {
 	COMFORTABLE,
 	ELBOW_RADIUS,
+	NODE_TURN_RADIUS,
 	LANE_STROKE,
 	MERGE_R,
 	NODE_HALO,
@@ -24,7 +25,7 @@ import {
 	type Density
 } from '../metrics';
 import { portraitTile, seedOf } from './portrait';
-import type { GraphRow } from '../types';
+import type { GraphRow, LaneEdge } from '../types';
 
 const TAU = Math.PI * 2;
 
@@ -105,6 +106,28 @@ export interface LaneDrawOptions {
 	picture?: (row: GraphRow) => CanvasImageSource | null;
 }
 
+/**
+ * Where a lane that changes column turns, in the band between `above` and
+ * `below` (BUG-053).
+ *
+ * `top`: the line leaves the node above sideways — a merge reaching for its
+ * other parent, or any line starting at a node and going elsewhere. `bottom`:
+ * it arrives at the node below sideways — a branch coming home to the commit it
+ * grew from. `middle`: it passes between two nodes that are neither end, a
+ * lane shifting over, and turns square in the middle of the band as before.
+ */
+export function turnsAt(
+	edge: LaneEdge,
+	above: GraphRow | undefined,
+	below: GraphRow
+): 'top' | 'bottom' | 'middle' {
+	const leaves = above !== undefined && edge.from === above.lane;
+	const arrives = edge.to === below.lane;
+	if (leaves && (above.parents.length > 1 || !arrives)) return 'top';
+	if (arrives) return 'bottom';
+	return 'middle';
+}
+
 /** How much of its colour a row keeps when another branch is being hovered. */
 const FADED = 0.22;
 
@@ -145,6 +168,7 @@ export function drawLanes(options: LaneDrawOptions): void {
 	// The corner radius follows the pitch, so a squeezed row turns proportionally
 	// tighter rather than keeping a corner too big for the space.
 	const corner = (ELBOW_RADIUS / ROW_PITCH) * pitch;
+	const nodeCorner = (NODE_TURN_RADIUS / ROW_PITCH) * pitch;
 
 	// No clip (FEAT-081). A lane that no longer fits is folded onto the boundary
 	// by `laneX`, so its track is still drawn — under the same x as its node —
@@ -156,6 +180,7 @@ export function drawLanes(options: LaneDrawOptions): void {
 
 		const bottom = rowCenterY(i, pitch) - scrollTop;
 		const top = rowCenterY(i - 1, pitch) - scrollTop;
+		const above = row(i - 1);
 		// A band belongs to both rows it joins; it stays bright if either end is
 		// in the highlight, so a branch's line is not cut off at its own tip.
 		ctx.globalAlpha = Math.max(alphaFor(i), alphaFor(i - 1));
@@ -168,6 +193,18 @@ export function drawLanes(options: LaneDrawOptions): void {
 			ctx.beginPath();
 			ctx.moveTo(x0, top);
 			if (x0 === x1) {
+				ctx.lineTo(x1, bottom);
+			} else if (turnsAt(edge, above, commit) !== 'middle') {
+				// Into or out of a node (BUG-053): straight across from the dot
+				// itself, one quarter-turn, straight along the other lane — as
+				// GitKraken draws it. A turn half a row away left a short stub
+				// running parallel beside the node before the line bent.
+				const radius = Math.min(nodeCorner, Math.abs(x1 - x0), Math.abs(bottom - top));
+				if (turnsAt(edge, above, commit) === 'top') {
+					ctx.arcTo(x1, top, x1, bottom, radius);
+				} else {
+					ctx.arcTo(x0, bottom, x1, bottom, radius);
+				}
 				ctx.lineTo(x1, bottom);
 			} else {
 				// A rounded right angle, not a curve: straight down its own lane,

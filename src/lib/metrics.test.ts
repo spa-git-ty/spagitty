@@ -47,15 +47,15 @@ describe('laneColumns', () => {
 
 describe('laneColumnWidth', () => {
 	it('fits five lanes and their slack', () => {
-		// Lanes at 16…120, r=11 for the portrait, 18px of slack:
-		// 16 + 4×26 + 11 + 18 = 149px.
+		// Lanes at 16…128, r=12 for the portrait, 18px of slack:
+		// 16 + 4×28 + 12 + 18 = 158px.
 		//
 		// It was 96 while a node was a 5.5px disc, then 129 at the first
-		// portrait size. FEAT-029 enlarged the face again, and a face needs both
+		// portrait size, 149 until BUG-053. FEAT-029 enlarged the face again, and a face needs both
 		// a wider pitch and a wider node — the width is the price of the graph
 		// saying who, and the message column is still the wider of the two at
 		// five lanes.
-		expect(laneColumnWidth(LANE_COLUMNS_MIN)).toBe(149);
+		expect(laneColumnWidth(LANE_COLUMNS_MIN)).toBe(158);
 	});
 
 	it('rounds to whole pixels, so the canvas and the cells share a boundary', () => {
@@ -408,17 +408,17 @@ describe('narrowing the graph column', () => {
 	const widths = Array.from({ length: 331 - 40 + 1 }, (_, i) => 331 - i);
 
 	it('leaves a lane that still fits exactly where it rests', () => {
-		// 185px leaves 140px of span: lanes 0–5 (offsets 0–130) fit.
+		// 185px leaves 139px of span: lanes 0–4 (offsets 0–112) fit.
 		const span = laneSpanFor(185);
-		expect(span).toBe(140);
-		for (let lane = 0; lane <= 5; lane++) {
+		expect(span).toBe(139);
+		for (let lane = 0; lane <= 4; lane++) {
 			expect(laneX(lane, 12, 1, span)).toBe(LANE_X0 + lane * LANE_PITCH);
 		}
 	});
 
 	it('folds every lane the boundary has reached onto the boundary', () => {
 		const span = laneSpanFor(185);
-		for (const lane of [6, 7, 11]) {
+		for (const lane of [5, 6, 7, 11]) {
 			expect(laneX(lane, 12, 1, span)).toBe(LANE_X0 + span);
 		}
 	});
