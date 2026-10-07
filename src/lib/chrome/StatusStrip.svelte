@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { version } from '$lib/version';
 	import { relativeTime } from '$lib/format';
 	import { graph } from '$lib/graph/store.svelte';
@@ -72,9 +73,9 @@
 		items.push({
 			id: 'manage-profiles',
 			label: 'Manage Profiles…',
-			run: () => {
-				window.location.href = '/settings#you';
-			}
+			// In the app, not a page load (BUG-056): reloading restarted the
+			// window, which came back on the last screen instead of Settings.
+			run: () => void goto('/settings#you')
 		});
 		return items;
 	});
