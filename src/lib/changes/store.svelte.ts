@@ -15,6 +15,8 @@
 import * as api from '../api';
 import { commitLanded } from '$lib/delight/watch';
 import { repo } from '../repo.svelte';
+import { hooks } from '$lib/hooks/store.svelte';
+import { dialog } from '$lib/ui/dialog.svelte';
 import type { DiffSide, FileDiff, Signing, StatusEntry, WorkingCopy } from '../types';
 
 /** Which file is open, and which side of the index it is being read from. */
@@ -38,6 +40,8 @@ let fileLoading = $state(false);
 let subject = $state('');
 let body = $state('');
 let amend = $state(false);
+/** Skip the hooks for the next commit only (FEAT-107). */
+let skipHooks = $state(false);
 
 /**
  * Whether this commit would be signed, and whether it could be (FEAT-019).
@@ -107,6 +111,12 @@ export const changes = {
 	},
 	get amend(): boolean {
 		return amend;
+	},
+	get skipHooks(): boolean {
+		return skipHooks;
+	},
+	setSkipHooks(next: boolean): void {
+		skipHooks = next;
 	},
 	get busy(): boolean {
 		return busy;
@@ -297,14 +307,43 @@ export const changes = {
 		const message = [subject, body].filter(Boolean).join('\n\n');
 		const amended = amend;
 
+		// The hooks, read fresh: one added in a terminal a minute ago still
+		// asks. Run them, skip them for this commit, or do not commit (FEAT-107).
+		let skip = skipHooks;
+		let names: string[] = [];
+		if (!skip) {
+			await hooks.load();
+			names = hooks.onCommit;
+			if (names.length > 0) {
+				const answer = await dialog.choose({
+					title: names.length === 1 ? `Run ${names[0]}?` : `Run ${names.length} hooks?`,
+					body: `${names.join(', ')} will run before this commit lands, and you can watch them as they do.`,
+					confirmLabel: 'Run hooks',
+					alternativeLabel: 'Skip hooks'
+				});
+				if (answer === 'cancel') return false;
+				skip = answer === 'alternative';
+			}
+		}
+
+		const watched = !skip && names.length > 0;
+		const token = watched ? await hooks.begin(names) : null;
+		let failure: string | null = null;
 		const committed = await this.run(async () => {
-			await api.commit(subject, body, amend);
+			try {
+				await api.commit(subject, body, amend, skip, token);
+			} catch (e) {
+				failure = String(e);
+				throw e;
+			}
 		});
+		if (watched) hooks.finish(committed ? null : (failure ?? 'The commit did not land.'));
 
 		if (committed) {
 			subject = '';
 			body = '';
 			amend = false;
+			skipHooks = false;
 			// Not awaited: the commit is done and the screen has already moved
 			// on. Reading the diff back to work out what kind of commit it was
 			// must not hold up the next thing the user does (FEAT-072).
@@ -328,6 +367,7 @@ export const changes = {
 		subject = '';
 		body = '';
 		amend = false;
+		skipHooks = false;
 		signing = null;
 		busy = false;
 		writeError = null;

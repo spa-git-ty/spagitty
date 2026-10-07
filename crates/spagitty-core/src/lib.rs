@@ -31,6 +31,7 @@ pub mod diff;
 pub mod error;
 pub mod forge;
 pub mod graph;
+pub mod hooks;
 pub mod identity;
 pub mod merger;
 pub mod ops;

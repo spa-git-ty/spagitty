@@ -1513,3 +1513,38 @@ export type MergerReplay =
 			files: MergerFileConflict[];
 	  }
 	| { state: 'done'; tip: string; short: string; written: number };
+
+// --- Hooks (FEAT-107) -------------------------------------------------------
+
+/** Who manages a repository's hooks. */
+export type HookManager = 'git' | 'husky' | 'lefthook' | 'preCommit';
+
+/** One hook that would run, and what it runs. */
+export interface Hook {
+	name: string;
+	/** The file holding what runs — `.husky/pre-commit` for Husky, not its stub. */
+	path: string;
+	script: string;
+	truncated: boolean;
+	/** Run by a commit: pre-commit, prepare-commit-msg, commit-msg, post-commit. */
+	onCommit: boolean;
+}
+
+export interface Hooks {
+	/** The directory git runs hooks from. */
+	dir: string;
+	manager: HookManager;
+	/** lefthook's or pre-commit's configuration, where the steps are. */
+	config: { path: string; text: string } | null;
+	hooks: Hook[];
+	/** False when this repository's hooks are switched off in Spagitty. */
+	enabled: boolean;
+}
+
+export const HOOK_OUTPUT_EVENT = 'hook-output';
+
+/** A line a commit's hooks printed. */
+export interface HookOutputEvent {
+	token: number;
+	line: string;
+}

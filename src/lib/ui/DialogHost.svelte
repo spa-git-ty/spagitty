@@ -72,6 +72,9 @@
 
 			<div class="actions">
 				<Btn onclick={() => dialog.dismiss()}>Cancel</Btn>
+				{#if question.kind === 'choice' && question.alternativeLabel}
+					<Btn onclick={() => dialog.alternative()}>{question.alternativeLabel}</Btn>
+				{/if}
 				<!--
 					`quiet` on a destructive confirmation: the travelling glow says
 					"this is the thing to do next", and it is not — the thing to do

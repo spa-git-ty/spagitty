@@ -4,6 +4,9 @@
 	import { changes } from '$lib/changes/store.svelte';
 	import { describeSigningProblem as signingProblem } from '$lib/settings/describe';
 	import Chip from '$lib/ui/Chip.svelte';
+	import { onMount } from 'svelte';
+	import HooksDialog from '$lib/hooks/HooksDialog.svelte';
+	import { hooks } from '$lib/hooks/store.svelte';
 
 	/**
 	 * The commit bar, along the bottom of the screen (TASK-047).
@@ -56,12 +59,28 @@
 
 	let bodyField = $state<HTMLTextAreaElement | null>(null);
 
+	/**
+	 * The hooks a commit here runs (FEAT-107): a chip that opens what they are,
+	 * and one that skips them for the next commit. Said only when there are any.
+	 */
+	let showingHooks = $state(false);
+	const commitHooks = $derived(hooks.info?.hooks.filter((hook) => hook.onCommit) ?? []);
+	const hooksOff = $derived(hooks.info !== null && !hooks.info.enabled);
+
+	onMount(() => {
+		void hooks.load();
+	});
+
 	function describe() {
 		asked = true;
 		// After the field exists, so the focus lands in it.
 		queueMicrotask(() => bodyField?.focus());
 	}
 </script>
+
+{#if showingHooks}
+	<HooksDialog onclose={() => (showingHooks = false)} />
+{/if}
 
 <div class="message">
 	{#if willSign || changes.amend}
@@ -103,6 +122,26 @@
 		>
 			amend
 		</Chip>
+
+		{#if commitHooks.length > 0}
+			<Chip
+				active={changes.skipHooks || hooksOff}
+				disabled={hooksOff}
+				onclick={() => changes.setSkipHooks(!changes.skipHooks)}
+				title={hooksOff
+					? 'Hooks are off for this repository (Settings → Hooks)'
+					: 'Skip the hooks for this commit only'}
+			>
+				skip hooks
+			</Chip>
+			<button
+				class="text-action hooks"
+				onclick={() => (showingHooks = true)}
+				title="What runs when you commit"
+			>
+				{commitHooks.length === 1 ? '1 hook' : `${commitHooks.length} hooks`}
+			</button>
+		{/if}
 
 		{@render action?.()}
 	</div>

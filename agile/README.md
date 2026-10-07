@@ -160,6 +160,7 @@ rather than an audit.
 | [FEAT-104](items/FEAT-104-a-branch-named-where-head-is.md) | A branch named where HEAD is | chrome, 1A | Done |
 | [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Done |
 | [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Done |
+| [FEAT-107](items/FEAT-107-hooks-you-can-see-and-skip.md) | Hooks you can see and skip | 1C, Settings | Open |
 
 ## Bugs
 

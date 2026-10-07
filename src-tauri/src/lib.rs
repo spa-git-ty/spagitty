@@ -61,6 +61,8 @@ pub fn run() {
             commands::discard,
             commands::discard_hunk,
             commands::commit,
+            commands::hooks,
+            commands::set_hooks_enabled,
             commands::head_message,
             commands::branches,
             commands::checkout,

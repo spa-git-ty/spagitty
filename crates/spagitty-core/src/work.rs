@@ -108,6 +108,24 @@ pub fn discard_hunk(repo: &gix::Repository, path: &str, index: usize, header: &s
 /// The subject is required: a commit with no subject line is one nobody can
 /// read in a log, and git would open an editor we have no terminal for.
 pub fn commit(repo: &gix::Repository, subject: &str, body: &str, amend: bool) -> Result<String> {
+    commit_with(repo, subject, body, amend, false, &mut |_| {})
+}
+
+/// [`commit`], with a say over the hooks and their output as it is printed
+/// (FEAT-107).
+///
+/// Hooks are skipped when `skip_hooks` asks for this one commit, or when this
+/// repository's hooks are switched off ([`crate::hooks::enabled`]) — read
+/// here, at the moment of committing, so a screen that read the switch a
+/// minute ago cannot run hooks the person has since turned off.
+pub fn commit_with(
+    repo: &gix::Repository,
+    subject: &str,
+    body: &str,
+    amend: bool,
+    skip_hooks: bool,
+    line: &mut dyn FnMut(&str),
+) -> Result<String> {
     let subject = subject.trim();
     if subject.is_empty() {
         return Err(Error::EmptyMessage);
@@ -118,7 +136,9 @@ pub fn commit(repo: &gix::Repository, subject: &str, body: &str, amend: bool) ->
     // between the screen reading it and the commit happening.
     let signing = signing::read(repo);
 
-    shell::commit(workdir(repo)?, subject, body, amend, signing.enabled)
+    let dir = workdir(repo)?;
+    let skip = skip_hooks || !crate::hooks::enabled(dir)?;
+    shell::commit_with(dir, subject, body, amend, signing.enabled, skip, line)
         .map_err(|error| signing::as_signing_failure(error, &signing.program))
 }
 

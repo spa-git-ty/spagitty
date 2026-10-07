@@ -41,7 +41,7 @@ use spagitty_core::update;
 use spagitty_core::work;
 use spagitty_core::worktrees::{self, Worktree};
 use spagitty_core::{Error, Result};
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 use crate::about::{About, Licenses};
 use crate::accounts;
@@ -538,17 +538,67 @@ pub fn discard_hunk(
     })
 }
 
+/// What a hook printed while a commit ran it (FEAT-107).
+pub const HOOK_OUTPUT_EVENT: &str = "hook-output";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HookOutput {
+    /// The caller's, so a window shows only the commit it was opened for.
+    pub token: u64,
+    pub line: String,
+}
+
 /// Commit what is staged. Returns the new commit's id.
+///
+/// `skip_hooks` runs none of the repository's hooks for this commit; a
+/// `token` asks for everything git and its hooks print, as `hook-output`
+/// events carrying it (FEAT-107). The session is released before git runs:
+/// a hook can take a minute, and nothing else should wait in line behind it.
 #[tauri::command(async)]
-pub fn commit(
+pub fn commit<R: Runtime>(
+    app: AppHandle<R>,
     state: State<'_, AppState>,
     subject: String,
     body: String,
     amend: bool,
+    skip_hooks: Option<bool>,
+    token: Option<u64>,
 ) -> Result<String> {
-    state.with_session("commit", |session| {
-        work::commit(&session.repo.to_thread_local(), &subject, &body, amend)
-    })
+    let repo = state.with_session("commit", |session| Ok(session.repo.to_thread_local()))?;
+    work::commit_with(
+        &repo,
+        &subject,
+        &body,
+        amend,
+        skip_hooks.unwrap_or(false),
+        &mut |line| {
+            if let Some(token) = token {
+                let _ = app.emit(
+                    HOOK_OUTPUT_EVENT,
+                    HookOutput {
+                        token,
+                        line: line.to_string(),
+                    },
+                );
+            }
+        },
+    )
+}
+
+/// The repository's hooks, what each runs, and whether Spagitty runs them
+/// (FEAT-107).
+#[tauri::command(async)]
+pub fn hooks(state: State<'_, AppState>) -> Result<spagitty_core::hooks::Hooks> {
+    let path = state.with_session("hooks", |session| Ok(session.path.clone()))?;
+    spagitty_core::hooks::list(&path)
+}
+
+/// Switch this repository's hooks on or off for commits made in Spagitty.
+#[tauri::command(async)]
+pub fn set_hooks_enabled(state: State<'_, AppState>, enabled: bool) -> Result<()> {
+    let path = state.with_session("set_hooks_enabled", |session| Ok(session.path.clone()))?;
+    spagitty_core::hooks::set_enabled(&path, enabled)
 }
 
 /// The message of the commit HEAD points at, for pre-filling an amend.
