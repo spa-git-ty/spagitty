@@ -11,6 +11,9 @@
 		type UserReviewRole
 	} from '$lib/requests/store.svelte';
 	import type { MergeMethod, ReviewVerdict } from '$lib/types';
+	import { goto } from '$app/navigation';
+	import { review } from '$lib/review/store.svelte';
+	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -62,6 +65,26 @@
 	function handleFileClick(path: string, commitSha: string | null = null) {
 		requests.selectCommit(commitSha);
 		requests.selectPath(path);
+	}
+
+	/**
+	 * Review this pull request in the review room (FEAT-105): where comments
+	 * are written on any line or range, threads answered and resolved, and the
+	 * review finished with a verdict. The room is built for answering a pull
+	 * request; this screen reads, merges and closes it.
+	 */
+	let openingReview = $state(false);
+	async function openInReview() {
+		if (!request || openingReview) return;
+		openingReview = true;
+		try {
+			if (await review.open(request)) await goto('/review');
+			else notice.failed('The review could not be opened', review.notHere ?? undefined);
+		} catch (e) {
+			notice.failed('The review could not be opened', e);
+		} finally {
+			openingReview = false;
+		}
 	}
 
 	async function handlePublishReview() {
@@ -152,6 +175,14 @@
 		<div class="head-right">
 			<div class="pr-actions">
 				<ContributedActions context="pullRequest" />
+				<Btn
+					primary
+					busy={openingReview}
+					onclick={openInReview}
+					title="Comment, reply and finish a review"
+				>
+					<Icon name="review" size="1em" />Review
+				</Btn>
 				{#if canDraft}
 					<Btn
 						onclick={handleToggleDraft}
@@ -433,6 +464,7 @@
 					<span class="developer-status note">
 						{unresolvedCount === 0 ? '✓ All review comments addressed' : 'Reply or resolve comments to notify reviewer'}
 					</span>
+					<Btn primary busy={openingReview} onclick={openInReview}>Reply in Review</Btn>
 				</div>
 			{/if}
 		</footer>
