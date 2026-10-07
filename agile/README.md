@@ -159,6 +159,7 @@ rather than an audit.
 | [FEAT-103](items/FEAT-103-a-rebase-that-stops-in-merger.md) | A rebase that stops, in Merger | 1S | Open |
 | [FEAT-104](items/FEAT-104-a-branch-named-where-head-is.md) | A branch named where HEAD is | chrome, 1A | Open |
 | [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Open |
+| [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Open |
 
 ## Bugs
 

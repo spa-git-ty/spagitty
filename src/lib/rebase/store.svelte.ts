@@ -156,9 +156,38 @@ export const rebase = {
 	async setAction(id: string, action: RebaseAction): Promise<void> {
 		const at = positionOf(id);
 		if (at === -1) return;
-		plan[at] = { id, action };
+		// A message typed for a reword survives a change of mind and back.
+		plan[at] = { ...plan[at], id, action };
 		plan = [...plan];
 		await this.recompute();
+	},
+
+	/**
+	 * The new message for a reword (FEAT-106). Collected on screen, because
+	 * the editor git would open at execution time has no terminal here; a
+	 * reword with an empty message runs as a pick.
+	 */
+	setMessage(id: string, message: string): void {
+		const at = positionOf(id);
+		if (at === -1) return;
+		plan[at] = { ...plan[at], message };
+		plan = [...plan];
+	},
+
+	/** For tests and previews: a planned rebase, without the backend. */
+	seed(next: { upstream: string; todo: RebaseTodo; plan?: RebaseEdit[]; preview: RebasePreview }) {
+		upstream = next.upstream;
+		todo = next.todo;
+		plan = next.plan ?? next.todo.rows.map((row) => ({ id: row.id, action: 'pick' as const }));
+		preview = next.preview;
+		focused = next.todo.rows[0]?.id ?? null;
+		error = null;
+		loading = false;
+	},
+
+	/** The message typed for a commit's reword, or empty. */
+	messageOf(id: string): string {
+		return plan[positionOf(id)]?.message ?? '';
 	},
 
 	/**

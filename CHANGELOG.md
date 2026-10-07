@@ -16,6 +16,12 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Added
 
+- **Rebase, redesigned to read like Merger.** Your branch on one side, the
+  branch it is replayed onto on the other, and the result between them —
+  how many commits, what is folded or dropped, which may stop on a conflict
+  — before anything is written. Pick, reword, squash or drop each commit on
+  its own card, reorder by dragging, type a reword's new message in place,
+  and see the history the plan leaves.
 - **Review a pull request from Pull requests.** An open pull request has a
   **Review** button that takes it to the review room, to comment on lines,
   answer threads and finish the review; your own has **Reply in Review**.
