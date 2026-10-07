@@ -2,7 +2,7 @@
 
 # BUG-054 — Review's loader, its Conversation card, and scrollbars at rest
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Fixed — merged into `main`; the manual sweep is not yet run.
 **Branch:** `bugfix/BUG-054-review-loader-conversation-panel-and-scrollbars`
 **Screens:** 1R, all.
 **Raised by:** the author, 2026-10-07, with a screenshot: Review showed only the small strands at the top while it read, never the main loader; the Conversation card's *Resolved* chip ran out past the card's edge, and the card could not be put away; and scrollbars should not show at rest, only while something scrolls.

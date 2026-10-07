@@ -2,7 +2,7 @@
 
 # FEAT-107 — Hooks you can see and skip
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Done — merged into `main`; the manual sweep is not yet run.
 **Branch:** `feature/FEAT-107-hooks-you-can-see-and-skip`
 **Screens:** 1C, Settings.
 **Raised by:** the author, 2026-10-07: switch commit hooks off for a project, skip them for one commit, see what hooks there are and what they run (Husky's code and steps), confirm before they run with OK / Cancel / Skip, and watch their output in a window that matches the design.

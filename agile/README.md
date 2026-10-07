@@ -160,7 +160,7 @@ rather than an audit.
 | [FEAT-104](items/FEAT-104-a-branch-named-where-head-is.md) | A branch named where HEAD is | chrome, 1A | Done |
 | [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Done |
 | [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Done |
-| [FEAT-107](items/FEAT-107-hooks-you-can-see-and-skip.md) | Hooks you can see and skip | 1C, Settings | Open |
+| [FEAT-107](items/FEAT-107-hooks-you-can-see-and-skip.md) | Hooks you can see and skip | 1C, Settings | Done |
 
 ## Bugs
 
@@ -220,7 +220,7 @@ rather than an audit.
 | [BUG-051](items/BUG-051-what-the-author-saw-on-first-run.md) | What the author saw on first run | 1S, 1D, 1F, 1A | Fixed |
 | [BUG-052](items/BUG-052-squeezed-lanes-silent-waits-and-striped-notices.md) | Squeezed lanes, silent waits and striped notices | 1A, all, chrome | Fixed |
 | [BUG-053](items/BUG-053-what-the-author-found-sweeping.md) | What the author found sweeping | 1H, 1A, chrome | Fixed |
-| [BUG-054](items/BUG-054-review-loader-conversation-panel-and-scrollbars.md) | Review's loader, its Conversation card, and scrollbars at rest | 1R, all | Open |
+| [BUG-054](items/BUG-054-review-loader-conversation-panel-and-scrollbars.md) | Review's loader, its Conversation card, and scrollbars at rest | 1R, all | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
