@@ -38,6 +38,15 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Fixed
 
+- **Changes made in your editor show up straight away.** The working-copy
+  count and the graph's uncommitted row update as soon as a file is saved;
+  ignored build output does not trigger anything.
+- **Branch makes the branch where you point**, at the selected commit or HEAD,
+  and asks before creating and checking it out. **Stash** stashes your work
+  right there, with an editable *WIP on <branch>* message. Clone and Rebase
+  left the bottom bar.
+- **Review says when no account is connected**, like Pull requests, and both
+  centre their empty states.
 - **Review loads with the main loader**, and its Conversation card no longer
   spills its chips past its edge. The card can be hidden into a tab at the
   edge and brought back.

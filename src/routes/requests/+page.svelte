@@ -90,7 +90,9 @@
 						</Btn>
 					</div>
 				{:else if requests.all.length === 0}
-					<p class="note">Nothing open. Every pull request on this repository is closed.</p>
+					<div class="empty">
+						<p class="note">Nothing open. Every pull request on this repository is closed.</p>
+					</div>
 				{:else}
 					{#if needingYou.length > 0}
 						<section class="group">
@@ -192,11 +194,20 @@
 		gap: 4px;
 	}
 
+	/* In the middle of the pane, like every other empty state (BUG-055). */
 	.empty {
+		flex: 1;
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
-		gap: 8px;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		padding: 32px 16px;
+		text-align: center;
+	}
+
+	.empty p {
+		margin: 0;
 		max-width: 520px;
 	}
 </style>

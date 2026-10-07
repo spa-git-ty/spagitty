@@ -275,7 +275,7 @@ fn open_as<R: Runtime>(
         Vec::new(),
         order,
     );
-    let watcher = watch::watch(app.clone(), &git_dir);
+    let watcher = watch::watch(app.clone(), &git_dir, local.workdir());
 
     let mut slot = state.lock_session("open_as");
     // Overtaken while it was reading: the worker and watcher it started are

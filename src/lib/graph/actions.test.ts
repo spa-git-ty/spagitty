@@ -22,6 +22,7 @@ interface Asked {
 	body: string;
 	confirmLabel: string;
 	danger?: boolean;
+	value?: string;
 }
 
 const confirm = vi.fn<(options: Asked) => Promise<boolean>>();
@@ -71,6 +72,9 @@ vi.mock('$lib/repo.svelte', () => ({
 		refresh: () => repoRefresh(),
 		get counts() {
 			return { working };
+		},
+		get info() {
+			return { head: { branch: 'feature/tabs', short: 'abc1234' } };
 		}
 	}
 }));
@@ -700,5 +704,38 @@ describe('pull', () => {
 			await actions.pull();
 			expect(repoRefresh).toHaveBeenCalled();
 		});
+	});
+});
+
+/** BUG-055: the bottom bar's Stash puts the work away here, in one question. */
+describe('quickStash', () => {
+	it('asks with WIP on the branch as the message, then stashes everything', async () => {
+		working = 3;
+		prompt.mockResolvedValueOnce('WIP on feature/tabs: half the drag');
+
+		expect(await actions.quickStash()).toBe(true);
+
+		const asked = prompt.mock.calls[0][0];
+		expect(asked.value).toBe('WIP on feature/tabs');
+		expect(asked.confirmLabel).toBe('Stash now');
+		expect(api.stashPush).toHaveBeenCalledWith('WIP on feature/tabs: half the drag', true);
+		working = 0;
+	});
+
+	it('stashes nothing when refused', async () => {
+		working = 2;
+		prompt.mockResolvedValueOnce(null);
+
+		expect(await actions.quickStash()).toBe(false);
+		expect(api.stashPush).not.toHaveBeenCalled();
+		working = 0;
+	});
+
+	it('asks nothing when there is nothing to stash', async () => {
+		working = 0;
+
+		expect(await actions.quickStash()).toBe(false);
+		expect(prompt).not.toHaveBeenCalled();
+		expect(ok).toHaveBeenCalledWith('Nothing to stash', undefined);
 	});
 });

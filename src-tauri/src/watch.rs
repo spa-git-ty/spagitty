@@ -8,11 +8,16 @@
 //! being slow to notice or burning CPU on a directory that is idle almost all
 //! of the time.
 //!
-//! Only `.git` is watched, not the working tree. Everything the Graph screen
-//! shows lives in there, and recursively watching a large checkout is exactly
-//! the cost we are trying to avoid.
+//! The working tree is watched too (BUG-055). It was once left out to save a
+//! recursive watch of a large checkout, but an edit in an editor touches
+//! nothing in `.git`, so the working-copy count and the graph's
+//! uncommitted-changes row stayed stale until something else wrote the index.
+//! What keeps it cheap is the filter: a burst of working-tree events counts only
+//! when one of its paths is not git-ignored, so a build or an install writing
+//! thousands of ignored files asks for nothing.
 
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -63,7 +68,11 @@ impl Drop for RepoWatcher {
 /// Start watching `git_dir`. Returns `None` if the platform watcher could not
 /// be created — the app still works, it just won't notice outside changes,
 /// which is better than refusing to open the repository.
-pub fn watch<R: Runtime>(app: AppHandle<R>, git_dir: &Path) -> Option<RepoWatcher> {
+pub fn watch<R: Runtime>(
+    app: AppHandle<R>,
+    git_dir: &Path,
+    workdir: Option<&Path>,
+) -> Option<RepoWatcher> {
     let (event_tx, event_rx) = channel::<notify::Result<notify::Event>>();
     let (stop_tx, stop_rx) = channel::<()>();
 
@@ -74,10 +83,17 @@ pub fn watch<R: Runtime>(app: AppHandle<R>, git_dir: &Path) -> Option<RepoWatche
     .ok()?;
 
     watcher.watch(git_dir, RecursiveMode::Recursive).ok()?;
+    // The working tree, when there is one. A watch that cannot be made (a
+    // Linux machine out of inotify watches) leaves `.git` watched, as before.
+    if let Some(workdir) = workdir {
+        let _ = watcher.watch(workdir, RecursiveMode::Recursive);
+    }
 
+    let git_dir = canonical(git_dir);
+    let workdir = workdir.map(canonical);
     let handle = std::thread::Builder::new()
         .name("spagitty-watch".into())
-        .spawn(move || debounce(app, event_rx, stop_rx))
+        .spawn(move || debounce(app, event_rx, stop_rx, git_dir, workdir))
         .ok()?;
 
     Some(RepoWatcher {
@@ -87,11 +103,25 @@ pub fn watch<R: Runtime>(app: AppHandle<R>, git_dir: &Path) -> Option<RepoWatche
     })
 }
 
+fn canonical(path: &Path) -> PathBuf {
+    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// Working-tree paths a burst may name before the rest are not looked at: one
+/// that git would notice among the first few hundred is enough to refresh.
+const CANDIDATES: usize = 256;
+
 fn debounce<R: Runtime>(
     app: AppHandle<R>,
     events: Receiver<notify::Result<notify::Event>>,
     stop: Receiver<()>,
+    git_dir: PathBuf,
+    workdir: Option<PathBuf>,
 ) {
+    // Opened here, on this thread, the first time a working-tree path needs
+    // asking about, and kept: the ignore rules are read from it.
+    let mut rules: Option<spagitty_core::ignore::Rules> = None;
+    let mut candidates: HashSet<PathBuf> = HashSet::new();
     loop {
         if stop.try_recv().is_ok() {
             return;
@@ -100,7 +130,7 @@ fn debounce<R: Runtime>(
         // Block until something happens, then keep collecting until the
         // repository goes quiet again.
         let mut pending = match events.recv_timeout(Duration::from_millis(250)) {
-            Ok(Ok(event)) => classify(&event),
+            Ok(Ok(event)) => classify(&event, &git_dir, &mut candidates),
             Ok(Err(_)) => continue,
             Err(RecvTimeoutError::Timeout) => continue,
             Err(RecvTimeoutError::Disconnected) => return,
@@ -109,7 +139,7 @@ fn debounce<R: Runtime>(
         loop {
             match events.recv_timeout(QUIET_PERIOD) {
                 Ok(Ok(event)) => {
-                    let next = classify(&event);
+                    let next = classify(&event, &git_dir, &mut candidates);
                     pending.refs |= next.refs;
                     pending.worktree |= next.worktree;
                 }
@@ -118,6 +148,20 @@ fn debounce<R: Runtime>(
                 Err(RecvTimeoutError::Disconnected) => return,
             }
         }
+
+        if !pending.worktree && !candidates.is_empty() {
+            if let Some(workdir) = &workdir {
+                if rules.is_none() {
+                    rules = spagitty_core::ignore::Rules::open(workdir);
+                }
+                let paths: Vec<PathBuf> = candidates.iter().take(CANDIDATES).cloned().collect();
+                pending.worktree = match &rules {
+                    Some(rules) => rules.any_not_ignored(&paths),
+                    None => true,
+                };
+            }
+        }
+        candidates.clear();
 
         if !pending.is_empty() {
             let _ = app.emit(CHANGED_EVENT, pending);
@@ -150,7 +194,18 @@ fn is_change(kind: &EventKind) -> bool {
 ///
 /// Lock files are ignored: git writes `ref.lock` before `ref`, so reacting to
 /// the lock would mean reading the repository exactly while it is mid-write.
-fn classify(event: &notify::Event) -> ChangedEvent {
+///
+/// A path outside `git_dir` is in the working tree: it goes into
+/// `candidates`, for the debounce to ask whether git would notice it.
+///
+/// Refs are recognised by path components, not by a `/refs/` substring: on
+/// Windows the separator is `\`, and the substring test never matched there,
+/// so a branch moved outside Spagitty went unnoticed (BUG-055).
+fn classify(
+    event: &notify::Event,
+    git_dir: &Path,
+    candidates: &mut HashSet<PathBuf>,
+) -> ChangedEvent {
     let mut out = ChangedEvent::default();
 
     if !is_change(&event.kind) {
@@ -163,8 +218,13 @@ fn classify(event: &notify::Event) -> ChangedEvent {
             continue;
         }
 
-        let text = path.to_string_lossy();
-        if text.contains("/refs/") || name == "HEAD" || name == "packed-refs" {
+        let Ok(inside) = path.strip_prefix(git_dir) else {
+            if candidates.len() < CANDIDATES {
+                candidates.insert(path.clone());
+            }
+            continue;
+        };
+        if inside.starts_with("refs") || name == "HEAD" || name == "packed-refs" {
             out.refs = true;
         } else if name == "index" {
             out.worktree = true;
@@ -305,6 +365,11 @@ mod tests {
     // what it classifies.
 
     use crate::testing::{self, Emitted};
+
+    /// `classify` for a repository whose `.git` is at `.git`.
+    fn classify(event: &notify::Event) -> ChangedEvent {
+        super::classify(event, Path::new(".git"), &mut HashSet::new())
+    }
     use serde_json::Value;
     use std::sync::mpsc::Sender;
 
@@ -326,7 +391,9 @@ mod tests {
             let (events, event_rx) = channel();
             let (stop, stop_rx) = channel();
             let handle = app.handle().clone();
-            let thread = std::thread::spawn(move || debounce(handle, event_rx, stop_rx));
+            let thread = std::thread::spawn(move || {
+                debounce(handle, event_rx, stop_rx, PathBuf::from(".git"), None)
+            });
 
             Running {
                 events,
@@ -408,5 +475,54 @@ mod tests {
         let events = running.changed.at_least(2);
         assert_eq!(events[1]["worktree"], true);
         assert_eq!(events[1]["refs"], false);
+    }
+
+    /// BUG-055: an edit in the working tree refreshes the working copy; a burst
+    /// of git-ignored output does not.
+    #[test]
+    fn an_edit_in_the_working_tree_is_noticed_and_ignored_output_is_not() {
+        let fixture = spagitty_core::fixture::Fixture::linear(1);
+        std::fs::write(
+            fixture.path().join(".gitignore"),
+            "target/
+",
+        )
+        .expect("ignore");
+        std::fs::create_dir_all(fixture.path().join("target")).expect("dir");
+        std::fs::write(fixture.path().join("target/out.bin"), "x").expect("out");
+        std::fs::write(fixture.path().join("notes.md"), "x").expect("notes");
+
+        let app = testing::app();
+        let changed = Emitted::<Value>::on(app.handle(), CHANGED_EVENT);
+        let (events, event_rx) = channel();
+        let (stop, stop_rx) = channel();
+        let handle = app.handle().clone();
+        let work = canonical(fixture.path());
+        let git = work.join(".git");
+        let thread = {
+            let work = work.clone();
+            std::thread::spawn(move || debounce(handle, event_rx, stop_rx, git, Some(work)))
+        };
+        let wrote = |path: PathBuf| Ok(notify::Event::new(WROTE).add_path(path));
+
+        events
+            .send(wrote(work.join("target/out.bin")))
+            .expect("send");
+        changed.no_more_than(0);
+
+        events.send(wrote(work.join("notes.md"))).expect("send");
+        let got = changed.at_least(1);
+        assert_eq!(got[0]["worktree"], true);
+        assert_eq!(got[0]["refs"], false);
+
+        let _ = stop.send(());
+        thread.join().expect("the debounce thread");
+    }
+
+    #[test]
+    fn a_ref_written_through_windows_separators_is_a_ref_change() {
+        let git = Path::new("C:").join("repo").join(".git");
+        let event = notify::Event::new(WROTE).add_path(git.join("refs").join("heads").join("main"));
+        assert!(super::classify(&event, &git, &mut HashSet::new()).refs);
     }
 }

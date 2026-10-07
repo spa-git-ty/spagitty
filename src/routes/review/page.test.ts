@@ -361,3 +361,16 @@ it('hides the conversation into a tab at the edge, and remembers it', async () =
 	click(view.get('button.conversation-tab'));
 	expect(view.all('aside[aria-label="Conversation"]')).toHaveLength(1);
 });
+
+/** BUG-055: no account for the host is a state, said as Pull requests says it. */
+it('says no account is connected in All my repos, not the host refusing a token', async () => {
+	vi.mocked(api.forgeAccounts).mockResolvedValue([]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards().length).toBeGreaterThan(0));
+	click(button('All my repos'));
+	await vi.waitFor(() => expect(view.text()).toContain('No account is connected.'));
+
+	expect(api.involvedPullRequests).not.toHaveBeenCalled();
+	expect(view.text()).not.toContain('refused the token');
+	expect(view.all('.empty')).toHaveLength(1);
+});

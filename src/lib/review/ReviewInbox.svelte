@@ -37,6 +37,15 @@
 		void review.loadSummaries();
 	});
 
+	/**
+	 * No account to ask with — said as Pull requests says it, not as the host's
+	 * refusal (BUG-055). The refusal is matched too, for a host that answers
+	 * before the inbox has asked about accounts.
+	 */
+	const noAccount = $derived(
+		review.error ? review.error.includes('no account is connected') : !review.connected
+	);
+
 	async function open(id: string) {
 		const pr = review.list.find((candidate) => candidate.id === id);
 		if (!pr || opening) return;
@@ -67,20 +76,20 @@
 		<div class="lists">
 			{#if review.loading && groups.length === 0 && !review.error}
 				<Loader label="Reading pull requests…" />
+			{:else if review.scope === 'repo' && requests.repo === null && !review.loading}
+				<div class="empty"><p class="note">This repository is not on a service Spagitty can read.</p></div>
+			{:else if noAccount && !review.loading}
+				<div class="empty">
+					<p class="note">No account is connected.</p>
+					<Btn primary onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
+				</div>
 			{:else if review.error}
 				<div class="empty">
 					<p class="note error">{review.error}</p>
 					<Btn onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
 				</div>
-			{:else if review.scope === 'repo' && requests.repo === null && !review.loading}
-				<p class="note">This repository is not on a service Spagitty can read.</p>
-			{:else if review.scope === 'repo' && !requests.connected && !review.loading}
-				<div class="empty">
-					<p class="note">No account is connected.</p>
-					<Btn primary onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
-				</div>
 			{:else if groups.length === 0 && !review.loading}
-				<p class="note">Nothing to review.</p>
+				<div class="empty"><p class="note">Nothing to review.</p></div>
 			{:else}
 				{#each groups as group (group.id)}
 					<section class="group">
@@ -178,11 +187,20 @@
 		opacity: 0.7;
 	}
 
+	/* In the middle of the pane, like every other empty state (BUG-055). */
 	.empty {
+		flex: 1;
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
-		gap: 8px;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		padding: 32px 16px;
+		text-align: center;
+	}
+
+	.empty p {
+		margin: 0;
 		max-width: 520px;
 	}
 

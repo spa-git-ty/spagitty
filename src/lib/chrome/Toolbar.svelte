@@ -2,9 +2,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { branches } from '$lib/branches/store.svelte';
-	import { clone } from '$lib/clone/store.svelte';
+	import { page } from '$app/state';
+	import { graph } from '$lib/graph/store.svelte';
 	import { commandLog } from '$lib/commandlog/store.svelte';
-	import { fetchAll, pull, pushCurrent } from '$lib/graph/actions';
+	import { fetchAll, pull, pushCurrent, quickStash } from '$lib/graph/actions';
 	import { branching } from '$lib/graph/branching.svelte';
 	import { network } from '$lib/network/store.svelte';
 	import { remotes } from '$lib/remotes/store.svelte';
@@ -201,10 +202,13 @@
 	 * screen, and not a dialog. The graph is opened if another screen was.
 	 */
 	function branchHere() {
-		const id = head?.id;
+		// The commit selected on the graph, when the graph is what is showing
+		// and a commit row is selected (BUG-055); HEAD otherwise.
+		const selected = page.url.pathname === '/' ? graph.selected : null;
+		const id = selected?.id ?? head?.id;
 		if (!id) return;
 		branching.start(id);
-		void goto('/');
+		if (page.url.pathname !== '/') void goto('/');
 	}
 
 	function openPullMenu(anchor: HTMLElement) {
@@ -262,18 +266,23 @@
 				label: 'Push',
 				title: 'Push the current branch',
 				act: () => pushCurrent()
-			},
-			{ icon: 'clone', label: 'Clone', title: 'Bring a repository in', act: () => clone.show() }
+			}
 		],
 		[
 			{
 				icon: 'branch',
 				label: 'Branch',
-				title: head?.id ? 'Name a branch where HEAD is' : 'Nothing to branch from yet',
+				title: head?.id
+					? 'Name a branch at the commit selected in the graph, or at HEAD'
+					: 'Nothing to branch from yet',
 				act: () => branchHere()
 			},
-			{ icon: 'stash', label: 'Stash', href: '/stash' },
-			{ icon: 'rebase', label: 'Rebase', href: '/rebase' }
+			{
+				icon: 'stash',
+				label: 'Stash',
+				title: 'Stash the work in progress',
+				act: () => void quickStash()
+			}
 		]
 	]);
 </script>
