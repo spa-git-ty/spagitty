@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import LaneCanvas from '$lib/graph/LaneCanvas.svelte';
 	import GraphHeader from '$lib/graph/GraphHeader.svelte';
@@ -14,6 +15,7 @@
 	import { visibility } from '$lib/graph/visibility.svelte';
 	import { selection } from '$lib/graph/selection.svelte';
 	import * as act from '$lib/graph/actions';
+	import { branchName, branching } from '$lib/graph/branching.svelte';
 	import { goto } from '$app/navigation';
 	import { merger } from '$lib/merger/store.svelte';
 	import { clockTime, fullDate, isNotable, relativeTime } from '$lib/format';
@@ -401,7 +403,7 @@
 			{
 				id: 'branch',
 				label: 'Create branch here',
-				run: () => act.createBranchAt(row.id, row.short)
+				run: () => branching.start(row.id)
 			},
 			{ id: 'tag', label: 'Create tag here', run: () => act.createTagAt(row.id, row.short) },
 			{ separator: true },
@@ -577,6 +579,62 @@
 		} else {
 			selection.only(index);
 			graph.select(index);
+		}
+	}
+
+	// --- A branch named in place (FEAT-104) ------------------------------
+
+	let naming = $state('');
+	/** Revealed once, so a batch arriving later does not pull the view back. */
+	let revealed: string | null = null;
+	let creating = $state(false);
+
+	/** The row the name field is on, once it is loaded; brought into view. */
+	$effect(() => {
+		const id = branching.at;
+		void graph.version;
+		if (id === null) {
+			revealed = null;
+			return;
+		}
+		if (id === revealed) return;
+		untrack(() => {
+			naming = '';
+			for (let index = 0; index < graph.count; index++) {
+				if (graph.row(index)?.id === id) {
+					revealed = id;
+					scrollIntoView(index);
+					return;
+				}
+			}
+		});
+	});
+
+	/** Focus the field the moment it is drawn, with the cursor in it. */
+	function focusOnMount(input: HTMLInputElement) {
+		input.focus();
+	}
+
+	async function createNamed(id: string) {
+		const name = branchName(naming);
+		if (name === '' || creating) return;
+		creating = true;
+		const made = await act.createBranchNamed(name, id);
+		creating = false;
+		if (made) branching.cancel();
+		revealed = null;
+	}
+
+	function nameKey(event: KeyboardEvent, id: string) {
+		// The listbox's arrow keys and Enter belong to the rows, not to a
+		// field being typed in.
+		event.stopPropagation();
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			void createNamed(id);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			branching.cancel();
 		}
 	}
 
@@ -761,6 +819,27 @@
 						{#each shown as column, index (column.id)}
 							{#if column.id === 'refs'}
 								<div class="cell refs" style="width: {column.width}px">
+									{#if branching.at === row.id}
+										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+										<span class="naming" onclick={(event) => event.stopPropagation()}>
+											<input
+												class="name-field mono"
+												placeholder="branch name"
+												spellcheck="false"
+												aria-label="New branch name"
+												disabled={creating}
+												bind:value={naming}
+												use:focusOnMount
+												onkeydown={(event) => nameKey(event, row.id)}
+												onblur={() => {
+													if (!creating) {
+														branching.cancel();
+														revealed = null;
+													}
+												}}
+											/>
+										</span>
+									{/if}
 									{#each row.refs.slice(0, MAX_CHIPS) as chip (chip.kind + chip.name)}
 										<!-- svelte-ignore a11y_no_static_element_interactions -->
 										<span
@@ -1315,6 +1394,31 @@
 	   still joined to the node it names. Tucking the chips against the graph
 	   would shorten that line and scatter the names; the names stay a column.
 	*/
+	/* The name field takes the cell, ahead of the row's own labels, and
+	   looks like a chip being written (FEAT-104). */
+	.naming {
+		flex: 1 0 auto;
+		min-width: 0;
+		display: flex;
+	}
+
+	.name-field {
+		flex: 1;
+		min-width: 0;
+		height: calc(var(--fs-mono) * 1.9);
+		padding: 0 10px;
+		border-radius: var(--r-pill);
+		border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+		background: var(--surface);
+		color: var(--ink);
+		font-size: var(--fs-mono);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+	}
+
+	.name-field:focus {
+		outline: none;
+	}
+
 	.refs {
 		justify-content: flex-start;
 		gap: 4px;

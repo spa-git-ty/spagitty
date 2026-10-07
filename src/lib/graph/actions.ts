@@ -88,17 +88,12 @@ export async function copyId(id: string, short: string): Promise<void> {
 	}
 }
 
-export async function createBranchAt(id: string, short: string): Promise<void> {
-	const name = await dialog.prompt({
-		title: 'Create branch here',
-		body: `The new branch will start at ${short} and be checked out.`,
-		label: 'Branch name',
-		placeholder: 'feature/…',
-		confirmLabel: 'Create'
-	});
-	if (name === null) return;
-
-	await perform(`Created ${name}`, 'Could not create the branch', () =>
+/**
+ * Create a branch at a commit and check it out, with the name already typed —
+ * the graph's own name field, opened by the toolbar's Branch (FEAT-104).
+ */
+export function createBranchNamed(name: string, id: string): Promise<boolean> {
+	return perform(`Created ${name}`, 'Could not create the branch', () =>
 		api.createBranch(name, id, true)
 	);
 }

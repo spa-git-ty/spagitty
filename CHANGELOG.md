@@ -14,6 +14,13 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Branch names a branch where you are.** The bottom bar's Branch opens a
+  name field on the graph, in HEAD's row: type a name, press Enter, and the
+  branch is made there and checked out — no dialog. *Create branch here* on
+  any commit does the same in its row.
+
 ### Fixed
 
 - **Graph nodes are bigger, and merges turn like GitKraken's.** Portraits and
