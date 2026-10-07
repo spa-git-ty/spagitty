@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, flushSync, render } from '../../testing/mount';
-import type { RepoCounts, RepoInfo } from '$lib/types';
+import type { GraphRow, RepoCounts, RepoInfo } from '$lib/types';
 
 const goto = vi.fn();
 vi.mock('$app/navigation', () => ({ goto: (path: string) => goto(path) }));
@@ -66,6 +66,26 @@ function info(
 		bare: false,
 		lastFetched: null,
 		head: { branch, detached, id: 'a'.repeat(40), short: 'aaaaaaa' }
+	};
+}
+
+/** A graph row, enough for the toolbar to read its id. */
+function graphRow(index: number): GraphRow {
+	return {
+		index,
+		id: `${index}`.repeat(40),
+		short: `${index}`.repeat(7),
+		summary: `commit ${index}`,
+		authorName: 'Ada',
+		authorEmail: '',
+		initials: 'A',
+		time: 0,
+		lane: 0,
+		color: 0,
+		signed: false,
+		parents: [],
+		refs: [],
+		edges: []
 	};
 }
 
@@ -704,23 +724,19 @@ describe('Toolbar', () => {
 		view.destroy();
 	});
 
-	it('navigates from the actions that do exist', () => {
+	it('stashes in place rather than opening the Stash screen (BUG-055)', () => {
 		const view = render(Toolbar, {});
+		goto.mockClear();
 
-		for (const [label, route] of [
-			['Stash', '/stash'],
-			['Rebase', '/rebase']
-		] as const) {
-			goto.mockClear();
-			const button = view.all('.tool').find((b) => b.textContent?.includes(label));
-			click(button as HTMLElement);
-			expect(goto).toHaveBeenCalledWith(route);
-		}
+		const button = view.all('.tool').find((b) => b.textContent?.includes('Stash'));
+		click(button as HTMLElement);
+		expect(goto).not.toHaveBeenCalledWith('/stash');
 
 		view.destroy();
 	});
 
 	it('opens a name field in HEAD\'s row on the graph, not a screen (FEAT-104)', () => {
+		at('/stash');
 		repoControl.setInfo(info('main'));
 		const view = render(Toolbar, {});
 		goto.mockClear();
@@ -733,6 +749,31 @@ describe('Toolbar', () => {
 		expect(goto).not.toHaveBeenCalledWith('/branches');
 
 		branching.cancel();
+		at('/');
+		view.destroy();
+	});
+
+	it('names the branch at the commit selected on the graph, when there is one (BUG-055)', () => {
+		at('/');
+		repoControl.setInfo(info('main'));
+		graphControl.setRows([{ ...graphRow(0), id: 'b'.repeat(40) }, { ...graphRow(1), id: 'c'.repeat(40) }]);
+		graphControl.setSelected(1);
+		const view = render(Toolbar, {});
+		goto.mockClear();
+
+		click(view.all('.tool').find((b) => b.textContent?.includes('Branch')) as HTMLElement);
+
+		expect(branching.at).toBe('c'.repeat(40));
+		expect(goto).not.toHaveBeenCalled();
+		branching.cancel();
+		view.destroy();
+	});
+
+	it('offers no Clone and no Rebase in the bottom bar (BUG-055)', () => {
+		const view = render(Toolbar, {});
+		const labels = view.all('.tool').map((b) => b.textContent?.trim() ?? '');
+		expect(labels.some((label) => label.includes('Clone'))).toBe(false);
+		expect(labels.some((label) => label.includes('Rebase'))).toBe(false);
 		view.destroy();
 	});
 

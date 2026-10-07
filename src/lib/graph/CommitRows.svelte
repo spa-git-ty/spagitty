@@ -15,6 +15,7 @@
 	import { visibility } from '$lib/graph/visibility.svelte';
 	import { selection } from '$lib/graph/selection.svelte';
 	import * as act from '$lib/graph/actions';
+	import { dialog } from '$lib/ui/dialog.svelte';
 	import { branchName, branching } from '$lib/graph/branching.svelte';
 	import { goto } from '$app/navigation';
 	import { merger } from '$lib/merger/store.svelte';
@@ -610,28 +611,50 @@
 		});
 	});
 
+	let nameField: HTMLInputElement | null = null;
+
 	/** Focus the field the moment it is drawn, with the cursor in it. */
 	function focusOnMount(input: HTMLInputElement) {
+		nameField = input;
 		input.focus();
 	}
 
-	async function createNamed(id: string) {
+	/**
+	 * Enter: ask, then create and check out (BUG-055). `creating` is set before
+	 * the question opens, because the question takes the focus and a field
+	 * that lost it would otherwise put itself away.
+	 */
+	async function createNamed(row: GraphRow) {
 		const name = branchName(naming);
 		if (name === '' || creating) return;
 		creating = true;
-		const made = await act.createBranchNamed(name, id);
+		const agreed = await dialog.confirm({
+			title: 'Create branch here',
+			body: `${name} starts at ${row.short} — ${row.summary} — and is checked out.`,
+			confirmLabel: 'Create branch'
+		});
+		if (!agreed) {
+			creating = false;
+			queueMicrotask(() => nameField?.focus());
+			return;
+		}
+		const made = await act.createBranchNamed(name, row.id);
 		creating = false;
-		if (made) branching.cancel();
-		revealed = null;
+		if (made) {
+			branching.cancel();
+			revealed = null;
+		} else {
+			queueMicrotask(() => nameField?.focus());
+		}
 	}
 
-	function nameKey(event: KeyboardEvent, id: string) {
+	function nameKey(event: KeyboardEvent, row: GraphRow) {
 		// The listbox's arrow keys and Enter belong to the rows, not to a
 		// field being typed in.
 		event.stopPropagation();
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			void createNamed(id);
+			void createNamed(row);
 		} else if (event.key === 'Escape') {
 			event.preventDefault();
 			branching.cancel();
@@ -830,7 +853,7 @@
 												disabled={creating}
 												bind:value={naming}
 												use:focusOnMount
-												onkeydown={(event) => nameKey(event, row.id)}
+												onkeydown={(event) => nameKey(event, row)}
 												onblur={() => {
 													if (!creating) {
 														branching.cancel();

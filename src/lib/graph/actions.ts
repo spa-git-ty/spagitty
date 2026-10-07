@@ -98,6 +98,30 @@ export function createBranchNamed(name: string, id: string): Promise<boolean> {
 	);
 }
 
+/**
+ * The bottom bar's Stash (BUG-055): put the work in progress away, here, in
+ * one question — not the Stash screen. The message starts as `WIP on
+ * <branch>` and can be changed; untracked files go too, so the working copy
+ * is left clean. With nothing to stash, it says so and asks nothing.
+ */
+export async function quickStash(): Promise<boolean> {
+	const changed = repo.counts.working ?? 0;
+	if (changed === 0) {
+		notice.ok('Nothing to stash');
+		return false;
+	}
+	const branch = repo.info?.head.branch ?? repo.info?.head.short ?? 'HEAD';
+	const message = await dialog.prompt({
+		title: 'Stash your changes',
+		body: `${changed} changed ${changed === 1 ? 'file is' : 'files are'} put away, untracked ones too, and the working copy is left clean.`,
+		label: 'Message',
+		value: `WIP on ${branch}`,
+		confirmLabel: 'Stash now'
+	});
+	if (message === null) return false;
+	return perform('Stashed', 'Could not stash', () => api.stashPush(message, true));
+}
+
 export async function createTagAt(id: string, short: string): Promise<void> {
 	const name = await dialog.prompt({
 		title: 'Create tag here',

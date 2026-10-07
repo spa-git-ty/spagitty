@@ -26,6 +26,8 @@ let involved = $state<PullRequest[]>([]);
 let involvedLoading = $state(false);
 let involvedError = $state<string | null>(null);
 let involvedLoaded = $state(false);
+/** No account is connected for the host All my repos would ask (BUG-055). */
+let involvedNoAccount = $state(false);
 /** The host the "All my repos" search ran against, and what kind it is. */
 let searchHost = $state<string | null>(null);
 let searchKind = $state<ForgeKind | null>(null);
@@ -149,6 +151,15 @@ export const review = {
 		return scope === 'repo' ? requests.error : involvedError;
 	},
 
+	/**
+	 * Whether there is an account to ask with. Not an error when there is not
+	 * (BUG-055): the inbox says so and offers Settings, as Pull requests does,
+	 * rather than printing the host's refusal.
+	 */
+	get connected(): boolean {
+		return scope === 'repo' ? requests.connected : !involvedNoAccount;
+	},
+
 	/** The pull request in the preview card: the one chosen, or the first. */
 	get selected(): PullRequest | null {
 		const order = inboxOrder(this.groups);
@@ -264,13 +275,23 @@ export const review = {
 		involvedLoading = true;
 		involvedError = null;
 		try {
+			const accounts = (await api.forgeAccounts()) ?? [];
 			let host = requests.repo?.host ?? null;
 			let kind = requests.repo?.kind ?? null;
 			if (!host) {
-				const accounts = await api.forgeAccounts();
 				host = accounts[0]?.host ?? null;
 				kind = accounts[0]?.kind ?? null;
 			}
+			// Asked first: with no account for the host, the backend's answer is
+			// a refusal, and that is a state to show, not an error (BUG-055).
+			if (!accounts.some((account) => account.host === host)) {
+				if (mine !== involvedSeq) return;
+				involvedNoAccount = true;
+				involved = [];
+				involvedLoaded = true;
+				return;
+			}
+			involvedNoAccount = false;
 			const found = await api.involvedPullRequests();
 			if (mine !== involvedSeq) return;
 			searchHost = host;
@@ -385,6 +406,7 @@ export const review = {
 		involvedLoading = false;
 		involvedError = null;
 		involvedLoaded = false;
+		involvedNoAccount = false;
 		searchHost = null;
 		searchKind = null;
 		summaries = {};

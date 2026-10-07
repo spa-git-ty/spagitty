@@ -33,6 +33,7 @@ pub mod forge;
 pub mod graph;
 pub mod hooks;
 pub mod identity;
+pub mod ignore;
 pub mod merger;
 pub mod ops;
 pub mod pull;

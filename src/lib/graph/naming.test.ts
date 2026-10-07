@@ -15,6 +15,7 @@ import { control } from '../../testing/graph-store.svelte';
 import { columns } from './columns.svelte';
 import { createBranchNamed } from './actions';
 import { branching } from './branching.svelte';
+import { dialog } from '$lib/ui/dialog.svelte';
 import CommitRows from './CommitRows.svelte';
 
 function row(index: number): GraphRow {
@@ -60,7 +61,7 @@ describe('a branch named in the graph', () => {
 		view.destroy();
 	});
 
-	it('creates the typed name there on Enter, spaces as dashes', async () => {
+	it('asks on Enter, then creates the typed name there, spaces as dashes (BUG-055)', async () => {
 		const view = render(CommitRows, {});
 		branching.start(row(1).id);
 		flushSync();
@@ -69,7 +70,17 @@ describe('a branch named in the graph', () => {
 		field.value = 'my feature';
 		fire(field, 'input');
 		press(field, 'Enter');
-		await Promise.resolve();
+
+		expect(dialog.question?.title).toBe('Create branch here');
+		expect(dialog.question?.body).toContain('my-feature');
+		expect(dialog.question?.body).toContain(row(1).short);
+		expect(createBranchNamed).not.toHaveBeenCalled();
+		// The question took the focus; the field must not have put itself away.
+		fire(field, 'blur');
+		expect(branching.at).toBe(row(1).id);
+
+		dialog.accept();
+		await vi.waitFor(() => expect(createBranchNamed).toHaveBeenCalled());
 		await Promise.resolve();
 		flushSync();
 
@@ -77,6 +88,25 @@ describe('a branch named in the graph', () => {
 		expect(branching.at).toBeNull();
 		expect(view.all('.name-field')).toHaveLength(0);
 
+		view.destroy();
+	});
+
+	it('keeps the field and its name when the question is cancelled', async () => {
+		const view = render(CommitRows, {});
+		branching.start(row(1).id);
+		flushSync();
+		const field = view.get('.name-field') as HTMLInputElement;
+		field.value = 'topic';
+		fire(field, 'input');
+		press(field, 'Enter');
+
+		dialog.dismiss();
+		await Promise.resolve();
+		flushSync();
+
+		expect(createBranchNamed).not.toHaveBeenCalled();
+		expect(branching.at).toBe(row(1).id);
+		expect((view.get('.name-field') as HTMLInputElement).value).toBe('topic');
 		view.destroy();
 	});
 
