@@ -2,7 +2,7 @@
 
 # FEAT-105 — Review from the pull request screen
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Done — merged into `main`; the manual sweep is not yet run.
 **Branch:** `feature/FEAT-105-review-from-the-pull-request-screen`
 **Screens:** 1H, 1R.
 **Raised by:** the author, 2026-10-07: in Pull requests a pull request could be read as files and changes, but not reviewed or commented on, though Review (1R, FEAT-087–FEAT-093) now does both.

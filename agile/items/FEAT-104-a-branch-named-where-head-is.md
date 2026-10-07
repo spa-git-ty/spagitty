@@ -2,7 +2,7 @@
 
 # FEAT-104 — A branch named where HEAD is
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Done — merged into `main`; the manual sweep is not yet run.
 **Branch:** `feature/FEAT-104-a-branch-named-where-head-is`
 **Screens:** chrome, 1A.
 **Raised by:** the author, 2026-10-07: the bottom bar's Branch went to the Branches screen; it should open a text field where HEAD points and take the branch from there, as GitKraken does.

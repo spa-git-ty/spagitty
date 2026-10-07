@@ -2,7 +2,7 @@
 
 # TASK-057 — The Log screen in the house style
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Done — merged into `main`; the manual sweep is not yet run.
 **Branch:** `task/TASK-057-the-log-screen-in-the-house-style`
 **Screens:** 1I.
 **Raised by:** the author, 2026-10-07: "log screen looks borrowed, not matching our design."

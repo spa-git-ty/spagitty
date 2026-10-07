@@ -2,7 +2,7 @@
 
 # BUG-053 — What the author found sweeping
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Fixed — merged into `main`; the manual sweep is not yet run.
 **Branch:** `bugfix/BUG-053-what-the-author-found-sweeping`
 **Screens:** 1H, 1A, chrome.
 **Raised by:** the author, 2026-10-07, sweeping the 1.0.1 release.

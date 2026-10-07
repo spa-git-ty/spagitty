@@ -2,7 +2,7 @@
 
 # FEAT-106 — A rebase you can see
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Done — merged into `main`; the manual sweep is not yet run.
 **Branch:** `feature/FEAT-106-a-rebase-you-can-see`
 **Screens:** 1E.
 **Raised by:** the author, 2026-10-07: the Rebase screen was never designed — a header of fields and two plain lists. "Make it easy and visualized like the merger screen."

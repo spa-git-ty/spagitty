@@ -157,9 +157,9 @@ rather than an audit.
 | [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Open |
 | [FEAT-102](items/FEAT-102-resolve-every-conflict-every-way.md) | Resolve every conflict, every way | 1S, 1D | Open |
 | [FEAT-103](items/FEAT-103-a-rebase-that-stops-in-merger.md) | A rebase that stops, in Merger | 1S | Open |
-| [FEAT-104](items/FEAT-104-a-branch-named-where-head-is.md) | A branch named where HEAD is | chrome, 1A | Open |
-| [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Open |
-| [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Open |
+| [FEAT-104](items/FEAT-104-a-branch-named-where-head-is.md) | A branch named where HEAD is | chrome, 1A | Done |
+| [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Done |
+| [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Done |
 
 ## Bugs
 
@@ -218,7 +218,7 @@ rather than an audit.
 | [BUG-050](items/BUG-050-the-mac-check-waits-for-a-licence-agreement.md) | The Mac check waits for a licence agreement | CI | Fixed |
 | [BUG-051](items/BUG-051-what-the-author-saw-on-first-run.md) | What the author saw on first run | 1S, 1D, 1F, 1A | Fixed |
 | [BUG-052](items/BUG-052-squeezed-lanes-silent-waits-and-striped-notices.md) | Squeezed lanes, silent waits and striped notices | 1A, all, chrome | Fixed |
-| [BUG-053](items/BUG-053-what-the-author-found-sweeping.md) | What the author found sweeping | 1H, 1A, chrome | Open |
+| [BUG-053](items/BUG-053-what-the-author-found-sweeping.md) | What the author found sweeping | 1H, 1A, chrome | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -282,7 +282,7 @@ of its own.
 | [TASK-054](items/TASK-054-build-macos-on-a-mac.md) | Build macOS on a Mac | — | Done |
 | [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Open |
 | [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Open |
-| [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Open |
+| [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
 
 ## Skipped identifiers
 
