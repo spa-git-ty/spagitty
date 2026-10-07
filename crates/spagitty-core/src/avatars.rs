@@ -70,6 +70,12 @@
 //! repository's API for one of the author's commits, then a request for the
 //! picture URL it names, on an image host from a fixed list.
 //!
+//! For an ordinary address in a repository on GitLab — gitlab.com or a
+//! self-hosted instance — one request to that instance's `avatar` endpoint
+//! carrying the address, which the instance's own users already show it; on
+//! Bitbucket, one request for one commit, as on GitHub (BUG-053). The picture
+//! is then fetched from the instance itself or a host on the list.
+//!
 //! For any other address: a request to `gravatar.com` carrying the SHA-256 of
 //! the lowercased address. That is the whole of it — no name, no repository, no
 //! path, no other address. Gravatar cannot reverse the hash, but it can confirm
@@ -352,9 +358,11 @@ pub fn picture(cache: &Path, email: &str, commit: Option<&Commit<'_>>, net: &dyn
         };
     };
 
-    let forge = commit.filter(|commit| commit.repo.kind == Kind::GitHub);
+    // Every forge Spagitty reads is asked (BUG-053): GitHub and Bitbucket by
+    // one of the author's commits, GitLab by the address itself.
+    let forge = commit;
     if let Some(who) = forge.and_then(|commit| read_who(cache, &commit.repo.host, &address)) {
-        handle = handle.or(Some(who.0));
+        handle = handle.or(named(who.0));
     }
 
     match read_cache(cache, &address) {
@@ -390,7 +398,7 @@ pub fn picture(cache: &Path, email: &str, commit: Option<&Commit<'_>>, net: &dyn
             forge_account(cache, &address, commit, net)
         }) {
             Step::Got((login, url)) => {
-                handle = handle.or(Some(login));
+                handle = handle.or(named(login));
                 url
             }
             Step::Nothing => fallback,
@@ -432,6 +440,11 @@ pub fn cached(cache: &Path, email: &str) -> Option<String> {
     }
 }
 
+/// A login worth showing: GitLab's answer names a picture and no account.
+fn named(login: String) -> Option<String> {
+    (!login.is_empty()).then_some(login)
+}
+
 /// Record a transient failure and say so.
 fn waiting(cache: &Path, address: &str, handle: Option<String>) -> Answer {
     back_off(cache, address);
@@ -464,40 +477,116 @@ fn forge_account(
     }
 
     // An id is interpolated into a URL; anything that is not one is not sent.
+    // GitLab is asked by address and needs none.
     let id = commit.id.trim();
-    if id.len() < 7 || id.len() > 64 || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return Step::Nothing;
-    }
-
-    let url = format!(
-        "{}/repos/{}/{}/commits/{id}",
-        repo.kind.api_base(&repo.host),
-        repo.owner,
-        repo.name
-    );
+    let usable = id.len() >= 7 && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_hexdigit());
+    let api = repo.kind.api_base(&repo.host);
+    let (url, read): (String, fn(&str) -> Option<(String, String)>) = match repo.kind {
+        Kind::GitHub if usable => (
+            format!("{api}/repos/{}/{}/commits/{id}", repo.owner, repo.name),
+            account_of,
+        ),
+        // GitLab answers "what picture goes with this address" directly, on
+        // gitlab.com and on a self-hosted instance alike, and it knows the
+        // private commit addresses its own accounts use.
+        Kind::GitLab => (
+            format!(
+                "{api}/avatar?email={}&size={SIZE}",
+                crate::forge::encode_segment(address)
+            ),
+            gitlab_avatar_of,
+        ),
+        Kind::Bitbucket if usable => (
+            format!(
+                "{api}/repositories/{}/{}/commit/{id}",
+                repo.owner, repo.name
+            ),
+            bitbucket_account_of,
+        ),
+        _ => return Step::Nothing,
+    };
     let token = (commit.token)().unwrap_or_default();
     let Ok(response) = net.json(&url, &token, &repo.host) else {
         return Step::Transient;
     };
 
     match response.status {
-        200..=299 => match account_of(&response.body) {
+        200..=299 => match read(&response.body) {
             Some((login, avatar)) => {
-                let url = sized(&avatar);
+                let url = if repo.kind == Kind::GitHub {
+                    sized(&avatar)
+                } else {
+                    avatar
+                };
                 write_who(cache, &repo.host, address, &login, &url);
                 Step::Got((login, url))
             }
-            // A commit GitHub has no account for: the address is not on any
-            // account, and Gravatar is the next place to look.
+            // A commit the forge has no account for, or an address GitLab
+            // knows no picture for: Gravatar is the next place to look.
             None if response.body.trim_start().starts_with('{') => Step::Nothing,
             None => Step::Transient,
         },
         // No such commit here (not pushed, or a private repository this token
-        // cannot see), or an id GitHub will not parse: nothing to learn from
+        // cannot see), or an id the forge will not parse: nothing to learn from
         // the forge, which is not the same as the network failing.
         401 | 404 | 422 => Step::Nothing,
+        // GitHub says 403 when rate limited, which passes; GitLab and
+        // Bitbucket say it for a private instance or repository, which does not.
+        403 if repo.kind != Kind::GitHub => Step::Nothing,
         _ => Step::Transient,
     }
+}
+
+/// GitLab's `avatar_url` for an address (BUG-053).
+///
+/// GitLab answers every address, so its stand-ins are not answers: the
+/// generated Gravatar identicon it falls back to is asked for as `d=404`
+/// instead — Spagitty's own generated face is the better stand-in — and a
+/// self-hosted instance's grey `no_avatar` placeholder is no picture at all.
+fn gitlab_avatar_of(body: &str) -> Option<(String, String)> {
+    let value: serde_json::Value = serde_json::from_str(body).ok()?;
+    let url = value.get("avatar_url")?.as_str()?.trim();
+    if !url.starts_with("https://") || url.contains("/no_avatar") {
+        return None;
+    }
+    let host = url["https://".len()..]
+        .split(['/', '?'])
+        .next()
+        .unwrap_or_default();
+    if !host.ends_with("gravatar.com") {
+        return Some((String::new(), url.to_string()));
+    }
+    let (path, query) = url.split_once('?').unwrap_or((url, ""));
+    let kept: Vec<&str> = query
+        .split('&')
+        .filter(|part| !part.is_empty() && !part.starts_with("d="))
+        .collect();
+    let query = kept
+        .into_iter()
+        .chain(["d=404"])
+        .collect::<Vec<_>>()
+        .join("&");
+    Some((String::new(), format!("{path}?{query}")))
+}
+
+/// Bitbucket's account and picture for a commit: `author.user`, which is
+/// absent when the commit's address is on no account.
+fn bitbucket_account_of(body: &str) -> Option<(String, String)> {
+    let value: serde_json::Value = serde_json::from_str(body).ok()?;
+    let user = value.get("author")?.get("user")?;
+    let login = user
+        .get("nickname")
+        .or_else(|| user.get("display_name"))?
+        .as_str()?
+        .trim();
+    let avatar = user
+        .get("links")?
+        .get("avatar")?
+        .get("href")?
+        .as_str()?
+        .trim();
+    (!login.is_empty() && avatar.starts_with("https://"))
+        .then(|| (login.to_string(), avatar.to_string()))
 }
 
 /// `author.login` and `author.avatar_url` out of a commit response.
@@ -584,6 +673,10 @@ fn image_host_allowed(url: &str, forge_host: Option<&str>) -> bool {
         "secure.gravatar.com",
     ];
     HOSTS.contains(&host.as_str())
+        // Where GitLab.com and Bitbucket keep uploaded pictures (BUG-053).
+        || host.ends_with(".gitlab-static.net")
+        || host.ends_with(".atl-paas.net")
+        || host == "bitbucket.org"
         || forge_host.is_some_and(|forge| forge.eq_ignore_ascii_case(&host))
 }
 
@@ -685,7 +778,9 @@ fn read_who(cache: &Path, host: &str, address: &str) -> Option<(String, String)>
     }
     let text = std::fs::read_to_string(&file).ok()?;
     let (login, url) = text.split_once('\n')?;
-    (!login.is_empty() && url.starts_with("https://")).then(|| (login.to_string(), url.to_string()))
+    // An empty login is GitLab's answer: a picture and no account name.
+    url.starts_with("https://")
+        .then(|| (login.to_string(), url.to_string()))
 }
 
 fn write_who(cache: &Path, host: &str, address: &str, login: &str, url: &str) {
@@ -1129,6 +1224,125 @@ mod tests {
         picture(dir.path(), "gm@icloud.com", Some(&commit), &net);
         // `Net::bytes` has no token parameter at all; the one JSON call had it.
         assert_eq!(net.tokens.borrow().as_slice(), ["ghp_secret"]);
+    }
+
+    fn work_gitlab() -> Repo {
+        Repo {
+            kind: Kind::GitLab,
+            host: "gitlab.work.example".into(),
+            owner: "bank/core".into(),
+            name: "ledger".into(),
+        }
+    }
+
+    #[test]
+    fn a_self_hosted_gitlab_is_asked_by_address_and_its_upload_fetched() {
+        let dir = tempfile::tempdir().expect("a temporary directory");
+        let api =
+            "https://gitlab.work.example/api/v4/avatar?email=ada%2Bwork%40bank.example&size=96";
+        let upload = "https://gitlab.work.example/uploads/-/system/user/avatar/7/avatar.png";
+        let net = Fake::default()
+            .json(api, Some((200, &format!(r#"{{"avatar_url":"{upload}"}}"#))))
+            .image(upload, 200, PNG, None);
+        let repo = work_gitlab();
+        let token = || Some("glpat-secret".to_string());
+        let commit = Commit {
+            repo: &repo,
+            id: "",
+            token: &token,
+        };
+
+        let answer = picture(dir.path(), "Ada+work@bank.example", Some(&commit), &net);
+        assert!(
+            answer.picture.is_some(),
+            "the instance's own upload is drawn"
+        );
+        assert_eq!(
+            answer.handle, None,
+            "GitLab names a picture, not an account"
+        );
+        assert_eq!(net.asked(), [api, upload]);
+        assert_eq!(net.tokens.borrow().as_slice(), ["glpat-secret"]);
+
+        // Asked once: the second look is the disk.
+        let again = Fake::default();
+        assert!(
+            picture(dir.path(), "ada+work@bank.example", Some(&commit), &again)
+                .picture
+                .is_some()
+        );
+        assert!(again.asked().is_empty());
+    }
+
+    #[test]
+    fn gitlabs_identicon_is_asked_for_as_a_miss_and_its_placeholder_is_none() {
+        let (_, url) = gitlab_avatar_of(
+            r#"{"avatar_url":"https://secure.gravatar.com/avatar/abc?s=96&d=identicon"}"#,
+        )
+        .expect("a gravatar answer");
+        assert_eq!(url, "https://secure.gravatar.com/avatar/abc?s=96&d=404");
+
+        assert_eq!(
+            gitlab_avatar_of(
+                r#"{"avatar_url":"https://gitlab.work.example/assets/no_avatar-1a2b.png"}"#
+            ),
+            None
+        );
+        assert_eq!(gitlab_avatar_of(r#"{"avatar_url":null}"#), None);
+    }
+
+    #[test]
+    fn a_private_gitlab_without_a_token_falls_back_to_gravatar() {
+        let dir = tempfile::tempdir().expect("a temporary directory");
+        let address = "ada@bank.example";
+        let api = "https://gitlab.work.example/api/v4/avatar?email=ada%40bank.example&size=96";
+        let net =
+            Fake::default()
+                .json(api, Some((401, "")))
+                .image(&gravatar(address), 404, b"", None);
+        let repo = work_gitlab();
+        let commit = Commit {
+            repo: &repo,
+            id: "",
+            token: &no_token,
+        };
+
+        let answer = picture(dir.path(), address, Some(&commit), &net);
+        assert_eq!(answer.picture, None);
+        assert!(
+            !answer.retry,
+            "a refusal and a Gravatar 404 are both answers"
+        );
+        assert_eq!(net.asked(), [api.to_string(), gravatar(address)]);
+    }
+
+    #[test]
+    fn bitbucket_names_the_account_on_a_commit() {
+        let dir = tempfile::tempdir().expect("a temporary directory");
+        let api = format!("https://api.bitbucket.org/2.0/repositories/team/app/commit/{SHA}");
+        let image =
+            "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/123/abc/128";
+        let body = format!(
+            r#"{{"author":{{"raw":"Ada <ada@example.com>","user":{{"nickname":"ada","display_name":"Ada L","links":{{"avatar":{{"href":"{image}"}}}}}}}}}}"#
+        );
+        let net = Fake::default()
+            .json(&api, Some((200, &body)))
+            .image(image, 200, PNG, None);
+        let repo = Repo {
+            kind: Kind::Bitbucket,
+            host: "bitbucket.org".into(),
+            owner: "team".into(),
+            name: "app".into(),
+        };
+        let commit = Commit {
+            repo: &repo,
+            id: SHA,
+            token: &no_token,
+        };
+
+        let answer = picture(dir.path(), "ada@example.com", Some(&commit), &net);
+        assert!(answer.picture.is_some());
+        assert_eq!(answer.handle.as_deref(), Some("ada"));
     }
 
     #[test]

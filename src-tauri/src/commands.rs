@@ -2536,12 +2536,14 @@ pub async fn avatar<R: Runtime>(
         };
         let cache = avatars::cache_dir(&root);
 
-        // An ordinary address in a GitHub repository, asked without a commit it
-        // authored — a committer in the detail pane. Only the forge can say who
-        // that is, so nothing is sent: a Gravatar miss written now would hide
-        // the forge's answer when a row this person authored asks properly.
-        let on_github = repo.as_ref().is_some_and(|repo| repo.kind == Kind::GitHub);
-        if on_github && commit.is_none() && avatars::source(&email).handle.is_none() {
+        // An ordinary address in a GitHub or Bitbucket repository, asked
+        // without a commit it authored — a committer in the detail pane. Only
+        // the forge can say who that is, so nothing is sent: a Gravatar miss
+        // written now would hide the forge's answer when a row this person
+        // authored asks properly. GitLab is asked by address, so it needs no
+        // commit (BUG-053).
+        let by_commit = repo.as_ref().is_some_and(|repo| repo.kind != Kind::GitLab);
+        if by_commit && commit.is_none() && avatars::source(&email).handle.is_none() {
             return avatars::Answer {
                 picture: avatars::cached(&cache, &email),
                 ..avatars::Answer::default()
@@ -2552,6 +2554,11 @@ pub async fn avatar<R: Runtime>(
             (Some(repo), Some(id)) => Some(avatars::Commit {
                 repo,
                 id,
+                token: &token,
+            }),
+            (Some(repo), None) if repo.kind == Kind::GitLab => Some(avatars::Commit {
+                repo,
+                id: "",
                 token: &token,
             }),
             _ => None,

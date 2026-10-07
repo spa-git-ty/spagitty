@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it, vi } from 'vitest';
-import { drawLanes, lanesNeeded, visibleRange } from './lanes';
+import { drawLanes, lanesNeeded, turnsAt, visibleRange } from './lanes';
 import {
 	LANE_COLUMNS_MAX,
 	LANE_COLUMNS_MIN,
@@ -257,39 +257,92 @@ describe('drawLanes', () => {
 	});
 
 	/**
-	 * A rounded right angle, not a curve (FEAT-053): down its own lane, turn,
-	 * straight across, turn, down the new lane. The straight runs are what the
-	 * eye follows when many lanes share one band, and a full-row S leaves none.
+	 * A rounded right angle, not a curve (FEAT-053): a lane passing between two
+	 * nodes that are neither of its ends goes down, turns, straight across,
+	 * turns, down the new lane, all in the middle of the band.
 	 */
-	it('turns square, with two rounded corners, for a lane that changes column', () => {
-		const rows = [row(0), row(1, 0, [{ from: 0, to: 1, color: 1 }])];
+	it('turns square in the middle of the band for a lane passing between nodes', () => {
+		const rows = [row(0, 0), row(1, 0, [{ from: 1, to: 2, color: 1 }])];
 		const { calls } = draw(rows, 0, 1);
 
 		const corners = calls.filter((c) => c.op === 'arcTo');
 		expect(corners).toHaveLength(2);
 
 		const middle = (rowCenterY(0) + rowCenterY(1)) / 2;
-		// Out of the old lane and into the crossing, at the band's middle.
-		expect(corners[0]?.args.slice(0, 4)).toEqual([laneX(0), middle, laneX(1), middle]);
-		// Out of the crossing and down into the new lane.
-		expect(corners[1]?.args.slice(0, 4)).toEqual([laneX(1), middle, laneX(1), rowCenterY(1)]);
+		expect(corners[0]?.args.slice(0, 4)).toEqual([laneX(1), middle, laneX(2), middle]);
+		expect(corners[1]?.args.slice(0, 4)).toEqual([laneX(2), middle, laneX(2), rowCenterY(1)]);
 
-		// And it finishes vertically in the destination lane, at that row's centre.
+		const line = calls.filter((c) => c.op === 'lineTo').at(-1);
+		expect(line?.args).toEqual([laneX(2), rowCenterY(1)]);
+	});
+
+	/**
+	 * GitKraken's merge (BUG-053): the line to the other parent leaves the dot
+	 * sideways, turns once, and runs down the other lane — no stub running
+	 * parallel beside the node before it bends.
+	 */
+	it('leaves a merge sideways from the dot, with one turn', () => {
+		const merge = { ...row(0, 0), parents: ['a', 'b'] };
+		const rows = [merge, row(1, 0, [{ from: 0, to: 1, color: 1 }])];
+		const { calls } = draw(rows, 0, 1);
+
+		const corners = calls.filter((c) => c.op === 'arcTo');
+		expect(corners).toHaveLength(1);
+		expect(corners[0]?.args.slice(0, 4)).toEqual([
+			laneX(1),
+			rowCenterY(0),
+			laneX(1),
+			rowCenterY(1)
+		]);
 		const line = calls.filter((c) => c.op === 'lineTo').at(-1);
 		expect(line?.args).toEqual([laneX(1), rowCenterY(1)]);
+	});
+
+	it('brings a branch home sideways into the commit it grew from', () => {
+		const rows = [row(0, 1), row(1, 0, [{ from: 2, to: 0, color: 2 }])];
+		const { calls } = draw(rows, 0, 1);
+
+		const corners = calls.filter((c) => c.op === 'arcTo');
+		expect(corners).toHaveLength(1);
+		// Down its own lane to the node's row, then across into the node.
+		expect(corners[0]?.args.slice(0, 4)).toEqual([
+			laneX(2),
+			rowCenterY(1),
+			laneX(0),
+			rowCenterY(1)
+		]);
+	});
+
+	it('names where each kind of crossing turns', () => {
+		const merge = { ...row(0, 0), parents: ['a', 'b'] };
+		expect(turnsAt({ from: 0, to: 1, color: 0 }, merge, row(1, 1))).toBe('top');
+		expect(turnsAt({ from: 2, to: 0, color: 0 }, row(0, 1), row(1, 0))).toBe('bottom');
+		expect(turnsAt({ from: 1, to: 0, color: 0 }, row(0, 1), row(1, 0))).toBe('bottom');
+		expect(turnsAt({ from: 1, to: 2, color: 0 }, row(0, 0), row(1, 0))).toBe('middle');
+		expect(turnsAt({ from: 1, to: 0, color: 0 }, undefined, row(1, 0))).toBe('bottom');
 	});
 
 	it('turns tighter rather than bulging when the lanes are close together', () => {
 		// The radius is clamped against half the crossing, so neighbouring lanes
 		// at a squeezed pitch cannot round past their own corner.
-		const rows = [row(0), row(1, 0, [{ from: 0, to: 1, color: 1 }])];
+		const rows = [row(0, 0), row(1, 0, [{ from: 1, to: 2, color: 1 }])];
 		const { calls } = draw(rows, 0, 1, { columns: 40 });
 
 		const corners = calls.filter((c) => c.op === 'arcTo');
 		const radius = corners[0]?.args[4] as number;
-		const crossing = Math.abs(laneX(1, 40) - laneX(0, 40));
+		const crossing = Math.abs(laneX(2, 40) - laneX(1, 40));
 
 		expect(radius).toBeLessThanOrEqual(crossing / 2);
+		expect(radius).toBeGreaterThan(0);
+	});
+
+	it('keeps a sideways turn within its crossing at a squeezed pitch', () => {
+		const merge = { ...row(0, 0), parents: ['a', 'b'] };
+		const rows = [merge, row(1, 0, [{ from: 0, to: 1, color: 1 }])];
+		const { calls } = draw(rows, 0, 1, { columns: 40 });
+
+		const radius = calls.find((c) => c.op === 'arcTo')?.args[4] as number;
+		expect(radius).toBeLessThanOrEqual(Math.abs(laneX(1, 40) - laneX(0, 40)));
 		expect(radius).toBeGreaterThan(0);
 	});
 

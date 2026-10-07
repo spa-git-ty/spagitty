@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { columns, type ColumnId } from '$lib/graph/columns.svelte';
+	import { graph } from '$lib/graph/store.svelte';
+	import { refsFitWidth } from '$lib/graph/fit';
 	import Menu from '$lib/ui/Menu.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { createResizeDrag } from '$lib/ui/resize-drag';
@@ -131,6 +133,50 @@
 		return shown[index].id;
 	}
 
+	/**
+	 * Double-click on a divider. The Branch / Tag column fits its names, like
+	 * a spreadsheet column (BUG-053); every other column goes back to its own
+	 * width, or back to filling.
+	 */
+	function fitOrReset(id: ColumnId) {
+		if (id !== 'refs') {
+			columns.unsize(id);
+			return;
+		}
+		columns.resize('refs', fitRefs());
+	}
+
+	/** The widest row's labels, measured in the chips' own type. */
+	function fitRefs(): number {
+		const name = document.querySelector<HTMLElement>('.cell.refs .ref .name');
+		const chip = name?.closest<HTMLElement>('.ref');
+		const context = document.createElement('canvas').getContext('2d');
+		const font = name
+			? getComputedStyle(name).font
+			: `${12 * scale.zoom}px ${getComputedStyle(document.documentElement).getPropertyValue('--font-mono')}`;
+		if (context) context.font = font;
+		const measure = (text: string) => context?.measureText(text).width ?? text.length * 7.5 * scale.zoom;
+		// What a chip adds round its name, read off one on screen: padding,
+		// border, the local and remote marks. The widest guess where none is.
+		const chipExtra = chip && name ? Math.max(0, chip.scrollWidth + 2 - measure(name.textContent ?? '')) : 44 * scale.zoom;
+
+		const rows = function* () {
+			for (let index = 0; index < graph.count; index++) {
+				const row = graph.row(index);
+				if (row) yield row;
+			}
+		};
+		return refsFitWidth(rows(), {
+			measure,
+			chipExtra,
+			maxChips: 2,
+			gap: 4,
+			frame: 8 + 8 + 6,
+			min: 90,
+			max: 640 * scale.zoom
+		});
+	}
+
 	function startResize(event: PointerEvent, index: number) {
 		const id = resizeTarget(index);
 
@@ -214,7 +260,7 @@
 				onpointerup={(event) => finishResize(event.clientX)}
 				onpointercancel={() => finishResize()}
 				onlostpointercapture={() => finishResize()}
-				ondblclick={() => columns.unsize(resizeTarget(freezeAt - 1))}
+				ondblclick={() => fitOrReset(resizeTarget(freezeAt - 1))}
 			></div>
 		{/if}
 		{#each shown.slice(freezeAt) as column, offset (column.id)}
@@ -309,13 +355,15 @@
 			class="divider"
 			class:last={index === shown.length - 1}
 			class:silent={column.id === 'refs'}
-			title={`Resize ${sized} — double-click to reset`}
+			title={target === 'refs'
+				? `Resize ${sized} — double-click to fit the names`
+				: `Resize ${sized} — double-click to reset`}
 			onpointerdown={(event) => startResize(event, index)}
 			onpointermove={moveResize}
 			onpointerup={(event) => finishResize(event.clientX)}
 			onpointercancel={() => finishResize()}
 			onlostpointercapture={() => finishResize()}
-			ondblclick={() => columns.unsize(target)}
+			ondblclick={() => fitOrReset(target)}
 		></div>
 	</div>
 {/snippet}

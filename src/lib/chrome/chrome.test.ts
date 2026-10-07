@@ -51,6 +51,7 @@ import TitleBar from './TitleBar.svelte';
 import Toolbar from './Toolbar.svelte';
 import { NAV_ITEMS } from '$lib/nav';
 import { version } from '$lib/version';
+import pkg from '../../../package.json';
 import { workspace } from '$lib/workspace.svelte';
 
 function info(
@@ -328,22 +329,22 @@ describe('RepoTabs', () => {
 });
 
 describe('StatusStrip', () => {
-	it('states the license and version, which the GPL asks for (FEAT-043)', () => {
+	it('states the version the package carries, not a typed one', () => {
 		const view = render(StatusStrip, {});
 
-		expect(view.text()).toContain(version.licenseShort);
-		expect(view.text()).toContain(`v${version.number}`);
+		expect(version.number).toBe(pkg.version);
+		expect(view.text()).toContain(`v${pkg.version}`);
 
 		view.destroy();
 	});
 
-	it('carries the full SPDX identifier where a short one is shown', () => {
-		// `GPL-3.0` is the abbreviation that fits; the authoritative identifier
-		// is `GPL-3.0-or-later`, and it must be reachable without opening
-		// Settings.
+	it('names no licence on the strip, and keeps the SPDX identifier in its title', () => {
+		// The author asked for the GPL label off the strip; the identifier stays
+		// reachable on hover and in Settings -> About.
 		const view = render(StatusStrip, {});
 
-		expect(view.get('.note').getAttribute('title')).toBe(version.license);
+		expect(view.text()).not.toContain(version.licenseShort);
+		expect(view.get('.license').getAttribute('title')).toContain(version.license);
 
 		view.destroy();
 	});
@@ -354,7 +355,7 @@ describe('StatusStrip', () => {
 		const view = render(StatusStrip, {});
 
 		expect(view.all('.repo')).toHaveLength(0);
-		expect(view.text().trim()).toBe(`${version.licenseShort} · v${version.number}`);
+		expect(view.text().trim()).toBe(`v${version.number}`);
 
 		view.destroy();
 	});

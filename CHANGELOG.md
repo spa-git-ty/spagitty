@@ -14,6 +14,19 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Graph nodes are bigger, and merges turn like GitKraken's.** Portraits and
+  merge dots are larger, and a merge's line to its other parent leaves the dot
+  sideways and turns once, with no short stub beside the node.
+- **Double-click the Branch / Tag column's border to fit the names.** The
+  column widens to the longest labels, like a spreadsheet column.
+- **Author pictures on GitLab and Bitbucket.** Self-hosted GitLab included:
+  the instance is asked for each author's picture, with your connected
+  account's token where it needs one.
+- **Pull requests loads with the same loader as every other screen.**
+- **The status bar shows the right version**, without the licence label.
+
 ## [1.0.1] - 2026-10-06
 
 ### Added
