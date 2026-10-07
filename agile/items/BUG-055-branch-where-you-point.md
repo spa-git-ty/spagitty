@@ -2,7 +2,7 @@
 
 # BUG-055 — Branch where you point, stash in place, and a working copy that is noticed
 
-**Status:** Open — on its branch; the manual sweep is not yet run.
+**Status:** Fixed — merged into `main`; the manual sweep is not yet run.
 **Branch:** `bugfix/BUG-055-branch-where-you-point`
 **Screens:** chrome, 1A, 1R, 1H, 1C.
 **Raised by:** the author, 2026-10-07, using the build with FEAT-107: Branch was buggy; Clone and Rebase do not belong in the bottom bar; Stash should stash, not open a screen; Review showed the host's refusal where Pull requests says no account is connected, and both put that state in a corner; and an edit in the working tree was never noticed — the rail said 0 changes with a file changed, and the graph's uncommitted row was gone.

@@ -221,7 +221,7 @@ rather than an audit.
 | [BUG-052](items/BUG-052-squeezed-lanes-silent-waits-and-striped-notices.md) | Squeezed lanes, silent waits and striped notices | 1A, all, chrome | Fixed |
 | [BUG-053](items/BUG-053-what-the-author-found-sweeping.md) | What the author found sweeping | 1H, 1A, chrome | Fixed |
 | [BUG-054](items/BUG-054-review-loader-conversation-panel-and-scrollbars.md) | Review's loader, its Conversation card, and scrollbars at rest | 1R, all | Fixed |
-| [BUG-055](items/BUG-055-branch-where-you-point.md) | Branch where you point, stash in place, and a working copy that is noticed | chrome, 1A, 1R, 1H, 1C | Open |
+| [BUG-055](items/BUG-055-branch-where-you-point.md) | Branch where you point, stash in place, and a working copy that is noticed | chrome, 1A, 1R, 1H, 1C | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
