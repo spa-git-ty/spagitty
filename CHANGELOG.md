@@ -16,6 +16,9 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Added
 
+- **Review a pull request from Pull requests.** An open pull request has a
+  **Review** button that takes it to the review room, to comment on lines,
+  answer threads and finish the review; your own has **Reply in Review**.
 - **Branch names a branch where you are.** The bottom bar's Branch opens a
   name field on the graph, in HEAD's row: type a name, press Enter, and the
   branch is made there and checked out — no dialog. *Create branch here* on

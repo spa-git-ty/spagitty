@@ -26,7 +26,12 @@ vi.mock('$lib/api', () => ({
 	setPrDraft: vi.fn()
 }));
 
+vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
+vi.mock('$lib/review/store.svelte', () => ({ review: { open: vi.fn(() => Promise.resolve(true)), notHere: null } }));
+
 import * as api from '$lib/api';
+import { goto } from '$app/navigation';
+import { review } from '$lib/review/store.svelte';
 import PRDiffPane from './PRDiffPane.svelte';
 import PRMarkdown from './PRMarkdown.svelte';
 import PRWorkspace from './PRWorkspace.svelte';
@@ -463,6 +468,26 @@ describe('PRMarkdown component', () => {
 		expect(view.text()).toContain('Todo task');
 		expect(view.text()).toContain('Important quote');
 
+		view.destroy();
+	});
+});
+
+/** FEAT-105: the pull request screen hands a review to the review room. */
+describe('Review from the pull request screen', () => {
+	it('opens this pull request in the review room', async () => {
+		vi.mocked(api.inTauri).mockReturnValue(false);
+		requests.present([request()]);
+		requests.select('PR_1');
+		const view = render(PRWorkspace, {});
+
+		const button = view.all('button').find((b) => b.textContent?.trim() === 'Review');
+		expect(button).toBeDefined();
+		click(button as HTMLElement);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(review.open).toHaveBeenCalledWith(expect.objectContaining({ number: 412 }));
+		expect(goto).toHaveBeenCalledWith('/review');
 		view.destroy();
 	});
 });
