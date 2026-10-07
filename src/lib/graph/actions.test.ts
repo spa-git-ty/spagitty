@@ -177,23 +177,13 @@ describe('copyId', () => {
 	});
 });
 
-describe('createBranchAt / createTagAt', () => {
-	it('creates and checks out the branch it was given a name for', async () => {
-		prompt.mockResolvedValueOnce('feature/FEAT-031-graph');
+describe('createBranchNamed / createTagAt', () => {
+	it('creates and checks out the branch named in the graph (FEAT-104)', async () => {
+		expect(await actions.createBranchNamed('feature/FEAT-031-graph', 'a1b2c3d4')).toBe(true);
 
-		await actions.createBranchAt('a1b2c3d4', 'a1b2c3d');
-
+		expect(prompt).not.toHaveBeenCalled();
 		expect(api.createBranch).toHaveBeenCalledWith('feature/FEAT-031-graph', 'a1b2c3d4', true);
 		expect(ok).toHaveBeenCalledWith('Created feature/FEAT-031-graph', undefined);
-	});
-
-	it('creates nothing when the naming prompt is dismissed', async () => {
-		prompt.mockResolvedValueOnce(null);
-
-		await actions.createBranchAt('a1b2c3d4', 'a1b2c3d');
-
-		expect(api.createBranch).not.toHaveBeenCalled();
-		expect(ok).not.toHaveBeenCalled();
 	});
 
 	it('tags the commit it was given a name for', async () => {

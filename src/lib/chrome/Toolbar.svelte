@@ -5,6 +5,7 @@
 	import { clone } from '$lib/clone/store.svelte';
 	import { commandLog } from '$lib/commandlog/store.svelte';
 	import { fetchAll, pull, pushCurrent } from '$lib/graph/actions';
+	import { branching } from '$lib/graph/branching.svelte';
 	import { network } from '$lib/network/store.svelte';
 	import { remotes } from '$lib/remotes/store.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -195,6 +196,17 @@
 		}))
 	]);
 
+	/**
+	 * A name field on the graph, in HEAD's row (FEAT-104) — not the Branches
+	 * screen, and not a dialog. The graph is opened if another screen was.
+	 */
+	function branchHere() {
+		const id = head?.id;
+		if (!id) return;
+		branching.start(id);
+		void goto('/');
+	}
+
 	function openPullMenu(anchor: HTMLElement) {
 		// A second press closes it, the convention `Menu` is built around
 		// (BUG-018).
@@ -254,7 +266,12 @@
 			{ icon: 'clone', label: 'Clone', title: 'Bring a repository in', act: () => clone.show() }
 		],
 		[
-			{ icon: 'branch', label: 'Branch', href: '/branches' },
+			{
+				icon: 'branch',
+				label: 'Branch',
+				title: head?.id ? 'Name a branch where HEAD is' : 'Nothing to branch from yet',
+				act: () => branchHere()
+			},
 			{ icon: 'stash', label: 'Stash', href: '/stash' },
 			{ icon: 'rebase', label: 'Rebase', href: '/rebase' }
 		]

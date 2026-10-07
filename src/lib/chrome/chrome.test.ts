@@ -50,6 +50,7 @@ import StatusStrip from './StatusStrip.svelte';
 import TitleBar from './TitleBar.svelte';
 import Toolbar from './Toolbar.svelte';
 import { NAV_ITEMS } from '$lib/nav';
+import { branching } from '$lib/graph/branching.svelte';
 import { version } from '$lib/version';
 import pkg from '../../../package.json';
 import { workspace } from '$lib/workspace.svelte';
@@ -707,7 +708,6 @@ describe('Toolbar', () => {
 		const view = render(Toolbar, {});
 
 		for (const [label, route] of [
-			['Branch', '/branches'],
 			['Stash', '/stash'],
 			['Rebase', '/rebase']
 		] as const) {
@@ -717,6 +717,22 @@ describe('Toolbar', () => {
 			expect(goto).toHaveBeenCalledWith(route);
 		}
 
+		view.destroy();
+	});
+
+	it('opens a name field in HEAD\'s row on the graph, not a screen (FEAT-104)', () => {
+		repoControl.setInfo(info('main'));
+		const view = render(Toolbar, {});
+		goto.mockClear();
+
+		const button = view.all('.tool').find((b) => b.textContent?.includes('Branch'));
+		click(button as HTMLElement);
+
+		expect(branching.at).toBe('a'.repeat(40));
+		expect(goto).toHaveBeenCalledWith('/');
+		expect(goto).not.toHaveBeenCalledWith('/branches');
+
+		branching.cancel();
 		view.destroy();
 	});
 
