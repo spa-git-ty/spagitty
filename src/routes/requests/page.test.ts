@@ -27,24 +27,77 @@ it('separates requested reviews from work waiting on others and opens the select
  const open=vi.spyOn(requests,'openWorkspace').mockResolvedValue();click(view.get('li.row button'));
  expect(open).toHaveBeenCalledWith('PR_1');
 });
-it('shows the host error and sends account recovery to Settings',async()=>{
- vi.mocked(api.pullRequests).mockRejectedValue(new Error('No account for github.com'));
- view=render(Page,{});await vi.waitFor(()=>expect(view.text()).toContain('No account for github.com'));
- click(button('Settings → Accounts'));expect(goto).toHaveBeenCalledWith('/settings#accounts');
+it('separates requested reviews from work waiting on others and opens the selected request', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(requests.all).toHaveLength(2));
+	expect(view.text()).toContain('1 waiting on you · 1 on others');
+	expect(view.text()).toContain('Review requested');
+	expect(view.get('header .repository').textContent).toBe('example/demo');
+	const open = vi.spyOn(requests, 'openWorkspace').mockResolvedValue();
+	click(view.get('li.row button'));
+	expect(open).toHaveBeenCalledWith('PR_1');
 });
 it('explains unsupported remotes without requesting pull requests',async()=>{
  vi.mocked(api.forgeRepo).mockResolvedValue(null);view=render(Page,{});
  await vi.waitFor(()=>expect(requests.loading).toBe(false));expect(view.text()).toContain('not on a service');expect(api.pullRequests).not.toHaveBeenCalled();
 });
-it('distinguishes an empty queue and validates a new pull request before sending',async()=>{
- vi.mocked(api.pullRequests).mockResolvedValue([]);view=render(Page,{});
- await vi.waitFor(()=>expect(requests.connected).toBe(true));expect(view.text()).toContain('Nothing open');
- click(button('+ Create PR'));expect(view.find('[role="dialog"]')).not.toBeNull();
- type('#pr-title',' Fix checks ');type('#head-branch','main');click(button('Create Pull Request'));
- await vi.waitFor(()=>expect(view.text()).toContain('cannot be identical'));expect(api.createPullRequest).not.toHaveBeenCalled();
- type('#head-branch','feature/checks');type('#pr-body',' Regression covered ');
- vi.mocked(api.createPullRequest).mockRejectedValue(new Error('host denied creation'));
- click(button('Create Pull Request'));await vi.waitFor(()=>expect(view.text()).toContain('host denied creation'));
- expect(api.createPullRequest).toHaveBeenCalledWith('Fix checks','Regression covered','feature/checks','main',false);
- press(view.get('[role="dialog"]'),'Escape');expect(view.find('[role="dialog"]')).toBeNull();
+it('normalizes the backend no-account response into the shared account state', async () => {
+	vi.mocked(api.pullRequests).mockRejectedValue(
+		new Error('github.com refused the token: no account is connected for this host')
+	);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.text()).toContain('No account is connected.'));
+	expect(view.text()).not.toContain('refused the token');
+	expect(view.get('[role="status"] p').classList.contains('error')).toBe(false);
+	expect(button('+ Create PR')).toBeUndefined();
+	click(button('Settings → Accounts'));
+	expect(goto).toHaveBeenCalledWith('/settings#accounts');
+});
+it('shows the same account state when disconnected without an error', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(requests.all).toHaveLength(2));
+	requests.present([], { connected: false });
+	await vi.waitFor(() => expect(view.text()).toContain('No account is connected.'));
+	expect(view.get('[role="status"] p').classList.contains('error')).toBe(false);
+});
+it('preserves a repository lookup failure before a host is known', async () => {
+	vi.mocked(api.forgeRepo).mockRejectedValue(new Error('the remote could not be read'));
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.text()).toContain('the remote could not be read'));
+	expect(view.get('[role="status"] p').classList.contains('error')).toBe(true);
+	expect(view.text()).not.toContain('not on a service');
+});
+it('explains unsupported remotes without requesting pull requests', async () => {
+	vi.mocked(api.forgeRepo).mockResolvedValue(null);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(requests.loading).toBe(false));
+	expect(view.text()).toContain('not on a service');
+	expect(api.pullRequests).not.toHaveBeenCalled();
+});
+it('distinguishes an empty queue and validates a new pull request before sending', async () => {
+	vi.mocked(api.pullRequests).mockResolvedValue([]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(requests.connected).toBe(true));
+	expect(view.text()).toContain('Nothing open');
+	click(button('+ Create PR'));
+	expect(view.find('[role="dialog"]')).not.toBeNull();
+	type('#pr-title', ' Fix checks ');
+	type('#head-branch', 'main');
+	click(button('Create Pull Request'));
+	await vi.waitFor(() => expect(view.text()).toContain('cannot be identical'));
+	expect(api.createPullRequest).not.toHaveBeenCalled();
+	type('#head-branch', 'feature/checks');
+	type('#pr-body', ' Regression covered ');
+	vi.mocked(api.createPullRequest).mockRejectedValue(new Error('host denied creation'));
+	click(button('Create Pull Request'));
+	await vi.waitFor(() => expect(view.text()).toContain('host denied creation'));
+	expect(api.createPullRequest).toHaveBeenCalledWith(
+		'Fix checks',
+		'Regression covered',
+		'feature/checks',
+		'main',
+		false
+	);
+	press(view.get('[role="dialog"]'), 'Escape');
+	expect(view.find('[role="dialog"]')).toBeNull();
 });

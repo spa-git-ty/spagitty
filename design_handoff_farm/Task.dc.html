@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Farm task</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 24%,transparent) transparent}}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-button{display:none;width:0;height:0}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent);border:3px solid transparent;background-clip:padding-box;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink) 38%,transparent);background-clip:padding-box}::-webkit-scrollbar-corner{background:transparent}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-3:#a86a00;--lane-4:#6c4fa3;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-3:#f0b54a;--lane-4:#a58bd8;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--ok-soft:color-mix(in srgb,var(--ok) 12%,transparent);--danger-soft:color-mix(in srgb,var(--danger) 11%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.btn.quiet{background:none;box-shadow:none;border-color:transparent;color:var(--muted)}
+.btn.danger{color:var(--danger)}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono)}
+.sect{margin:0;font-weight:400;font-size:var(--fs-secondary);color:var(--muted);display:flex;align-items:baseline;gap:6px}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ag{--agent:var(--muted)}.ag-cc{--agent:var(--lane-1)}.ag-cx{--agent:var(--lane-5)}.ag-cu{--agent:var(--lane-4)}.ag-pi{--agent:var(--lane-3)}
+.mono-badge{width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--agent);background:color-mix(in srgb,var(--agent) 15%,transparent);border:1px solid color-mix(in srgb,var(--agent) 45%,transparent)}
+.mono-badge.live{animation:halo 2.4s ease-in-out infinite}
+.strands{display:inline-flex;align-items:center;gap:3px;height:13px;flex:none}
+.strands i{width:3.5px;height:13px;border-radius:999px;animation:wave 1s ease-in-out infinite}
+.strands i:nth-child(1){background:var(--lane-1)}.strands i:nth-child(2){background:var(--lane-5);animation-delay:.15s}.strands i:nth-child(3){background:var(--lane-2);animation-delay:.3s}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.jstep{display:flex;flex-direction:column;gap:6px;min-width:0}
+.jrow{display:flex;align-items:center}
+.jdot{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;border:1.5px solid var(--line);color:var(--muted)}
+.jline{flex:1;height:2px;background:var(--soft);margin:0 8px;border-radius:2px}
+.jstep.last .jline{visibility:hidden}
+.jstep.d .jdot{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 60%,transparent);color:var(--ok)}
+.jstep.d .jline{background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.jstep.n .jdot{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);animation:halo-a 2.4s ease-in-out infinite}
+.jstep.y .jdot{border-color:var(--ok);background:var(--ok);color:var(--bg);animation:halo-o 2.4s ease-in-out infinite}
+.jstep.s .jdot{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+.jname{font-weight:600;font-size:14px}
+.jstep.o .jname{color:var(--muted);font-weight:500}
+.jstep.s .jname{color:var(--danger)}
+.term{background:var(--sunken);border:1px solid var(--pane-edge);border-radius:10px;padding:14px 16px;font-family:var(--font-mono);font-size:12.5px;line-height:1.7;overflow:auto}
+.tl-think{color:var(--muted)}.tl-edit{color:var(--ok)}.tl-cmd{color:var(--lane-5)}.tl-out{color:var(--muted);padding-left:18px}.tl-err{color:var(--danger);padding-left:18px}
+.caret{display:inline-block;width:7px;height:14px;background:var(--accent);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+.row-line{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--soft)}
+.row-line:last-child{border-bottom:none}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 10px;font-size:var(--fs-secondary)}
+@keyframes wave{0%,100%{transform:scaleY(.45);opacity:.55}50%{transform:scaleY(1);opacity:1}}
+@keyframes halo{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--agent) 16%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--agent) 4%,transparent)}}
+@keyframes halo-a{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--accent) 4%,transparent)}}
+@keyframes halo-o{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--ok) 22%,transparent)}50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--ok) 5%,transparent)}}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px 10px">
+<a href="Main.dc.html" class="chip" aria-label="Back to the board"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Board</a>
+<span class="mono" style="color: var(--muted); font-size: 14px">{{t.id}}</span>
+<span style="font-size: 22px">{{t.title}}</span>
+<span class="chip">{{t.kind}}</span>
+<span style="flex: 1"></span>
+<sc-for list="{{t.actions}}" as="a" hint-placeholder-count="3"><button class="btn {{a.cls}}">{{a.label}}</button></sc-for>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 10px 10px 10px">
+<div style="flex: 1; min-width: 0; overflow: auto; padding: 2px 8px 16px; display: flex; flex-direction: column; gap: 14px">
+
+<div class="card" style="padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-size: 15px; font-weight: 600">{{t.where}}</span>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: 12px">{{t.attempt}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr))">
+<sc-for list="{{t.steps}}" as="s" hint-placeholder-count="6">
+<div class="jstep {{s.cls}} {{s.last}}">
+<div class="jrow"><span class="jdot"><sc-if value="{{s.isD}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></sc-if><sc-if value="{{s.isN}}" hint-placeholder-val="{{false}}"><span class="strands" aria-hidden="true"><i></i><i></i><i></i></span></sc-if><sc-if value="{{s.isY}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><path d="M12 12v9"></path></svg></sc-if><sc-if value="{{s.isS}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></sc-if><sc-if value="{{s.isO}}" hint-placeholder-val="{{true}}"><span style="font-size: 12px; font-weight: 700">{{s.num}}</span></sc-if></span><span class="jline"></span></div>
+<span class="jname">{{s.name}}</span>
+<span class="note" style="font-size: 12px; padding-right: 10px">{{s.sub}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{t.hasCallout}}" hint-placeholder-val="{{false}}">
+<div class="card" style="{{t.calloutStyle}} padding: 12px 14px; display: flex; align-items: center; gap: 12px">
+<span style="font-size: 14px; line-height: 1.45; flex: 1">{{t.callout}}</span>
+</div>
+</sc-if>
+
+<div role="tablist" aria-label="About this task" style="display: flex; gap: 6px; flex-wrap: wrap">
+<sc-for list="{{tabs}}" as="b" hint-placeholder-count="5"><button role="tab" class="chip {{b.on}}" onClick="{{b.pick}}">{{b.label}}<sc-if value="{{b.hasCount}}" hint-placeholder-val="{{false}}"><span style="opacity: .7">{{b.count}}</span></sc-if></button></sc-for>
+</div>
+
+<sc-if value="{{show.live}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div class="term" style="min-height: 260px">
+<sc-for list="{{t.transcript}}" as="l" hint-placeholder-count="8"><div class="{{l.k}}">{{l.text}}</div></sc-for>
+<sc-if value="{{t.isLive}}" hint-placeholder-val="{{true}}"><div><span class="caret"></span></div></sc-if>
+</div>
+<div class="note" style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 0 4px"><sc-if value="{{t.isLive}}" hint-placeholder-val="{{true}}"><span class="strands" aria-hidden="true"><i></i><i></i><i></i></span></sc-if>{{t.liveNote}}<span style="flex: 1"></span><button class="btn quiet" style="padding: 2px 6px">Full log</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{show.changes}}" hint-placeholder-val="{{false}}">
+<div class="card" style="overflow: hidden">
+<sc-for list="{{t.files}}" as="f" hint-placeholder-count="4">
+<div class="row-line"><span class="mono" style="flex: 1; min-width: 0; font-size: 12.5px">{{f.path}}</span><span class="mono" style="color: var(--ok)">{{f.add}}</span><span class="mono" style="color: var(--danger); width: 40px; text-align: right">{{f.del}}</span></div>
+</sc-for>
+<div class="row-line note" style="font-size: 12px">{{t.filesNote}}<span style="flex: 1"></span><a href="Main.dc.html" class="btn" style="padding: 3px 10px">Open the branch in Graph</a></div>
+</div>
+</sc-if>
+
+<sc-if value="{{show.checks}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{t.checks}}" as="c" hint-placeholder-count="2">
+<div class="card" style="overflow: hidden">
+<div class="row-line"><span class="dot" style="{{c.dot}}"></span><span class="mono" style="flex: 1; font-size: 13px">{{c.cmd}}</span><span class="note" style="font-size: 12px">{{c.state}}</span></div>
+<sc-if value="{{c.hasOut}}" hint-placeholder-val="{{false}}"><div class="term" style="border: none; border-radius: 0; border-top: 1px solid var(--soft)"><sc-for list="{{c.out}}" as="o" hint-placeholder-count="3"><div class="{{o.k}}" style="padding-left: 0">{{o.text}}</div></sc-for></div></sc-if>
+</div>
+</sc-for>
+<span class="note" style="padding: 0 4px; font-size: 12px">{{t.checksNote}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{show.review}}" hint-placeholder-val="{{false}}">
+<div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<sc-if value="{{t.hasReview}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div class="ag ag-cx" style="display: flex; align-items: center; gap: 10px"><span class="mono-badge">CX</span><span style="font-weight: 600">Codex approved</span><span class="chip" style="color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: var(--ok-soft)">approve</span></div>
+<p style="margin: 0; font-size: 14.4px; line-height: 1.6">Clean split between listing and merging; the error mapping follows github.rs. One nit: the page size is fixed at 50, which is Gitea's default but not its maximum.</p>
+<div class="card" style="box-shadow: none; overflow: hidden">
+<div class="row-line"><span class="chip" style="padding: 1px 8px; color: var(--warn)">low</span><span class="mono" style="font-size: 12px; color: var(--muted)">gitea/pulls.rs</span><span style="font-size: 13.2px">Page size is hard-coded at 50</span></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{t.noReview}}" hint-placeholder-val="{{true}}"><span class="note">{{t.reviewNote}}</span></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{show.handoff}}" hint-placeholder-val="{{false}}">
+<div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{t.hasHandoff}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; font-size: 14.4px; line-height: 1.6">Added <span class="mono">gitea.rs</span> with list, create and merge, behind the same <span class="mono">Host</span> trait as GitHub and GitLab. Merge uses Gitea's “merge” style only; squash and rebase are mapped but untested.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px"><span class="note">Risks it raised</span><span style="font-size: 13.2px">Squash and rebase merges have no fixture yet.</span></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span class="note">Questions for you</span><span style="font-size: 13.2px">Should self-signed Gitea servers be allowed?</span></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span class="note">It proposed a task</span><span style="font-size: 13.2px; display: flex; align-items: center; gap: 8px">Cache the API version per remote<button class="chip">Add to plan</button></span></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{t.noHandoff}}" hint-placeholder-val="{{true}}"><span class="note">{{t.handoffNote}}</span></sc-if>
+</div>
+</sc-if>
+
+</div>
+
+<aside aria-label="The brief" style="width: 330px; flex: none; display: flex; flex-direction: column; gap: 16px; padding: 16px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px; overflow: auto">
+<div class="ag {{t.agc}}" style="display: flex; align-items: center; gap: 10px">
+<span class="mono-badge {{t.live}}" style="width: 36px; height: 36px; font-size: 12px">{{t.agN}}</span>
+<div style="display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{t.agName}}</span><span class="note" style="font-size: 12px">{{t.agLine}}</span></div>
+<span style="flex: 1"></span>
+<button class="btn" style="padding: 3px 9px">Reassign</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="note">The brief</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.55">{{t.brief}}</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 7px">
+<span class="note">Done when</span>
+<sc-for list="{{t.criteria}}" as="c" hint-placeholder-count="3">
+<span style="display: flex; gap: 8px; font-size: 13.2px; line-height: 1.45"><span style="width: 16px; height: 16px; flex: none; margin-top: 1px; border-radius: 5px; display: grid; place-items: center; {{c.boxStyle}}"><sc-if value="{{c.met}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></sc-if></span>{{c.text}}</span>
+</sc-for>
+</div>
+<div class="kv">
+<span class="note">May touch</span><span style="display: flex; flex-wrap: wrap; gap: 4px"><sc-for list="{{t.paths}}" as="p" hint-placeholder-count="2"><span class="chip mono" style="padding: 1px 7px; font-size: 11px">{{p}}</span></sc-for></span>
+<span class="note">Needs</span><span>{{t.needs}}</span>
+<span class="note">Asked by</span><span>{{t.origin}}</span>
+<span class="note">Branch</span><span class="mono" style="font-size: 12px; word-break: break-all">{{t.branch}}</span>
+<span class="note">Worktree</span><span class="mono" style="font-size: 12px; word-break: break-all">{{t.worktree}}</span>
+</div>
+<span style="flex: 1"></span>
+<button class="btn quiet" style="justify-content: center">Edit the task</button>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span class="dot" style="width: 6px; height: 6px; background: var(--ok)"></span>Repository ready · farm building on 3 worktrees</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · <span class="mono">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"task":{"editor":"enum","options":["T-04 working","T-02 ready to land","T-09 stuck"],"default":"T-04 working"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+function shell(dot) {
+ return {
+  rail: RAIL.map(function (k) { return k === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'farm' ? 'on' : '', dot: k === 'farm' && dot }; }),
+  tools: TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; })
+ };
+}
+var NAMES = ['Queued', 'Worktree', 'Working', 'Checks', 'Review', 'Landed'];
+function steps(codes, subs) {
+ return codes.split('').map(function (c, i) { return { cls: c, name: NAMES[i], sub: subs[i], num: String(i + 1), isD: c === 'd', isN: c === 'n', isY: c === 'y', isS: c === 's', isO: c === 'o', last: i === 5 ? 'last' : '' }; });
+}
+function L(k, text) { return { k: 'tl-' + k, text: text }; }
+function crit(text, met) { return { text: text, met: met, boxStyle: met ? 'background: var(--ok-soft); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);' : 'border: 1.5px solid var(--line);' }; }
+var TASKS = {
+ 'T-04 working': {
+  id: 'T-04', title: 'Review comments on Gitea', kind: 'Backend', tab: 'live',
+  where: 'Claude Code is writing it', attempt: 'Attempt 1 of 3',
+  steps: steps('ddnooo', ['09:58 · it waited for T-03', 'farm/T-04-review-comments', 'Claude Code · 6 min 12 s', 'cargo test, bun run check', 'Codex reads the diff', 'You approve the merge']),
+  actions: [{ cls: 'quiet danger', label: 'Stop' }, { cls: '', label: 'Open the worktree' }],
+  hasCallout: false,
+  agc: 'ag-cc', agN: 'CC', agName: 'Claude Code', agLine: 'Working · spoke 8 s ago', live: 'live',
+  isLive: true, liveNote: 'Claude Code is working · last line 8 s ago',
+  transcript: [L('think', '› Reading hosts/github/review.rs to match its shape'), L('think', '› Gitea groups line comments under a review, one request per review'), L('edit', '+ src-tauri/src/hosts/gitea/review.rs   +86'), L('edit', '+ src-tauri/src/hosts/gitea/mod.rs      +3'), L('cmd', '$ cargo check -p spagitty-hosts'), L('out', 'Finished `dev` profile in 14.2s'), L('think', '› Mapping Gitea’s new_position / old_position onto DraftComment.line'), L('edit', '+ src-tauri/src/hosts/gitea/review.rs   +22 −4')],
+  files: [{ path: 'src-tauri/src/hosts/gitea/review.rs', add: '+108', del: '−4' }, { path: 'src-tauri/src/hosts/gitea/mod.rs', add: '+3', del: '' }], filesNote: 'Uncommitted in the worktree so far',
+  checks: [{ cmd: 'cargo test', state: 'Runs after the hand-off', dot: 'background: var(--soft);', hasOut: false }, { cmd: 'bun run check', state: 'Runs after the hand-off', dot: 'background: var(--soft);', hasOut: false }], checksNote: 'Your commands, from the farm’s rules. Nothing is checked until the agent says it is done.',
+  hasReview: false, reviewNote: 'Codex reviews it once the checks pass.',
+  hasHandoff: false, handoffNote: 'When Claude Code finishes it writes a hand-off: what it did, the files, the tests, risks, and anything it wants to ask you.',
+  brief: 'Read and post line comments on a Gitea pull request through the same review calls the Review screen already uses for GitHub.',
+  criteria: [crit('Comments on a Gitea PR appear in the Review room', false), crit('A new comment posts to the right line', false), crit('No change to the GitHub path', false)],
+  paths: ['src-tauri/src/hosts/gitea/', 'src/lib/review/'], needs: 'T-03 · landed', origin: 'Planned by Claude Code', branch: 'farm/T-04-review-comments', worktree: '~/.spagitty/farm/spagitty/T-04'
+ },
+ 'T-02 ready to land': {
+  id: 'T-02', title: 'gitea.rs: list, create and merge', kind: 'Backend', tab: 'review',
+  where: 'Ready to land. It needs your yes.', attempt: 'Attempt 1 of 3',
+  steps: steps('dddddy', ['09:31', 'farm/T-02-gitea-rs', 'Claude Code · 17 min', 'Both passed · 1 min 4 s', 'Codex approved', 'Waiting for you']),
+  actions: [{ cls: '', label: 'Send it back' }, { cls: 'primary', label: 'Land it into main' }],
+  hasCallout: true, calloutStyle: 'border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: color-mix(in srgb, var(--ok) 7%, var(--surface));', callout: 'The farm is semi-automatic, so merges wait for you. Landing merges farm/T-02-gitea-rs into main and frees T-08 to start.',
+  agc: 'ag-cc', agN: 'CC', agName: 'Claude Code', agLine: 'Built it · free now', live: '',
+  isLive: false, liveNote: 'Finished 8 min ago · exit 0',
+  transcript: [L('think', '› Wrote the hand-off'), L('cmd', '$ git commit -m "hosts: gitea merge styles"'), L('out', '[farm/T-02-gitea-rs 3e1a7c2] 1 file changed, 41 insertions(+)'), L('think', '› Done. Four commits on farm/T-02-gitea-rs.')],
+  files: [{ path: 'src-tauri/src/hosts/gitea/mod.rs', add: '+58', del: '' }, { path: 'src-tauri/src/hosts/gitea/pulls.rs', add: '+241', del: '' }, { path: 'src-tauri/src/hosts/gitea/merge.rs', add: '+97', del: '' }, { path: 'src-tauri/src/hosts/mod.rs', add: '+12', del: '−14' }, { path: 'src-tauri/Cargo.toml', add: '+4', del: '−4' }], filesNote: '4 commits · 5 files · +412 −18',
+  checks: [{ cmd: 'cargo test', state: 'Passed · 46 s', dot: 'background: var(--ok);', hasOut: false }, { cmd: 'bun run check', state: 'Passed · 18 s', dot: 'background: var(--ok);', hasOut: false }], checksNote: 'Ran in the task’s own worktree, on the branch’s last commit.',
+  hasReview: true, reviewNote: '',
+  hasHandoff: true, handoffNote: '',
+  brief: 'A Gitea host beside GitHub and GitLab: list open pull requests, open one, and merge one, behind the existing Host trait.',
+  criteria: [crit('Lists PRs from a Gitea remote', true), crit('Creates a PR with title and body', true), crit('Merges with the server’s default style', true)],
+  paths: ['src-tauri/src/hosts/'], needs: 'T-01 · landed', origin: 'Planned by Claude Code', branch: 'farm/T-02-gitea-rs', worktree: '~/.spagitty/farm/spagitty/T-02'
+ },
+ 'T-09 stuck': {
+  id: 'T-09', title: 'Store the token in the system keyring', kind: 'Backend', tab: 'checks',
+  where: 'Stuck. The farm stopped trying.', attempt: 'Attempt 3 of 3',
+  steps: steps('dddsoo', ['09:23 · wave 1', 'farm/T-09-keyring', 'Codex · third try, 9 min', 'cargo test failed', 'Not reached', 'Not reached']),
+  actions: [{ cls: 'quiet danger', label: 'Give up on it' }, { cls: '', label: 'Edit the task' }, { cls: 'primary', label: 'Retry with Codex' }],
+  hasCallout: true, calloutStyle: 'border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: color-mix(in srgb, var(--danger) 6%, var(--surface));', callout: 'Three tries, the same failure: the build cannot find libsecret-1 on this machine. That is a missing system package, not a code problem. Install it, then retry.',
+  agc: 'ag-cx', agN: 'CX', agName: 'Codex', agLine: 'Third attempt · free now', live: '',
+  isLive: false, liveNote: 'Finished 9 min ago · exit 0, then the checks failed',
+  transcript: [L('think', '› Added the keyring crate behind a Linux feature'), L('cmd', '$ cargo build'), L('err', 'error: failed to run custom build command for `libdbus-sys`'), L('think', '› The agent assumed it was a CI-only problem and handed off')],
+  files: [{ path: 'src-tauri/src/accounts/keyring.rs', add: '+64', del: '' }, { path: 'src-tauri/Cargo.toml', add: '+2', del: '' }], filesNote: '1 commit · 2 files',
+  checks: [{ cmd: 'cargo test', state: 'Failed · 3 of 3 attempts', dot: 'background: var(--danger);', hasOut: true, out: [L('err', 'error: failed to run custom build command for `libdbus-sys v0.2.5`'), L('out', 'Package libsecret-1 was not found in the pkg-config search path.'), L('out', 'Perhaps you should add the directory containing `libsecret-1.pc`')] }, { cmd: 'bun run check', state: 'Not run · the first one failed', dot: 'background: var(--soft);', hasOut: false }], checksNote: 'Attempt 1 and 2 (Claude Code) and 3 (Codex) all failed on this line.',
+  hasReview: false, reviewNote: 'Nobody reviews a task whose checks fail.',
+  hasHandoff: false, handoffNote: 'Codex said it was done; the checks disagreed. Its hand-off is kept with attempt 3.',
+  brief: 'Keep the Gitea token in the system keyring instead of the settings file.',
+  criteria: [crit('The token is never written to settings.json', true), crit('Builds on Linux, macOS and Windows', false), crit('Removing the account removes the secret', false)],
+  paths: ['src-tauri/src/accounts/', 'src-tauri/Cargo.toml'], needs: 'Nothing', origin: 'Planned by Claude Code', branch: 'farm/T-09-keyring', worktree: '~/.spagitty/farm/spagitty/T-09'
+ }
+};
+var TABS = [['live', 'Output'], ['changes', 'Changes'], ['checks', 'Checks'], ['review', 'Review'], ['handoff', 'Hand-off']];
+class Component extends DCLogic {
+ constructor(p) { super(p); this.state = { tab: null, tabFor: null }; }
+ renderVals() {
+  var self = this;
+  var key = this.props.task || 'T-04 working';
+  var t = TASKS[key] || TASKS['T-04 working'];
+  var tab = this.state.tabFor === key && this.state.tab ? this.state.tab : t.tab;
+  var show = {}; TABS.forEach(function (b) { show[b[0]] = b[0] === tab; });
+  var counts = { changes: String(t.files.length) };
+  var tabs = TABS.map(function (b) { return { label: b[1], on: b[0] === tab ? 'on' : '', hasCount: !!counts[b[0]], count: counts[b[0]] || '', pick: function () { self.setState({ tab: b[0], tabFor: key }); } }; });
+  var tt = Object.assign({ noReview: !t.hasReview, noHandoff: !t.hasHandoff }, t);
+  return Object.assign(shell(true), { theme: this.props.theme || 'dark', t: tt, tabs: tabs, show: show });
+ }
+}
+</script>
+</body>
+</html>

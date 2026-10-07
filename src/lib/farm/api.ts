@@ -35,6 +35,11 @@ export function open(path: string): Promise<FarmSnapshot> {
 	return invoke('farm_open', { path });
 }
 
+/** Whether a repository has a farm on disk. Reads one file; opens nothing. */
+export function exists(path: string): Promise<boolean> {
+	return invoke('farm_exists', { path });
+}
+
 export function close(): Promise<void> {
 	return invoke('farm_close');
 }

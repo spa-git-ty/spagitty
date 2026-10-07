@@ -65,7 +65,10 @@ export type IconName =
 	| 'farm'
 	| 'review'
 	| 'ruler'
-	| 'unfold';
+	| 'unfold'
+	| 'pause'
+	| 'play'
+	| 'warning';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -138,6 +141,11 @@ export const ICONS: Record<IconName, string[]> = {
 	ruler: ['M4 9.5h16', 'M4 14.5h16'],
 	// Two chevrons opening apart: unchanged lines folded away (FEAT-091).
 	unfold: ['M6 9.5l6-5 6 5', 'M6 14.5l6 5 6-5'],
+	// The Farm's pill (FEAT-109): pause and resume a farm.
+	pause: ['M9 5.5v13', 'M15 5.5v13'],
+	play: ['M8 5.5v13l10-6.5z'],
+	// A stuck task: a triangle with a mark in it.
+	warning: ['M12 4 21.5 20h-19z', 'M12 10v4.5', 'M12 17.5v.01'],
 	// A clock turned back: where HEAD has been.
 	history: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3 4v4h4', 'M12 8v4.5l3 1.8'],
 	folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],

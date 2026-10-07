@@ -6,6 +6,7 @@
 	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import '../app.css';
 
+	import { farmStore } from '$lib/farm/store.svelte';
 	import * as api from '$lib/api';
 	import { timing } from '$lib/timing.svelte';
 	import { gentleFly } from '$lib/motion';
@@ -284,6 +285,14 @@
 	// (FEAT-087). Nothing is read for a repository with no account.
 	$effect(() => {
 		if (repo.info !== null) review.prime(repo.generation);
+	});
+
+	// A repository that has a farm is read once, so the rail's Farm dot says
+	// whether something waits on you before the screen is visited (FEAT-109).
+	// Only one with a farm, and never in place of a farm mid-run: see `prime`.
+	$effect(() => {
+		const path = repo.info?.path;
+		if (path) void farmStore.prime(path);
 	});
 
 	/*

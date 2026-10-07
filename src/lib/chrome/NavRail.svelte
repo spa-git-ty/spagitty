@@ -7,6 +7,7 @@
 	import { isItemActive, navRows } from '$lib/nav';
 	import { repo } from '$lib/repo.svelte';
 	import { review } from '$lib/review/store.svelte';
+	import { farmStore } from '$lib/farm/store.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { NavItem } from '$lib/nav';
 
@@ -52,6 +53,10 @@
 	 * would say nothing.
 	 */
 	function waiting(item: NavItem): boolean {
+		// Farm's dot: a task waits on you, in this repository's farm (FEAT-109).
+		if (item.code === '1Q') {
+			return farmStore.path === repo.info?.path && farmStore.needsYou.length > 0;
+		}
 		// Review has no count to show: its dot is a pull request waiting on
 		// your review (FEAT-087).
 		if (item.code === '1R') return review.waiting;

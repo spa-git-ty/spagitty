@@ -66,6 +66,7 @@ afterEach(() => {
 	requests.clear();
 	review.clear();
 	control.reset();
+	vi.restoreAllMocks();
 });
 
 it('groups what needs you above what came back, and leaves your own out', async () => {
@@ -79,7 +80,10 @@ it('groups what needs you above what came back, and leaves your own out', async 
 	expect(text).not.toContain('My own change');
 	expect(text).toContain('2 open threads');
 	expect(text).toContain('1 reply to you');
-	expect(text).toContain('spagitty · GitHub · signed in as mahmoud');
+	expect(view.get('header .repository').textContent).toBe('spa-git-ty/spagitty');
+	expect(view.get('header').textContent).toContain('GitHub · signed in as mahmoud');
+	expect(button('This repo')).toBeUndefined();
+	expect(button('All my repos')).toBeUndefined();
 });
 
 it('previews the first pull request and then the one chosen', async () => {
@@ -151,67 +155,31 @@ it('opens a GitLab merge request from this repository', async () => {
 
 it('says why a review did not open', async () => {
 	const { notice } = await import('$lib/ui/notice.svelte');
-	const elsewhere = request({ id: 'PR_77', number: 77, title: 'Elsewhere', repository: 'other/thing' });
-	vi.mocked(api.involvedPullRequests).mockResolvedValue([elsewhere]);
-	vi.mocked(api.localCloneOf).mockRejectedValue(new Error('the clone list could not be read'));
+	vi.spyOn(review, 'open').mockRejectedValueOnce(new Error('the saved review could not be read'));
 	view = render(Page, {});
 	await vi.waitFor(() => expect(cards()).toHaveLength(2));
-	click(button('All my repos'));
-	await vi.waitFor(() => expect(view.text()).toContain('Elsewhere'));
 
 	click(button('Start review'));
 
 	await vi.waitFor(() => expect(notice.current?.tone).toBe('error'));
 	expect(notice.current?.title).toBe('The review could not be opened');
-	expect(notice.current?.detail).toContain('the clone list could not be read');
+	expect(notice.current?.detail).toContain('the saved review could not be read');
 	expect((button('Start review') as HTMLButtonElement).disabled).toBe(false);
 	notice.dismiss();
 });
 
-it('reads every repository on asking, and says when a row has no clone here', async () => {
-	const elsewhere = request({
-		id: 'PR_77',
-		number: 77,
-		title: 'Elsewhere',
-		reviewRequested: true,
-		repository: 'other/thing'
-	});
-	vi.mocked(api.involvedPullRequests).mockResolvedValue([elsewhere]);
-	vi.mocked(api.localCloneOf).mockResolvedValue(null);
+it('returns to this repository when an older session left another scope selected', async () => {
+	vi.mocked(api.involvedPullRequests).mockResolvedValue([]);
+	review.setScope('all');
+	await vi.waitFor(() => expect(review.loading).toBe(false));
+	vi.mocked(api.involvedPullRequests).mockClear();
 	view = render(Page, {});
 	await vi.waitFor(() => expect(cards()).toHaveLength(2));
 
-	click(button('All my repos'));
-	await vi.waitFor(() => expect(view.text()).toContain('Elsewhere'));
-	expect(view.text()).toContain('other/thing');
-
-	click(button('Start review'));
-	await vi.waitFor(() => expect(view.text()).toContain('No clone of other/thing here'));
-	expect(api.localCloneOf).toHaveBeenCalledWith('github.com', 'other/thing');
-	expect(review.room).toBeNull();
-});
-
-it('opens the clone a row from another repository belongs to', async () => {
-	const elsewhere = request({ id: 'PR_77', number: 77, title: 'Elsewhere', repository: 'other/thing' });
-	vi.mocked(api.involvedPullRequests).mockResolvedValue([elsewhere]);
-	vi.mocked(api.localCloneOf).mockResolvedValue('/repos/thing');
-	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
-	click(button('All my repos'));
-	await vi.waitFor(() => expect(view.text()).toContain('Elsewhere'));
-
-	vi.mocked(api.forgeRepo).mockResolvedValue({
-		kind: 'gitHub',
-		host: 'github.com',
-		owner: 'other',
-		name: 'thing'
-	});
-	vi.mocked(api.pullRequests).mockResolvedValue([{ ...elsewhere, repository: null }]);
-	click(button('Start review'));
-
-	await vi.waitFor(() => expect(review.room?.pr.number).toBe(77));
-	expect(calls.opened).toContain('/repos/thing');
 	expect(review.scope).toBe('repo');
+	click(button('Refresh'));
+	await vi.waitFor(() => expect(api.pullRequests).toHaveBeenCalledTimes(2));
+	expect(api.involvedPullRequests).not.toHaveBeenCalled();
 });
 
 it('says what the host said, and sends account trouble to Settings', async () => {
@@ -362,15 +330,43 @@ it('hides the conversation into a tab at the edge, and remembers it', async () =
 	expect(view.all('aside[aria-label="Conversation"]')).toHaveLength(1);
 });
 
-/** BUG-055: no account for the host is a state, said as Pull requests says it. */
-it('says no account is connected in All my repos, not the host refusing a token', async () => {
+/** BUG-056: the repository's no-account state has the same recovery on both screens. */
+it('says no account is connected when the backend reports no account for this host', async () => {
 	vi.mocked(api.forgeAccounts).mockResolvedValue([]);
+	vi.mocked(api.pullRequests).mockRejectedValue(
+		new Error('github.com refused the token: no account is connected for this host')
+	);
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards().length).toBeGreaterThan(0));
-	click(button('All my repos'));
 	await vi.waitFor(() => expect(view.text()).toContain('No account is connected.'));
 
 	expect(api.involvedPullRequests).not.toHaveBeenCalled();
 	expect(view.text()).not.toContain('refused the token');
-	expect(view.all('.empty')).toHaveLength(1);
+	expect(view.get('[role="status"] p').classList.contains('error')).toBe(false);
+	click(button('Settings → Accounts'));
+	expect(goto).toHaveBeenCalledWith('/settings#accounts');
+});
+
+it('shows the same no-account state when disconnected without an error', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	requests.present([], { connected: false });
+	await vi.waitFor(() => expect(view.text()).toContain('No account is connected.'));
+	expect(view.get('[role="status"] p').classList.contains('error')).toBe(false);
+});
+
+it('explains unsupported remotes without reading pull requests', async () => {
+	vi.mocked(api.forgeRepo).mockResolvedValue(null);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.text()).toContain('not on a service'));
+	expect(api.pullRequests).not.toHaveBeenCalled();
+	expect(view.find('header .repository')).toBeNull();
+	expect(button('Settings → Accounts')).toBeUndefined();
+});
+
+it('keeps a repository lookup failure visible instead of calling the remote unsupported', async () => {
+	vi.mocked(api.forgeRepo).mockRejectedValue(new Error('the remote could not be read'));
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.text()).toContain('the remote could not be read'));
+	expect(view.get('[role="status"] p').classList.contains('error')).toBe(true);
+	expect(view.text()).not.toContain('not on a service');
 });

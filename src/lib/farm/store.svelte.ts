@@ -26,6 +26,7 @@
 
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from './api';
+import { attention } from './describe';
 import type {
 	AgentScore,
 	AgentStatus,
@@ -38,6 +39,7 @@ import type {
 	AgentRun,
 	StaleWorkspace,
 	Task,
+	TaskDetail,
 	TaskStatus
 } from './types';
 
@@ -80,11 +82,27 @@ let transcripts = $state<Record<string, string[]>>({});
 let loaded = $state(false);
 let loading = $state(false);
 let error = $state<string | null>(null);
+let details = $state<Record<string, TaskDetail>>({});
+let detailErrors = $state<Record<string, string>>({});
+let generation = 0;
+/** The repository the store holds, so the rail shows its dot only there. */
+let openedPath = $state<string | null>(null);
+let openEpoch = 0;
+let refreshEpoch = 0;
+const detailVersions = new Map<string, string>();
+const detailRequests = new Map<string, string>();
 
 let unlisten: UnlistenFn | null = null;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 function apply(snapshot: FarmSnapshot): void {
+	if (farm?.id !== snapshot.farm?.id) {
+		generation++;
+		details = {};
+		detailErrors = {};
+		detailVersions.clear();
+		detailRequests.clear();
+	}
 	farm = snapshot.farm;
 	agents = snapshot.agents;
 	undetected = snapshot.undetected;
@@ -94,6 +112,36 @@ function apply(snapshot: FarmSnapshot): void {
 	waiting = snapshot.waiting;
 	activity = snapshot.events.slice(-ACTIVITY_LIMIT);
 	loaded = true;
+	void loadDetails();
+}
+
+/** Read evidence once per task revision, with no polling and no stale-repository writes. */
+async function loadDetails(): Promise<void> {
+	const epoch = generation;
+	await Promise.all(
+		(farm?.tasks ?? []).map(async (task) => {
+			const version = `${task.updatedMs}:${task.status}:${task.attempts}`;
+			if (detailVersions.get(task.id) === version || detailRequests.get(task.id) === version)
+				return;
+			detailRequests.set(task.id, version);
+			try {
+				const found = await api.taskDetail(task.id);
+				if (!found) return;
+				if (generation !== epoch || detailRequests.get(task.id) !== version) return;
+				details = { ...details, [task.id]: found };
+				detailVersions.set(task.id, version);
+				const next = { ...detailErrors };
+				delete next[task.id];
+				detailErrors = next;
+			} catch (cause) {
+				if (generation === epoch)
+					detailErrors = { ...detailErrors, [task.id]: api.failure(cause).message };
+			} finally {
+				if (generation === epoch && detailRequests.get(task.id) === version)
+					detailRequests.delete(task.id);
+			}
+		})
+	);
 }
 
 /**
@@ -104,6 +152,9 @@ function apply(snapshot: FarmSnapshot): void {
  */
 function absorb(event: RecordedEvent): void {
 	if (event.kind === 'agentOutput') {
+		runs = runs.map((run) =>
+			run.id === event.run ? { ...run, lastOutputMs: event.atMs || Date.now() } : run
+		);
 		const existing = transcripts[event.task] ?? [];
 		const next = [...existing, event.line];
 		transcripts = {
@@ -138,8 +189,11 @@ function scheduleRefresh(): void {
 }
 
 async function refresh(): Promise<void> {
+	const epoch = openEpoch;
+	const revision = ++refreshEpoch;
 	try {
-		apply(await api.snapshot());
+		const snapshot = await api.snapshot();
+		if (epoch === openEpoch && revision === refreshEpoch) apply(snapshot);
 	} catch (cause) {
 		// A refresh that fails must not blank a screen that is showing
 		// something true. The error is recorded and the last snapshot stays.
@@ -148,6 +202,18 @@ async function refresh(): Promise<void> {
 }
 
 export const farmStore = {
+	/** The repository this store holds a farm for, if any. */
+	get path(): string | null {
+		return openedPath;
+	},
+
+	get details(): Record<string, TaskDetail> {
+		return details;
+	},
+	get detailErrors(): Record<string, string> {
+		return detailErrors;
+	},
+	loadDetails,
 	get farm(): Farm | null {
 		return farm;
 	},
@@ -260,8 +326,8 @@ export const farmStore = {
 
 	/** Tasks waiting for a person: reviewed and not merged, or blocked. */
 	get needsYou(): Task[] {
-		return (farm?.tasks ?? []).filter(
-			(task) => task.status === 'review' || task.status === 'blocked'
+		return (farm?.tasks ?? []).filter((task) =>
+			attention(task, farm?.tasks ?? [], details[task.id], runs)
 		);
 	},
 
@@ -308,18 +374,49 @@ export const farmStore = {
 	 * that produces the event is asked for.
 	 */
 	async open(path: string): Promise<void> {
+		if (openedPath === path && (loaded || loading)) return;
+		this.reset();
+		openedPath = path;
+		const epoch = ++openEpoch;
 		loading = true;
 		error = null;
 		try {
 			await this.listen();
-			apply(await api.open(path));
+			const snapshot = await api.open(path);
+			if (epoch !== openEpoch) return;
+			apply(snapshot);
 			// Once, on open, and never as part of a refresh: see `leftovers`.
 			await this.leftovers();
 		} catch (cause) {
-			error = api.failure(cause).message;
+			if (epoch === openEpoch) {
+				error = api.failure(cause).message;
+				openedPath = null;
+			}
 		} finally {
-			loading = false;
+			if (epoch === openEpoch) loading = false;
 		}
+	},
+
+	/**
+	 * Open a repository's farm before its screen is visited, for the rail dot
+	 * (FEAT-109) — but only one that already has a farm, and never in place
+	 * of a farm with a run in flight.
+	 *
+	 * Opening is not free: it detects agents, writes the agent registry into
+	 * the repository, and replaces the backend's one farm service, which stops
+	 * a planner running elsewhere. A visit to the Farm screen still opens
+	 * whatever repository it is in; this only declines to do so unasked.
+	 */
+	async prime(path: string): Promise<void> {
+		if (openedPath === path) return;
+		if (runs.some((run) => run.outcome.state === 'running')) return;
+		try {
+			if (!(await api.exists(path))) return;
+		} catch {
+			// A farm that cannot be looked for is one the dot cannot speak for.
+			return;
+		}
+		await this.open(path);
 	},
 
 	/**
@@ -373,6 +470,13 @@ export const farmStore = {
 
 	/** Throw away everything. The farm on disk is untouched. */
 	reset(): void {
+		openEpoch++;
+		openedPath = null;
+		generation++;
+		details = {};
+		detailErrors = {};
+		detailVersions.clear();
+		detailRequests.clear();
 		farm = null;
 		agents = [];
 		undetected = [];

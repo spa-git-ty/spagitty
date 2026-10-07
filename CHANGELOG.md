@@ -14,6 +14,36 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Farm shows the whole journey:** Crew, Goal, Plan, Build and Wrap up on
+  every screen, with stable agent badges and six-step task tracks.
+- **The Farm board says what needs you.** Checked and approved tasks can land
+  from their cards; stuck tasks can retry with another available agent. The
+  board separates waiting, working, checking and landed work, and flags quiet
+  agents after three minutes. Pause leaves current agents to finish. The
+  rail's Farm item carries a dot while something waits on you.
+- **Task links open their full journey**, live output, real file-change counts,
+  checks, review and hand-off, with the task's brief beside them.
+- **Farm setup brings crew, goal and rules together.** Planning streams into
+  a proposal grouped by dependency waves. Omitted prerequisites prevent
+  starting a broken plan, and accepting, discarding and starting happen in order.
+- **Crew and Activity show who did what:** agent availability, arguments and
+  records, a timeline of real runs, and a filtered event log.
+- **Farm wrap-up lists what landed**, merge hashes, contributions and every
+  task's hand-off. Cleanup removes clean merged farm worktrees and branches;
+  uncommitted or unmerged work stays.
+
+### Fixed
+
+- **Manage Profiles opens Settings without restarting the session.** The
+  status-strip menu now navigates within the app to Settings → You.
+- **Review and Pull requests use the same header and empty-state layout.**
+  Both name the repository in the same pill and centre empty states in the
+  window. Review shows the current repository; the scope controls are removed.
+  A missing account on either screen says *No account is connected* and offers
+  Settings → Accounts.
+
 ## [1.1.0] - 2026-10-07
 
 ### Added

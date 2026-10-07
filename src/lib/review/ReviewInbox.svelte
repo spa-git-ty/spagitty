@@ -4,7 +4,8 @@
 	import { goto } from '$app/navigation';
 	import { requests } from '$lib/requests/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
-	import Chip from '$lib/ui/Chip.svelte';
+	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import ScreenHead from '$lib/ui/ScreenHead.svelte';
 	import Splitter from '$lib/ui/Splitter.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import InboxCard from './InboxCard.svelte';
@@ -21,11 +22,11 @@
 
 	const HOSTS = { gitHub: 'GitHub', gitLab: 'GitLab', bitbucket: 'Bitbucket' } as const;
 
-	/** `spagitty · GitHub · signed in as mahmoud`, as much of it as is known. */
+	/** `GitHub · signed in as mahmoud`, as much of it as is known. */
 	const signedIn = $derived.by(() => {
 		const parts: string[] = [];
 		const where = requests.repo;
-		if (where) parts.push(where.name, HOSTS[where.kind]);
+		if (where) parts.push(HOSTS[where.kind]);
 		if (review.me) parts.push(`signed in as ${review.me}`);
 		return parts.join(' · ');
 	});
@@ -46,6 +47,8 @@
 		review.error ? review.error.includes('no account is connected') : !review.connected
 	);
 
+	if (review.scope !== 'repo') review.setScope('repo');
+
 	async function open(id: string) {
 		const pr = review.list.find((candidate) => candidate.id === id);
 		if (!pr || opening) return;
@@ -62,34 +65,43 @@
 </script>
 
 <div class="screen">
-	<header class="head">
-		<span class="title">Review</span>
-		<Chip active={review.scope === 'repo'} onclick={() => review.setScope('repo')}>This repo</Chip>
-		<Chip active={review.scope === 'all'} onclick={() => review.setScope('all')}>All my repos</Chip>
-		<span class="grow"></span>
-		{#if review.loading}<Loader size="inline" label="Reading…" />{/if}
-		{#if signedIn}<span class="note">{signedIn}</span>{/if}
-		<Btn disabled={review.loading} onclick={() => review.refresh()}>Refresh</Btn>
-	</header>
+	<!--
+		The same head as Pull requests (BUG-056): the title and this repository.
+		"All my repos" is gone from the screen, at the author's request.
+	-->
+	<ScreenHead
+		title="Review"
+		repository={requests.repo ? `${requests.repo.owner}/${requests.repo.name}` : null}
+	>
+		{#snippet detail()}
+			{#if signedIn}<span class="note">{signedIn}</span>{/if}
+		{/snippet}
+		{#snippet actions()}
+			{#if review.loading}<Loader size="inline" label="Reading…" />{/if}
+			<Btn disabled={review.loading} onclick={() => review.refresh()}>Refresh</Btn>
+		{/snippet}
+	</ScreenHead>
 
 	<div class="body">
 		<div class="lists">
 			{#if review.loading && groups.length === 0 && !review.error}
 				<Loader label="Reading pull requests…" />
-			{:else if review.scope === 'repo' && requests.repo === null && !review.loading}
-				<div class="empty"><p class="note">This repository is not on a service Spagitty can read.</p></div>
+			{:else if requests.repo === null && !review.error && !review.loading}
+				<EmptyState message="This repository is not on a service Spagitty can read." />
 			{:else if noAccount && !review.loading}
-				<div class="empty">
-					<p class="note">No account is connected.</p>
-					<Btn primary onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
-				</div>
+				<EmptyState message="No account is connected.">
+					{#snippet action()}
+						<Btn primary onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
+					{/snippet}
+				</EmptyState>
 			{:else if review.error}
-				<div class="empty">
-					<p class="note error">{review.error}</p>
-					<Btn onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
-				</div>
+				<EmptyState message={review.error} error>
+					{#snippet action()}
+						<Btn onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
+					{/snippet}
+				</EmptyState>
 			{:else if groups.length === 0 && !review.loading}
-				<div class="empty"><p class="note">Nothing to review.</p></div>
+				<EmptyState message="Nothing to review." />
 			{:else}
 				{#each groups as group (group.id)}
 					<section class="group">
@@ -132,27 +144,6 @@
 		flex-direction: column;
 		overflow: hidden;
 	}
-
-	.head {
-		flex: none;
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 8px;
-		padding: 14px 18px 10px;
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
-	}
-
-	.title {
-		font-size: var(--fs-title);
-		margin-right: 4px;
-	}
-
-	.grow {
-		flex: 1;
-	}
-
 	.body {
 		flex: 1;
 		min-height: 0;
@@ -185,26 +176,5 @@
 
 	.hint {
 		opacity: 0.7;
-	}
-
-	/* In the middle of the pane, like every other empty state (BUG-055). */
-	.empty {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 10px;
-		padding: 32px 16px;
-		text-align: center;
-	}
-
-	.empty p {
-		margin: 0;
-		max-width: 520px;
-	}
-
-	.error {
-		color: var(--danger);
 	}
 </style>

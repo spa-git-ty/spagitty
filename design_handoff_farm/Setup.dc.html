@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Start a farm</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 24%,transparent) transparent}}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-button{display:none;width:0;height:0}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent);border:3px solid transparent;background-clip:padding-box;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink) 38%,transparent);background-clip:padding-box}::-webkit-scrollbar-corner{background:transparent}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-3:#a86a00;--lane-4:#6c4fa3;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-3:#f0b54a;--lane-4:#a58bd8;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--ok-soft:color-mix(in srgb,var(--ok) 12%,transparent);--danger-soft:color-mix(in srgb,var(--danger) 11%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.btn.quiet{background:none;box-shadow:none;border-color:transparent;color:var(--muted)}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono)}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ag{--agent:var(--muted)}.ag-cc{--agent:var(--lane-1)}.ag-cx{--agent:var(--lane-5)}.ag-cu{--agent:var(--lane-4)}.ag-pi{--agent:var(--lane-3)}
+.mono-badge{width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--agent);background:color-mix(in srgb,var(--agent) 15%,transparent);border:1px solid color-mix(in srgb,var(--agent) 45%,transparent)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.spine{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.st{display:flex;align-items:center;gap:8px;font-size:var(--fs-secondary)}
+.st-dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;flex:none}
+.st.done .st-dot{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 60%,transparent);color:var(--ok)}
+.st.now .st-dot{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);animation:halo-a 2.4s ease-in-out infinite}
+.st.now{font-weight:600}.st.next{color:var(--muted)}
+.st-l{display:flex;flex-direction:column;line-height:1.15}
+.st-s{font-size:11.5px;color:var(--muted);font-weight:400}
+.st-bar{width:22px;height:2px;border-radius:2px;background:var(--soft)}
+.st-bar.done{background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent);flex:none}
+.sec{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+.sec-h{display:flex;align-items:center;gap:12px}
+.agent-tile{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--pane-edge);background:var(--surface-2);text-align:left}
+.agent-tile.in{border-color:color-mix(in srgb,var(--agent) 55%,transparent);background:color-mix(in srgb,var(--agent) 7%,var(--surface-2))}
+.agent-tile.off{opacity:.62}
+.box{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;border:1.5px solid var(--line);flex:none}
+.in .box{background:var(--agent);border-color:var(--agent);color:var(--bg)}
+.field{display:flex;flex-direction:column;gap:6px}
+.input{background:var(--sunken);border:1px solid var(--pane-edge);border-radius:9px;padding:10px 12px;outline:none}
+.input:focus{border-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.level{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:10px;border:1px solid var(--pane-edge);background:var(--surface-2);text-align:left;min-width:0}
+.level.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);background:color-mix(in srgb,var(--accent) 10%,var(--surface-2))}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-secondary)}
+.flow-step{display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--pane-edge);background:var(--surface-veil)}
+.flow-arrow{color:var(--muted)}
+@keyframes halo-a{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 4%,transparent)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 4px">Farm</span>
+<span class="note">spagitty · no farm yet</span>
+<span style="flex: 1"></span>
+<div class="spine" aria-label="Where the farm is">
+<sc-for list="{{spine}}" as="s" hint-placeholder-count="5">
+<div style="display: contents">
+<div class="st {{s.cls}}"><span class="st-dot"><sc-if value="{{s.isDone}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></sc-if><sc-if value="{{s.notDone}}" hint-placeholder-val="{{true}}">{{s.num}}</sc-if></span><span class="st-l">{{s.label}}<span class="st-s">{{s.sub}}</span></span></div>
+<sc-if value="{{s.bar}}" hint-placeholder-val="{{true}}"><span class="st-bar {{s.barCls}}"></span></sc-if>
+</div>
+</sc-for>
+</div>
+</header>
+
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 8px 24px 24px">
+<div style="max-width: 1020px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 8px 2px 4px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.01em">Put a crew of agents on one goal</h1>
+<p style="margin: 0; font-size: 15.6px; line-height: 1.55; color: var(--muted); max-width: 760px">One agent plans the work. Each task then gets its own agent and its own worktree, your checks run on it, a second agent reviews it, and it lands on your branch. You choose where you come in.</p>
+<div class="flow" aria-label="How a farm runs">
+<span class="flow-step">Goal</span><span class="flow-arrow">→</span>
+<span class="flow-step">Plan</span><span class="flow-arrow">→</span>
+<span class="flow-step">Task in its own worktree</span><span class="flow-arrow">→</span>
+<span class="flow-step">Your checks</span><span class="flow-arrow">→</span>
+<span class="flow-step">Another agent reviews</span><span class="flow-arrow">→</span>
+<span class="flow-step" style="border-color: color-mix(in srgb, var(--ok) 50%, transparent); color: var(--ok)">Lands on main</span>
+</div>
+</div>
+
+<section class="card sec" aria-labelledby="crew-h">
+<div class="sec-h"><span class="num">1</span><div style="display: flex; flex-direction: column; gap: 2px; flex: 1"><h2 id="crew-h" style="margin: 0; font-size: 17px; font-weight: 600">Your crew</h2><span class="note">Command-line agents found on PATH. Only CLI agents can join a farm.</span></div><button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-.5 4"></path><path d="M20 4v7h-7"></path></svg>Look again</button></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 10px">
+<sc-for list="{{agents}}" as="a" hint-placeholder-count="4">
+<button class="agent-tile ag {{a.agc}} {{a.state}}" onClick="{{a.toggle}}" aria-pressed="{{a.pressed}}">
+<div style="display: flex; align-items: center; gap: 10px; width: 100%"><span class="mono-badge">{{a.n}}</span><div style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">{{a.name}}</span><span class="mono" style="color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{a.path}}</span></div><span class="box"><sc-if value="{{a.isIn}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></sc-if></span></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; {{a.statusStyle}}"><span class="dot" style="{{a.dot}}"></span>{{a.status}}</span>
+<span class="note" style="font-size: 12px">{{a.good}}</span>
+</button>
+</sc-for>
+</div>
+<div class="note" style="display: flex; align-items: center; gap: 10px; font-size: 12.5px">Another CLI agent? Give Spagitty its command and how it takes a prompt.<button class="chip">Add a CLI agent</button></div>
+</section>
+
+<section class="card sec" aria-labelledby="goal-h">
+<div class="sec-h"><span class="num">2</span><div style="display: flex; flex-direction: column; gap: 2px"><h2 id="goal-h" style="margin: 0; font-size: 17px; font-weight: 600">The goal</h2><span class="note">One outcome. The planner splits it into tasks; you can edit every one before anything runs.</span></div></div>
+<label class="field"><span class="note">What should be true when the farm is done?</span><input class="input" style="font-size: 16px" value="Gitea support for pull requests"></label>
+<label class="field"><span class="note">Anything the agents should know</span><textarea class="input" rows="3" style="resize: vertical; line-height: 1.5">Same Host trait as GitHub and GitLab. Do not touch the GitHub code path. Tokens never go into settings.json.</textarea></label>
+</section>
+
+<section class="card sec" aria-labelledby="rules-h">
+<div class="sec-h"><span class="num">3</span><div style="display: flex; flex-direction: column; gap: 2px"><h2 id="rules-h" style="margin: 0; font-size: 17px; font-weight: 600">The rules</h2><span class="note">Where you come in, what counts as done, and how many agents work at once. You can change these while it runs.</span></div></div>
+<div class="field">
+<span class="note">How much it does on its own</span>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{levels}}" as="l" hint-placeholder-count="5"><button class="level {{l.on}}" onClick="{{l.pick}}" aria-pressed="{{l.pressed}}"><span style="font-weight: 600; font-size: 14px">{{l.label}}</span><span class="note" style="font-size: 12px; line-height: 1.4">{{l.detail}}</span></button></sc-for>
+</div>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13.2px; padding-top: 2px"><span class="dot" style="background: var(--accent)"></span><span><span style="font-weight: 600">You come in:</span> {{youLine}}</span></span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 18px">
+<div class="field">
+<span class="note">Checks every task must pass</span>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="input mono" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 13px"><span style="color: var(--muted)">$</span>cargo test</span>
+<span class="input mono" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 13px"><span style="color: var(--muted)">$</span>bun run check</span>
+<button class="chip" style="align-self: flex-start">Add a command</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div class="field"><span class="note">Agents at once</span><div style="display: flex; gap: 6px"><sc-for list="{{atOnce}}" as="c" hint-placeholder-count="4"><button class="chip {{c.on}}" onClick="{{c.pick}}" style="min-width: 40px; justify-content: center; padding: 5px 12px">{{c.n}}</button></sc-for></div></div>
+<div class="field"><span class="note">Tries before a task needs you</span><div style="display: flex; gap: 6px"><button class="chip" style="padding: 5px 12px">1</button><button class="chip" style="padding: 5px 12px">2</button><button class="chip on" style="padding: 5px 12px">3</button><button class="chip" style="padding: 5px 12px">5</button></div></div>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; border-top: 1px solid var(--soft); padding-top: 12px">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13.2px"><span class="dot" style="background: var(--ok)"></span>AGENTS.md is attached to every prompt</span>
+<span class="note">·</span>
+<span class="note" style="font-size: 13.2px">Extra CodeRabbit review: off</span>
+<span style="flex: 1"></span>
+<button class="btn quiet">More rules</button>
+</div>
+</section>
+
+<div class="ornament" style="position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px 12px 18px; border-radius: 18px">
+<span class="note" style="flex: 1 1 360px">Planning reads the goal and the repository, then proposes tasks. Nothing runs until you accept them.</span>
+<a href="Main.dc.html" class="btn">I'll write the tasks myself</a>
+<a href="Planning.dc.html" class="btn primary" style="padding: 8px 16px">Plan it with {{planner}}</a>
+</div>
+
+</div>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span class="dot" style="width: 6px; height: 6px; background: var(--ok)"></span>Repository ready · working copy clean · fetched 4 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · <span class="mono">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var STEPS = ['Crew','Goal','Plan','Build','Wrap up'];
+function shell() {
+ return {
+  rail: RAIL.map(function (k) { return k === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'farm' ? 'on' : '' }; }),
+  tools: TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; })
+ };
+}
+function spine(cur, subs) {
+ return STEPS.map(function (s, i) { return { label: s, sub: subs[i] || '', cls: i < cur ? 'done' : (i === cur ? 'now' : 'next'), isDone: i < cur, notDone: i >= cur, num: String(i + 1), bar: i < STEPS.length - 1, barCls: i < cur ? 'done' : '' }; });
+}
+var LEVELS = [
+ ['manual', 'Manual', 'Tasks are organised here. Nothing runs by itself.', 'you start every task and every merge yourself.'],
+ ['assisted', 'Assisted', 'Agents run. You approve every task.', 'after each task, before it is reviewed or merged.'],
+ ['semiAuto', 'Semi-automatic', 'Agents run and review each other.', 'only to approve merges, and when a task is stuck.'],
+ ['auto', 'Automatic', 'Checked, reviewed tasks merge themselves.', 'only when a task is stuck after its tries.'],
+ ['yolo', 'Unattended', 'Everything, retries included.', 'at the end. Nothing waits for you.']
+];
+var AGENTS = [
+ { id: 'cc', n: 'CC', name: 'Claude Code', path: '~/.local/bin/claude', ok: true, good: 'Plans well · backend, review' },
+ { id: 'cx', n: 'CX', name: 'Codex', path: '/usr/bin/codex', ok: true, good: 'Review, research, backend' },
+ { id: 'cu', n: 'CU', name: 'Cursor', path: '~/.local/bin/cursor-agent', ok: true, good: 'Frontend, long context' },
+ { id: 'pi', n: 'PI', name: 'Oh My Pi', path: '~/.bun/bin/omp', ok: true, good: 'Testing, tool use' }
+];
+class Component extends DCLogic {
+ constructor(p) { super(p); this.state = { level: 'semiAuto', off: {}, atOnce: 3 }; }
+ renderVals() {
+  var self = this, st = this.state;
+  var agents = AGENTS.map(function (a) {
+   var isIn = !st.off[a.id];
+   return { agc: 'ag-' + a.id, n: a.n, name: a.name, path: a.path, good: a.good, isIn: isIn, state: isIn ? 'in' : 'off', pressed: isIn ? 'true' : 'false', disabled: false,
+    status: isIn ? 'Ready · on the crew' : 'Ready · left out', dot: 'background: var(--ok);', statusStyle: '',
+    toggle: function () { var o = Object.assign({}, st.off); o[a.id] = !o[a.id]; self.setState({ off: o }); } };
+  });
+  var crewCount = AGENTS.filter(function (a) { return !st.off[a.id]; }).length;
+  var cur = LEVELS.filter(function (l) { return l[0] === st.level; })[0];
+  return Object.assign(shell(), {
+   theme: this.props.theme || 'dark',
+   spine: spine(1, [crewCount + ' agents', '', '', '', '']),
+   agents: agents,
+   levels: LEVELS.map(function (l) { return { label: l[1], detail: l[2], on: l[0] === st.level ? 'on' : '', pressed: l[0] === st.level ? 'true' : 'false', pick: function () { self.setState({ level: l[0] }); } }; }),
+   youLine: cur[3],
+   atOnce: [1, 2, 3, 4].map(function (n) { return { n: String(n), on: n === st.atOnce ? 'on' : '', pick: function () { self.setState({ atOnce: n }); } }; }),
+   planner: st.off.cc ? 'Codex' : 'Claude Code'
+  });
+ }
+}
+</script>
+</body>
+</html>

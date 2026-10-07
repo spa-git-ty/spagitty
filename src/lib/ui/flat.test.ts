@@ -76,7 +76,12 @@ describe('the tokens components read', () => {
 		const text = readFileSync(path, 'utf8');
 		// A component may declare its own custom properties, and several set one
 		// from JavaScript. Those are defined, just not in `app.css`.
-		const own = new Set([...text.matchAll(/--([a-z0-9-]+)\s*:/g)].map((match) => match[1]));
+		// Svelte's `style:--name={value}` directive is a declaration too.
+		const own = new Set(
+			[...text.matchAll(/(?:--([a-z0-9-]+)\s*:|style:--([a-z0-9-]+)\s*=)/g)].map(
+				(match) => match[1] ?? match[2]
+			)
+		);
 
 		return [
 			...new Set(

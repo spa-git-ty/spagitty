@@ -350,6 +350,39 @@ describe('RepoTabs', () => {
 });
 
 describe('StatusStrip', () => {
+	it('opens Manage Profiles through in-app navigation and keeps the repository session', async () => {
+		const { settings } = await import('$lib/settings/store.svelte');
+		const identity = vi.spyOn(settings, 'identity', 'get').mockReturnValue({
+			name: { effective: 'Ada', origin: 'global', global: 'Ada', local: null },
+			email: {
+				effective: 'ada@example.com',
+				origin: 'global',
+				global: 'ada@example.com',
+				local: null
+			},
+			repository: true
+		});
+		repoControl.setInfo(info());
+		const url = window.location.href;
+		const view = render(StatusStrip, {});
+		try {
+			click(view.get('button.profile-btn'));
+			click(
+				view
+					.all('[role="menuitem"]')
+					.find((item) => item.textContent?.includes('Manage Profiles…'))!
+			);
+			expect(goto).toHaveBeenCalledWith('/settings#you');
+			expect(window.location.href).toBe(url);
+			expect(view.find('[role="menu"]')).toBeNull();
+			expect(repoCalls.opened).toEqual([]);
+			expect(view.text()).toContain('never fetched');
+		} finally {
+			view.destroy();
+			identity.mockRestore();
+		}
+	});
+
 	it('states the version the package carries, not a typed one', () => {
 		const view = render(StatusStrip, {});
 

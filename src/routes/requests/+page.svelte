@@ -9,6 +9,8 @@
 	import { requests } from '$lib/requests/store.svelte';
 	import CreatePRModal from '$lib/requests/CreatePRModal.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
+	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import ScreenHead from '$lib/ui/ScreenHead.svelte';
 
 	/**
 	 * What is waiting on you, above what is waiting on everyone else.
@@ -24,6 +26,14 @@
 	 */
 	const needingYou = $derived(requests.needingYou);
 	const waiting = $derived(requests.waitingOnOthers);
+
+	/**
+	 * No account for this host is a state, not an error (BUG-056): said as
+	 * Review says it, whichever way the backend reported it.
+	 */
+	const noAccount = $derived(
+		requests.error ? requests.error.includes('no account is connected') : !requests.connected
+	);
 
 	let generation: number | null = null;
 	$effect(() => {
@@ -43,56 +53,49 @@
 	<PRWorkspace />
 {:else}
 	<div class="screen">
-		<header class="head">
-			<div class="left">
-				<span class="title">Pull requests</span>
-				{#if requests.repo}
-					<span class="note mono">{requests.repo.owner}/{requests.repo.name}</span>
-				{/if}
+		<ScreenHead
+			title="Pull requests"
+			repository={requests.repo ? `${requests.repo.owner}/${requests.repo.name}` : null}
+		>
+			{#snippet detail()}
 				{#if requests.connected && requests.all.length > 0}
-					<span class="note">
-						{needingYou.length} waiting on you · {waiting.length} on others
-					</span>
+					<span class="note">{needingYou.length} waiting on you · {waiting.length} on others</span>
 				{/if}
-			</div>
-			<div class="right">
+			{/snippet}
+			{#snippet actions()}
 				{#if requests.loading}<Loader size="inline" label="Reading…" />{/if}
 				{#if requests.connected}
 					<Btn primary onclick={() => requests.openCreateModal()}>+ Create PR</Btn>
 				{/if}
 				<Btn disabled={requests.loading} onclick={() => requests.load()}>Refresh</Btn>
-			</div>
-		</header>
+			{/snippet}
+		</ScreenHead>
 
 		<div class="body">
 			<div class="lists">
 				{#if requests.loading && requests.all.length === 0}
 					<Loader label="Reading pull requests…" />
+				{:else if requests.repo === null && !requests.error}
+					<EmptyState message="This repository is not on a service Spagitty can read." />
+				{:else if noAccount}
+					<EmptyState message="No account is connected.">
+						{#snippet action()}
+							<Btn primary onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
+						{/snippet}
+					</EmptyState>
 				{:else if requests.error}
 					<!--
-						The host's own words. Offline, rate limited, refused and
-						"no account for this host" are four different decisions for
-						the reader, and the backend already told them apart.
+						The host's own words. Offline, rate limited and refused are
+						different decisions for the reader, and the backend already
+						told them apart.
 					-->
-					<div class="empty">
-						<p class="note error">{requests.error}</p>
-						<Btn onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
-					</div>
-				{:else if requests.repo === null}
-					<div class="empty">
-						<p class="note">This repository is not on a service Spagitty can read.</p>
-					</div>
-				{:else if !requests.connected}
-					<div class="empty">
-						<p class="note">No account is connected.</p>
-						<Btn primary onclick={() => goto('/settings#accounts')}>
-							Settings → Accounts
-						</Btn>
-					</div>
+					<EmptyState message={requests.error} error>
+						{#snippet action()}
+							<Btn onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
+						{/snippet}
+					</EmptyState>
 				{:else if requests.all.length === 0}
-					<div class="empty">
-						<p class="note">Nothing open. Every pull request on this repository is closed.</p>
-					</div>
+					<EmptyState message="Nothing open. Every pull request on this repository is closed." />
 				{:else}
 					{#if needingYou.length > 0}
 						<section class="group">
@@ -132,37 +135,6 @@
 		overflow: hidden;
 	}
 
-	.head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 10px;
-		padding: 10px 12px;
-		background-color: var(--chrome-veil);
-		border-bottom: 1px solid var(--band-rule, color-mix(in srgb, var(--line) 55%, transparent));
-		box-shadow: none;
-		position: relative;
-		z-index: 1;
-		flex: none;
-	}
-
-	.right {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.left {
-		display: flex;
-		align-items: baseline;
-		gap: 8px;
-		min-width: 0;
-	}
-
-	.title {
-		font-size: var(--fs-title);
-	}
-
 	.body {
 		flex: 1;
 		min-height: 0;
@@ -192,22 +164,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-	}
-
-	/* In the middle of the pane, like every other empty state (BUG-055). */
-	.empty {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 10px;
-		padding: 32px 16px;
-		text-align: center;
-	}
-
-	.empty p {
-		margin: 0;
-		max-width: 520px;
 	}
 </style>
