@@ -820,71 +820,62 @@ rather than by volume, because volume ranks whoever was given the most work.
 
 ## 1Q — Farm
 
-**Built.** `src/routes/farm/+page.svelte`, `src/lib/farm/`, `crates/spagitty-farm`
-(FEAT-073).
+**Built.** `src/routes/farm/+page.svelte`, `src/lib/farm/` and
+`crates/spagitty-farm` (FEAT-073, redesigned in FEAT-108–113).
 
-Supervising a small engineering team from inside the Git client. The plan is on
-the left, the selected task in the middle, and the log along the bottom — the
-three questions a supervisor has, answerable without navigating between them. A
-person who has to move between those three is reading a log.
+A farm follows five phases: **Crew → Goal → Plan → Build → Wrap up**.
+The phase tracker stays in the header. Farm remains at 1Q on the rail; its
+dot means a task needs the person, including checked, approved work waiting
+to merge, in the repository the farm belongs to. So the dot works before the
+screen is visited, the shell opens a repository's farm when it already has one
+on disk (`farm_exists`) — never a repository without one, because opening
+writes the agent registry, and never in place of a farm with a run in flight,
+because the backend holds one farm and replacing it would stop a planner.
+Reads stay event-driven, with one five-second screen clock while a run is live.
 
-**The log is a drawer, and it has two tabs** (FEAT-074). *Activity* is what the
-farm did — tasks created, statuses moved, verifications run, merges landed —
-timestamped, filterable to one task, and as long as the history. *Transcript* is
-what one agent said, which is thousands of lines and belongs to one task at a
-time; keeping them in one list would drown the record in the narration. The
-drawer is dragged to the height you want and collapses to its own tab bar.
+**Setup** puts crew, goal and rules in one scrolling column. Agent detection,
+custom CLIs, capability chips, autonomy, checks, slots, tries, permissions,
+CodeRabbit, AGENTS.md and leftovers use existing backend commands. Plan it
+creates the farm, configures it, then asks the first eligible planner.
+**Planning** shows the planner's live output and can stop just that run. A
+finished plan is grouped into dependency waves; missing or cyclic
+prerequisites remain visibly unordered. The kept tasks are accepted, the
+omitted tasks discarded, then building starts. A failed step stops that sequence.
 
-Two controls, and they are not the same thing. **Following** is where the
-scrollbar is: the pane sticks to the newest line while the reader is at the
-bottom and lets go the moment they scroll up. **Hold** is a decision — it
-freezes the list so a line can be read while it is still arriving, and counts
-what arrived while it was held, so holding is never losing.
+**Building** begins with the goal and a sentence counting work, checks and
+tasks needing the person. Needs you has the merge or retry action on each
+card. The four board columns are Up next, Working, Checking and Landed.
+Dependency waits stay Up next, cancelled tasks have a toggle, and containers
+expand their children. Every card has the same six steps: Queued, Worktree,
+Working, Checks, Review and Landed. The right card shows crew and recent
+events. The floating pill pauses/resumes, changes autonomy and slots, adds a
+task and opens Rules. A quiet run is marked after three minutes; a finished
+run is never shown as working. Pause leaves existing agents to finish.
 
-**The header is a ring, and the strip above the plan says who is working**
-(FEAT-077). What is finished fills the ring, what is running is a brighter arc
-at its leading edge, and anything blocked colours the remainder — an unfinished
-farm and a stuck one are not the same state. One chip per working agent names
-what it is on and for how long, and the strip is absent when nothing runs.
+**Task** is a deep link at `/farm?task=<id>`. Its full stepper, state-specific
+actions and Output, Changes, Checks, Review and Hand-off tabs sit beside the
+brief. Checks and review come from task evidence; unverified work never
+gets a green pass. File counts come from an in-process Git range comparison.
+Task editing, deleting, decomposition and extension actions remain available.
 
-**A quiet run says so, and is never stopped for you.** After six minutes without
-a word the chip and the row say how long it has been silent and the pulse stops.
-A model may think for a long time; killing it throws the work away, so the farm
-flags and leaves the decision where it belongs.
+**Crew** and **Activity** use `?pane=crew` and `?pane=activity`. Crew shows
+availability, live work, capability chips, records, traits and arguments.
+Activity plots the recorded runs, check and merge events, then lists events
+newest first with All, Needs you, Landed and Failures filters. Transcript
+output belongs in Task, rather than flooding that history.
 
-**Finished work is scored.** A task taken to Done hands the delight layer
-(FEAT-072) what it needs to credit the agent that did it — including that
-"nothing checked it" is not a pass.
+**Wrap up** appears when the backend says the farm is completed. It lists
+landed tasks, recorded merge hashes, tries, contributions and the questions,
+risks and proposed work from every task's hand-off. A question's answer is
+saved with its task's brief; follow-ups can become tasks or prefill a new goal.
+Cleanup only removes clean worktrees and merged branches in the farm
+namespace, and leaves unmerged work, uncommitted changes and live tasks alone.
+Checks are described as evidence from task branches, without claiming an
+unobserved check on the destination branch.
 
-**A planning run is visible while it runs.** A card under the header carries how
-long it has been going, the last thing the planner said, and a control that
-stops the planner without cancelling the farm (BUG-021).
-
-**Nothing polls.** A farm changes when an agent says something, which is at a
-model's pace and on no schedule. The backend emits, the store applies, and the
-screen is a function of the store; a snapshot is refetched shortly after a burst
-so nothing drifts if an event was missed.
-
-**A branch and a worktree per task**, named `spagitty-farm/<task>/<provider>`.
-The name is derived rather than chosen, in one place, because it is how the
-graph, the worktree list and this screen find each other. Nothing an agent does
-reaches the working copy, and deleting a task keeps the commits on its branch.
-
-**An agent saying "done" is not done.** Verification runs the repository's own
-commands in the task's worktree; review is performed by a different agent than
-the one that wrote the change. A task that reached review with nothing
-configured to check it says so, in those words, rather than reading as passed.
-
-**The starter page answers three questions in the order they are asked** — what
-a farm is, how to start one, and whether this machine can run one. The goal
-field is on it, so starting a farm needs one sentence and no navigation. The
-readiness rows say whether an agent was found, whether the repository has an
-`AGENTS.md` for one, and whether anything verifies the work; none of them blocks
-starting a farm, because a farm with no agent is still a plan.
-
-**Spagitty runs agents; it does not contain them.** Claude Code, Codex, Cursor
-and Oh My Pi are detected on `PATH`, and anything else with a command line can
-be added by hand. There is no model here and no key.
+Dark and light use the shell's tokens. Only the floating pill and the Setup
+bar add blur;
+the shell's reduced-motion rule stops loaders, halos and entrance animations.
 
 ## 1R — Review
 

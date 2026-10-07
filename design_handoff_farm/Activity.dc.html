@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Farm activity</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 24%,transparent) transparent}}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-button{display:none;width:0;height:0}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent);border:3px solid transparent;background-clip:padding-box;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink) 38%,transparent);background-clip:padding-box}::-webkit-scrollbar-corner{background:transparent}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-3:#a86a00;--lane-4:#6c4fa3;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-3:#f0b54a;--lane-4:#a58bd8;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--ok-soft:color-mix(in srgb,var(--ok) 12%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono)}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ag{--agent:var(--muted)}.ag-cc{--agent:var(--lane-1)}.ag-cx{--agent:var(--lane-5)}.ag-cu{--agent:var(--lane-4)}.ag-pi{--agent:var(--lane-3)}.ag-sg{--agent:var(--ink)}
+.mono-badge{width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;color:var(--agent);background:color-mix(in srgb,var(--agent) 15%,transparent);border:1px solid color-mix(in srgb,var(--agent) 45%,transparent)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.spine{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.st{display:flex;align-items:center;gap:8px;font-size:var(--fs-secondary)}
+.st-dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;flex:none}
+.st.done .st-dot{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 60%,transparent);color:var(--ok)}
+.st.now .st-dot{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);animation:halo-a 2.4s ease-in-out infinite}
+.st.now{font-weight:600}.st.next{color:var(--muted)}
+.st-l{display:flex;flex-direction:column;line-height:1.15}
+.st-s{font-size:11.5px;color:var(--muted);font-weight:400}
+.st-bar{width:22px;height:2px;border-radius:2px;background:var(--soft)}
+.st-bar.done{background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.lane-row{display:grid;grid-template-columns:130px minmax(0,1fr);align-items:center;gap:12px;height:38px}
+.track-bg{position:relative;height:26px;border-radius:7px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(12.5% - 1px),var(--soft) calc(12.5% - 1px),var(--soft) 12.5%)}
+.run{position:absolute;top:2px;height:22px;border-radius:6px;display:flex;align-items:center;padding:0 7px;font-family:var(--font-mono);font-size:11px;white-space:nowrap;overflow:hidden;color:var(--ink);background:color-mix(in srgb,var(--agent) 26%,var(--surface));border:1px solid color-mix(in srgb,var(--agent) 55%,transparent)}
+.run.fail{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 16%,var(--surface)) 0 6px,color-mix(in srgb,var(--danger) 8%,var(--surface)) 6px 12px);border-color:color-mix(in srgb,var(--danger) 55%,transparent)}
+.run.review{background:transparent;border-style:dashed}
+.run.live{animation:glow 1.6s ease-in-out infinite}
+.mark{position:absolute;top:5px;width:16px;height:16px;margin-left:-8px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--bg)}
+.mark.ok{background:var(--ok)}.mark.bad{background:var(--danger)}.mark.check{background:var(--lane-5)}
+.now-line{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--accent);border-radius:2px}
+.ev{display:grid;grid-template-columns:58px 26px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--soft)}
+.ev:last-child{border-bottom:none}
+@keyframes glow{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes halo-a{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 4%,transparent)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 4px">Farm</span>
+<a href="Main.dc.html" class="chip">Board</a>
+<a href="Crew.dc.html" class="chip">Crew <span style="opacity: .7">4</span></a>
+<a href="Activity.dc.html" class="chip on">Activity</a>
+<span style="flex: 1"></span>
+<div class="spine" aria-label="Where the farm is">
+<sc-for list="{{spine}}" as="s" hint-placeholder-count="5">
+<div style="display: contents">
+<div class="st {{s.cls}}"><span class="st-dot"><sc-if value="{{s.isDone}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></sc-if><sc-if value="{{s.notDone}}" hint-placeholder-val="{{true}}">{{s.num}}</sc-if></span><span class="st-l">{{s.label}}<span class="st-s">{{s.sub}}</span></span></div>
+<sc-if value="{{s.bar}}" hint-placeholder-val="{{true}}"><span class="st-bar {{s.barCls}}"></span></sc-if>
+</div>
+</sc-for>
+</div>
+</header>
+
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 2px 18px 18px; display: flex; flex-direction: column; gap: 16px">
+
+<section class="card" aria-label="Who worked on what, over time" style="padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding-bottom: 6px">
+<span style="font-weight: 600">The last 48 minutes</span>
+<span style="flex: 1"></span>
+<span class="note" style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span style="width: 18px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 22%, var(--surface)); border: 1px solid var(--line)"></span>writing</span>
+<span class="note" style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span style="width: 18px; height: 10px; border-radius: 3px; border: 1px dashed var(--line)"></span>reviewing</span>
+<span class="note" style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span style="width: 18px; height: 10px; border-radius: 3px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--danger) 30%, transparent) 0 3px, transparent 3px 6px); border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent)"></span>checks failed</span>
+<span class="note" style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span class="dot" style="background: var(--ok)"></span>landed</span>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+<div class="lane-row ag {{r.agc}}">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13.2px"><span class="mono-badge">{{r.n}}</span>{{r.name}}</span>
+<div class="track-bg">
+<sc-for list="{{r.runs}}" as="b" hint-placeholder-count="2"><span class="run {{b.cls}}" style="left: {{b.l}}; width: {{b.w}}" title="{{b.title}}">{{b.label}}</span></sc-for>
+<sc-for list="{{r.marks}}" as="m" hint-placeholder-count="1"><span class="mark {{m.cls}}" style="left: {{m.l}}" title="{{m.title}}"></span></sc-for>
+<span class="now-line" style="left: calc(100% - 2px)"></span>
+</div>
+</div>
+</sc-for>
+<div class="lane-row" style="height: 20px"><span></span><div style="display: flex; justify-content: space-between" class="note mono"><span>09:20</span><span>09:32</span><span>09:44</span><span>09:56</span><span style="color: var(--accent)">now</span></div></div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="font-weight: 600; margin-right: 6px">What happened</span>
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="4"><button class="chip {{f.on}}" onClick="{{f.pick}}">{{f.label}}</button></sc-for>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: 12px">Newest first</span>
+</div>
+<div class="card" style="overflow: hidden">
+<sc-for list="{{events}}" as="e" hint-placeholder-count="8">
+<div class="ev ag {{e.agc}}">
+<span class="mono" style="color: var(--muted)">{{e.at}}</span>
+<span class="mono-badge" style="width: 22px; height: 22px; font-size: 9px">{{e.n}}</span>
+<span style="font-size: 14px; display: flex; align-items: center; gap: 8px; min-width: 0"><span class="dot" style="{{e.dot}}"></span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{e.text}}</span></span>
+<a href="Task.dc.html" class="chip mono">{{e.task}}</a>
+</div>
+</sc-for>
+</div>
+</section>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span class="dot" style="width: 6px; height: 6px; background: var(--ok)"></span>Repository ready · farm building on 3 worktrees</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · <span class="mono">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var STEPS = ['Crew','Goal','Plan','Build','Wrap up'];
+function shell(dot) {
+ return {
+  rail: RAIL.map(function (k) { return k === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'farm' ? 'on' : '', dot: k === 'farm' && dot }; }),
+  tools: TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; })
+ };
+}
+function spine(cur, subs) {
+ return STEPS.map(function (s, i) { return { label: s, sub: subs[i] || '', cls: i < cur ? 'done' : (i === cur ? 'now' : 'next'), isDone: i < cur, notDone: i >= cur, num: String(i + 1), bar: i < STEPS.length - 1, barCls: i < cur ? 'done' : '' }; });
+}
+var SPAN = 48;
+function pct(m) { return (m / SPAN * 100).toFixed(2) + '%'; }
+function run(a, b, label, cls, title) { return { l: pct(a), w: 'calc(' + pct(b - a) + ' - 2px)', label: label, cls: cls || '', title: title || label }; }
+function mark(m, cls, title) { return { l: pct(m), cls: cls, title: title }; }
+var ROWS = [
+ { agc: 'ag-cc', n: 'CC', name: 'Claude Code', runs: [run(0, 3, 'plan', 'review', 'Planned the farm'), run(3, 9, 'T-09', 'fail', 'T-09 attempt 1, checks failed'), run(9, 15, 'T-09', 'fail', 'T-09 attempt 2, checks failed'), run(17, 34, 'T-02 gitea.rs', '', 'T-02, 17 min'), run(42, 48, 'T-04', 'live', 'T-04, working')], marks: [] },
+ { agc: 'ag-cx', n: 'CX', name: 'Codex', runs: [run(3, 14, 'T-01 API notes', ''), run(14, 22, 'T-03 remotes', ''), run(28, 37, 'T-09', 'fail', 'T-09 attempt 3, checks failed'), run(38, 42, 'review T-02', 'review', 'Reviewed T-02: approved')], marks: [] },
+ { agc: 'ag-cu', n: 'CU', name: 'Cursor', runs: [run(37, 48, 'T-05 token settings', 'live', 'T-05, working, quiet for 4 min')], marks: [] },
+ { agc: 'ag-pi', n: 'PI', name: 'Oh My Pi', runs: [run(20, 46, 'T-07 fixture tests', '', 'T-07, 26 min')], marks: [] },
+ { agc: 'ag-sg', n: 'SG', name: 'Checks · merges', runs: [run(46, 48, 'T-07', 'live', 'Checks running on T-07')], marks: [mark(9, 'bad', 'T-09 checks failed'), mark(15, 'bad', 'T-09 checks failed'), mark(17, 'ok', 'T-01 landed'), mark(34, 'ok', 'T-03 landed'), mark(35, 'check', 'T-02 checks passed'), mark(39, 'bad', 'T-09 checks failed, 3 of 3')] }
+];
+var EVENTS = [
+ ['10:06', 'pi', 'Oh My Pi finished T-07. Checks started.', 'T-07', 'check', 'var(--lane-5)'],
+ ['10:04', 'cu', 'Cursor has been quiet for 4 minutes on T-05.', 'T-05', 'quiet', 'var(--warn)'],
+ ['10:02', 'cx', 'Codex approved T-02: “Clean split, one nit on paging.”', 'T-02', 'you', 'var(--ok)'],
+ ['10:02', 'cc', 'Claude Code started T-04 in farm/T-04-review-comments.', 'T-04', 'start', 'var(--accent)'],
+ ['09:59', 'cx', 'T-09 failed its checks a third time. It now needs you.', 'T-09', 'fail', 'var(--danger)'],
+ ['09:57', 'cu', 'Cursor started T-05 in farm/T-05-gitea-token.', 'T-05', 'start', 'var(--accent)'],
+ ['09:55', 'sg', 'T-02 passed cargo test and bun run check.', 'T-02', 'check', 'var(--lane-5)'],
+ ['09:54', 'sg', 'T-03 landed on main. T-04 and T-05 can start.', 'T-03', 'landed', 'var(--ok)'],
+ ['09:48', 'cx', 'Codex took T-09 after Claude Code’s two tries.', 'T-09', 'start', 'var(--accent)'],
+ ['09:37', 'sg', 'T-01 landed on main. T-02 and T-07 can start.', 'T-01', 'landed', 'var(--ok)'],
+ ['09:35', 'sg', 'T-09 failed its checks again, 2 of 3.', 'T-09', 'fail', 'var(--danger)'],
+ ['09:23', 'cc', 'You accepted 9 tasks. The farm started.', 'plan', 'start', 'var(--accent)']
+];
+var AGN = { cc: 'CC', cx: 'CX', cu: 'CU', pi: 'PI', sg: 'SG' };
+var FILTERS = [['all', 'All'], ['you', 'Needs you'], ['landed', 'Landed'], ['fail', 'Failures']];
+class Component extends DCLogic {
+ constructor(p) { super(p); this.state = { f: 'all' }; }
+ renderVals() {
+  var self = this, f = this.state.f;
+  var events = EVENTS.filter(function (e) {
+   if (f === 'all') return true;
+   if (f === 'you') return e[4] === 'you' || (e[4] === 'fail' && e[3] === 'T-09' && e[0] === '09:59');
+   return e[4] === f;
+  }).map(function (e) { return { at: e[0], agc: 'ag-' + e[1], n: AGN[e[1]], text: e[2], task: e[3], dot: 'background: ' + e[5] + ';' }; });
+  return Object.assign(shell(true), {
+   theme: this.props.theme || 'dark',
+   spine: spine(3, ['4 agents', 'Gitea support', '9 tasks', '7 to go', '']),
+   rows: ROWS, events: events,
+   filters: FILTERS.map(function (x) { return { label: x[1], on: x[0] === f ? 'on' : '', pick: function () { self.setState({ f: x[0] }); } }; })
+  });
+ }
+}
+</script>
+</body>
+</html>

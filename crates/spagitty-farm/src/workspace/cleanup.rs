@@ -72,6 +72,10 @@ pub fn sweep(repo: &Path, known: &[TaskId]) -> Result<Vec<Stale>> {
         if known.contains(&stale.task) {
             continue;
         }
+        // Removing the directory must not discard an unmerged task's working context.
+        if !shell::is_ancestor(repo, &stale.branch, "HEAD").unwrap_or(false) {
+            continue;
+        }
         // Never forced: a leftover with uncommitted changes stays, and stays
         // visible in the Worktrees screen where the user can decide.
         let path = Path::new(&stale.path);
@@ -84,6 +88,32 @@ pub fn sweep(repo: &Path, known: &[TaskId]) -> Result<Vec<Stale>> {
     // record behind. Pruning them is safe by definition — there is nothing on
     // disk to lose — and without it they are listed forever.
     let _ = shell::worktree_prune(repo);
+    // Successful merges already removed their worktrees. Sweep those branches too,
+    // using the same namespace, ownership and merge proof as the worktree path.
+    if let Ok(repository) = spagitty_core::repo::open(repo) {
+        if let Ok(branches) = spagitty_core::branches::list(&repository) {
+            for branch in branches {
+                let Some(task) = task_of(&branch.name) else {
+                    continue;
+                };
+                if branch.current
+                    || !branch.merged
+                    || known.contains(&task)
+                    || !branch.full_name.starts_with("refs/heads/")
+                {
+                    continue;
+                }
+                if shell::delete_branch(repo, &branch.name, false).is_ok() {
+                    removed.push(Stale {
+                        task,
+                        path: String::new(),
+                        branch: branch.name,
+                        orphaned: false,
+                    });
+                }
+            }
+        }
+    }
     Ok(removed)
 }
 
@@ -166,5 +196,46 @@ mod tests {
         let repo = Fixture::woven();
         assert!(farm_worktrees(repo.path()).is_empty());
         assert!(sweep(repo.path(), &[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn merged_branches_are_swept_after_their_worktree_was_removed() {
+        let repo = Fixture::woven();
+        let task = TaskId::new("TASK-0088");
+        let workspace = worktree::create(repo.path(), &task, AgentProvider::Codex, "HEAD").unwrap();
+        shell::worktree_remove(repo.path(), &workspace.path, false).unwrap();
+        let removed = sweep(repo.path(), &[]).unwrap();
+        assert_eq!(removed.len(), 1);
+        assert!(removed[0].path.is_empty());
+        assert!(shell::commit_id(repo.path(), &workspace.branch).is_err());
+    }
+
+    #[test]
+    fn a_live_tasks_branch_is_not_swept() {
+        let repo = Fixture::woven();
+        let task = TaskId::new("TASK-0089");
+        let workspace = worktree::create(repo.path(), &task, AgentProvider::Codex, "HEAD").unwrap();
+        shell::worktree_remove(repo.path(), &workspace.path, false).unwrap();
+        assert!(sweep(repo.path(), &[task]).unwrap().is_empty());
+        assert!(shell::commit_id(repo.path(), &workspace.branch).is_ok());
+    }
+
+    #[test]
+    fn an_unmerged_clean_worktree_and_its_branch_survive() {
+        let repo = Fixture::woven();
+        let workspace = worktree::create(
+            repo.path(),
+            &TaskId::new("TASK-0090"),
+            AgentProvider::Codex,
+            "HEAD",
+        )
+        .unwrap();
+        std::fs::write(workspace.path.join("new-task.txt"), "new work\n").unwrap();
+        let dir = workspace.path.to_string_lossy();
+        repo.git(&["-C", &dir, "add", "new-task.txt"]);
+        repo.git(&["-C", &dir, "commit", "-m", "unmerged task"]);
+        assert!(sweep(repo.path(), &[]).unwrap().is_empty());
+        assert!(workspace.path.exists());
+        assert!(shell::commit_id(repo.path(), &workspace.branch).is_ok());
     }
 }

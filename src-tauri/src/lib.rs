@@ -203,6 +203,7 @@ pub fn run() {
             // The agent farm (FEAT-073). A separate module rather than more of
             // `commands.rs`: see its header.
             farm::farm_open,
+            farm::farm_exists,
             farm::farm_close,
             farm::farm_snapshot,
             farm::farm_events,

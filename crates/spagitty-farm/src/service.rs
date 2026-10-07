@@ -1997,6 +1997,7 @@ impl FarmService {
                     branch: branch.clone(),
                     ok: true,
                     error: None,
+                    sha: shell::commit_id(&self.repo, "HEAD").ok(),
                 });
                 self.set_status(id, TaskStatus::Done, None)?;
                 let _ = workspace::remove(&self.repo, id, provider, false);
@@ -2018,6 +2019,7 @@ impl FarmService {
                     branch,
                     ok: false,
                     error: Some(message.clone()),
+                    sha: None,
                 });
                 // A conflict is never resolved silently by an agent. The task
                 // is blocked, the conflict is in the working copy, and the
@@ -2409,7 +2411,13 @@ impl FarmService {
     pub fn stale_workspaces(&self) -> Vec<workspace::cleanup::Stale> {
         let known: Vec<TaskId> = self
             .farm()
-            .map(|farm| farm.tasks.iter().map(|task| task.id.clone()).collect())
+            .map(|farm| {
+                farm.tasks
+                    .iter()
+                    .filter(|task| task.status != TaskStatus::Done)
+                    .map(|task| task.id.clone())
+                    .collect()
+            })
             .unwrap_or_default();
         workspace::cleanup::farm_worktrees(&self.repo)
             .into_iter()
@@ -2421,7 +2429,13 @@ impl FarmService {
     pub fn sweep(&self) -> Result<Vec<workspace::cleanup::Stale>> {
         let known: Vec<TaskId> = self
             .farm()
-            .map(|farm| farm.tasks.iter().map(|task| task.id.clone()).collect())
+            .map(|farm| {
+                farm.tasks
+                    .iter()
+                    .filter(|task| task.status != TaskStatus::Done)
+                    .map(|task| task.id.clone())
+                    .collect()
+            })
             .unwrap_or_default();
         workspace::cleanup::sweep(&self.repo, &known)
     }

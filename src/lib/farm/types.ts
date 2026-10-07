@@ -322,7 +322,14 @@ export type FarmEvent =
 	| { kind: 'supplementalPolicyChanged'; mode: SupplementalPolicy['mode']; revision: number; actor: string }
 	| { kind: 'supplementalReview'; task: string; state: string; provider: string; summary: string }
 	| { kind: 'mergeRequested'; task: string; branch: string }
-	| { kind: 'mergeCompleted'; task: string; branch: string; ok: boolean; error: string | null }
+	| {
+			kind: 'mergeCompleted';
+			task: string;
+			branch: string;
+			ok: boolean;
+			error: string | null;
+			sha?: string | null;
+	  }
 	| { kind: 'workspaceChanged'; task: string; path: string; created: boolean }
 	| { kind: 'taskProposed'; from: string; title: string }
 	| { kind: 'failed'; message: string };
@@ -360,6 +367,11 @@ export interface TaskDetail {
 	review: Review | null;
 	handoff: Handoff | null;
 	runs: AgentRun[];
+	stats?: {
+		commits: number;
+		files: { path: string; added: number; removed: number; binary: boolean }[];
+	} | null;
+	mergeSha?: string | null;
 }
 
 /** What the task editor sends back. */

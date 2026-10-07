@@ -205,6 +205,8 @@ pub struct TaskDetail {
     pub review: Option<Review>,
     pub handoff: Option<Handoff>,
     pub runs: Vec<AgentRun>,
+    pub stats: Option<spagitty_core::compare::RangeStats>,
+    pub merge_sha: Option<String>,
 }
 
 /// Point the farm at a repository.
@@ -259,6 +261,18 @@ pub fn farm_open<R: Runtime>(
         .ok();
 
     snapshot(&service)
+}
+
+/// Whether a repository has a farm on disk, without opening it (FEAT-109).
+///
+/// The rail's Farm dot needs the farm read before the screen is visited, but
+/// opening one is not free: it detects agents, writes the agent registry into
+/// the repository, and replaces the one farm service — which would stop a
+/// planner running in another repository. The shell asks this first, and
+/// opens only a repository that already has a farm.
+#[tauri::command(async)]
+pub fn farm_exists(path: PathBuf) -> bool {
+    store::farm_path(&path).is_file()
 }
 
 #[tauri::command(async)]
@@ -588,7 +602,32 @@ pub fn farm_task_detail(state: State<'_, FarmState>, id: TaskId) -> Result<TaskD
         .farm()
         .and_then(|farm| farm.task(&id).cloned())
         .ok_or_else(|| Failure::from(spagitty_farm::Error::NoSuchTask(id.clone())))?;
+    let merge_sha = service
+        .events()
+        .iter()
+        .rev()
+        .find_map(|record| match &record.event {
+            FarmEvent::MergeCompleted {
+                task,
+                ok: true,
+                sha,
+                ..
+            } if task == &id => sha.clone(),
+            _ => None,
+        });
+    let stats = task.branch.as_deref().and_then(|branch| {
+        let farm = service.farm()?;
+        spagitty_core::compare::task_stats(
+            std::path::Path::new(&farm.repository),
+            branch,
+            task.merge_target.as_deref().unwrap_or("HEAD"),
+            merge_sha.as_deref(),
+        )
+        .ok()
+    });
     Ok(TaskDetail {
+        stats,
+        merge_sha,
         verification: service.verification_of(&id),
         review: service.review_of(&id),
         handoff: service.handoff_of(&id),

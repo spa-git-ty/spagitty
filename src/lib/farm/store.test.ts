@@ -19,6 +19,8 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 vi.mock('./api', () => ({
 	open: vi.fn(),
+	exists: vi.fn(),
+	taskDetail: vi.fn(() => Promise.resolve(null)),
 	snapshot: vi.fn(),
 	stale: vi.fn(() => Promise.resolve([])),
 	failure: vi.fn((err: unknown) => ({
@@ -463,5 +465,63 @@ describe('farmStore refresh & stop', () => {
 
 		await farmStore.stop();
 		expect(unlistenMock).toHaveBeenCalled();
+	});
+});
+
+describe('priming a farm for the rail dot (FEAT-109)', () => {
+	const apiExists = vi.mocked(api.exists);
+
+	beforeEach(() => {
+		farmStore.reset();
+		apiOpen.mockReset();
+		apiExists.mockReset();
+	});
+
+	it('opens nothing in a repository with no farm', async () => {
+		// Opening writes the agent registry into the repository.
+		apiExists.mockResolvedValue(false);
+		await farmStore.prime('/repos/plain');
+		expect(apiOpen).not.toHaveBeenCalled();
+		expect(farmStore.path).toBeNull();
+	});
+
+	it('opens a repository that has a farm, and says which one it holds', async () => {
+		apiExists.mockResolvedValue(true);
+		apiOpen.mockResolvedValue(sampleSnapshot([sampleTask('T1')]));
+		await farmStore.prime('/repos/farmed');
+		expect(apiOpen).toHaveBeenCalledWith('/repos/farmed');
+		expect(farmStore.path).toBe('/repos/farmed');
+	});
+
+	it('never replaces a farm with a run in flight', async () => {
+		// The backend holds one farm; opening another stops a planner mid-plan.
+		apiExists.mockResolvedValue(true);
+		const busy = sampleSnapshot([sampleTask('T1', { status: 'running' })]);
+		busy.runs = [
+			{
+				id: 'R1',
+				task: 'planning',
+				agent: 'claude-1',
+				phase: 'planning',
+				outcome: { state: 'running' },
+				command: [],
+				startedMs: 1,
+				endedMs: null,
+				logFile: null,
+				lastOutputMs: null
+			}
+		];
+		apiOpen.mockResolvedValue(busy);
+		await farmStore.prime('/repos/a');
+		apiOpen.mockClear();
+		await farmStore.prime('/repos/b');
+		expect(apiOpen).not.toHaveBeenCalled();
+		expect(farmStore.path).toBe('/repos/a');
+	});
+
+	it('treats a failed look as no farm', async () => {
+		apiExists.mockRejectedValue(new Error('gone'));
+		await farmStore.prime('/repos/broken');
+		expect(apiOpen).not.toHaveBeenCalled();
 	});
 });

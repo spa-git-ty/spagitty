@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Farm, building</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 24%,transparent) transparent}}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-button{display:none;width:0;height:0}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent);border:3px solid transparent;background-clip:padding-box;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink) 38%,transparent);background-clip:padding-box}::-webkit-scrollbar-corner{background:transparent}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--selection:rgba(184,50,31,.12);--lane-1:#c23b22;--lane-2:#2f8a52;--lane-3:#a86a00;--lane-4:#6c4fa3;--lane-5:#2f6fb0;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 7%,transparent),transparent 70%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--selection:rgba(242,113,90,.18);--lane-1:#f2715a;--lane-2:#7cc68d;--lane-3:#f0b54a;--lane-4:#a58bd8;--lane-5:#6aa7e0;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),radial-gradient(70% 60% at 60% 40%,color-mix(in srgb,var(--lane-2) 14%,transparent),transparent 70%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--ok-soft:color-mix(in srgb,var(--ok) 12%,transparent);--danger-soft:color-mix(in srgb,var(--danger) 11%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.btn.quiet{background:none;box-shadow:none;border-color:transparent;color:var(--muted)}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool:hover,.rail-item:hover{background:var(--hover)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono);white-space:nowrap}
+.sect{margin:0;font-weight:400;font-size:var(--fs-secondary);color:var(--muted);display:flex;align-items:baseline;gap:6px}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ag{--agent:var(--muted)}.ag-cc{--agent:var(--lane-1)}.ag-cx{--agent:var(--lane-5)}.ag-cu{--agent:var(--lane-4)}.ag-pi{--agent:var(--lane-3)}
+.mono-badge{width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--agent);background:color-mix(in srgb,var(--agent) 15%,transparent);border:1px solid color-mix(in srgb,var(--agent) 45%,transparent)}
+.mono-badge.live{animation:halo 2.4s ease-in-out infinite}
+.strands{display:inline-flex;align-items:center;gap:3px;height:13px;flex:none}
+.strands i{width:3.5px;height:13px;border-radius:999px;animation:wave 1s ease-in-out infinite}
+.strands i:nth-child(1){background:var(--lane-1)}.strands i:nth-child(2){background:var(--lane-5);animation-delay:.15s}.strands i:nth-child(3){background:var(--lane-2);animation-delay:.3s}
+.track{display:flex;gap:3px}
+.track i{flex:1;height:4px;border-radius:999px;background:var(--soft)}
+.track i.d{background:var(--ok)}.track i.n{background:var(--accent);animation:glow 1.6s ease-in-out infinite}.track i.s{background:var(--danger)}.track i.w{background:color-mix(in srgb,var(--warn) 70%,transparent)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.spine{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.st{display:flex;align-items:center;gap:8px;font-size:var(--fs-secondary)}
+.st-dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;flex:none}
+.st.done .st-dot{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 60%,transparent);color:var(--ok)}
+.st.now .st-dot{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);animation:halo-a 2.4s ease-in-out infinite}
+.st.now{font-weight:600}.st.next{color:var(--muted)}
+.st-l{display:flex;flex-direction:column;line-height:1.15}
+.st-s{font-size:11.5px;color:var(--muted);font-weight:400}
+.st-bar{width:22px;height:2px;border-radius:2px;background:var(--soft)}
+.st-bar.done{background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.tcard{display:flex;flex-direction:column;gap:9px;padding:12px 13px}
+.tcard:hover,.crew-row:hover{border-color:color-mix(in srgb,var(--accent) 42%,transparent)}
+.crew-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;border:1px solid transparent}
+.crew-row:hover{background:var(--hover)}
+.need{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px}
+.need.land{border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 7%,var(--surface))}
+.need.stuck{border-color:color-mix(in srgb,var(--danger) 45%,transparent);background:color-mix(in srgb,var(--danger) 6%,var(--surface))}
+.need-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none}
+.land .need-ic{background:var(--ok-soft);color:var(--ok)}.stuck .need-ic{background:var(--danger-soft);color:var(--danger)}
+.seg{flex:1;height:8px;border-radius:999px;background:var(--soft)}
+.seg.landed{background:var(--ok)}.seg.stk{background:var(--danger)}.seg.ready{background:color-mix(in srgb,var(--ok) 45%,transparent)}.seg.work{background:var(--accent);animation:glow 1.6s ease-in-out infinite}.seg.check{background:var(--lane-5)}
+.lane-h{display:flex;flex-direction:column;gap:2px;padding:0 4px 4px}
+.lane-empty{border:1px dashed var(--soft);border-radius:10px;padding:16px;text-align:center}
+@keyframes wave{0%,100%{transform:scaleY(.45);opacity:.55}50%{transform:scaleY(1);opacity:1}}
+@keyframes glow{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes halo{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--agent) 16%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--agent) 4%,transparent)}}
+@keyframes halo-a{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 4%,transparent)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Add a repository" style="width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 2px; color: var(--muted)">
+<button aria-label="Minimize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14"></path></svg></button>
+<button aria-label="Maximize" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 5h14v14H5z"></path></svg></button>
+<button aria-label="Close" style="width: 28px; height: 26px; border-radius: 999px; display: grid; place-items: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none; position: relative">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="11">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}">
+<button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button>
+</sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 4px">Farm</span>
+<a href="Main.dc.html" class="chip on">Board</a>
+<a href="Crew.dc.html" class="chip">Crew <span style="opacity: .7">4</span></a>
+<a href="Activity.dc.html" class="chip">Activity</a>
+<span style="flex: 1"></span>
+<div class="spine" aria-label="Where the farm is">
+<sc-for list="{{spine}}" as="s" hint-placeholder-count="5">
+<div style="display: contents">
+<div class="st {{s.cls}}"><span class="st-dot"><sc-if value="{{s.isDone}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"></path></svg></sc-if><sc-if value="{{s.notDone}}" hint-placeholder-val="{{true}}">{{s.num}}</sc-if></span><span class="st-l">{{s.label}}<span class="st-s">{{s.sub}}</span></span></div>
+<sc-if value="{{s.bar}}" hint-placeholder-val="{{true}}"><span class="st-bar {{s.barCls}}"></span></sc-if>
+</div>
+</sc-for>
+</div>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 10px 10px 10px">
+
+<div style="flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column">
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 2px 8px 92px; display: flex; flex-direction: column; gap: 18px">
+
+<div class="card" style="display: flex; flex-wrap: wrap; align-items: center; gap: 22px; padding: 16px 18px">
+<div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<span class="note" style="display: flex; align-items: center; gap: 8px">Goal<span style="color: var(--ink)">Gitea support for pull requests</span></span>
+<span style="font-size: 18px; line-height: 1.35; display: flex; align-items: center; gap: 10px"><sc-if value="{{running}}" hint-placeholder-val="{{true}}"><span class="strands" aria-hidden="true"><i></i><i></i><i></i></span></sc-if><sc-if value="{{paused}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2.4" stroke-linecap="round"><path d="M8 5v14M16 5v14"></path></svg></sc-if>{{headline}}</span>
+<span class="note">{{subline}}</span>
+</div>
+<div style="flex: 0 1 300px; min-width: 220px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; justify-content: space-between"><span><span style="font-size: 22px; font-weight: 600">{{landedCount}}</span><span class="note"> of 9 landed</span></span><span class="note">{{leftText}}</span></div>
+<div style="display: flex; gap: 3px" title="One mark per task">
+<sc-for list="{{segs}}" as="g" hint-placeholder-count="9"><span class="seg {{g}}"></span></sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 11.5px" class="note">
+<span style="display: flex; align-items: center; gap: 5px"><span class="dot" style="background: var(--ok)"></span>landed</span>
+<span style="display: flex; align-items: center; gap: 5px"><span class="dot" style="background: var(--accent)"></span>working</span>
+<span style="display: flex; align-items: center; gap: 5px"><span class="dot" style="background: var(--lane-5)"></span>checking</span>
+<span style="display: flex; align-items: center; gap: 5px"><span class="dot" style="background: var(--danger)"></span>stuck</span>
+</div>
+</div>
+</div>
+
+<section aria-label="Needs you" style="display: flex; flex-direction: column; gap: 8px">
+<h2 class="sect" style="padding: 0 4px"><span style="color: var(--ink); font-weight: 600">Needs you</span><span>· {{needCount}} · nothing else is waiting on a person</span></h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 10px">
+<sc-for list="{{needs}}" as="n" hint-placeholder-count="2">
+<div class="card need {{n.cls}}">
+<span class="need-ic"><sc-if value="{{n.isLand}}" hint-placeholder-val="{{true}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><path d="M12 12v9"></path><path d="M9 18l3 3 3-3"></path></svg></sc-if><sc-if value="{{n.isStuck}}" hint-placeholder-val="{{false}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.5 20h19z"></path><path d="M12 10v4.5"></path><path d="M12 17.5v.01"></path></svg></sc-if></span>
+<div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="display: flex; align-items: baseline; gap: 8px"><span class="mono" style="color: var(--muted); white-space: nowrap">{{n.id}}</span><span style="font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{n.title}}</span></span>
+<span class="note" style="font-size: 12.5px">{{n.why}}</span>
+</div>
+<div style="display: flex; gap: 6px; flex: none; margin-left: auto">
+<sc-if value="{{n.isLand}}" hint-placeholder-val="{{true}}"><button class="btn primary" onClick="{{n.act}}">Land it</button></sc-if>
+<sc-if value="{{n.isStuck}}" hint-placeholder-val="{{false}}"><button class="btn primary">Retry with Codex</button></sc-if>
+<a href="Task.dc.html" class="btn">{{n.open}}</a>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-label="Board" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start">
+<sc-for list="{{lanes}}" as="l" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div class="lane-h">
+<span style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--fs-secondary)"><span class="dot" style="{{l.dotStyle}}"></span>{{l.name}}<span class="note" style="font-weight: 400">{{l.count}}</span></span>
+<span class="note" style="font-size: 11.5px">{{l.hint}}</span>
+</div>
+<sc-for list="{{l.cards}}" as="t" hint-placeholder-count="2">
+<a href="Task.dc.html" class="card tcard">
+<div style="display: flex; align-items: center; gap: 8px"><span class="mono" style="color: var(--muted)">{{t.id}}</span><span style="flex: 1"></span><span class="chip" style="padding: 1px 8px; font-size: 11px">{{t.kind}}</span></div>
+<span style="font-size: 14.4px; line-height: 1.35">{{t.title}}</span>
+<div class="ag {{t.agc}}" style="display: flex; align-items: center; gap: 8px">
+<span class="mono-badge {{t.live}}">{{t.agN}}</span>
+<span style="flex: 1; min-width: 0; font-size: 12.5px; color: var(--muted); {{t.lineStyle}}">{{t.line}}</span>
+<sc-if value="{{t.moving}}" hint-placeholder-val="{{false}}"><span class="strands" aria-hidden="true"><i></i><i></i><i></i></span></sc-if>
+</div>
+<div class="track" title="Queued · Worktree · Working · Checks · Review · Landed"><sc-for list="{{t.track}}" as="k" hint-placeholder-count="6"><i class="{{k}}"></i></sc-for></div>
+</a>
+</sc-for>
+<sc-if value="{{l.empty}}" hint-placeholder-val="{{false}}"><div class="lane-empty note">Nothing here right now</div></sc-if>
+</div>
+</sc-for>
+</section>
+</div>
+
+<div class="ornament" role="toolbar" aria-label="Farm controls" style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-secondary); white-space: nowrap">
+<button class="tool" onClick="{{togglePause}}" style="font-weight: 600"><sc-if value="{{running}}" hint-placeholder-val="{{true}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 5v14M16 5v14"></path></svg></sc-if><sc-if value="{{paused}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"></path></svg></sc-if>{{pauseLabel}}</button>
+<span class="vr"></span>
+<button class="tool" title="How much the farm may do on its own"><span class="note">Autonomy</span>Semi-automatic<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+<button class="tool" title="Agents allowed to work at once"><span style="display: flex; gap: 3px"><span style="width: 7px; height: 14px; border-radius: 3px; background: var(--accent)"></span><span style="width: 7px; height: 14px; border-radius: 3px; background: var(--accent)"></span><span style="width: 7px; height: 14px; border-radius: 3px; background: var(--soft)"></span></span>3 at once</button>
+<span class="vr"></span>
+<button class="tool"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Task</button>
+<a href="Setup.dc.html" class="tool"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h10M18 6h2M16 4v4M4 18h4M12 18h8M10 16v4M4 12h2M10 12h10M8 10v4"></path></svg>Rules</a>
+</div>
+</div>
+
+<aside aria-label="Crew and recent activity" style="width: 320px; flex: none; display: flex; flex-direction: column; gap: 16px; padding: 16px 12px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px; overflow: auto">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 0 6px">
+<h2 class="sect"><span style="color: var(--ink); font-weight: 600">Crew</span></h2>
+<span class="note" style="display: flex; align-items: center; gap: 6px; font-size: 12px">2 of 3 busy<span style="display: flex; gap: 2px"><span style="width: 6px; height: 11px; border-radius: 2px; background: var(--accent)"></span><span style="width: 6px; height: 11px; border-radius: 2px; background: var(--accent)"></span><span style="width: 6px; height: 11px; border-radius: 2px; background: var(--soft)"></span></span></span>
+</div>
+<sc-for list="{{crew}}" as="c" hint-placeholder-count="4">
+<a href="Crew.dc.html" class="crew-row ag {{c.agc}}">
+<span class="mono-badge {{c.live}}">{{c.n}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="display: flex; align-items: baseline; gap: 6px"><span style="font-weight: 550; font-size: 14px">{{c.name}}</span><span class="mono" style="color: var(--muted)">{{c.task}}</span></span>
+<span style="font-size: 12px; color: var(--muted); {{c.subStyle}}">{{c.sub}}</span>
+</div>
+<sc-if value="{{c.moving}}" hint-placeholder-val="{{false}}"><span class="strands" aria-hidden="true"><i></i><i></i><i></i></span></sc-if>
+</a>
+</sc-for>
+</div>
+<div style="height: 1px; background: var(--soft); margin: 0 6px"></div>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 0 6px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 class="sect"><span style="color: var(--ink); font-weight: 600">Lately</span></h2>
+<a href="Activity.dc.html" class="note" style="font-size: 12px; color: var(--accent)">All activity</a>
+</div>
+<sc-for list="{{lately}}" as="e" hint-placeholder-count="5">
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<span class="dot" style="margin-top: 6px; {{e.dot}}"></span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 13px; line-height: 1.4"><span class="mono" style="color: var(--muted)">{{e.id}}</span> {{e.text}}</span>
+<span class="note" style="font-size: 11.5px">{{e.when}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span class="dot" style="width: 6px; height: 6px; background: var(--ok)"></span>Repository ready · farm building on 3 worktrees</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px; font-size: 15.6px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="7">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · <span class="mono">GPL-3.0 · v0.8.1</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ rebase: ['M6 20V10a4 4 0 0 1 4-4h8','M6 20.5a2.5 2.5 0 1 0 0-.02','M6 5.5a2.5 2.5 0 1 0 0-.02','M14 2.5 17.5 6 14 9.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ clone: ['M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','branch','request','review','|','rebase','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', branch:'Branches', request:'Pull requests', review:'Review', rebase:'Rebase', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['clone','Clone'],'|',['branch','Branch'],['stash','Stash'],['rebase','Rebase']];
+var STEPS = ['Crew','Goal','Plan','Build','Wrap up'];
+function shell(dot) {
+ return {
+  rail: RAIL.map(function (k) { return k === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'farm' ? 'on' : '', dot: k === 'farm' && dot }; }),
+  tools: TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; })
+ };
+}
+function spine(cur, subs) {
+ return STEPS.map(function (s, i) { return { label: s, sub: subs[i] || '', cls: i < cur ? 'done' : (i === cur ? 'now' : 'next'), isDone: i < cur, notDone: i >= cur, num: String(i + 1), bar: i < STEPS.length - 1, barCls: i < cur ? 'done' : '' }; });
+}
+var AG = { cc: ['CC', 'Claude Code'], cx: ['CX', 'Codex'], cu: ['CU', 'Cursor'], pi: ['PI', 'Oh My Pi'] };
+function trk(s) { var m = { d: 'd', n: 'n', s: 's', w: 'w', o: '' }; return s.split('').map(function (c) { return m[c]; }); }
+class Component extends DCLogic {
+ constructor(p) { super(p); this.state = { paused: false, landed: false }; }
+ renderVals() {
+  var self = this, st = this.state;
+  var card = function (o) { var a = AG[o.ag]; return Object.assign({ agc: a ? 'ag-' + o.ag : '', agN: a ? a[0] : '—', live: o.moving && !st.paused ? 'live' : '', moving: !!o.moving && !st.paused, lineStyle: o.warn ? 'color: var(--warn);' : '', track: trk(o.tr) }, o); };
+  var next = [
+   card({ id: 'T-06', title: 'Gitea badge and avatars on Pull requests', kind: 'Frontend', ag: 'cx', line: 'Waits for T-05', tr: 'wooooo' }),
+   card({ id: 'T-08', title: 'hosts.md: a section on Gitea', kind: 'Docs', ag: null, line: 'Waits for T-02 and T-04', tr: 'wooooo' })
+  ];
+  var work = [
+   card({ id: 'T-04', title: 'Review comments on Gitea', kind: 'Backend', ag: 'cc', line: '6 min · editing gitea/review.rs', moving: true, tr: 'ddnooo' }),
+   card({ id: 'T-05', title: 'Gitea token in Settings › Accounts', kind: 'Frontend', ag: 'cu', line: '11 min · quiet for 4 min', warn: true, moving: true, tr: 'ddnooo' })
+  ];
+  var check = [
+   card({ id: 'T-07', title: 'Tests against a recorded Gitea fixture', kind: 'Testing', ag: 'pi', line: 'cargo test -p spagitty-hosts', moving: true, tr: 'dddnoo' })
+  ];
+  var landed = [];
+  if (st.landed) landed.push(card({ id: 'T-02', title: 'gitea.rs: list, create and merge', kind: 'Backend', ag: 'cc', line: 'Landed just now · 4 commits', tr: 'dddddd' }));
+  landed.push(card({ id: 'T-03', title: 'Recognise Gitea remotes in the host picker', kind: 'Backend', ag: 'cx', line: 'Landed 14 min ago · 2 commits', tr: 'dddddd' }));
+  landed.push(card({ id: 'T-01', title: "Map Gitea's pull request API", kind: 'Research', ag: 'cx', line: 'Landed 31 min ago · notes only', tr: 'dddddd' }));
+  var lane = function (name, hint, color, cards) { return { name: name, hint: hint, dotStyle: 'background: ' + color + ';', cards: cards, count: String(cards.length), empty: cards.length === 0 }; };
+  var needs = [];
+  if (!st.landed) needs.push({ cls: 'land', isLand: true, isStuck: false, id: 'T-02', title: 'gitea.rs: list, create and merge', why: 'Checks passed · Codex approved · 4 commits, +412 −18', open: 'See the changes', act: function () { self.setState({ landed: true }); } });
+  needs.push({ cls: 'stuck', isLand: false, isStuck: true, id: 'T-09', title: 'Store the token in the system keyring', why: 'Failed its checks 3 of 3 times: libsecret-1 is missing on this machine', open: 'Open the task' });
+  var landedCount = st.landed ? 3 : 2;
+  var segs = ['landed', 'landed'].concat(st.landed ? ['landed'] : ['ready']).concat(['stk', 'work', 'work', 'check', '', '']);
+  var headline = st.paused
+   ? 'Paused. Nothing new starts; the two agents already working are left to finish.'
+   : 'Two agents are working, one task is being checked, and ' + (st.landed ? 'one needs you.' : 'two need you.');
+  return Object.assign(shell(true), {
+   theme: this.props.theme || 'dark',
+   spine: spine(3, ['4 agents', 'Gitea support', '9 tasks', (9 - landedCount) + ' to go', '']),
+   running: !st.paused, paused: st.paused,
+   pauseLabel: st.paused ? 'Resume' : 'Pause',
+   togglePause: function () { self.setState({ paused: !st.paused }); },
+   headline: headline,
+   subline: 'Started 48 min ago · Semi-automatic: agents review each other, you approve every merge',
+   landedCount: String(landedCount), leftText: (9 - landedCount) + ' to go', segs: segs,
+   needs: needs, needCount: String(needs.length),
+   lanes: [
+    lane('Up next', 'Waits for a free agent or an earlier task', 'color-mix(in srgb, var(--warn) 70%, transparent)', next),
+    lane('Working', 'Each agent in its own worktree', 'var(--accent)', work),
+    lane('Checking', 'Your commands run, then another agent reviews', 'var(--lane-5)', check),
+    lane('Landed', 'Merged into main', 'var(--ok)', landed)
+   ],
+   crew: [
+    { agc: 'ag-cc', n: 'CC', name: 'Claude Code', task: 'T-04', sub: st.paused ? 'Finishing T-04, then stopping' : '6 min · spoke 8 s ago', live: st.paused ? '' : 'live', moving: !st.paused, subStyle: '' },
+    { agc: 'ag-cu', n: 'CU', name: 'Cursor', task: 'T-05', sub: '11 min · quiet for 4 min', live: st.paused ? '' : 'live', moving: !st.paused, subStyle: 'color: var(--warn);' },
+    { agc: 'ag-pi', n: 'PI', name: 'Oh My Pi', task: '', sub: 'Free · finished T-07, its checks are running', live: '', moving: false, subStyle: '' },
+    { agc: 'ag-cx', n: 'CX', name: 'Codex', task: '', sub: 'Free · takes T-06 when T-05 lands', live: '', moving: false, subStyle: '' }
+   ],
+   lately: [
+    { id: 'T-07', text: 'Oh My Pi finished. Checks started.', when: '2 min ago', dot: 'background: var(--lane-5);' },
+    { id: 'T-02', text: 'Codex approved: “Clean split, one nit on paging.”', when: '6 min ago', dot: 'background: var(--ok);' },
+    { id: 'T-09', text: 'Checks failed again, 3 of 3. Waiting for you.', when: '9 min ago', dot: 'background: var(--danger);' },
+    { id: 'T-05', text: 'Cursor started in farm/T-05-gitea-token.', when: '11 min ago', dot: 'background: var(--accent);' },
+    { id: 'T-03', text: 'Landed on main.', when: '14 min ago', dot: 'background: var(--ok);' }
+   ]
+  });
+ }
+}
+</script>
+</body>
+</html>

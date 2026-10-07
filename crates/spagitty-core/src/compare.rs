@@ -13,6 +13,70 @@ use std::path::{Path, PathBuf};
 
 use crate::{Error, Result};
 
+/// The committed range a Farm task contributed, even after its branch is tidied away.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RangeStats {
+    pub commits: usize,
+    pub files: Vec<crate::diff::FileChange>,
+}
+
+pub fn task_stats(
+    path: &Path,
+    branch: &str,
+    target: &str,
+    merge: Option<&str>,
+) -> Result<RangeStats> {
+    let repo = crate::repo::open(path)?;
+    let (base, head) = if let Some(merge) = merge {
+        let commit = repo
+            .rev_parse_single(merge)
+            .map_err(|e| Error::Diff(e.to_string()))?
+            .object()
+            .map_err(|e| Error::Diff(e.to_string()))?
+            .peel_to_commit()
+            .map_err(|e| Error::Diff(e.to_string()))?;
+        let parents: Vec<String> = commit.parent_ids().map(|id| id.to_string()).collect();
+        if parents.len() < 2 {
+            return Err(Error::Diff(
+                "The recorded merge has fewer than two parents.".into(),
+            ));
+        }
+        (parents[0].clone(), parents[1].clone())
+    } else {
+        let head = resolve_commit(&repo, branch)?;
+        let target = resolve_commit(&repo, target)?;
+        let base = merge_base(&repo, &head, &target)?.ok_or_else(|| {
+            Error::Diff("The task and its target have no common ancestor.".into())
+        })?;
+        (base, head)
+    };
+    fn reachable(repo: &gix::Repository, tip: &str) -> Result<std::collections::HashSet<String>> {
+        let mut seen = std::collections::HashSet::new();
+        let mut pending = vec![tip.to_string()];
+        while let Some(id) = pending.pop() {
+            if !seen.insert(id.clone()) {
+                continue;
+            }
+            let commit = repo
+                .rev_parse_single(id.as_str())
+                .map_err(|e| Error::Diff(e.to_string()))?
+                .object()
+                .map_err(|e| Error::Diff(e.to_string()))?
+                .peel_to_commit()
+                .map_err(|e| Error::Diff(e.to_string()))?;
+            pending.extend(commit.parent_ids().map(|id| id.to_string()));
+        }
+        Ok(seen)
+    }
+    let old = reachable(&repo, &base)?;
+    let new = reachable(&repo, &head)?;
+    Ok(RangeStats {
+        commits: new.difference(&old).count(),
+        files: crate::diff::changes_between(&repo, &base, &head)?,
+    })
+}
+
 /// The full commit id `revision` names: a branch, a tag, `HEAD`, a remote
 /// branch or an id.
 ///
@@ -122,5 +186,38 @@ mod tests {
             std::fs::canonicalize(fixture.path()).unwrap()
         );
         assert!(common_dir(&repo).ends_with(".git"));
+    }
+
+    #[test]
+    fn task_stats_count_the_range_and_report_real_line_changes() {
+        let fixture = Fixture::woven();
+        let stats = task_stats(fixture.path(), "HEAD", "HEAD~1", None).unwrap();
+        let expected_count: usize = fixture
+            .git(&["rev-list", "--count", "HEAD~1..HEAD"])
+            .trim()
+            .parse()
+            .unwrap();
+        assert_eq!(stats.commits, expected_count);
+        let repo = crate::repo::open(fixture.path()).unwrap();
+        let head = resolve_commit(&repo, "HEAD").unwrap();
+        let parent = resolve_commit(&repo, "HEAD~1").unwrap();
+        let expected = crate::diff::changes_between(&repo, &parent, &head).unwrap();
+        assert_eq!(stats.files.len(), expected.len());
+        assert_eq!(
+            stats.files.iter().map(|f| f.added).sum::<u32>(),
+            expected.iter().map(|f| f.added).sum::<u32>()
+        );
+    }
+
+    #[test]
+    fn task_stats_still_work_when_the_merged_branch_is_gone() {
+        let fixture = Fixture::woven();
+        let merge = fixture
+            .git(&["rev-list", "--merges", "-n", "1", "HEAD"])
+            .trim()
+            .to_string();
+        let stats =
+            task_stats(fixture.path(), "deleted-task-branch", "main", Some(&merge)).unwrap();
+        assert!(stats.commits > 0);
     }
 }

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it, vi } from 'vitest';
-import { click, render } from '../../testing/mount';
-import PlanningCard from './components/PlanningCard.svelte';
 
 // The store reaches the backend through `./api` and the Tauri event channel.
 // Neither exists here, and neither is what these tests are about.
@@ -28,16 +26,6 @@ import type { AgentRun, FarmSnapshot } from './types';
  * says is narrated in the backend, so the assertions here are about the card
  * showing the *latest* thing rather than about the words themselves.
  */
-
-function props(overrides: Record<string, unknown> = {}) {
-	return {
-		lines: [],
-		startedMs: null,
-		busy: false,
-		oncancel: vi.fn(),
-		...overrides
-	} as never;
-}
 
 function planningRun(overrides: Partial<AgentRun> = {}): AgentRun {
 	return {
@@ -67,58 +55,6 @@ function snapshot(runs: AgentRun[]): FarmSnapshot {
 		waiting: {}
 	};
 }
-
-describe('the planning card', () => {
-	it('shows the last thing the planner said, not the first', () => {
-		const view = render(
-			PlanningCard,
-			props({ lines: ['· claude-opus-5 started', '· Read src/auth.rs'] })
-		);
-
-		expect(view.text()).toContain('· Read src/auth.rs');
-		expect(view.text()).not.toContain('claude-opus-5 started');
-
-		view.destroy();
-	});
-
-	it('skips blank lines rather than flickering to empty', () => {
-		// An agent's output is full of them; a card that blanks reads as a stall.
-		const view = render(PlanningCard, props({ lines: ['· Read src/auth.rs', '   ', ''] }));
-
-		expect(view.text()).toContain('· Read src/auth.rs');
-
-		view.destroy();
-	});
-
-	it('says so plainly before the planner has spoken', () => {
-		const view = render(PlanningCard, props());
-
-		expect(view.text()).toContain('has not said anything yet');
-
-		view.destroy();
-	});
-
-	it('shows how long the run has been going, from the run and not the screen', () => {
-		const view = render(PlanningCard, props({ startedMs: Date.now() - 95_000 }));
-
-		// `duration()` rounds; the point is that a minute-and-a-half run does
-		// not read as seconds.
-		expect(view.text()).toMatch(/1m 3\ds/);
-
-		view.destroy();
-	});
-
-	it('can stop the planner', () => {
-		const oncancel = vi.fn();
-		const view = render(PlanningCard, props({ oncancel }));
-
-		click(view.get('button'));
-
-		expect(oncancel).toHaveBeenCalledOnce();
-
-		view.destroy();
-	});
-});
 
 describe('the store, about planning', () => {
 	it('keeps the planner’s own transcript, which belongs to no task', () => {

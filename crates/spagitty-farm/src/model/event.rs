@@ -150,6 +150,8 @@ pub enum FarmEvent {
         ok: bool,
         #[serde(default)]
         error: Option<String>,
+        #[serde(default)]
+        sha: Option<String>,
     },
 
     /// A worktree was cut or removed. Worth an event of its own because it is
@@ -318,5 +320,21 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         let back: FarmEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(back, event);
+    }
+
+    #[test]
+    fn old_merge_events_without_a_hash_still_load() {
+        let event: FarmEvent = serde_json::from_str(
+            r#"{"kind":"mergeCompleted","task":"T-1","branch":"farm/T-1","ok":true,"error":null}"#,
+        )
+        .unwrap();
+        assert!(matches!(
+            event,
+            FarmEvent::MergeCompleted {
+                sha: None,
+                ok: true,
+                ..
+            }
+        ));
     }
 }
