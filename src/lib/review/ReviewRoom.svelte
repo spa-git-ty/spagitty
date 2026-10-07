@@ -12,6 +12,7 @@
 	import RoomFiles from './RoomFiles.svelte';
 	import RoomPill from './RoomPill.svelte';
 	import Splitter from '$lib/ui/Splitter.svelte';
+	import Loader from '$lib/ui/Loader.svelte';
 	import { room } from './room.svelte';
 	import { review } from './store.svelte';
 
@@ -36,6 +37,33 @@
 	const viewed = $derived(room.viewedCount);
 	/** The Finish review card is open (FEAT-093). */
 	let finishing = $state(false);
+
+	/**
+	 * The Conversation card can be put away (BUG-054): the diff takes its room,
+	 * and a tab at the edge, with the open thread count, brings it back.
+	 * Remembered on this machine.
+	 */
+	const HIDDEN_KEY = 'spagitty.review.conversationHidden';
+	let conversationHidden = $state(readHidden());
+
+	function readHidden(): boolean {
+		try {
+			return localStorage.getItem(HIDDEN_KEY) === '1';
+		} catch {
+			return false;
+		}
+	}
+
+	function setConversationHidden(next: boolean) {
+		conversationHidden = next;
+		try {
+			localStorage.setItem(HIDDEN_KEY, next ? '1' : '0');
+		} catch {
+			// A private window: the choice lasts the session.
+		}
+	}
+
+	const openThreads = $derived(room.threads.filter((thread) => !thread.resolved).length);
 	const total = $derived(room.files.length);
 
 	/**
@@ -110,7 +138,7 @@
 					</p>
 				{/if}
 				{#if room.phase === 'reading'}
-					<p class="pad note">Fetching #{pr.number}…</p>
+					<Loader label="Fetching #{pr.number}…" />
 				{:else if room.phase === 'failed'}
 					<p class="pad note error">{room.error}</p>
 				{:else if room.phase === 'ready' && total === 0}
@@ -120,13 +148,63 @@
 					<RoomPill onfinish={() => (finishing = true)} />
 				{/if}
 			</section>
-			<Splitter panel="roomConversation" label="Resize the conversation" />
-			<RoomConversation />
+			{#if conversationHidden}
+				<button
+					class="conversation-tab"
+					onclick={() => setConversationHidden(false)}
+					title="Show the conversation"
+				>
+					<Icon name="chevron-left" size="0.95em" weight={2.2} />
+					<span class="tab-label">Conversation</span>
+					{#if openThreads > 0}<span class="tab-count">{openThreads}</span>{/if}
+				</button>
+			{:else}
+				<Splitter panel="roomConversation" label="Resize the conversation" />
+				<RoomConversation onhide={() => setConversationHidden(true)} />
+			{/if}
 		</div>
 	</div>
 {/if}
 
 <style>
+	/* The put-away Conversation card, as a tab down the room's right edge. */
+	.conversation-tab {
+		flex: none;
+		width: 30px;
+		margin: 0 0 10px 6px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 0;
+		border-radius: 12px;
+		background: var(--surface);
+		border: 1px solid var(--pane-edge);
+		color: var(--muted);
+	}
+
+	.conversation-tab:hover {
+		color: var(--ink);
+		background: var(--hover);
+	}
+
+	.tab-label {
+		writing-mode: vertical-rl;
+		font-size: var(--fs-secondary);
+	}
+
+	.tab-count {
+		min-width: 18px;
+		height: 18px;
+		padding: 0 4px;
+		border-radius: var(--r-pill);
+		display: grid;
+		place-items: center;
+		font-size: var(--fs-mono);
+		background: color-mix(in srgb, var(--accent) 18%, transparent);
+		color: var(--accent);
+	}
+
 	.screen {
 		flex: 1;
 		min-width: 0;

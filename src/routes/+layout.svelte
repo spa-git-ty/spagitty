@@ -41,6 +41,7 @@
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
 	import DialogHost from '$lib/ui/DialogHost.svelte';
+	import { watchScrolling } from '$lib/ui/scrolling';
 	import HookRunWindow from '$lib/hooks/HookRunWindow.svelte';
 	import ExtensionHost from '$lib/extensions/ExtensionHost.svelte';
 	import NoticeToast from '$lib/ui/NoticeToast.svelte';
@@ -64,6 +65,8 @@
 		// desktop, and it belongs to the shell's lifetime like every other
 		// listener here (BUG-031).
 		cleanups.push(() => theme.dispose());
+		// Scrollbars show while their element scrolls, and not at rest (BUG-054).
+		cleanups.push(watchScrolling());
 		// Publishes the structural metrics as well as the type scale, at the
 		// stored zoom — so there is no frame at 100% before the user's zoom
 		// arrives.

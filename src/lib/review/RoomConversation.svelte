@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { relativeTime } from '$lib/format';
 	import Chip from '$lib/ui/Chip.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { markdownText } from '$lib/ui/markdown';
 	import { room } from './room.svelte';
 	import { whereOfDraft } from './drafts';
@@ -15,6 +16,13 @@
 	 * to its line too — and at the foot the box for the pull request as a
 	 * whole, which goes out with Finish review.
 	 */
+
+	interface Props {
+		/** Put the card away; the room offers it back at its edge (BUG-054). */
+		onhide?: () => void;
+	}
+
+	let { onhide }: Props = $props();
 
 	const open = $derived(room.threads.filter((thread) => !thread.resolved));
 	const resolved = $derived(room.threads.filter((thread) => thread.resolved));
@@ -32,6 +40,11 @@
 		<Chip active={room.panel === 'resolved'} onclick={() => room.setPanel('resolved')}>
 			Resolved {resolved.length}
 		</Chip>
+		{#if onhide}
+			<button class="hide" onclick={onhide} title="Hide the conversation" aria-label="Hide the conversation">
+				<Icon name="chevron-right" size="0.95em" weight={2.2} />
+			</button>
+		{/if}
 	</div>
 	<div class="list">
 		{#if room.commentsError}
@@ -100,18 +113,43 @@
 		border: 1px solid var(--pane-edge);
 		border-top-color: var(--glass-edge);
 		border-radius: var(--r-floating);
+		min-width: 0;
+		overflow: hidden;
 	}
 
+	/* Wraps rather than spilling the chips past the card's edge when the card
+	   is narrow (BUG-054). */
 	.head {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 6px;
 		padding: 4px 4px 10px;
+		min-width: 0;
 	}
 
 	.title {
-		flex: 1;
+		flex: 1 1 auto;
+		min-width: 0;
 		font-size: var(--fs-ui);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.hide {
+		width: 24px;
+		height: 24px;
+		border-radius: 8px;
+		display: grid;
+		place-items: center;
+		color: var(--muted);
+		flex: none;
+	}
+
+	.hide:hover {
+		background: var(--hover);
+		color: var(--ink);
 	}
 
 	.list {

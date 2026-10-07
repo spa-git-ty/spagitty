@@ -38,6 +38,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Fixed
 
+- **Review loads with the main loader**, and its Conversation card no longer
+  spills its chips past its edge. The card can be hidden into a tab at the
+  edge and brought back.
+- **Scrollbars stay out of sight until something scrolls.**
 - **The Log screen matches the rest of Spagitty.** The search, the results
   with each author's face, the opened commit and Blame are on cards, laid
   out like Merger and Rebase.

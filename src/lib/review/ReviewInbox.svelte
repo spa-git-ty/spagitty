@@ -65,7 +65,9 @@
 
 	<div class="body">
 		<div class="lists">
-			{#if review.error}
+			{#if review.loading && groups.length === 0 && !review.error}
+				<Loader label="Reading pull requests…" />
+			{:else if review.error}
 				<div class="empty">
 					<p class="note error">{review.error}</p>
 					<Btn onclick={() => goto('/settings#accounts')}>Settings → Accounts</Btn>
