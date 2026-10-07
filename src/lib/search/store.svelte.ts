@@ -123,6 +123,22 @@ function narrowest(query: SearchQuery): string | null {
 }
 
 export const search = {
+	/** For tests and previews: results and an opened commit, without the backend. */
+	seed(next: { author?: string; message?: string; path?: string; rows: SearchRow[]; detail?: CommitDetail | null }) {
+		author = next.author ?? '';
+		message = next.message ?? '';
+		path = next.path ?? '';
+		buffer = [...next.rows];
+		count = next.rows.length;
+		version += 1;
+		ran = true;
+		running = false;
+		complete = true;
+		error = null;
+		detail = next.detail ?? null;
+		selectedId = next.detail?.id ?? null;
+	},
+
 	get version(): number {
 		return version;
 	},

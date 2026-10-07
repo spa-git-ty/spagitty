@@ -3,6 +3,7 @@
 	import { relativeTime } from '$lib/format';
 	import { search } from '$lib/search/store.svelte';
 	import RefChip from '$lib/ui/RefChip.svelte';
+	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
 
 	/**
 	 * The results.
@@ -47,18 +48,25 @@
 				onclick={(event) => activate(row.id, event)}
 				onkeydown={(event) => keydown(row.id, event)}
 			>
-				<span class="glyph" aria-hidden="true">{row.initials}</span>
-				<span class="summary" title={row.summary}>{row.summary}</span>
-				{#if row.refs.length > 0}
-					<span class="refs">
-						{#each row.refs as chip (chip.name)}
-							<RefChip {chip} />
-						{/each}
+				<span class="face"><AuthorAvatar email={row.authorEmail} name={row.authorName} letters={row.initials} /></span>
+				<span class="text">
+					<span class="line">
+						<span class="summary" title={row.summary}>{row.summary}</span>
+						{#if row.refs.length > 0}
+							<span class="refs">
+								{#each row.refs as chip (chip.name)}
+									<RefChip {chip} />
+								{/each}
+							</span>
+						{/if}
 					</span>
-				{/if}
-				<span class="who note">{row.authorName}</span>
-				<span class="when note">{relativeTime(row.time)}</span>
-				<span class="sha mono note">{row.short}</span>
+					<span class="meta note">
+						<span class="who">{row.authorName}</span>
+						<span aria-hidden="true">·</span>
+						<span class="when">{relativeTime(row.time)}</span>
+					</span>
+				</span>
+				<span class="sha mono">{row.short}</span>
 			</button>
 		</li>
 	{/each}
@@ -71,50 +79,58 @@
 		list-style: none;
 		display: flex;
 		flex-direction: column;
+		gap: 2px;
 	}
 
 	.row {
 		width: 100%;
-		height: var(--row-pitch);
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 0 8px;
-		border: none;
-		border-radius: var(--r-field);
-		background: transparent;
-		color: inherit;
-		font: inherit;
+		gap: 12px;
+		padding: 8px 12px;
+		border-radius: 12px;
 		text-align: left;
 		min-width: 0;
 	}
 
 	.row:hover {
-		background: var(--soft);
+		background: var(--hover);
 	}
 
 	.row.selected {
-		background: var(--selection);
+		background: color-mix(in srgb, var(--accent) 14%, transparent);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 	}
 
-	.glyph {
+	.face {
 		flex: none;
-		width: 20px;
-		height: 20px;
-		border: 1px solid var(--line);
-		border-radius: 50%;
-		display: inline-flex;
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+	}
+
+	.text {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.line {
+		display: flex;
 		align-items: center;
-		justify-content: center;
-		font-size: var(--fs-secondary);
+		gap: 8px;
+		min-width: 0;
 	}
 
 	.summary {
-		flex: 1;
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		font-weight: 550;
 	}
 
 	.refs {
@@ -123,13 +139,19 @@
 		gap: 4px;
 	}
 
-	.who,
-	.when {
-		flex: none;
+	.meta {
+		display: flex;
+		gap: 6px;
+		font-size: var(--fs-mono);
 		white-space: nowrap;
 	}
 
 	.sha {
 		flex: none;
+		font-size: var(--fs-mono);
+		color: var(--muted);
+		padding: 2px 8px;
+		border-radius: var(--r-pill);
+		background: color-mix(in srgb, var(--sunken) 70%, transparent);
 	}
 </style>

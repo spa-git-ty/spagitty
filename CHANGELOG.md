@@ -32,6 +32,9 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Fixed
 
+- **The Log screen matches the rest of Spagitty.** The search, the results
+  with each author's face, the opened commit and Blame are on cards, laid
+  out like Merger and Rebase.
 - **Graph nodes are bigger, and merges turn like GitKraken's.** Portraits and
   merge dots are larger, and a merge's line to its other parent leaves the dot
   sideways and turns once, with no short stub beside the node.

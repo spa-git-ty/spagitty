@@ -44,11 +44,11 @@
 <section class="strip">
 	<form class="ask" onsubmit={submit}>
 		<label class="field">
-			<span class="note">blame</span>
-			<input bind:value={file} placeholder="path to a file" />
+			<span class="note">File</span>
+			<input bind:value={file} placeholder="path" />
 		</label>
 		<label class="field short">
-			<span class="note">at</span>
+			<span class="note">At</span>
 			<input bind:value={revision} placeholder="HEAD" />
 		</label>
 		<Btn disabled={file.trim() === '' || search.blaming}>Blame</Btn>
@@ -90,45 +90,49 @@
 </section>
 
 <style>
-	/* Sits in the lower half of the side column; the column owns the width. */
 	.strip {
 		flex: 1;
 		min-height: 0;
 		display: flex;
 		flex-direction: column;
-		border-top: 1px solid var(--soft);
+		gap: 8px;
 	}
 
 	.ask {
 		flex: none;
 		display: flex;
 		align-items: flex-end;
-		gap: 6px;
-		flex-wrap: wrap;
-		padding: 8px;
-		border-bottom: 1px solid var(--soft);
+		gap: 8px;
 	}
 
 	.field {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 4px;
 		min-width: 0;
+		flex: 1;
+	}
+
+	.field.short {
+		flex: 0 0 72px;
+	}
+
+	.field .note {
+		font-size: var(--fs-mono);
+		padding-left: 2px;
 	}
 
 	.field input {
-		width: 150px;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-field);
-		padding: 3px 6px;
-		background: transparent;
-		color: inherit;
-		font: inherit;
+		width: 100%;
+		height: 30px;
+		box-sizing: border-box;
+		border: 1px solid var(--pane-edge);
+		border-radius: 10px;
+		padding: 0 10px;
+		background: var(--sunken);
+		color: var(--ink);
+		font-family: var(--font-mono);
 		font-size: var(--fs-secondary);
-	}
-
-	.field.short input {
-		width: 70px;
 	}
 
 	.field input:focus {
@@ -136,11 +140,14 @@
 		border-color: var(--accent);
 	}
 
+	.ask :global(button) {
+		height: 30px;
+	}
+
 	.body {
 		flex: 1;
 		min-height: 0;
 		overflow: auto;
-		padding: 8px;
 	}
 
 	.state {
@@ -154,8 +161,8 @@
 	/* One block per run of lines from the same commit, which is how a blame is
 	   actually read: by change, not by line. */
 	.group {
-		border-left: 1px solid var(--soft);
-		padding-left: 8px;
+		border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+		padding: 2px 0 2px 10px;
 		margin-bottom: 10px;
 	}
 
