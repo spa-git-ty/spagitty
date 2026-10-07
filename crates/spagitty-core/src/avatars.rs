@@ -481,7 +481,7 @@ fn forge_account(
     let id = commit.id.trim();
     let usable = id.len() >= 7 && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_hexdigit());
     let api = repo.kind.api_base(&repo.host);
-    let (url, read): (String, fn(&str) -> Option<(String, String)>) = match repo.kind {
+    let (url, read): (String, ReadAccount) = match repo.kind {
         Kind::GitHub if usable => (
             format!("{api}/repos/{}/{}/commits/{id}", repo.owner, repo.name),
             account_of,
@@ -536,6 +536,9 @@ fn forge_account(
         _ => Step::Transient,
     }
 }
+
+/// Reads the login and picture URL out of a forge's answer.
+type ReadAccount = fn(&str) -> Option<(String, String)>;
 
 /// GitLab's `avatar_url` for an address (BUG-053).
 ///

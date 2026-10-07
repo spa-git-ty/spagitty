@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-07
+
 ### Added
 
 - **Git hooks you can see, skip and watch.** Settings → Hooks shows the
@@ -64,6 +66,16 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   account's token where it needs one.
 - **Pull requests loads with the same loader as every other screen.**
 - **The status bar shows the right version**, without the licence label.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 1.0.1. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, the download is
+  corrupt: compare it with `SHA256SUMS-*.txt` and download it again.
 
 ## [1.0.1] - 2026-10-06
 

@@ -225,7 +225,7 @@ pub fn list(repo: &Path) -> Result<Hooks> {
 
 /// Whether Spagitty runs this repository's hooks when it commits.
 pub fn enabled(repo: &Path) -> Result<bool> {
-    Ok(shell::get_config(repo, KEY)?.is_none_or(|value| value != "false"))
+    Ok(shell::get_config(repo, KEY)?.as_deref() != Some("false"))
 }
 
 /// Switch this repository's hooks on or off for commits made in Spagitty.
