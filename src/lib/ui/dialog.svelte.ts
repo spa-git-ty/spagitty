@@ -23,7 +23,7 @@
  */
 
 export interface Question {
-	kind: 'confirm' | 'prompt';
+	kind: 'confirm' | 'prompt' | 'choice';
 	title: string;
 	/** The sentence under the title. Say what will happen, in plain words. */
 	body: string;
@@ -36,7 +36,12 @@ export interface Question {
 	/** Prompt only: what the field starts with. */
 	value?: string;
 	placeholder?: string;
+	/** Choice only: the middle way's button, between Cancel and the affirmative. */
+	alternativeLabel?: string;
 }
+
+/** What a three-way question answers (FEAT-107). */
+export type Choice = 'confirm' | 'alternative' | 'cancel';
 
 type Answer = boolean | string | null;
 
@@ -52,6 +57,7 @@ let resolver: ((answer: Answer) => void) | null = null;
  * caller's side and must not be able to disagree about it.
  */
 function cancelValue(open: Question): Answer {
+	if (open.kind === 'choice') return 'cancel';
 	return open.kind === 'prompt' ? null : false;
 }
 
@@ -141,10 +147,38 @@ export const dialog = {
 		}) as Promise<string | null>;
 	},
 
-	/** Answer affirmatively: true, or the typed text. */
+	/**
+	 * Ask a question with a middle way (FEAT-107): Cancel, the alternative, or
+	 * the affirmative. Resolves 'cancel' when dismissed.
+	 */
+	choose(options: {
+		title: string;
+		body: string;
+		confirmLabel: string;
+		alternativeLabel: string;
+		danger?: boolean;
+	}): Promise<Choice> {
+		return ask({
+			kind: 'choice',
+			title: options.title,
+			body: options.body,
+			confirmLabel: options.confirmLabel,
+			alternativeLabel: options.alternativeLabel,
+			danger: options.danger ?? false
+		}) as Promise<Choice>;
+	},
+
+	/** Take the middle way of a choice. */
+	alternative(): void {
+		if (question?.kind === 'choice') settle('alternative');
+	},
+
+	/** Answer affirmatively: true, the typed text, or 'confirm' for a choice. */
 	accept(): void {
 		if (!question) return;
-		if (question.kind === 'prompt') {
+		if (question.kind === 'choice') {
+			settle('confirm');
+		} else if (question.kind === 'prompt') {
 			const text = draft.trim();
 			if (text === '') return;
 			settle(text);

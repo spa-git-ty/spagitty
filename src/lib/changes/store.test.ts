@@ -394,7 +394,7 @@ describe('committing', () => {
 
 		expect(await changes.commit()).toBe(true);
 
-		expect(commit).toHaveBeenCalledWith('A subject', 'A body.', false);
+		expect(commit).toHaveBeenCalledWith('A subject', 'A body.', false, false, null);
 		expect(changes.subject).toBe('');
 		expect(changes.body).toBe('');
 		expect(changes.amend).toBe(false);

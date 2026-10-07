@@ -29,7 +29,7 @@ it('requires a subject before committing the staged file and reports write failu
  const input=view.get('input') as HTMLInputElement;input.value='Fix tests';fire(input,'input');
  vi.mocked(api.commit).mockRejectedValue(new Error('hook rejected commit'));
  click(button('Commit 1 file'));await vi.waitFor(()=>expect(view.text()).toContain('hook rejected commit'));
- expect(api.commit).toHaveBeenCalledWith('Fix tests','',false);
+ expect(api.commit).toHaveBeenCalledWith('Fix tests','',false,false,null);
 });
 it('tells the user why conflicts prevent committing',async()=>{
  vi.mocked(api.workingCopy).mockResolvedValue({staged:[],unstaged:[],conflicted:[{path:'a.txt',status:'modified'}]});

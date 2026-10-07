@@ -16,6 +16,12 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Added
 
+- **Git hooks you can see, skip and watch.** Settings → Hooks shows the
+  repository's hooks and what each runs — Husky's scripts, lefthook's and
+  pre-commit's steps — and switches them off for that repository. Before a
+  commit runs hooks you are asked: Run, Skip or Cancel; *skip hooks* on the
+  commit bar skips them for one commit. Running hooks show their output live
+  in a window, and a failing one keeps your message.
 - **Rebase, redesigned to read like Merger.** Your branch on one side, the
   branch it is replayed onto on the other, and the result between them —
   how many commits, what is folded or dropped, which may stop on a conflict

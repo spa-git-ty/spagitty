@@ -341,7 +341,38 @@ pub fn remove_untracked(repo: &Path, paths: &[String]) -> Result<()> {
 /// command say so, both in the log the Settings panel shows and in the gap
 /// between what the Commit screen promised and what ran.
 pub fn commit(repo: &Path, subject: &str, body: &str, amend: bool, sign: bool) -> Result<String> {
-    let mut args = vec!["commit", "-m", subject];
+    commit_with(repo, subject, body, amend, sign, false, &mut |_| {})
+}
+
+/// [`commit`], with the hooks' say and their output (FEAT-107).
+///
+/// `skip_hooks` runs no hook at all: `--no-verify` alone still runs
+/// `prepare-commit-msg` and `post-commit`, so `core.hooksPath` is pointed at a
+/// directory that does not exist as well, and git finds nothing to run.
+///
+/// `line` is handed every line git and its hooks print, as they print it — a
+/// lint that takes a minute is a minute of output to watch, not a minute of
+/// nothing followed by all of it.
+pub fn commit_with(
+    repo: &Path,
+    subject: &str,
+    body: &str,
+    amend: bool,
+    sign: bool,
+    skip_hooks: bool,
+    line: &mut dyn FnMut(&str),
+) -> Result<String> {
+    let nowhere = format!(
+        "core.hooksPath={}",
+        std::env::temp_dir()
+            .join(format!("spagitty-no-hooks-{}", std::process::id()))
+            .display()
+    );
+    let mut args = Vec::new();
+    if skip_hooks {
+        args.extend(["-c", nowhere.as_str()]);
+    }
+    args.extend(["commit", "-m", subject]);
     if !body.trim().is_empty() {
         args.push("-m");
         args.push(body);
@@ -352,9 +383,112 @@ pub fn commit(repo: &Path, subject: &str, body: &str, amend: bool, sign: bool) -
     if sign {
         args.push("--gpg-sign");
     }
+    if skip_hooks {
+        args.push("--no-verify");
+    }
 
-    run(repo, &args)?;
+    run_streaming(repo, &args, line)?;
     Ok(run(repo, &["rev-parse", "HEAD"])?.trim().to_string())
+}
+
+/// Run `git`, handing each line of its stdout and stderr to `line` as it is
+/// written, and fail the way [`run`] does: [`Error::Git`] carrying what it
+/// printed. Both streams together, because a hook writes its progress to
+/// either and the order it wrote them in is the story.
+fn run_streaming(repo: &Path, args: &[&str], line: &mut dyn FnMut(&str)) -> Result<String> {
+    use std::io::{BufRead, BufReader};
+    use std::process::Stdio;
+    use std::sync::mpsc;
+
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
+
+    let started = Instant::now();
+    let mut command = command(repo, args);
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            record::push(
+                args,
+                Outcome::Failed {
+                    code: None,
+                    stderr: error.to_string(),
+                },
+                0,
+            );
+            return Err(error.into());
+        }
+    };
+
+    let (send, receive) = mpsc::channel::<String>();
+    let mut readers = Vec::new();
+    if let Some(out) = child.stdout.take() {
+        let send = send.clone();
+        readers.push(std::thread::spawn(move || {
+            for text in BufReader::new(out)
+                .lines()
+                .map_while(std::result::Result::ok)
+            {
+                let _ = send.send(text);
+            }
+        }));
+    }
+    if let Some(err) = child.stderr.take() {
+        let send = send.clone();
+        readers.push(std::thread::spawn(move || {
+            for text in BufReader::new(err)
+                .lines()
+                .map_while(std::result::Result::ok)
+            {
+                let _ = send.send(text);
+            }
+        }));
+    }
+    drop(send);
+
+    let mut printed = String::new();
+    for text in receive {
+        line(&text);
+        printed.push_str(&text);
+        printed.push('\n');
+    }
+    for reader in readers {
+        let _ = reader.join();
+    }
+    let status = child.wait()?;
+    let elapsed = started.elapsed().as_millis() as u64;
+
+    if !status.success() {
+        let stderr = printed.trim().to_string();
+        record::push(
+            args,
+            Outcome::Failed {
+                code: status.code(),
+                stderr: stderr.clone(),
+            },
+            elapsed,
+        );
+        return Err(Error::Git {
+            command: args.join(" "),
+            stderr,
+        });
+    }
+    record::push(args, Outcome::Ok, elapsed);
+    Ok(printed)
+}
+
+/// Where this repository's hooks live: `.git/hooks`, or wherever
+/// `core.hooksPath` sends git (Husky's `.husky/_`, for one). Relative to
+/// `repo` when git answers relatively.
+pub fn hooks_dir(repo: &Path) -> Result<PathBuf> {
+    let answer = run(repo, &["rev-parse", "--git-path", "hooks"])?;
+    let path = PathBuf::from(answer.trim());
+    Ok(if path.is_absolute() {
+        path
+    } else {
+        repo.join(path)
+    })
 }
 
 /// Check out a branch.

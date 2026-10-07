@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import AccountsSection from '$lib/settings/AccountsSection.svelte';
 	import RemotesSection from '$lib/settings/RemotesSection.svelte';
+	import HooksSection from '$lib/settings/HooksSection.svelte';
 	import LicenseSection from '$lib/settings/LicenseSection.svelte';
 	import AppearanceSection from '$lib/settings/AppearanceSection.svelte';
 	import ReadingSection from '$lib/settings/ReadingSection.svelte';
@@ -94,6 +95,8 @@
 			<AccountsSection />
 		{:else if settings.section === 'remotes'}
 			<RemotesSection />
+		{:else if settings.section === 'hooks'}
+			<HooksSection />
 		{:else if settings.section === 'tools'}
 			<ExternalToolsSection />
 		{:else if settings.section === 'extensions'}

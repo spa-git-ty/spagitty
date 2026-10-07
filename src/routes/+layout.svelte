@@ -41,6 +41,7 @@
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
 	import DialogHost from '$lib/ui/DialogHost.svelte';
+	import HookRunWindow from '$lib/hooks/HookRunWindow.svelte';
 	import ExtensionHost from '$lib/extensions/ExtensionHost.svelte';
 	import NoticeToast from '$lib/ui/NoticeToast.svelte';
 	import { settings as settingsStore } from '$lib/settings/store.svelte';
@@ -417,6 +418,7 @@
 -->
 <ExtensionHost />
 <DialogHost />
+<HookRunWindow />
 <NoticeToast />
 
 <!--

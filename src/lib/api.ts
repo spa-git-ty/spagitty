@@ -11,6 +11,7 @@ import { invoke as call, type InvokeArgs } from '@tauri-apps/api/core';
 import { timing } from './timing.svelte';
 import type { DesktopTheme } from './omarchy';
 import type {
+	Hooks,
 	About,
 	AvatarAnswer,
 	BinaryDiff,
@@ -214,8 +215,28 @@ export function discardHunk(path: string, index: number, header: string): Promis
 }
 
 /** Commit what is staged. Resolves to the new commit's id. */
-export function commit(subject: string, body: string, amend: boolean): Promise<string> {
-	return invoke('commit', { subject, body, amend });
+/**
+ * Commit what is staged. `skipHooks` runs none of the repository's hooks; a
+ * `token` streams what git and its hooks print as `hook-output` events (FEAT-107).
+ */
+export function commit(
+	subject: string,
+	body: string,
+	amend: boolean,
+	skipHooks = false,
+	token: number | null = null
+): Promise<string> {
+	return invoke('commit', { subject, body, amend, skipHooks, token });
+}
+
+/** The repository's hooks and what each runs (FEAT-107). */
+export function hooks(): Promise<Hooks> {
+	return invoke('hooks');
+}
+
+/** Switch this repository's hooks on or off for commits made here. */
+export function setHooksEnabled(enabled: boolean): Promise<void> {
+	return invoke('set_hooks_enabled', { enabled });
 }
 
 /** The message of the commit HEAD points at, for pre-filling an amend. */

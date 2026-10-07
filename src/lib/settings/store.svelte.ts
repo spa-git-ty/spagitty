@@ -30,6 +30,7 @@ import type {
 export type Section =
 	| 'you'
 	| 'remotes'
+	| 'hooks'
 	| 'tools'
 	| 'extensions'
 	| 'behaviour'
@@ -51,6 +52,7 @@ export type ChoiceSetting = Exclude<keyof Settings, BooleanSetting>;
 export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'you', label: 'You' },
 	{ id: 'remotes', label: 'Remotes' },
+	{ id: 'hooks', label: 'Hooks' },
 	{ id: 'tools', label: 'External Tools' },
 	{ id: 'extensions', label: 'Extensions' },
 	{ id: 'behaviour', label: 'Behaviour' },
