@@ -3,6 +3,7 @@
 	import { search } from '$lib/search/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 
 	/**
 	 * The query fields and the chips they add up to.
@@ -33,34 +34,35 @@
 <form class="bar" onsubmit={submit}>
 	<div class="fields">
 		<label class="field">
-			<span class="note">author</span>
+			<span class="note">Author</span>
 			<input bind:this={first} bind:value={search.author} placeholder="name or email" />
 		</label>
-		<label class="field wide">
-			<span class="note">message</span>
+		<label class="field">
+			<span class="note">Message</span>
 			<input bind:value={search.message} placeholder="text in the message" />
 		</label>
-		<label class="field wide">
-			<span class="note">path</span>
-			<input bind:value={search.path} placeholder="a file the commit changed" />
-		</label>
-		<label class="field wide">
-			<span class="note">diff content</span>
-			<input bind:value={search.diffContent} placeholder="text in added/removed lines" />
+		<label class="field">
+			<span class="note">Path</span>
+			<input class="mono" bind:value={search.path} placeholder="a file the commit changed" />
 		</label>
 		<label class="field">
-			<span class="note">since</span>
-			<input bind:value={search.since} placeholder="YYYY-MM-DD" />
+			<span class="note">In the diff</span>
+			<input class="mono" bind:value={search.diffContent} placeholder="added or removed text" />
 		</label>
-		<label class="field">
-			<span class="note">until</span>
-			<input bind:value={search.until} placeholder="YYYY-MM-DD" />
+		<label class="field date">
+			<span class="note">Since</span>
+			<input class="mono" bind:value={search.since} placeholder="YYYY-MM-DD" />
 		</label>
-		<Btn primary disabled={search.empty}>Search</Btn>
+		<label class="field date">
+			<span class="note">Until</span>
+			<input class="mono" bind:value={search.until} placeholder="YYYY-MM-DD" />
+		</label>
+		<span class="go"><Btn primary disabled={search.empty}><Icon name="search" size="1em" />Search</Btn></span>
 	</div>
 
 	{#if search.chips.length > 0}
 		<div class="chips">
+			<span class="note small">Applied</span>
 			{#each search.chips as chip (chip.key)}
 				<Chip
 					active
@@ -78,46 +80,65 @@
 	.bar {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 10px;
 	}
 
 	.fields {
-		display: flex;
-		align-items: flex-end;
-		gap: 8px;
-		flex-wrap: wrap;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(2, minmax(110px, 0.6fr)) auto;
+		align-items: end;
+		gap: 10px;
 	}
 
 	.field {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 4px;
 		min-width: 0;
 	}
 
-	.field input {
-		width: 150px;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-field);
-		padding: 3px 6px;
-		background: transparent;
-		color: inherit;
-		font: inherit;
-		font-size: var(--fs-secondary);
+	.field .note {
+		font-size: var(--fs-mono);
+		padding-left: 2px;
 	}
 
-	.field.wide input {
-		width: 220px;
+	.field input {
+		width: 100%;
+		min-width: 0;
+		height: 32px;
+		box-sizing: border-box;
+		border: 1px solid var(--pane-edge);
+		border-radius: 10px;
+		padding: 0 10px;
+		background: var(--sunken);
+		color: var(--ink);
+		font-size: var(--fs-secondary);
 	}
 
 	.field input:focus {
 		outline: none;
 		border-color: var(--accent);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+	}
+
+	.go :global(button) {
+		height: 32px;
 	}
 
 	.chips {
 		display: flex;
-		gap: 4px;
+		align-items: center;
+		gap: 6px;
 		flex-wrap: wrap;
+	}
+
+	.small {
+		font-size: var(--fs-mono);
+	}
+
+	@media (max-width: 1200px) {
+		.fields {
+			grid-template-columns: repeat(2, minmax(0, 1fr)) repeat(2, minmax(100px, 0.6fr)) auto;
+		}
 	}
 </style>
