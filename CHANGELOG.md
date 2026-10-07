@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-07
+
 ### Added
 
 - **Farm shows the whole journey:** Crew, Goal, Plan, Build and Wrap up on
@@ -43,6 +45,16 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   window. Review shows the current repository; the scope controls are removed.
   A missing account on either screen says *No account is connected* and offers
   Settings → Accounts.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 1.1.0. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, the download is
+  corrupt: compare it with `SHA256SUMS-*.txt` and download it again.
 
 ## [1.1.0] - 2026-10-07
 
