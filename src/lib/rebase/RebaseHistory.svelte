@@ -53,10 +53,10 @@
 		{/if}
 
 		<circle cx={X} cy={base} r="7" fill="var(--side-a)"></circle>
-		<text x={X + 18} y={base + 4} class="label onto">onto {clip(onto, 22)} · {ontoShort}</text>
+		<text font-size="11" x={X + 18} y={base + 4} class="label onto">onto {clip(onto, 22)} · {ontoShort}</text>
 
 		{#if hidden > 0}
-			<text x={X + 18} y={yOf(0) + 4} class="label muted">+ {hidden} earlier</text>
+			<text font-size="11" x={X + 18} y={yOf(0) + 4} class="label muted">+ {hidden} earlier</text>
 			<circle cx={X} cy={yOf(0)} r="3" fill="var(--ok)"></circle>
 		{/if}
 
@@ -75,16 +75,16 @@
 				stroke-width="2.6"
 			></circle>
 			{#if folded}
-				<text x={X} y={y + 3.5} class="count" text-anchor="middle">{row.absorbed.length + 1}</text>
+				<text font-size="9.5" x={X} y={y + 3.5} class="count" text-anchor="middle">{row.absorbed.length + 1}</text>
 			{/if}
-			<text x={X + 18} y={y + 4} class="label">
+			<text font-size="11" x={X + 18} y={y + 4} class="label">
 				<tspan class="sha">{row.short}</tspan>
 				<tspan dx="6">{clip(row.summary)}</tspan>
 			</text>
 		{/each}
 
 		{#if drawn.length > 0}
-			<text x={X + 18} y={top - 18} class="label branch">{clip(branch, 34)}</text>
+			<text font-size="11" x={X + 18} y={top - 18} class="label branch">{clip(branch, 34)}</text>
 		{/if}
 	</svg>
 
@@ -110,7 +110,6 @@
 	}
 
 	.label {
-		font-size: 11px;
 		fill: var(--ink);
 	}
 
@@ -135,7 +134,6 @@
 	}
 
 	.count {
-		font-size: 9.5px;
 		font-weight: 700;
 		fill: var(--side-b);
 	}
