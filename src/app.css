@@ -1025,6 +1025,10 @@ input[type='radio'] {
  * trough down the side of a Mocha panel. These are the theme's own ink, thin,
  * troughless, and they thicken under the pointer rather than appearing from
  * nowhere.
+ *
+ * At rest they are not drawn at all (BUG-054): an element shows its bar while
+ * it scrolls — `is-scrolling`, set by `src/lib/ui/scrolling.ts` — and for a
+ * moment after, and under the pointer, so it can still be grabbed.
  */
 /*
  * The standard properties only where the pseudo-elements below do not work
@@ -1037,6 +1041,11 @@ input[type='radio'] {
 @supports not selector(::-webkit-scrollbar) {
 	* {
 		scrollbar-width: thin;
+		scrollbar-color: transparent transparent;
+	}
+
+	.is-scrolling,
+	*:hover {
 		scrollbar-color: color-mix(in srgb, var(--ink) 24%, transparent) transparent;
 	}
 }
@@ -1058,10 +1067,15 @@ input[type='radio'] {
 }
 
 ::-webkit-scrollbar-thumb {
-	background: color-mix(in srgb, var(--ink) 22%, transparent);
+	background: transparent;
 	border: 3px solid transparent;
 	background-clip: padding-box;
 	border-radius: var(--r-pill);
+}
+
+.is-scrolling::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--ink) 22%, transparent);
+	background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {

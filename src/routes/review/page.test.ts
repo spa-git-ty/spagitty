@@ -334,3 +334,30 @@ it('draws the description as its host does, and widens from its edge', async () 
 	expect(panels.size('reviewPreview')).toBe(before + 8);
 	panels.reset();
 });
+
+/** BUG-054: the shared loader while the inbox reads, not a line at the top. */
+it('shows the strands loader while the first list is read', async () => {
+	let answer!: (value: never[]) => void;
+	vi.mocked(api.pullRequests).mockImplementation(() => new Promise((resolve) => (answer = resolve as never)));
+	view = render(Page, {});
+
+	await vi.waitFor(() => expect(view.all('.lists [role="status"]').length).toBeGreaterThan(0));
+	expect(view.text()).toContain('Reading pull requests…');
+	answer?.([]);
+});
+
+/** BUG-054: the Conversation card can be put away and brought back. */
+it('hides the conversation into a tab at the edge, and remembers it', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	click(button('Start review'));
+	await vi.waitFor(() => expect(review.room?.pr.number).toBe(214));
+
+	expect(view.all('aside[aria-label="Conversation"]')).toHaveLength(1);
+	click(view.get('button[aria-label="Hide the conversation"]'));
+	expect(view.all('aside[aria-label="Conversation"]')).toHaveLength(0);
+	expect(localStorage.getItem('spagitty.review.conversationHidden')).toBe('1');
+
+	click(view.get('button.conversation-tab'));
+	expect(view.all('aside[aria-label="Conversation"]')).toHaveLength(1);
+});
