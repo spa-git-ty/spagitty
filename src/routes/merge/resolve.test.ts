@@ -7,7 +7,18 @@ import { control } from '../../testing/repo-store.svelte';
 vi.mock('$lib/api');
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$lib/agents/api', () => ({
+	control: vi.fn(() => Promise.resolve()),
+	start: vi.fn(),
+	consent: vi.fn(() => Promise.resolve()),
+	transcript: vi.fn(() => Promise.resolve('')),
+	forget: vi.fn(() => Promise.resolve())
+}));
 import * as api from '$lib/api';
+import * as agentsApi from '$lib/agents/api';
+import { agents } from '$lib/agents/store.svelte';
+import * as agentWork from '$lib/merger/agent.svelte';
+import { aMerge, aSnapshot, aStep } from '../../testing/agent-fixtures';
 import { resolving } from '$lib/merger/resolve.svelte';
 import { merger } from '$lib/merger/store.svelte';
 import { dialog } from '$lib/ui/dialog.svelte';
@@ -46,6 +57,8 @@ afterEach(() => {
 	merger.reset();
 	resolving.reset();
 	control.reset();
+	agents.reset(null);
+	agentWork.forgetActed();
 });
 
 async function opened() {
@@ -170,4 +183,124 @@ it('aborts back to the plan, asking first once something was chosen, and writes 
 	await vi.waitFor(() => expect(button('Resolve 4 conflicts')).toBeDefined());
 	expect(api.mergerLand).not.toHaveBeenCalled();
 	expect(resolving.counts.resolved).toBe(0);
+});
+
+// ── Agents (2.0) ─────────────────────────────────────────────────────────
+
+/** Codex on this merge: conflict 1 applied as its own edit, conflict 2
+ * proposed as both, main first, and unsure — so it waits. */
+function codex() {
+	return aMerge({
+		repo: '/repos/fixture',
+		state: 'waiting',
+		sentence: 'Waiting for you: Tabs.svelte · unsure',
+		steps: [
+			aStep({ label: 'Read the merge · 4 conflicts in 3 files' }),
+			aStep({ index: 1, kind: { kind: 'conflict', path: 'src/lib/chrome/Tabs.svelte', region: 0 }, label: 'Tabs.svelte · Edit' }),
+			aStep({
+				index: 2,
+				kind: { kind: 'conflict', path: 'src/lib/chrome/Tabs.svelte', region: 1 },
+				label: 'Tabs.svelte · Both',
+				state: 'waiting',
+				gate: 'conflict',
+				endedAt: null
+			})
+		],
+		proposals: [
+			{ ...aMerge().proposals[0] },
+			{
+				id: 'p2-1',
+				step: 2,
+				body: { kind: 'resolution', path: 'src/lib/chrome/Tabs.svelte', region: 1, choice: { mode: 'ab' }, why: 'Pinned and dragging both stay.' },
+				sure: false,
+				state: 'proposed',
+				decidedBy: null,
+				why: null,
+				stale: false
+			}
+		]
+	});
+}
+
+it('with no agent set up, the plan and the resolver say nothing about agents', async () => {
+	agents.reset(null);
+	await opened();
+	expect(view.text()).not.toContain('Assign an agent');
+	expect(view.find('aside[aria-label="Agent"]')).toBeNull();
+	expect(view.find('.badge.agent')).toBeNull();
+});
+
+it('with an agent set up, offers one way in beside Resolve 4 conflicts', async () => {
+	agents.reset(aSnapshot());
+	view = render(Page, {});
+	await vi.waitFor(() => expect(button('Resolve 4 conflicts')).toBeDefined());
+	click(button('Assign an agent…'));
+	const popover = view.get('[role="dialog"][aria-label="Assign an agent"]');
+	expect(popover.textContent).toContain('Stops at each conflict and at the checks.');
+	expect(popover.textContent).toContain('Resolve, check and land');
+});
+
+it('applies what the agent chose, badged as its own, and waits on what it is unsure of', async () => {
+	agents.reset(aSnapshot());
+	agentWork.follow();
+	await opened();
+	agents.absorb(codex());
+
+	await vi.waitFor(() => expect(text(cards()[0])).toContain('Codex · Edited by hand'));
+	// The fourth origin: text the agent wrote, with its mark.
+	expect(cards()[0].querySelector('.row.own.agent .badge.agent')).not.toBeNull();
+	expect(text(cards()[1])).toContain('Codex proposes: Both, main first · unsure');
+	expect(text(cards()[1])).toContain('Pinned and dragging both stay.');
+	// The dots and the legend.
+	expect(view.find('.dot.proposed')).not.toBeNull();
+	expect(text(view.get('.legend'))).toContain('Codex');
+	expect(view.find('aside[aria-label="Agent"]')).not.toBeNull();
+
+	click([...cards()[1].querySelectorAll<HTMLElement>('button')].find((b) => text(b) === 'Accept')!);
+	await vi.waitFor(() => expect(text(cards()[1])).toContain('Codex · Both, main first'));
+	expect(agentsApi.control).toHaveBeenCalledWith('merge-1', { kind: 'decide', proposal: 'p2-1', state: 'accepted' });
+});
+
+it('choosing another way is the person’s choice, and the agent is told', async () => {
+	agents.reset(aSnapshot());
+	agentWork.follow();
+	await opened();
+	agents.absorb(codex());
+	await vi.waitFor(() => expect(text(cards()[1])).toContain('Codex proposes'));
+	click(labelled('Take feat/tab-drag', 1));
+	expect(agentsApi.control).toHaveBeenCalledWith('merge-1', {
+		kind: 'decide',
+		proposal: 'p2-1',
+		state: 'dismissed',
+		choice: { mode: 'b' }
+	});
+	// Editing the agent's text by hand makes it the person's.
+	click(labelled('Take main', 0));
+	expect(cards()[0].querySelector('.badge.agent')).toBeNull();
+});
+
+it('the commit says who chose each conflict, and credits the agent', async () => {
+	agents.reset(aSnapshot());
+	agentWork.follow();
+	await opened();
+	agents.absorb(codex());
+	await vi.waitFor(() => expect(text(cards()[1])).toContain('Codex proposes'));
+	click([...cards()[1].querySelectorAll<HTMLElement>('button')].find((b) => text(b) === 'Accept')!);
+	click(button('Next unresolved'));
+	await vi.waitFor(() => expect(view.text()).toContain('metrics.ts'));
+	click(view.all('button[aria-label="Take main here"]')[0]);
+	click(button('Next unresolved'));
+	await vi.waitFor(() => expect(cards()[0]?.id).toContain('CHANGELOG.md'));
+	click(labelled('Both, main first'));
+	await vi.waitFor(() => expect(button('Complete merge').disabled).toBe(false));
+
+	click(button('Complete merge'));
+	await vi.waitFor(() => expect(view.text()).toContain('Ready to land on main'));
+	expect(view.text()).toContain('Codex, applied at Sign off');
+	expect(view.text()).toContain('Codex, accepted by you');
+	click(button('Create merge commit'));
+	await vi.waitFor(() => expect(api.mergerLand).toHaveBeenCalled());
+	expect(vi.mocked(api.mergerLand).mock.calls[0][0].message).toContain(
+		'Co-authored-by: Codex <agent@spagitty.invalid>'
+	);
 });

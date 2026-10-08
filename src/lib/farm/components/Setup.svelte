@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { goto } from '$app/navigation';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import AgentBadge from './AgentBadge.svelte';
@@ -91,6 +92,11 @@
 				{C.lookAgain}
 			</Btn>
 			<Btn onclick={() => (adding = true)}>{C.addCli}</Btn>
+			<!-- The machine's agents are set up once, in Settings › Agents (2.0);
+			     the crew is chosen from them here. -->
+			<Btn title="Every agent on this machine, and what each may do" onclick={() => goto('/settings#agents')}>
+				Settings › Agents
+			</Btn>
 		</header>
 		<div class="tiles">
 			{#each found as agent (agent.definition.id)}

@@ -39,6 +39,9 @@
 	import { panels } from '$lib/panels.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import { review } from '$lib/review/store.svelte';
+	import { agents } from '$lib/agents/store.svelte';
+	import { follow as followReviews, syncAll as syncReviews } from '$lib/review/agent.svelte';
+	import { follow as followMerges } from '$lib/merger/agent.svelte';
 	import { reading } from '$lib/reading.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
@@ -286,6 +289,20 @@
 	// (FEAT-087). Nothing is read for a repository with no account.
 	$effect(() => {
 		if (repo.info !== null) review.prime(repo.generation);
+	});
+
+	// Agents (2.0): the machine list and this repository's assignments, read
+	// once per repository, so Review and Merger know whether there is one to
+	// offer — and say nothing about agents when there is none. Assignments
+	// are followed into the review records as they change.
+	let agentsFor: string | null | undefined = undefined;
+	$effect(() => {
+		const path = repo.info?.path ?? null;
+		if (path === agentsFor) return;
+		agentsFor = path;
+		followReviews();
+		followMerges();
+		void agents.load(path).then(() => syncReviews());
 	});
 
 	// Pull request notifications (FEAT-114): watch while they are on, at the

@@ -6,7 +6,20 @@ import { control } from '../../testing/repo-store.svelte';
 vi.mock('$lib/api');
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$lib/agents/api', () => ({
+	control: vi.fn(() => Promise.resolve()),
+	start: vi.fn(),
+	consent: vi.fn(() => Promise.resolve()),
+	snapshot: vi.fn(),
+	list: vi.fn(() => Promise.resolve([])),
+	transcript: vi.fn(() => Promise.resolve('')),
+	forget: vi.fn(() => Promise.resolve())
+}));
 import * as api from '$lib/api';
+import * as agentsApi from '$lib/agents/api';
+import { agents } from '$lib/agents/store.svelte';
+import * as agentWork from '$lib/review/agent.svelte';
+import { aFinding, aReview, aSnapshot, aStep } from '../../testing/agent-fixtures';
 import { requests } from '$lib/requests/store.svelte';
 import { review } from '$lib/review/store.svelte';
 import type { DiffLine, FileChange, FullFile, PullRequestComment } from '$lib/types';
@@ -126,6 +139,8 @@ afterEach(() => {
 	requests.clear();
 	review.clear();
 	control.reset();
+	agents.reset(null);
+	agentWork.forgetActed();
 });
 
 async function openRoom() {
@@ -630,4 +645,102 @@ it('draws comments as their host does', async () => {
 	await vi.waitFor(() => expect(view.find('.thread .body code')).not.toBeNull());
 	expect(view.get('.thread .body .tok-keyword').textContent).toBe('let');
 	expect(view.text()).not.toContain('```');
+});
+
+// ── Agents (2.0) ─────────────────────────────────────────────────────────
+
+/** #214, with Claude Code waiting at its first file with one finding on line 15. */
+function assigned() {
+	const base = aReview();
+	return aReview({
+		repo: '/repos/fixture',
+		target: { ...(base.target as Extract<typeof base.target, { kind: 'review' }>), head: 'h1' },
+		steps: [
+			aStep(),
+			aStep({ index: 1, kind: { kind: 'plan' }, label: 'Plan · 2 files' }),
+			aStep({ index: 2, kind: { kind: 'file', path: AVATARS }, label: 'avatars.rs · 1 finding', state: 'waiting', gate: 'file', endedAt: null })
+		],
+		proposals: [aFinding({}, { path: AVATARS, line: 15, body: 'Two windows can write this file at once.' })],
+		sentence: 'Waiting for you: 1 finding on avatars.rs'
+	});
+}
+
+it('with no agent set up, says nothing about agents anywhere in the room', async () => {
+	agents.reset(null);
+	await openRoom();
+	expect(view.text()).not.toContain('Assign an agent');
+	expect(view.find('aside[aria-label="Agent"]')).toBeNull();
+	expect(view.find('[role="tablist"][aria-label="Side card"]')).toBeNull();
+	expect(files().textContent).not.toMatch(/Agent/);
+	expect(conversation().textContent).toContain('Conversation');
+});
+
+it('with an agent set up, offers one way in: beside Start review, and beside Check out branch', async () => {
+	agents.reset(aSnapshot());
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.all('button.row')).toHaveLength(1));
+	click(view.all('button.row')[0]);
+	await vi.waitFor(() => expect(button('Assign an agent…')).toBeDefined());
+	view.destroy();
+	await openRoom();
+	expect(button('Assign an agent…')).toBeDefined();
+	click(button('Assign an agent…'));
+	const popover = view.get('[role="dialog"][aria-label="Assign an agent"]');
+	expect(popover.textContent).toContain('Claude Code');
+	expect(popover.textContent).toContain('Stops after the plan and each file.');
+	expect(popover.textContent).toContain('your branch is not touched');
+});
+
+it('draws the agent’s finding where pending comments go, and accepting makes it yours', async () => {
+	agents.reset(aSnapshot());
+	agentWork.follow();
+	await openRoom();
+	agents.absorb(assigned());
+
+	const proposal = await vi.waitFor(() => view.get('[aria-label="Claude Code proposes"]'));
+	expect(proposal.textContent).toContain('Two windows can write this file at once.');
+	expect(proposal.textContent).toContain('high');
+	// The Agent tab comes forward, and the files list marks the file.
+	expect(view.find('aside[aria-label="Agent"]')).not.toBeNull();
+	expect(view.text()).toContain('Waiting for you: 1 finding on avatars.rs');
+	expect(files().textContent).toContain('Agent · 1');
+	// Proposed, it is not one of yours yet: Finish review does not count it.
+	expect(view.text()).toContain('Finish review · 0');
+	expect(view.text()).not.toContain('Your pending');
+
+	click([...proposal.querySelectorAll<HTMLElement>('button')].find((b) => b.textContent?.trim() === 'Accept')!);
+	await vi.waitFor(() =>
+		expect(agentsApi.control).toHaveBeenCalledWith('review-1', { kind: 'decide', proposal: 'p2-0', state: 'accepted' })
+	);
+	const saved = vi.mocked(api.setReviewState).mock.calls.at(-1)![1] as { drafts: { agent?: { state: string } }[] };
+	expect(saved.drafts[0].agent?.state).toBe('accepted');
+	await vi.waitFor(() => expect(view.text()).toContain('drafted with Claude Code'));
+});
+
+it('dismissing a finding takes it out of the review and tells the agent', async () => {
+	agents.reset(aSnapshot());
+	agentWork.follow();
+	await openRoom();
+	agents.absorb(assigned());
+	const proposal = await vi.waitFor(() => view.get('[aria-label="Claude Code proposes"]'));
+	click([...proposal.querySelectorAll<HTMLElement>('button')].find((b) => b.textContent?.trim() === 'Dismiss')!);
+	await vi.waitFor(() => expect(view.find('[aria-label="Claude Code proposes"]')).toBeNull());
+	expect(agentsApi.control).toHaveBeenCalledWith('review-1', { kind: 'decide', proposal: 'p2-0', state: 'dismissed' });
+});
+
+it('sends an agent’s comments marked as drafted, unless the repository says not to', async () => {
+	agents.reset(aSnapshot());
+	agentWork.follow();
+	await openRoom();
+	agents.absorb(assigned());
+	agents.absorb(assigned());
+	const proposal = await vi.waitFor(() => view.get('[aria-label="Claude Code proposes"]'));
+	click([...proposal.querySelectorAll<HTMLElement>('button')].find((b) => b.textContent?.trim() === 'Accept')!);
+	await vi.waitFor(() => expect(view.text()).toContain('drafted with Claude Code'));
+	vi.mocked(api.submitReview).mockResolvedValue(undefined);
+	const { room } = await import('$lib/review/room.svelte');
+	await room.finish('comment');
+	const [, , body, drafts] = vi.mocked(api.submitReview).mock.calls.at(-1)!;
+	expect(body).toContain('1 of these comments was drafted with Claude Code.');
+	expect(drafts![0].body).toContain('_Drafted with Claude Code_');
 });

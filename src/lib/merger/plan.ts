@@ -344,6 +344,8 @@ export interface SummaryRow {
 	badges: SideKey[];
 	/** Typed by hand: drawn in the hand-edit colour. */
 	mine: boolean;
+	/** Who chose it (2.0): `you`, `Codex, accepted by you`, `Codex, unattended`. */
+	who?: string;
 }
 
 /** Split a path into the folder, drawn muted, and the name. */

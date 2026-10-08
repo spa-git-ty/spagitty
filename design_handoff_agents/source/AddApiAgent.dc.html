@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Add an API agent</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--scrim:color-mix(in srgb,var(--umbra) 28%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--scrim:color-mix(in srgb,#000 55%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--warn-soft:color-mix(in srgb,var(--warn) 14%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--font-mono:ui-monospace,'Atkinson Hyperlegible Mono',Menlo,Consolas,monospace;--read-font:'Atkinson Hyperlegible',system-ui,sans-serif;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+input,select{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:10px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.chip[disabled]{opacity:.45;cursor:default}
+.btn{border-radius:9px;padding:6px 14px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.field{border:1px solid var(--pane-edge);background:var(--sunken);border-radius:8px;padding:8px 12px;font-size:var(--fs-secondary);min-width:0}
+.lbl{width:120px;flex:none;font-size:var(--fs-secondary);color:var(--muted);padding-top:8px}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink)}
+.ghost{height:14px;border-radius:999px;background:var(--soft)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="position: relative; height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 12px; font-size: var(--fs-secondary)">
+<span style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); font-weight: 550">spagitty</span>
+<span style="height: 28px; display: flex; align-items: center; padding: 0 12px; color: var(--muted)">quiblo</span>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 14px 12px">
+<div style="width: 62px; flex: none">
+<div class="ornament" aria-hidden="true" style="width: 62px; height: 640px; border-radius: 999px"></div>
+</div>
+<div aria-hidden="true" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 14px 18px; background: var(--bg); border: 1px solid var(--pane-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<div style="display: flex; gap: 8px; align-items: center"><span style="font-size: 22px; margin-right: 4px">Settings</span><span class="chip">You</span><span class="chip on">Agents</span><span class="chip">Remotes</span><span class="chip">External tools</span><span class="chip">Behaviour</span><span class="chip">Appearance</span><span class="chip">Reading</span><span class="chip">License</span></div>
+<div style="display: flex; gap: 16px; flex: 1">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 12px; max-width: 780px">
+<span>On this machine</span>
+<div class="card" style="height: 300px"></div>
+<span>Through an API</span>
+<div class="card" style="height: 150px"></div>
+</div>
+<div class="card" style="width: 400px; height: 520px"></div>
+</div>
+</div>
+</div>
+
+<div style="position: absolute; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 24px">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-title" style="width: 100%; max-width: 640px; max-height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 16px; padding: 22px 24px; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--sunken)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5 3.75 3.75 0 0 1 17.5 18z"></path></svg></span>
+<h1 id="dlg-title" style="margin: 0; font-size: var(--fs-title); font-weight: 500; flex: 1">API agent</h1>
+<a href="Main.dc.html" aria-label="Close" style="width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; color: var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+</div>
+
+<div style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap">
+<span class="lbl" id="l-provider">Provider</span>
+<div role="radiogroup" aria-labelledby="l-provider" style="flex: 1; display: flex; gap: 6px; flex-wrap: wrap; padding-top: 4px">
+<button role="radio" aria-checked="true" class="chip on">Anthropic</button>
+<button role="radio" aria-checked="false" class="chip">OpenAI</button>
+<button role="radio" aria-checked="false" class="chip">Google</button>
+<button role="radio" aria-checked="false" class="chip">OpenAI-compatible</button>
+</div>
+</div>
+
+<div style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap">
+<label class="lbl" for="f-name">Name</label>
+<input id="f-name" class="field" type="text" value="Anthropic" style="flex: 1">
+</div>
+
+<div style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap">
+<label class="lbl" for="f-key">Key</label>
+<div style="flex: 1; min-width: 240px; display: flex; align-items: center; gap: 8px">
+<input id="f-key" class="field" type="password" value="sk-ant-api03-placeholder-7Qx2" style="flex: 1; font-family: var(--font-mono)">
+<span title="Kept in the system keychain" aria-label="Kept in the system keychain" style="color: var(--muted); display: grid"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9H6z"></path><path d="M9 11V8a3 3 0 0 1 6 0v3"></path></svg></span>
+</div>
+</div>
+
+<div style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap">
+<label class="lbl" for="f-model">Model</label>
+<div style="flex: 1; min-width: 240px; display: flex; gap: 8px; align-items: center">
+<select id="f-model" class="field" style="flex: 1; font-family: var(--font-mono)"><option>claude-sonnet-5-5</option><option>claude-opus-5-5</option><option>claude-haiku-5-5</option></select>
+<button class="btn">Test</button>
+<span style="display: flex; align-items: center; gap: 4px; font-size: var(--fs-secondary); color: var(--ok)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5 10 17.5 19 7"></path></svg>1.2 s</span>
+</div>
+</div>
+
+<div style="height: 1px; background: var(--soft)"></div>
+
+<div style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap">
+<span class="lbl" id="l-jobs">May do</span>
+<div role="group" aria-labelledby="l-jobs" style="flex: 1; display: flex; gap: 6px; padding-top: 4px"><button class="chip on" aria-pressed="true">Review</button><button class="chip on" aria-pressed="true">Merge</button></div>
+</div>
+
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+<span class="lbl" style="padding-top: 0">Tokens</span>
+<input aria-label="Tokens per run" class="field" type="text" value="40,000" style="width: 96px; font-family: var(--font-mono)"><span class="note">per run</span>
+<input aria-label="Tokens per day" class="field" type="text" value="400,000" style="width: 96px; font-family: var(--font-mono); margin-left: 8px"><span class="note">per day</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--warn-soft); font-size: var(--fs-secondary)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M12 3v12"></path><path d="M7.5 7.5 12 3l4.5 4.5"></path><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>
+<span>Code you assign it is sent to Anthropic. Each repository asks once.</span>
+</div>
+
+<div style="display: flex; justify-content: flex-end; gap: 8px">
+<a href="Main.dc.html" class="btn">Cancel</a>
+<a href="Main.dc.html" class="btn primary">Add</a>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+ renderVals() {
+  return { theme: this.props.theme || 'dark' };
+ }
+}
+</script>
+</body>
+</html>

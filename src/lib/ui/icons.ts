@@ -68,7 +68,15 @@ export type IconName =
 	| 'unfold'
 	| 'pause'
 	| 'play'
-	| 'warning';
+	| 'warning'
+	| 'agent'
+	| 'cloud'
+	| 'machine'
+	| 'stop'
+	| 'lock'
+	| 'upload'
+	| 'person'
+	| 'arrow-right';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -146,6 +154,24 @@ export const ICONS: Record<IconName, string[]> = {
 	play: ['M8 5.5v13l10-6.5z'],
 	// A stuck task: a triangle with a mark in it.
 	warning: ['M12 4 21.5 20h-19z', 'M12 10v4.5', 'M12 17.5v.01'],
+	// An agent (2.0): a hexagon, the mark its proposals and its origin carry.
+	// Not a face, a robot or a spark: nothing in Spagitty is a model, and the
+	// mark says *which* work is the agent's rather than what it is.
+	agent: ['M12 3.5 19.4 7.75v8.5L12 20.5l-7.4-4.25v-8.5z'],
+	// A model reached over an API.
+	cloud: ['M7.5 18.5h9.5a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 9.6a4.5 4.5 0 0 0 .5 8.9z'],
+	// An endpoint on this machine.
+	machine: ['M4 5h16v11H4z', 'M9 20h6', 'M12 16v4'],
+	// Stop an agent's run.
+	stop: ['M7 7h10v10H7z'],
+	// Kept in the keychain.
+	lock: ['M6.5 11h11v9h-11z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
+	// What leaves the machine.
+	upload: ['M12 15V4', 'M7.5 8.5 12 4l4.5 4.5', 'M5 15v4h14v-4'],
+	// The person: *you do it*.
+	person: ['M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 'M5 20a7 7 0 0 1 14 0'],
+	// Send a line to the agent.
+	'arrow-right': ['M5 12h14', 'M13 6l6 6-6 6'],
 	// A clock turned back: where HEAD has been.
 	history: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3 4v4h4', 'M12 8v4.5l3 1.8'],
 	folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],

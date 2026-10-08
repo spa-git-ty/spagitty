@@ -163,6 +163,15 @@
 	--side-a-soft: color-mix(in srgb, var(--side-a) 13%, transparent);
 	--side-b-soft: color-mix(in srgb, var(--side-b) 13%, transparent);
 	--side-mine-soft: color-mix(in srgb, var(--side-mine) 14%, transparent);
+	/*
+	 * An agent's work (2.0): its proposals, its place in a file and the fourth
+	 * origin in Merger. Mint, kept apart from A's blue, B's amber, the purple
+	 * of typed-by-you and the conflict-fix sky, and different from each in
+	 * lightness — dark on a light ground, light on a dark one.
+	 */
+	--agent: #075c52;
+	--agent-soft: color-mix(in srgb, var(--agent) 12%, transparent);
+	--agent-edge: color-mix(in srgb, var(--agent) 50%, transparent);
 
 	/*
 	 * Radii.
@@ -237,6 +246,8 @@
 :root[data-theme='dark'] {
 	/* B's amber, lighter on a dark ground (FEAT-100). */
 	--side-b: #f0a64a;
+	/* The agent's mint, lighter on a dark ground (2.0). */
+	--agent: #86e3d2;
 	--bg: #1c1613;
 	--panel: #161110;
 	--ink: #f3e9dd;
