@@ -167,7 +167,8 @@ fn answer(
     gathered: &mut Gathered,
 ) -> (String, bool) {
     let fail = |text: String| (text, true);
-    match name {
+    let canonical = name.strip_prefix("default_api:").unwrap_or(name);
+    match canonical {
         "list_changed_files" => match world.changed_files() {
             Ok(files) => (
                 files
@@ -301,21 +302,22 @@ fn answer(
             });
             ("Resolution noted.".into(), false)
         }
-        other => fail(format!("{other} is not a tool Spagitty offers here")),
+        _ => fail(format!("{name} is not a tool Spagitty offers here")),
     }
 }
 
 /// What a call looks like in the timeline: an event, not JSON.
 fn narrate(name: &str, input: &Value) -> String {
     let arg = |key: &str| text_of(input, key).unwrap_or_default();
-    match name {
+    let canonical = name.strip_prefix("default_api:").unwrap_or(name);
+    match canonical {
         "list_changed_files" => "· listed the changed files".into(),
         "read_file" => format!("· read {}", arg("path")),
         "read_diff" => format!("· read the diff of {}", arg("path")),
         "search" => format!("· searched for “{}”", arg("pattern")),
         "finish_step" => "· finished the step".into(),
-        name if name.starts_with("propose_") => format!("· {}", name.replace('_', " ")),
-        other => format!("· asked for {other}, which is not offered; refused"),
+        n if n.starts_with("propose_") => format!("· {}", n.replace('_', " ")),
+        _ => format!("· asked for {name}, which is not offered; refused"),
     }
 }
 
@@ -511,6 +513,35 @@ mod tests {
             narrate("run_shell", &json!({})),
             "· asked for run_shell, which is not offered; refused"
         );
+    }
+
+    #[test]
+    fn gemini_default_api_prefix_is_canonicalized() {
+        let mut gathered = Gathered::default();
+        let (said, error) = answer(
+            "default_api:list_changed_files",
+            &json!({}),
+            &Tree,
+            &StepKind::Plan,
+            &mut gathered,
+        );
+        assert!(!error);
+        assert_eq!(said, "");
+        assert_eq!(
+            narrate("default_api:list_changed_files", &json!({})),
+            "· listed the changed files"
+        );
+        let (said, error) = answer(
+            "default_api:finish_step",
+            &json!({"why": "done"}),
+            &Tree,
+            &StepKind::Plan,
+            &mut gathered,
+        );
+        assert!(!error);
+        assert_eq!(said, "Done.");
+        assert!(gathered.finished);
+        assert_eq!(gathered.answer.why.as_deref(), Some("done"));
     }
 
     #[test]

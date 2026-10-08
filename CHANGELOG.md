@@ -17,6 +17,12 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Fixed
 
 - CI and release builds stop waiting for a stalled Rust cache download: each segment has a two-minute limit and each cache step has a five-minute limit, after which Cargo compiles dependencies and the required checks still run.
+- Preserved and echoed `thoughtSignature` / `thought_signature` for Google
+  Gemini thinking models (such as Gemini 3 and 2.5) across multi-turn tool
+  exchanges, preventing 400 validation failures.
+- Handled the `default_api:` tool prefix emitted by Gemini function calls so
+  remote tools execute and narrate cleanly while preserving the original name
+  in function responses.
 
 ## [2.0.1] - 2026-10-11
 
