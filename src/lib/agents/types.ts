@@ -150,6 +150,8 @@ export type Target =
 			bTip: string;
 			base: string;
 			strategy: string;
+			/** The branch that receives the merge, when it is not `a`. */
+			into: string;
 	  };
 
 export type Life = 'starting' | 'working' | 'waiting' | 'paused' | 'stopped' | 'failed' | 'done';
@@ -329,6 +331,15 @@ export type Control =
 	| { kind: 'moved' }
 	| { kind: 'carryOn' }
 	| { kind: 'acted'; ok: boolean; message?: string };
+
+/** What the Assign popover hands back. */
+export interface Assigned {
+	agent: string;
+	level: Level;
+	note: string;
+	/** For a merge: resolve, check and land, rather than resolve only. */
+	lands: boolean;
+}
 
 export interface Failure {
 	kind: 'refused' | 'consent' | 'notFound' | 'keychain' | 'model' | 'git' | 'io';

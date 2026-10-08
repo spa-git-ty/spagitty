@@ -22,9 +22,13 @@
 		type Region,
 		type RegionLayout,
 		type ResolverFile,
-		type SideKey
+		type SideKey,
+		type AgentProposal
 	} from './model';
 	import { paint } from './paint';
+	import Btn from '$lib/ui/Btn.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
+
 
 	/**
 	 * One conflict, in three columns (FEAT-102): A | Result | B, always in that
@@ -47,13 +51,46 @@
 		current: boolean;
 		onchoose: (choice: Choice | null) => void;
 		onfocus: () => void;
+		/** The agent that chose what stands here, when one did (2.0). */
+		author?: { agent: string; decided: 'agent' | 'person' } | null;
+		/** An agent's proposal waiting here for the person (2.0). */
+		proposal?: AgentProposal | null;
+		onaccept?: () => void;
+		onwhy?: () => void;
 	}
 
-	let { file, region, place, choice, number, names, language, showBase, baseShort, current, onchoose, onfocus }: Props =
-		$props();
+	let {
+		file,
+		region,
+		place,
+		choice,
+		number,
+		names,
+		language,
+		showBase,
+		baseShort,
+		current,
+		onchoose,
+		onfocus,
+		author = null,
+		proposal = null,
+		onaccept,
+		onwhy
+	}: Props = $props();
 
-	const lines = $derived(chosenLines(region, choice));
-	const editing = $derived(choice?.mode === 'edit' ? choice : null);
+	/**
+	 * Text an agent wrote is the fourth origin, beside A, B and ✎. An agent's
+	 * *Take A* is still A — the card says who chose it — and editing the
+	 * agent's text by hand makes it the person's again.
+	 */
+	const lines = $derived(
+		chosenLines(region, choice)?.map((line) =>
+			author && line.from === 'mine' ? { ...line, from: 'agent' as const } : line
+		) ?? null
+	);
+	/** The box to type in: the person's edit. An agent's is shown as its lines,
+	 * badged as its own, until the person takes it over with Edit by hand. */
+	const editing = $derived(choice?.mode === 'edit' && !author ? choice : null);
 	const picking = $derived(choice?.mode === 'pick' ? choice : null);
 	const name = $derived(file.path.slice(file.path.lastIndexOf('/') + 1));
 
@@ -77,7 +114,7 @@
 	const available = $derived(CHOICES.filter((entry) => offered(file).includes(entry.mode)));
 
 	function pick(mode: Mode) {
-		if (choice?.mode === mode) return;
+		if (choice?.mode === mode && !(mode === 'edit' && author)) return;
 		if (mode === 'pick') onchoose(pickAll(region));
 		else if (mode === 'edit') onchoose(editSeed(region, choice));
 		else onchoose({ mode } as Choice);
@@ -105,8 +142,16 @@
 	<header class="head">
 		<button class="number" onclick={onfocus}>Conflict {number}</button>
 		<span class="where mono">{name}:{lineOf(region, place)}</span>
-		<span class="status" class:resolved={choice !== null}>{statusLabel(choice, names)}</span>
-		<span class="why note">{why(region, file, names)}</span>
+		{#if choice && author}
+			<span class="status resolved agent"><Icon name="agent" size="0.85em" weight={2.2} />{author.agent} · {statusLabel(choice, names)}</span>
+		{:else if !choice && proposal}
+			<span class="status agent proposed"
+				><Icon name="agent" size="0.85em" weight={2.2} />{proposal.agent} proposes: {proposal.words}{proposal.sure ? '' : ' · unsure'}</span
+			>
+		{:else}
+			<span class="status" class:resolved={choice !== null}>{statusLabel(choice, names)}</span>
+		{/if}
+		<span class="why note">{!choice && proposal ? proposal.why : why(region, file, names)}</span>
 		{#if choice}
 			<button class="chip reset" onclick={() => onchoose(null)}>
 				<Icon name="undo" size="0.85em" weight={2.2} />Reset
@@ -216,6 +261,13 @@
 		{@render side('b', place.bBefore, region.b, place.bAfter, bTokens, region.bLine)}
 	</div>
 
+	{#if !choice && proposal}
+		<div class="agent-acts">
+			{#if onaccept}<Btn primary quiet onclick={onaccept}>Accept</Btn>{/if}
+			{#if onwhy && !proposal.asked}<Chip title="{proposal.agent} says what it read and why" onclick={onwhy}>Why?</Chip>{/if}
+			{#if proposal.asked}<span class="asked note">{proposal.asked}</span>{/if}
+		</div>
+	{/if}
 	<div class="choices" role="group" aria-label="Resolve conflict {number}">
 		{#each available as entry (entry.mode)}
 			<button
@@ -418,6 +470,38 @@
 
 	.own.mine .mark {
 		background: var(--side-mine);
+	}
+
+	.own.agent {
+		background: var(--agent-soft);
+	}
+
+	.own.agent .mark {
+		background: var(--agent);
+	}
+
+	.status.agent {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		color: var(--agent);
+		border-color: var(--agent-edge);
+	}
+
+	.status.proposed {
+		font-weight: 600;
+	}
+
+	.agent-acts {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 14px;
+	}
+
+	.asked {
+		padding-left: 10px;
+		border-left: 2px solid var(--agent-edge);
 	}
 
 	/*

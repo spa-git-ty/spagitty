@@ -1,12 +1,15 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import Icon from '$lib/ui/Icon.svelte';
+
 	/**
 	 * A, B or ✎ in its side's colour (FEAT-100): which branch something is,
 	 * or that it was typed by hand. The letter says it as well as the colour,
 	 * so the two sides are told apart without telling colours apart.
 	 */
 	interface Props {
-		side: 'a' | 'b' | 'mine';
+		/** `agent`: text an agent wrote, the fourth origin (2.0). */
+		side: 'a' | 'b' | 'mine' | 'agent';
 		small?: boolean;
 	}
 
@@ -15,7 +18,9 @@
 	const LETTER = { a: 'A', b: 'B', mine: '✎' } as const;
 </script>
 
-<span class="badge {side}" class:small aria-hidden="true">{LETTER[side]}</span>
+<span class="badge {side}" class:small aria-hidden="true"
+	>{#if side === 'agent'}<Icon name="agent" size="0.8em" weight={2.4} />{:else}{LETTER[side]}{/if}</span
+>
 
 <style>
 	.badge {
@@ -49,5 +54,9 @@
 
 	.mine {
 		background: var(--side-mine);
+	}
+
+	.agent {
+		background: var(--agent);
 	}
 </style>

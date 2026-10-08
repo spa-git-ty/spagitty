@@ -7,6 +7,12 @@
 	import Resolver from '$lib/resolver/Resolver.svelte';
 	import { resolving } from './resolve.svelte';
 	import { merger } from './store.svelte';
+	import AgentCard from '$lib/agents/AgentCard.svelte';
+	import AssignPopover from '$lib/agents/AssignPopover.svelte';
+	import { agents } from '$lib/agents/store.svelte';
+	import { isLive } from '$lib/agents/levels';
+	import type { Assigned, Proposal } from '$lib/agents/types';
+	import * as agentWork from './agent.svelte';
 
 	/**
 	 * Resolving a merge Merger planned (FEAT-102): what is merging into what,
@@ -35,6 +41,49 @@
 	);
 
 	const stop = $derived(resolving.stop);
+
+	// ── Agents (2.0): with none set up, nothing below draws. ──────────────
+	const offered = $derived(agents.usable('merge').length > 0);
+	const assignment = $derived(agentWork.current());
+	const working = $derived(assignment !== null && isLive(assignment));
+	const proposals = $derived(agentWork.proposalsFor(assignment, resolving.files, names));
+	const at = $derived(agentWork.workingOn(assignment));
+	let assigning = $state(false);
+	let starting = $state(false);
+	/** The Agent card can be put away, like the Graph's detail panel. */
+	let cardHidden = $state(false);
+
+	async function assign(chosen: Assigned) {
+		starting = true;
+		const started = await agentWork.assign(chosen);
+		starting = false;
+		if (started) {
+			assigning = false;
+			cardHidden = false;
+		}
+	}
+
+	/** The commit dialog, with the agents' trailers in the message. */
+	function complete() {
+		const names = resolving.agentsInResult;
+		if (names.length) merger.setMessage(agentWork.withTrailers(merger.message, names));
+		merger.openCommit('resolve');
+	}
+
+	// Landed by the person after an agent stopped at Land: its job is done.
+	$effect(() => {
+		if (merger.phase === 'done' && assignment && assignment.state === 'waiting') {
+			void agents.control(assignment.id, { kind: 'acted', ok: true });
+		}
+	});
+
+	function goTo(proposals: Proposal[]) {
+		const first = proposals.find((p) => p.body.kind === 'resolution');
+		if (first && first.body.kind === 'resolution') {
+			const card = document.querySelector(`[id="conflict-${CSS.escape(first.body.path)}-${first.body.region}"]`);
+			card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		}
+	}
 
 	async function abort() {
 		if (stop) {
@@ -85,6 +134,16 @@
 				<span class="bar"><span class="fill" style:width="{(progress.resolved / progress.total) * 100}%"></span></span>
 			</span>
 		{/if}
+		{#if offered && !working && !stop}
+			<span class="assign-anchor">
+				<Btn onclick={() => (assigning = !assigning)}><Icon name="agent" size="1em" />Assign an agent…</Btn>
+				{#if assigning}
+					<div class="below">
+						<AssignPopover job="merge" busy={starting} onassign={assign} oncancel={() => (assigning = false)} />
+					</div>
+				{/if}
+			</span>
+		{/if}
 		<Btn disabled={resolving.stepping} onclick={abort}>Abort</Btn>
 		{#if stop}
 			<Btn disabled={resolving.stepping} title="Drop this commit and carry on with the next" onclick={() => resolving.skipRebase()}>
@@ -104,7 +163,7 @@
 				primary
 				disabled={!resolving.ready}
 				title={resolving.ready ? undefined : 'Resolve every conflict first'}
-				onclick={() => merger.openCommit('resolve')}
+				onclick={complete}
 			>
 				{resolving.ready ? 'Complete merge' : `Complete merge · ${left} left`}
 			</Btn>
@@ -124,17 +183,45 @@
 	{:else if resolving.loading && resolving.files.length === 0}
 		<Loader label="Reading the conflicts…" />
 	{:else}
-		<Resolver
-			files={resolving.files}
-			choices={resolving.choices}
-			{names}
-			{roles}
-			baseShort={resolving.baseShort}
-			{others}
-			start={resolving.start}
-			onchoose={(path, index, choice) => resolving.choose(path, index, choice)}
-			onwhole={(path, side) => resolving.whole(path, side)}
-		/>
+		<div class="work">
+			<Resolver
+				files={resolving.files}
+				choices={resolving.choices}
+				{names}
+				{roles}
+				baseShort={resolving.baseShort}
+				{others}
+				start={resolving.start}
+				onchoose={(path, index, choice) => {
+					resolving.choose(path, index, choice);
+					agentWork.personChose(path, index, choice);
+				}}
+				onwhole={(path, side) => resolving.whole(path, side)}
+				agent={assignment?.agent.name ?? null}
+				authors={assignment ? resolving.authors : {}}
+				{proposals}
+				working={at}
+				onaccept={assignment ? (path, index) => agentWork.accept(assignment, path, index) : undefined}
+				onwhy={assignment && assignment.level !== 'unattended' ? (path, index) => agentWork.askWhy(assignment, path, index) : undefined}
+			/>
+			{#if assignment && !cardHidden}
+				<div class="agent-inset">
+					<AgentCard
+						{assignment}
+						{names}
+						ongo={goTo}
+						onaccept={(proposals) => agentWork.acceptAll(assignment, proposals)}
+						onlast={complete}
+						onhide={() => (cardHidden = true)}
+					/>
+				</div>
+			{:else if assignment}
+				<button class="agent-tab" title="Show the agent" onclick={() => (cardHidden = false)}>
+					<Icon name="chevron-left" size="0.95em" weight={2.2} />
+					<Icon name="agent" size="0.95em" weight={2} />
+				</button>
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -144,6 +231,59 @@
 		min-height: 0;
 		display: flex;
 		flex-direction: column;
+	}
+
+	/* The resolver, and beside it the Agent card while one is assigned. */
+	.work {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		gap: 10px;
+	}
+
+	.work > :global(:first-child) {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.agent-inset {
+		width: var(--room-conversation-w);
+		flex: none;
+		display: flex;
+		min-height: 0;
+		margin-bottom: 10px;
+	}
+
+	.agent-inset :global(.agent-card) {
+		flex: 1;
+		border-radius: var(--r-floating);
+	}
+
+	.agent-tab {
+		flex: none;
+		width: 30px;
+		margin-bottom: 10px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		padding-top: 12px;
+		border-radius: var(--r-panel);
+		border: 1px solid var(--pane-edge);
+		color: var(--agent);
+	}
+
+	.agent-tab:hover {
+		background: var(--hover);
+	}
+
+	.assign-anchor {
+		position: relative;
+	}
+
+	.below :global(.assign) {
+		top: calc(100% + 8px);
+		bottom: auto;
 	}
 
 	.head {

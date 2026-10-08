@@ -22,6 +22,11 @@
 	} from './plan';
 	import SideBadge from './SideBadge.svelte';
 	import { merger } from './store.svelte';
+	import AssignPopover from '$lib/agents/AssignPopover.svelte';
+	import { agents } from '$lib/agents/store.svelte';
+	import { cardLine, isLive } from '$lib/agents/levels';
+	import type { Assigned } from '$lib/agents/types';
+	import * as agentWork from './agent.svelte';
 
 	/**
 	 * Merger's plan (FEAT-100): a dry run, and the screen says so. The two
@@ -40,6 +45,19 @@
 	}
 
 	let { onresolve, onmerge, busy = false }: Props = $props();
+
+	// ── Agents (2.0): nothing here unless one is set up for merges. ────────
+	const offered = $derived(agents.usable('merge').length > 0);
+	const assignment = $derived(merger.a && merger.b ? agentWork.current() : null);
+	let assigning = $state(false);
+	let starting = $state(false);
+
+	async function assign(chosen: Assigned) {
+		starting = true;
+		const started = await agentWork.assign(chosen);
+		starting = false;
+		if (started) assigning = false;
+	}
 
 	const forecast = $derived(merger.forecast);
 	const who = $derived(merger.roles);
@@ -161,6 +179,16 @@
 						>
 							{action.label}<Icon name="chevron-right" size="0.95em" weight={2.2} />
 						</Btn>
+						{#if offered && !(assignment && isLive(assignment))}
+							<span class="assign-anchor">
+								<Btn disabled={stopped !== null || busy} onclick={() => (assigning = !assigning)}>
+									<Icon name="agent" size="1em" />Assign an agent…
+								</Btn>
+								{#if assigning}
+									<AssignPopover job="merge" busy={starting} onassign={assign} oncancel={() => (assigning = false)} />
+								{/if}
+							</span>
+						{/if}
 						<Btn disabled title="Resolve the conflicts first">Merge now</Btn>
 					{:else}
 						<Btn
@@ -175,6 +203,11 @@
 					{/if}
 					{#if blocked}<span class="note error">{blocked}</span>{/if}
 				</div>
+				{#if assignment}
+					<span class="agent-line note" title={assignment.sentence}>
+						<Icon name="agent" size="0.95em" weight={2} />{cardLine(assignment)}
+					</span>
+				{/if}
 			{:else if merger.error}
 				<p class="note error" role="alert">{merger.error}</p>
 			{:else if !merger.a || !merger.b}
@@ -302,6 +335,18 @@
 </div>
 
 <style>
+	.assign-anchor {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.agent-line {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		color: var(--agent);
+	}
+
 	.plan {
 		flex: 1;
 		min-height: 0;

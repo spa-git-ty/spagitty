@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import Chip from '$lib/ui/Chip.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
+	import { agentRead, readingNow } from '$lib/agents/levels';
+	import type { Assignment } from '$lib/agents/types';
 	import { room } from './room.svelte';
 
 	/**
@@ -23,6 +26,27 @@
 	// What each filter lets through, so choosing one visibly picks (TASK-053).
 	const authors = $derived(room.files.filter((file) => room.isAuthors(file.path)).length);
 	const fixes = $derived(room.files.filter((file) => room.hasFix(file.path)).length);
+
+	interface Props {
+		/** The agent assigned to this pull request, when there is one (2.0). */
+		assignment?: Assignment | null;
+	}
+
+	let { assignment = null }: Props = $props();
+
+	/** Findings waiting for the person, per file. Read from the drafts, so the
+	 * marks and the diff never disagree. */
+	const waiting = $derived.by(() => {
+		const counts = new Map<string, number>();
+		for (const draft of room.drafts) {
+			if (draft.agent?.state === 'proposed') counts.set(draft.path, (counts.get(draft.path) ?? 0) + 1);
+		}
+		return counts;
+	});
+	const findings = $derived([...waiting.values()].reduce((sum, n) => sum + n, 0));
+	const here = $derived(assignment ? readingNow(assignment) : null);
+	const read = $derived(assignment ? agentRead(assignment) : new Set<string>());
+	const agentName = $derived(assignment?.agent.name ?? 'Agent');
 </script>
 
 <aside class="files" aria-label="Touched files">
@@ -33,6 +57,11 @@
 			<Chip active={room.filter === 'conflict'} onclick={() => room.setFilter('conflict')}
 				>Conflict fixes {fixes}</Chip
 			>
+			{#if findings > 0 || room.filter === 'agent'}
+				<Chip active={room.filter === 'agent'} onclick={() => room.setFilter('agent')}>
+					<span class="agent-mark"><Icon name="agent" size="0.95em" weight={2} /></span>Agent · {findings}
+				</Chip>
+			{/if}
 		</div>
 	{/if}
 	<ul>
@@ -53,8 +82,17 @@
 						{#if local && room.isAuthors(file.path)}<span class="by"><span class="dot author"></span>author</span>{/if}
 						{#if room.hasFix(file.path)}<span class="fix"><span class="dot"></span>conflict fix</span>{/if}
 						{#if threads > 0}<span class="threads">{threads} {threads === 1 ? 'thread' : 'threads'}</span>{/if}
+						{#if read.has(file.path) && !waiting.get(file.path)}<span class="read" title="{agentName} read this file. Viewed is yours to tick.">agent read</span>{/if}
 					</span>
 				</button>
+				{#if waiting.get(file.path)}
+					<span class="found" title="{agentName}’s findings waiting for you">
+						<Icon name="agent" size="0.9em" weight={2} />{waiting.get(file.path)}
+					</span>
+				{/if}
+				{#if here === file.path}
+					<span class="here" title="{agentName} is reading this file"></span>
+				{/if}
 			</li>
 		{:else}
 			<li class="none note">
@@ -66,6 +104,9 @@
 		<div class="legend note">
 			<span><span class="dot author"></span>Author's own commits</span>
 			<span><span class="dot"></span>Written while fixing a merge conflict</span>
+			{#if assignment}
+				<span class="agent-legend"><Icon name="agent" size="0.9em" weight={2} />{agentName}</span>
+			{/if}
 			{#if room.conflictsError}
 				<span class="error" title={room.conflictsError}>Conflict fixes could not be looked for.</span>
 			{:else if room.conflicts?.truncated}
@@ -76,6 +117,35 @@
 </aside>
 
 <style>
+	/* The agent's marks (2.0): its colour and its hexagon, kept apart from
+	   the viewed tick, which only a person sets. */
+	.found,
+	.agent-mark,
+	.agent-legend {
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
+		color: var(--agent);
+		font-size: var(--fs-secondary);
+		flex: none;
+	}
+
+	.agent-legend {
+		gap: 6px;
+	}
+
+	.here {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex: none;
+		border: 2px solid var(--agent);
+	}
+
+	.read {
+		color: var(--muted);
+	}
+
 	.files {
 		width: var(--room-files-w);
 		flex: none;

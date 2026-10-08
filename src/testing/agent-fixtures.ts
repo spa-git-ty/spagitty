@@ -208,7 +208,7 @@ export function aMerge(overrides: Partial<Assignment> = {}): Assignment {
 		job: 'merge',
 		agent: { id: 'codex', name: 'Codex', reach: 'local', version: '0.46.0', provider: 'codex', model: null },
 		level: 'signOff',
-		target: { kind: 'merge', a: 'main', b: 'feat/tab-drag', aTip: 'a1', bTip: 'b1', base: 'c0', strategy: 'merge' },
+		target: { kind: 'merge', a: 'main', b: 'feat/tab-drag', aTip: 'a1', bTip: 'b1', base: 'c0', strategy: 'merge', into: 'main' },
 		state: 'working',
 		sentence: 'Proposing a resolution · conflict 2 of 4',
 		steps: [
