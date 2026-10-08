@@ -69,15 +69,16 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-it('groups what needs you above what came back, and leaves your own out', async () => {
+it('groups what needs you above what came back, and puts your own last', async () => {
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 
 	const text = view.text();
 	expect(text).toContain('Needs you · you are a requested reviewer');
 	expect(text).toContain('Back with you · the author answered you');
 	expect(text.indexOf('#214')).toBeLessThan(text.indexOf('#201'));
-	expect(text).not.toContain('My own change');
+	expect(text.indexOf('#201')).toBeLessThan(text.indexOf('My own change'));
+	expect(text).toContain('Yours · you opened these');
 	expect(text).toContain('2 open threads');
 	expect(text).toContain('1 reply to you');
 	expect(view.get('header .repository').textContent).toBe('spa-git-ty/spagitty');
@@ -88,7 +89,7 @@ it('groups what needs you above what came back, and leaves your own out', async 
 
 it('previews the first pull request and then the one chosen', async () => {
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 
 	const preview = () => view.get('aside[aria-label="Pull request preview"]').textContent ?? '';
 	expect(preview()).toContain('#214 · feat/avatar-disk-cache → main');
@@ -157,7 +158,7 @@ it('says why a review did not open', async () => {
 	const { notice } = await import('$lib/ui/notice.svelte');
 	vi.spyOn(review, 'open').mockRejectedValueOnce(new Error('the saved review could not be read'));
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 
 	click(button('Start review'));
 
@@ -174,7 +175,7 @@ it('returns to this repository when an older session left another scope selected
 	await vi.waitFor(() => expect(review.loading).toBe(false));
 	vi.mocked(api.involvedPullRequests).mockClear();
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 
 	expect(review.scope).toBe('repo');
 	click(button('Refresh'));
@@ -192,9 +193,18 @@ it('says what the host said, and sends account trouble to Settings', async () =>
 });
 
 it('says so when nothing is waiting', async () => {
-	vi.mocked(api.pullRequests).mockResolvedValue([MINE]);
+	vi.mocked(api.pullRequests).mockResolvedValue([]);
 	view = render(Page, {});
 	await vi.waitFor(() => expect(view.text()).toContain('Nothing to review.'));
+});
+
+// BUG-057: every pull request on the repository was the reader's own, and the
+// inbox said there was nothing to review while Pull requests listed them.
+it('shows your own pull requests when they are all there is', async () => {
+	vi.mocked(api.pullRequests).mockResolvedValue([MINE]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.text()).toContain('My own change'));
+	expect(view.text()).not.toContain('Nothing to review.');
 });
 
 it('asks GitLab for the checks and threads its list leaves out, once', async () => {
@@ -224,7 +234,7 @@ it('asks GitLab for the checks and threads its list leaves out, once', async () 
 
 it('asks GitHub nothing more: its list already says', async () => {
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 	expect(api.reviewSummaries).not.toHaveBeenCalled();
 });
 
@@ -238,7 +248,7 @@ it('checks the pull request out as a branch, fetching it first', async () => {
 		renamed: false
 	});
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 	expect(button('Open in worktree')).toBeUndefined();
 
 	click(button('Check out branch'));
@@ -257,7 +267,7 @@ it('says when the pull request had to take a name of its own', async () => {
 	vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'f00d', base: 'ba5e', mergeBase: 'b0b0' });
 	vi.mocked(api.reviewCheckOut).mockResolvedValue({ branch: 'pr-214', upstream: null, renamed: true });
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 
 	click(button('Check out branch'));
 	await vi.waitFor(() => expect(notice.current?.title).toBe('On pr-214'));
@@ -272,7 +282,7 @@ it('says what git said when the branch cannot be checked out', async () => {
 		new Error('Your local changes to the following files would be overwritten by checkout')
 	);
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 
 	click(button('Check out branch'));
 	await vi.waitFor(() => expect(notice.current?.tone).toBe('error'));
@@ -317,7 +327,7 @@ it('shows the strands loader while the first list is read', async () => {
 /** BUG-054: the Conversation card can be put away and brought back. */
 it('hides the conversation into a tab at the edge, and remembers it', async () => {
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 	click(button('Start review'));
 	await vi.waitFor(() => expect(review.room?.pr.number).toBe(214));
 
@@ -348,7 +358,7 @@ it('says no account is connected when the backend reports no account for this ho
 
 it('shows the same no-account state when disconnected without an error', async () => {
 	view = render(Page, {});
-	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
 	requests.present([], { connected: false });
 	await vi.waitFor(() => expect(view.text()).toContain('No account is connected.'));
 	expect(view.get('[role="status"] p').classList.contains('error')).toBe(false);

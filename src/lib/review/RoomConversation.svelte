@@ -31,6 +31,26 @@
 	function replies(count: number): string {
 		return count === 0 ? 'no replies' : count === 1 ? '1 reply' : `${count} replies`;
 	}
+
+	/**
+	 * Threads read in full (BUG-058). A card shows three lines of the first
+	 * comment; one that says more, or has replies, offers the rest.
+	 */
+	let expanded = $state<Record<number, boolean>>({});
+	let clipped = $state<Record<number, boolean>>({});
+
+	/** Whether the first comment runs past its three lines, kept as the card resizes. */
+	function measure(node: HTMLElement, id: number) {
+		const check = () => {
+			const over = node.scrollHeight > node.clientHeight + 1;
+			if (clipped[id] !== over) clipped[id] = over;
+		};
+		check();
+		if (typeof ResizeObserver === 'undefined') return {};
+		const watch = new ResizeObserver(check);
+		watch.observe(node);
+		return { destroy: () => watch.disconnect() };
+	}
 </script>
 
 <aside class="conversation" aria-label="Conversation">
@@ -54,15 +74,31 @@
 		{/if}
 		{#each shown as thread (thread.id)}
 			{@const first = thread.comments[0]}
-			<button class="card item" disabled={thread.line === null} onclick={() => room.jumpTo(thread)}>
+			{@const full = expanded[thread.id] ?? false}
+			<div class="thread">
+				<button class="card item" disabled={thread.line === null} onclick={() => room.jumpTo(thread)}>
 				<span class="top">
 					<Chip><span class="mono">{whereOf(thread)}</span></Chip>
 					<span class="grow"></span>
 					<span class="note small">{replies(thread.comments.length - 1)}</span>
 				</span>
 				<span class="note"><span class="who">{first.author}</span> · {relativeTime(first.createdAt)}</span>
-				<span class="body">{markdownText(first.body)}</span>
-			</button>
+					<span class="body" class:full use:measure={thread.id}>{markdownText(first.body)}</span>
+					{#if full}
+						{#each thread.comments.slice(1) as reply (reply.id)}
+							<span class="reply">
+								<span class="note"><span class="who">{reply.author}</span> · {relativeTime(reply.createdAt)}</span>
+								<span class="body full">{markdownText(reply.body)}</span>
+							</span>
+						{/each}
+					{/if}
+				</button>
+				{#if full || clipped[thread.id] || thread.comments.length > 1}
+					<button class="note more" aria-expanded={full} onclick={() => (expanded[thread.id] = !full)}>
+						{full ? 'Show less' : 'Show more'}
+					</button>
+				{/if}
+			</div>
 		{/each}
 		{#if room.currentDrafts.length > 0}
 			<span class="note mine">Your pending · {room.currentDrafts.length}</span>
@@ -250,5 +286,40 @@
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 		overflow-wrap: anywhere;
+	}
+
+	.body.full {
+		display: block;
+		overflow: visible;
+		white-space: pre-wrap;
+	}
+
+	.thread {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 4px;
+	}
+
+	.thread > .item {
+		align-self: stretch;
+	}
+
+	/* Each reply under the first comment, set in by a rule. */
+	.reply {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 6px 0 0 10px;
+		border-left: 2px solid var(--pane-edge);
+	}
+
+	.more {
+		padding: 0 12px;
+		text-decoration: underline;
+	}
+
+	.more:hover {
+		color: var(--ink);
 	}
 </style>

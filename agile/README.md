@@ -230,6 +230,8 @@ rather than an audit.
 | [BUG-054](items/BUG-054-review-loader-conversation-panel-and-scrollbars.md) | Review's loader, its Conversation card, and scrollbars at rest | 1R, all | Fixed |
 | [BUG-055](items/BUG-055-branch-where-you-point.md) | Branch where you point, stash in place, and a working copy that is noticed | chrome, 1A, 1R, 1H, 1C | Fixed |
 | [BUG-056](items/BUG-056-review-requests-and-profile-navigation.md) | Review and Pull requests align, and profiles open in Settings | chrome, 1R, 1H | Fixed |
+| [BUG-057](items/BUG-057-your-own-pull-requests-in-review.md) | Review lists your own pull requests | 1R | Fixed |
+| [BUG-058](items/BUG-058-conversation-reads-in-full.md) | A conversation thread can be read in full | 1R | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -322,3 +324,5 @@ missing documents are not listed here, and fails again if a row here is stale.
 | BUG-001 | plan, automated, sweep | Fixed inside FEAT-003's change before it had a branch of its own; its item document says so. No separate work to plan. |
 | FEAT-073 | plan, automated, sweep | The crate landed with its own Rust tests and the screen with component tests, and the item document records the decisions a plan would have argued in advance. What is missing is the record written *before* the code, which cannot be back-dated honestly; the sweep is owed the first time a farm is driven end to end on a repository that is not this one. |
 | FEAT-114 | plan, automated, sweep | Built in one session against a request to ship it in 1.3.0. The change detection has unit tests in `changes.test.ts` and the host parsing in `watch.rs`, but there is no plan written ahead and no automated record; the sweep is owed on Windows, macOS and Linux, including whether an ad-hoc signed macOS build can post notifications. |
+| BUG-057 | plan, automated, sweep | Fixed in one session from a report, so there is no plan or automated record. Covered by `inbox.test.ts` and the Review page tests; the sweep against a repository whose open pull requests are all the reader's own is owed. |
+| BUG-058 | plan, automated, sweep | Fixed in one session from a report, so there is no plan or automated record. Covered by a room test with a long whole-PR comment and a reply; how the clipped text is measured in a real window is owed to the sweep. |
