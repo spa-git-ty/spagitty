@@ -4,7 +4,7 @@
 
 **Status:** Backlog — reported 2026-10-08, not started.
 **Screens:** chrome, 1A, 1S, and every screen that keys off `repo.token`.
-**Raised by:** Claude (Claude Code), 2026-10-08, while recording the demo videos on Windows 11 with the 1.3.2 release build.
+**Raised by:** the author, 2026-10-08, while recording the demo videos on Windows 11 with the 1.3.2 release build.
 
 ## What happens
 
@@ -33,11 +33,10 @@ The refresh that follows touches `.git` again (snapshot, status), which is the n
 
 ## For the agent who picks this up
 
-**Who:** unassigned. Written so any agent working on this repository (Claude Code, Codex, Cursor, another, or the author) can start cold.
+**Who:** unassigned. Written so whoever picks it up, an agent or a person, can start cold.
 
 - **Where:** `src-tauri/src/watch.rs`, `canonical()` and `classify()`. Tests live in the same file (`mod tests`).
 - **A likely fix:** canonicalise without the verbatim prefix. `dunce::canonicalize` does exactly that, but it is a new dependency, and AGENTS.md asks for the reason to be given in the handoff. Without a dependency: strip a leading `\\?\` (and `\\?\UNC\`) after `canonicalize`, or canonicalise each event path the same way before `strip_prefix`. Mind workdirs too: `workdir` goes through the same `canonical()`.
-- **Check on a real Windows machine:** commit in a terminal and watch the graph; leave the app idle and confirm no `repo-changed` traffic. The demo recorder in this session listened to the event from the page, which is a quick way to see it.
+- **Check on a real Windows machine:** commit in a terminal and watch the graph; leave the app idle and confirm no `repo-changed` traffic. Listening for `repo-changed` from the webview is a quick way to see it.
 - **Unblocks:** BUG-060's lost forecast, which is very likely this loop at work.
-- **Branch:** `bugfix/BUG-059-windows-watcher-never-sees-refs`. Write the plan and testing documents when the work starts, and a `## [Unreleased]` changelog entry with the fix (Amendment 20).
-- **Rules:** the amendments book is at `/home/maxmya/dev/agents/docs/AMENDMENTS.md` (see `docs/AMENDMENTS.md`). It was not reachable from the Windows machine this was reported on.
+- **Branch:** `bugfix/BUG-059-windows-watcher-never-sees-refs`. Write the plan and testing documents when the work starts, and a `## [Unreleased]` changelog entry with the fix.

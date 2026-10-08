@@ -4,7 +4,7 @@
 
 **Status:** Backlog — reported 2026-10-08, not started.
 **Screens:** 1R, 1H, 1S.
-**Raised by:** Claude (Claude Code), 2026-10-08, while preparing a demo of reviewing a conflicting pull request (`maxmya/trattoria-demo#3`, which GitHub reports as `mergeable: CONFLICTING`).
+**Raised by:** the author, 2026-10-08, while preparing a demo of reviewing a conflicting pull request (`maxmya/trattoria-demo#3`, which GitHub reports as `mergeable: CONFLICTING`).
 
 ## What happens
 
