@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Merging or closing a pull request from its workspace returns to the list with a notice, instead of turning the workspace into another pull request with no files or commits.
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed
