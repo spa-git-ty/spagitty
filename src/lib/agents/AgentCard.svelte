@@ -41,9 +41,11 @@
 		onlast?: () => void;
 		/** Put the card away, where the screen lets it be. */
 		onhide?: () => void;
+		/** Carry on a stopped or failed run from its last finished step. */
+		onresume?: () => void;
 	}
 
-	let { assignment, tabs, names, follow, onfollow, ongo, onaccept, onlast, onhide }: Props = $props();
+	let { assignment, tabs, names, follow, onfollow, ongo, onaccept, onlast, onhide, onresume }: Props = $props();
 
 	let now = $state(Math.floor(Date.now() / 1000));
 	let open = $state<Record<number, boolean>>({});
@@ -298,6 +300,9 @@
 		</div>
 	{:else}
 		<div class="controls">
+			{#if onresume && (a.state === 'stopped' || a.state === 'failed')}
+				<Btn primary quiet title="A new run from the last finished step, told what was already done" onclick={onresume}>Resume</Btn>
+			{/if}
 			<Chip onclick={() => agents.forget(a.id)}>forget</Chip>
 		</div>
 	{/if}

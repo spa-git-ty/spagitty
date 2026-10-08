@@ -199,7 +199,7 @@ export function workOf(files: ResolverFile[]): MergeFile[] {
 
 /** Assign an agent to the merge Merger has planned. The conflicts are read
  * first, as *Resolve* reads them. */
-export async function assign(chosen: Assigned): Promise<Assignment | null> {
+export async function assign(chosen: Assigned, resume: string | null = null): Promise<Assignment | null> {
 	const path = repo.info?.path;
 	const plan = merger.forecast;
 	if (!path || !plan || !merger.a || !merger.b) return null;
@@ -224,10 +224,17 @@ export async function assign(chosen: Assigned): Promise<Assignment | null> {
 			into: merger.roles?.targetName ?? merger.a
 		},
 		work: { job: 'merge', files: workOf(resolving.files) },
-		lands: chosen.lands
+		lands: chosen.lands,
+		resume
 	};
 	const remote = agents.snapshot?.remote.find((r) => r.id === chosen.agent) ?? null;
 	return agents.start(request, remote?.providerLabel ?? null, remote ? consentSlug(remote) : null);
+}
+
+/** Carry a stopped merge on from its last finished conflict. */
+export async function resume(a: Assignment): Promise<Assignment | null> {
+	acted.delete(a.id);
+	return assign({ agent: a.agent.id, level: a.level, note: '', lands: a.lands }, a.id);
 }
 
 /** For the tests. */

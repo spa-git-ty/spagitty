@@ -47,7 +47,8 @@
 	let { onresolve, onmerge, busy = false }: Props = $props();
 
 	// ── Agents (2.0): nothing here unless one is set up for merges. ────────
-	const offered = $derived(agents.usable('merge').length > 0);
+	// A rebase stops commit by commit; an agent does not take those in 2.0.
+	const offered = $derived(agents.usable('merge').length > 0 && merger.strategy !== 'rebase');
 	const assignment = $derived(merger.a && merger.b ? agentWork.current() : null);
 	let assigning = $state(false);
 	let starting = $state(false);

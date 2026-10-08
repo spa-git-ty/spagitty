@@ -213,6 +213,7 @@
 						onaccept={(proposals) => agentWork.acceptAll(assignment, proposals)}
 						onlast={complete}
 						onhide={() => (cardHidden = true)}
+						onresume={() => agentWork.resume(assignment)}
 					/>
 				</div>
 			{:else if assignment}

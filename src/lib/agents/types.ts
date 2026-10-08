@@ -314,6 +314,8 @@ export interface StartRequest {
 	target: Target;
 	work: Work;
 	lands: boolean;
+	/** Carry on this assignment from its last finished step. */
+	resume?: string | null;
 }
 
 export type Control =

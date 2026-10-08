@@ -1202,3 +1202,76 @@ fn a_command_line_agent_proposes_a_resolution_that_spagitty_names() {
     // Nothing was merged where the person works.
     assert_eq!(fixture.read("shared.txt"), "one\nOURS\nthree\n");
 }
+
+#[test]
+fn a_resumed_review_skips_what_the_earlier_run_finished() {
+    use super::protocol::{Plan, PlanItem};
+    use super::record::{Proposal, Step};
+    let mut assignment = sample("/work/app", "r1");
+    assignment.level = Level::Suggest;
+    let step = |index, kind| Step {
+        index,
+        kind,
+        label: String::new(),
+        state: StepState::Done,
+        started_at: 0,
+        ended_at: Some(1),
+        gate: None,
+        events: Vec::new(),
+        sent: Vec::new(),
+        refused: Vec::new(),
+        note: None,
+        command: None,
+        checks: Vec::new(),
+        tokens: Tokens::default(),
+    };
+    assignment.steps = vec![
+        step(0, StepKind::Plan),
+        step(
+            1,
+            StepKind::File {
+                path: "src/avatars.rs".into(),
+            },
+        ),
+    ];
+    assignment.proposals = vec![Proposal {
+        id: "p0-0".into(),
+        step: 0,
+        body: ProposalBody::Plan(Plan {
+            files: vec![
+                PlanItem {
+                    path: "src/avatars.rs".into(),
+                    why: String::new(),
+                },
+                PlanItem {
+                    path: "src/types.ts".into(),
+                    why: String::new(),
+                },
+            ],
+            look_for: String::new(),
+        }),
+        sure: true,
+        state: ProposalState::Applied,
+        decided_by: None,
+        why: None,
+        stale: false,
+    }];
+    let run = start(
+        assignment,
+        engine::Work::Review(ReviewWork::default()),
+        // No plan in the script: asking for one would fail the run.
+        vec![findings(true), verdict("comment")],
+        RepoRules::default(),
+        Limits::default(),
+        Fake {
+            files: vec!["src/avatars.rs", "src/types.ts"],
+            ..Fake::default()
+        },
+    );
+    let script = run.script.clone();
+    let end = run.end();
+    assert_eq!(end.state, State::Done, "{:?}", end.reason);
+    let asked = script.asked.lock().unwrap().clone();
+    assert_eq!(asked.len(), 2);
+    assert!(asked[0].contains("This step: review src/types.ts"));
+}

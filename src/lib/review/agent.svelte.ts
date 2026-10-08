@@ -197,7 +197,12 @@ export async function acceptAll(a: Assignment, proposals: Proposal[]): Promise<v
  * Everything the engine needs for a pull request: its head and merge base,
  * fetched as the room fetches them, its description, threads and checks.
  */
-export async function assign(pr: PullRequest, key: ReviewKey, chosen: Assigned): Promise<Assignment | null> {
+export async function assign(
+	pr: PullRequest,
+	key: ReviewKey,
+	chosen: Assigned,
+	resume: string | null = null
+): Promise<Assignment | null> {
 	const path = repo.info?.path;
 	if (!path) return null;
 	try {
@@ -230,7 +235,8 @@ export async function assign(pr: PullRequest, key: ReviewKey, chosen: Assigned):
 				checks: pr.checks ? CHECK_LABELS[pr.checks] : '',
 				conflictFixes: record?.conflictFiles ?? []
 			},
-			lands: false
+			lands: false,
+			resume
 		};
 		const remote = agents.snapshot?.remote.find((r) => r.id === chosen.agent) ?? null;
 		return await agents.start(request, remote?.providerLabel ?? null, remote ? consentSlug(remote) : null);
@@ -238,6 +244,13 @@ export async function assign(pr: PullRequest, key: ReviewKey, chosen: Assigned):
 		notice.failed('The agent was not assigned', cause);
 		return null;
 	}
+}
+
+/** Carry a stopped review on from its last finished file. */
+export async function resume(a: Assignment, pr: PullRequest, key: ReviewKey): Promise<Assignment | null> {
+	acted.delete(a.id);
+	told.delete(a.id);
+	return assign(pr, key, { agent: a.agent.id, level: a.level, note: '', lands: false }, a.id);
 }
 
 /** For the tests. */

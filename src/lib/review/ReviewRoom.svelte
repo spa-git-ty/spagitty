@@ -270,6 +270,7 @@
 							onaccept={(proposals) => agentWork.acceptAll(assignment, proposals)}
 							onlast={() => (finishing = true)}
 							onhide={() => setConversationHidden(true)}
+							onresume={opened ? () => agentWork.resume(assignment, opened.pr, opened.key) : undefined}
 						/>
 					</div>
 				{:else}
