@@ -24,7 +24,9 @@
 
 use serde_json::Value;
 
-use crate::forge::{http, status_error, CheckState, PullRequest, Repo, ReviewState};
+use crate::forge::{
+    http, status_error, CheckState, PullRequest, Repo, ReviewState, ReviewVerdict, YourReview,
+};
 use crate::{Error, Result};
 
 /// How many pull requests are asked for.
@@ -73,6 +75,9 @@ fragment Row on PullRequest {
   repository { nameWithOwner }
   reviewRequests(first: 20) {
     nodes { requestedReviewer { ... on User { login } } }
+  }
+  latestReviews(first: 50) {
+    nodes { state author { login } commit { oid } }
   }
   commits(last: 1) {
     nodes { commit { statusCheckRollup { state } } }
@@ -530,7 +535,31 @@ fn row(node: &Value, me: &str) -> Option<PullRequest> {
         added: node["additions"].as_u64().unwrap_or(0),
         removed: node["deletions"].as_u64().unwrap_or(0),
         mergeable: mergeable_of(node["mergeable"].as_str()),
+        your_review: your_review(node, me),
     })
+}
+
+/// The person's latest review among the reviewers' latest (BUG-064).
+///
+/// A review still pending, or dismissed, is not something they said.
+fn your_review(node: &Value, me: &str) -> Option<YourReview> {
+    if me.is_empty() {
+        return None;
+    }
+    node["latestReviews"]["nodes"]
+        .as_array()?
+        .iter()
+        .filter(|review| review["author"]["login"].as_str() == Some(me))
+        .find_map(|review| {
+            let verdict = match review["state"].as_str()? {
+                "APPROVED" => ReviewVerdict::Approve,
+                "CHANGES_REQUESTED" => ReviewVerdict::RequestChanges,
+                "COMMENTED" => ReviewVerdict::Comment,
+                _ => return None,
+            };
+            let sha = review["commit"]["oid"].as_str().unwrap_or("").to_string();
+            Some(YourReview { verdict, sha })
+        })
 }
 
 /// What one pull request's review threads add up to, for `me`.
@@ -875,6 +904,57 @@ mod tests {
         assert!(!theirs.review_requested);
     }
 
+    // BUG-064 — your own latest review, and the head it was left on.
+
+    fn review(state: &str, login: &str, oid: &str) -> Value {
+        serde_json::json!({
+            "state": state,
+            "author": { "login": login },
+            "commit": { "oid": oid }
+        })
+    }
+
+    #[test]
+    fn your_latest_review_is_read_with_the_head_it_was_left_on() {
+        let mut bent = node();
+        bent["latestReviews"] = serde_json::json!({ "nodes": [
+            review("APPROVED", "linus", "c0"),
+            review("CHANGES_REQUESTED", "ada", "c1"),
+        ]});
+
+        let row = one(bent.clone(), "ada");
+        assert_eq!(
+            row.your_review,
+            Some(YourReview {
+                verdict: ReviewVerdict::RequestChanges,
+                sha: "c1".into()
+            })
+        );
+        assert_eq!(
+            one(bent.clone(), "linus").your_review.map(|r| r.verdict),
+            Some(ReviewVerdict::Approve)
+        );
+        assert_eq!(one(bent, "grace").your_review, None);
+    }
+
+    #[test]
+    fn a_pending_or_dismissed_review_is_not_one_you_left() {
+        for state in ["PENDING", "DISMISSED"] {
+            let mut bent = node();
+            bent["latestReviews"] = serde_json::json!({ "nodes": [review(state, "ada", "c1")] });
+            assert_eq!(one(bent, "ada").your_review, None, "for {state}");
+        }
+        let mut commented = node();
+        commented["latestReviews"] =
+            serde_json::json!({ "nodes": [review("COMMENTED", "ada", "c1")] });
+        assert_eq!(
+            one(commented, "ada").your_review.map(|r| r.verdict),
+            Some(ReviewVerdict::Comment)
+        );
+        // Nobody signed in: nobody's review is yours.
+        assert_eq!(one(node(), "").your_review, None);
+    }
+
     #[test]
     fn threads_are_counted_open_and_resolved_and_answered_ones_are_yours() {
         let mut bent = node();
@@ -1155,6 +1235,7 @@ mod tests {
             "statusCheckRollup",
             "headRefOid",
             "reviewThreads",
+            "latestReviews",
         ] {
             assert!(
                 FIELDS.contains(field),

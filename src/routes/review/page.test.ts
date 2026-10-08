@@ -100,6 +100,25 @@ it('previews the first pull request and then the one chosen', async () => {
 	expect(preview()).toContain('Rebase screen: keep the todo list');
 });
 
+it('puts what you reviewed under Reviewed by you, not under nobody asked you (BUG-064)', async () => {
+	const reviewed = {
+		...ASKED,
+		reviewRequested: false,
+		headSha: 'new',
+		yourReview: { verdict: 'requestChanges' as const, sha: 'old' }
+	};
+	vi.mocked(api.pullRequests).mockResolvedValue([MINE, reviewed]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+
+	const text = view.text();
+	expect(text).toContain('Reviewed by you · you left a review');
+	expect(text).not.toContain('nobody asked you yet');
+	expect(cards()[0].querySelector('.tag.on')?.textContent).toBe(
+		'you asked for changes · changed since'
+	);
+});
+
 it('shows how far a saved review got, and goes on from there', async () => {
 	vi.mocked(api.reviewState).mockImplementation(async (key) =>
 		key.number === 214

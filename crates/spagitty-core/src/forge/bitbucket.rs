@@ -161,6 +161,7 @@ fn parse_single_pr(node: &Value, me: &str) -> Option<PullRequest> {
         added: 0,
         removed: 0,
         mergeable: None,
+        your_review: None,
         ..PullRequest::default()
     })
 }
