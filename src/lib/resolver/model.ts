@@ -246,9 +246,22 @@ function wholeRegion(a: string[] | null, b: string[] | null): Region {
 	return { index: 0, start: 0, end: 0, a: a ?? [], base: null, b: b ?? [], aLine: a ? 1 : null, bLine: b ? 1 : null, aFrom: null, bFrom: null };
 }
 
+/** What an agent proposes for one conflict, as the card shows it (2.0). */
+export interface AgentProposal {
+	agent: string;
+	/** In the resolver's words: `Both, main first`. */
+	words: string;
+	/** Its one sentence on why. */
+	why: string;
+	sure: boolean;
+	/** The answer to *Ask why*, once given. */
+	asked: string | null;
+}
+
 export interface ResultLine {
 	text: string;
-	from: SideKey | 'mine';
+	/** `agent`: text an agent wrote (2.0), set by the card from who chose. */
+	from: SideKey | 'mine' | 'agent';
 }
 
 /** The lines a choice puts in the result, or null for no choice yet. */

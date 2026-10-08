@@ -5,6 +5,9 @@
 	import type { PullRequest } from '$lib/types';
 	import { continueLabel, factsOf, progressOf } from './inbox';
 	import type { ReviewRecord } from './record';
+	import Icon from '$lib/ui/Icon.svelte';
+	import AssignPopover from '$lib/agents/AssignPopover.svelte';
+	import type { Assigned } from '$lib/agents/types';
 
 	/**
 	 * The chosen pull request, before it is opened (FEAT-087): what it says
@@ -19,9 +22,33 @@
 		onopen: () => void;
 		/** Absent where the pull request cannot be checked out here. */
 		oncheckout?: () => void;
+		/**
+		 * An agent can be assigned here (2.0): one is set up for reviews, the
+		 * pull request is this repository's, and none is working on it. False
+		 * with no agent set up, and then nothing about agents is drawn.
+		 */
+		assignable?: boolean;
+		starting?: boolean;
+		onassign?: (chosen: Assigned) => Promise<boolean>;
 	}
 
-	let { pr, record, notHere, opening, onopen, oncheckout }: Props = $props();
+	let {
+		pr,
+		record,
+		notHere,
+		opening,
+		onopen,
+		oncheckout,
+		assignable = false,
+		starting = false,
+		onassign
+	}: Props = $props();
+
+	let assigning = $state(false);
+
+	async function assign(chosen: Assigned) {
+		if (await onassign?.(chosen)) assigning = false;
+	}
 
 	const facts = $derived(factsOf(pr, record));
 	const progress = $derived(progressOf(pr, record));
@@ -52,6 +79,16 @@
 		<span class="note">No clone of {notHere} here</span>
 	{/if}
 	<Btn primary quiet disabled={opening} onclick={onopen}>{continueLabel(progress)}</Btn>
+	{#if assignable && onassign}
+		<span class="assign-anchor">
+			<Btn disabled={opening} onclick={() => (assigning = !assigning)}>
+				<Icon name="agent" size="1em" />Assign an agent…
+			</Btn>
+			{#if assigning}
+				<AssignPopover job="review" busy={starting} onassign={assign} oncancel={() => (assigning = false)} />
+			{/if}
+		</span>
+	{/if}
 	{#if oncheckout}
 		<Btn disabled={opening} onclick={oncheckout}>Check out branch</Btn>
 	{/if}
@@ -131,6 +168,12 @@
 
 	.grow {
 		flex: 1;
+	}
+
+	.assign-anchor {
+		position: relative;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.preview :global(.btn) {

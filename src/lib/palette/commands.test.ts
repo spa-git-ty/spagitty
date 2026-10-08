@@ -20,6 +20,8 @@ vi.mock('$lib/api', async (importOriginal) => ({
 let toggles = { confirmHistoryRewrite: true, showGitCommands: false };
 
 import { registerCommands } from './commands';
+import { agents } from '../agents/store.svelte';
+import { aReview } from '../../testing/agent-fixtures';
 import { settings } from '../settings/store.svelte';
 import { palette } from './store.svelte';
 import { columns } from '../graph/columns.svelte';
@@ -139,5 +141,34 @@ describe('registerCommands', () => {
 
 		palette.setQuery('gts');
 		expect(palette.active?.id).toBe('go.search');
+	});
+});
+
+describe('the agent’s controls (2.0)', () => {
+	beforeEach(() => palette.setQuery(''));
+
+	it('are greyed with the reason when no agent works here, never hidden', () => {
+		agents.reset(null, []);
+		registerCommands();
+		const stop = find('agent.stop');
+		expect(stop.enabled?.()).toBe(false);
+		expect(stop.unavailable?.()).toBe('No agent is working here');
+	});
+
+	it('act on the agent waiting for you, and say why one does not apply', () => {
+		agents.reset(null, [aReview({ state: 'waiting' })]);
+		registerCommands();
+		const resume = find('agent.resume');
+		expect(resume.enabled?.()).toBe(false);
+		expect(resume.unavailable?.()).toBe('Claude Code is waiting');
+		const pause = find('agent.pause');
+		expect(pause.enabled?.()).toBe(true);
+		agents.reset(null, []);
+	});
+
+	it('include the way to Settings › Agents', async () => {
+		registerCommands();
+		await find('go.settings.agents').run();
+		expect(goto).toHaveBeenCalledWith('/settings#agents');
 	});
 });
