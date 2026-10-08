@@ -24,11 +24,13 @@ vi.mock('./api', () => ({
 	list: vi.fn(),
 	control: vi.fn(),
 	forget: vi.fn(),
-	start: vi.fn()
+	start: vi.fn(),
+	consent: vi.fn()
 }));
 
 import * as appApi from '$lib/api';
 import * as api from './api';
+import { dialog } from '$lib/ui/dialog.svelte';
 import { notice } from '$lib/ui/notice.svelte';
 import { agents } from './store.svelte';
 
@@ -61,6 +63,19 @@ describe('reading', () => {
 		vi.mocked(api.list).mockResolvedValue([]);
 		await agents.load(null);
 		expect(agents.error).toBe('no configuration directory');
+	});
+	it('keeps the newest repository when an older read answers last', async () => {
+		let answerA!: (value: unknown) => void;
+		vi.mocked(api.snapshot)
+			.mockImplementationOnce(() => new Promise((resolve) => (answerA = resolve)) as never)
+			.mockResolvedValueOnce(aSnapshot());
+		vi.mocked(api.list).mockResolvedValue([]);
+		const first = agents.load('/a');
+		await agents.load('/b');
+		answerA(aSnapshot());
+		await first;
+		expect(agents.repo).toBe('/b');
+		expect(agents.loading).toBe(false);
 	});
 });
 
@@ -115,6 +130,20 @@ describe('failures', () => {
 			'Claude Code wrote commits in this pull request, so it cannot review it.',
 			'Stop the agent first.'
 		]);
+	});
+
+	it('a consent the backend did not keep is said, and the assign is let go', async () => {
+		const failed = vi.spyOn(notice, 'failed');
+		vi.spyOn(dialog, 'confirm').mockResolvedValue(true);
+		vi.mocked(api.start).mockRejectedValue({ kind: 'consent', message: 'This repository has not agreed.' });
+		vi.mocked(api.consent).mockRejectedValue({ kind: 'io', message: 'agents.json could not be written.' });
+		const started = await agents.start(
+			{ repo: '/w', agent: 'api-1', level: 'stepByStep', note: '', target: aReview().target, work: { job: 'review', description: '', threads: [], checks: '', conflictFixes: [] }, lands: false },
+			'Anthropic',
+			'anthropic'
+		);
+		expect(started).toBeNull();
+		expect(failed).toHaveBeenCalledWith('The agent was not assigned', 'agents.json could not be written.');
 	});
 
 	it('forgetting a finished one takes it off the list', async () => {

@@ -1903,8 +1903,10 @@ pub fn changed_paths(dir: &Path) -> Result<Vec<(String, String)>> {
     Ok(parse_status_z(&raw))
 }
 
-/// Parse `status --porcelain=v1 -z`. A rename carries its old path as the
-/// next field, which is skipped: the new path is the one that changed.
+/// Parse `status --porcelain=v1 -z`. A rename or copy carries its old path
+/// as the next field. A rename's old path is gone from the index, so it is
+/// listed too, as deleted (`D `), for whatever puts the tree back; a copy's
+/// is untouched and is skipped.
 pub(crate) fn parse_status_z(raw: &str) -> Vec<(String, String)> {
     let mut out = Vec::new();
     let mut fields = raw.split('\0').filter(|field| !field.is_empty());
@@ -1913,10 +1915,13 @@ pub(crate) fn parse_status_z(raw: &str) -> Vec<(String, String)> {
             continue;
         }
         let (code, path) = field.split_at(2);
-        if code.starts_with('R') || code.starts_with('C') {
-            fields.next();
-        }
         out.push((code.to_string(), path[1..].to_string()));
+        if code.starts_with('R') || code.starts_with('C') {
+            let old = fields.next();
+            if let (true, Some(old)) = (code.starts_with('R'), old) {
+                out.push(("D ".to_string(), old.to_string()));
+            }
+        }
     }
     out
 }
@@ -1963,9 +1968,29 @@ pub fn restore_paths(dir: &Path, paths: &[String]) -> Result<()> {
     if paths.is_empty() {
         return Ok(());
     }
-    let mut args = vec!["checkout", "HEAD", "--"];
-    args.extend(paths.iter().map(String::as_str));
-    run(dir, &args)?;
+    // Unstage first, and check out only what `HEAD` has: a path added to the
+    // index is not in `HEAD`, and naming it to `checkout` would fail the call
+    // for every other path in it. What `HEAD` does not have is removed.
+    let mut reset = vec!["reset", "-q", "HEAD", "--"];
+    reset.extend(paths.iter().map(String::as_str));
+    run(dir, &reset)?;
+    let mut listed = vec!["ls-tree", "-z", "--name-only", "HEAD", "--"];
+    listed.extend(paths.iter().map(String::as_str));
+    let in_head: std::collections::HashSet<String> = run(dir, &listed)?
+        .split('\0')
+        .filter(|path| !path.is_empty())
+        .map(str::to_string)
+        .collect();
+    let (back, gone): (Vec<&String>, Vec<&String>) =
+        paths.iter().partition(|path| in_head.contains(*path));
+    if !back.is_empty() {
+        let mut checkout = vec!["checkout", "HEAD", "--"];
+        checkout.extend(back.iter().map(|path| path.as_str()));
+        run(dir, &checkout)?;
+    }
+    for path in gone {
+        let _ = std::fs::remove_file(dir.join(path));
+    }
     Ok(())
 }
 
@@ -2015,6 +2040,7 @@ mod tests {
                 (" M".to_string(), "src/a.rs".to_string()),
                 ("??".to_string(), "notes.txt".to_string()),
                 ("R ".to_string(), "new.rs".to_string()),
+                ("D ".to_string(), "old.rs".to_string()),
                 ("UU".to_string(), "both.rs".to_string()),
             ]
         );

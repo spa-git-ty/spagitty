@@ -501,10 +501,12 @@ impl Engine {
         }
         for step in &mut a.steps {
             if matches!(step.state, StepState::Running | StepState::Waiting) {
-                step.state = if a.state == State::Failed {
-                    StepState::Failed
-                } else {
-                    StepState::Done
+                step.state = match (a.state, step.state) {
+                    (State::Failed, _) => StepState::Failed,
+                    // Cut off before it answered: not finished work, so a
+                    // resume does it again rather than skipping it.
+                    (_, StepState::Running) => StepState::Superseded,
+                    _ => StepState::Done,
                 };
                 step.gate = None;
                 step.ended_at.get_or_insert(now());

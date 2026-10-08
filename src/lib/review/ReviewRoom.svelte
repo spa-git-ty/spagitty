@@ -15,6 +15,7 @@
 	import Loader from '$lib/ui/Loader.svelte';
 	import { room } from './room.svelte';
 	import { review } from './store.svelte';
+	import { sendable } from './agent-drafts';
 	import Chip from '$lib/ui/Chip.svelte';
 	import AgentCard from '$lib/agents/AgentCard.svelte';
 	import AssignPopover from '$lib/agents/AssignPopover.svelte';
@@ -209,7 +210,7 @@
 			</Btn>
 			<span class="finish-anchor">
 				<Btn primary disabled={room.phase !== 'ready'} onclick={() => (finishing = !finishing)}>
-					Finish review · {room.currentDrafts.length}
+					Finish review · {sendable(room.currentDrafts).length}
 				</Btn>
 				{#if finishing}<FinishReview {suggested} onsent={sent} onclose={() => (finishing = false)} />{/if}
 			</span>

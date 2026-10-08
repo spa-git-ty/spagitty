@@ -482,6 +482,7 @@ export const resolving = {
 		data = null;
 		files = [];
 		choices = {};
+		authors = {};
 		loading = false;
 		error = null;
 		start = null;

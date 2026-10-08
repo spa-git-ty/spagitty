@@ -705,7 +705,7 @@ it('draws the agent’s finding where pending comments go, and accepting makes i
 	expect(view.text()).toContain('Waiting for you: 1 finding on avatars.rs');
 	expect(files().textContent).toContain('Agent · 1');
 	// Proposed, it is not one of yours yet: Finish review does not count it.
-	expect(view.text()).toContain('Finish review · 1');
+	expect(view.text()).toContain('Finish review · 0');
 	expect(view.text()).not.toContain('Your pending');
 
 	click([...proposal.querySelectorAll<HTMLElement>('button')].find((b) => b.textContent?.trim() === 'Accept')!);

@@ -1,8 +1,10 @@
 # Design handoff — Spagitty 2.0: agents in Review and Merger
 
-The spec is `agents-in-review-and-merge.md` (status: Proposed). The screens show it. When they disagree, the spec wins on behaviour and the screens win on layout.
+The spec is [`docs/proposals/agents-in-review-and-merge.md`](../docs/proposals/agents-in-review-and-merge.md). The screens show it. When they disagree, the spec wins on behaviour and the screens win on layout.
 
-In the repo, this folder sits beside `design_handoff_review/` and `design_handoff_merger/`. The spec belongs at `docs/proposals/agents-in-review-and-merge.md`.
+What 2.0.0 ships is [FEAT-115](../agile/items/FEAT-115-agents-in-review-and-merge.md). Where the item and the spec differ, the item is the authority: it defers undoing a landed merge and agent-handled rebase stops, which the spec describes.
+
+In the repo, this folder sits beside `design_handoff_review/` and `design_handoff_merger/`.
 
 ## Contents
 

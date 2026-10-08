@@ -25,6 +25,7 @@ import type { AgentNote, PendingComment, ReviewRecord } from './record';
 import { draftId, keyOf, marked, reviewBody, sendable, syncRecord } from './agent-drafts';
 
 export { draftId, draftOf, keyOf, marked, reviewBody, sendable, syncRecord } from './agent-drafts';
+import { placeDraft } from './drafts';
 import { review } from './store.svelte';
 
 async function sync(a: Assignment): Promise<void> {
@@ -36,6 +37,36 @@ async function sync(a: Assignment): Promise<void> {
 	await review.saveRecord(key, (record) => {
 		syncRecord(record, a);
 	});
+}
+
+/**
+ * The agent's drafts placed in their files' diffs, as Finish review places them
+ * in the room: a host that anchors a range by position (GitLab) needs both
+ * ends. Best effort — a draft that cannot be placed goes by its line, as before.
+ */
+async function placed(target: { number: number; target: string; head: string }, drafts: PendingComment[]): Promise<PendingComment[]> {
+	const unplaced = drafts.filter((d) => d.agent && !d.place);
+	if (!unplaced.length) return drafts;
+	const out = new Map<string, PendingComment>();
+	try {
+		const head = await api.reviewCheckout(target.number, target.target, target.head);
+		const changes = await api.reviewFiles(head.mergeBase, head.head);
+		for (const path of new Set(unplaced.map((d) => d.path))) {
+			const oldPath = changes.find((c) => c.path === path)?.oldPath ?? null;
+			try {
+				const whole = await api.reviewFile(head.mergeBase, head.head, path, oldPath);
+				for (const draft of unplaced.filter((d) => d.path === path)) {
+					const done = placeDraft(draft, whole.lines, oldPath);
+					if (done) out.set(draft.id, done);
+				}
+			} catch {
+				// This file goes by line.
+			}
+		}
+	} catch {
+		// The pull request could not be read: every draft goes by line.
+	}
+	return drafts.map((d) => out.get(d.id) ?? d);
 }
 
 /** Assignments whose last act has been taken, so it is never taken twice. */
@@ -58,7 +89,10 @@ async function lastAct(a: Assignment): Promise<void> {
 		return;
 	}
 	const record = await review.recordFor(key);
-	const drafts = sendable(record.drafts).filter((d) => d.headSha === (a.target.kind === 'review' ? a.target.head : ''));
+	const drafts = await placed(
+		a.target,
+		sendable(record.drafts).filter((d) => d.headSha === (a.target.kind === 'review' ? a.target.head : ''))
+	);
 	const mark = agents.rules?.markComments ?? true;
 	try {
 		await api.submitReview(

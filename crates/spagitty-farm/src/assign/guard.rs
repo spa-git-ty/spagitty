@@ -128,6 +128,39 @@ mod tests {
         assert!(!fixture.path().join("new.txt").exists());
     }
 
+    /// What an agent staged is put back too: a new file it added to the index
+    /// and a rename it staged, whose old path is restored, without either one
+    /// stopping the plain edit beside it from being put back.
+    #[test]
+    fn staged_additions_and_renames_are_put_back_with_the_rest() {
+        let fixture = committed();
+        fixture.write("b.txt", "bee\n");
+        fixture.git(&["add", "b.txt"]);
+        fixture.commit("second");
+        let snapshot = Snapshot::take(fixture.path());
+
+        std::fs::write(fixture.path().join("new.rs"), "agent\n").unwrap();
+        fixture.git(&["add", "new.rs"]);
+        fixture.git(&["mv", "b.txt", "moved.txt"]);
+        std::fs::write(fixture.path().join("a.txt"), "two\n").unwrap();
+
+        assert_eq!(
+            snapshot.restore(fixture.path()),
+            vec![
+                "a.txt".to_string(),
+                "b.txt".to_string(),
+                "moved.txt".to_string(),
+                "new.rs".to_string()
+            ]
+        );
+        let read = |name: &str| std::fs::read_to_string(fixture.path().join(name)).ok();
+        assert_eq!(read("a.txt").as_deref(), Some("one\n"));
+        assert_eq!(read("b.txt").as_deref(), Some("bee\n"));
+        assert_eq!(read("moved.txt"), None);
+        assert_eq!(read("new.rs"), None);
+        assert!(shell::changed_paths(fixture.path()).unwrap().is_empty());
+    }
+
     #[test]
     fn a_change_that_was_there_before_the_step_is_kept_as_it_was() {
         let fixture = committed();

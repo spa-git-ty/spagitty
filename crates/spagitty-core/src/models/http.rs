@@ -48,20 +48,29 @@ impl std::fmt::Debug for Answered {
 }
 
 /// Is `url` on this machine?
+///
+/// The host is read the way a client connects to it: an authority with
+/// userinfo (`localhost@api.example.com`) is refused outright, since it is the
+/// part after `@` that is reached, and only `localhost` or an address that
+/// parses as loopback counts. A name that merely starts with `127.` does not.
 pub fn is_local(url: &str) -> bool {
     let rest = url
         .strip_prefix("http://")
         .or_else(|| url.strip_prefix("https://"))
         .unwrap_or(url);
-    let host = rest.split('/').next().unwrap_or("");
-    let host = if let Some(bracketed) = host.strip_prefix('[') {
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    if authority.contains('@') {
+        return false;
+    }
+    let host = if let Some(bracketed) = authority.strip_prefix('[') {
         bracketed.split(']').next().unwrap_or("")
     } else {
-        host.split(':').next().unwrap_or("")
+        authority.split(':').next().unwrap_or("")
     };
     host.eq_ignore_ascii_case("localhost")
-        || host == "::1"
-        || host.split('.').next() == Some("127") && host.split('.').count() == 4
+        || host
+            .parse::<std::net::IpAddr>()
+            .is_ok_and(|ip| ip.is_loopback())
 }
 
 fn allowed(url: &str, provider: &str) -> Result<()> {
@@ -167,6 +176,14 @@ mod tests {
         assert!(!is_local("http://localhost.example.com/v1"));
         assert!(!is_local("http://127.0.0.1.example.com"));
         assert!(!is_local("https://api.anthropic.com"));
+        assert!(is_local("http://127.8.9.10/v1"));
+        assert!(is_local("http://LOCALHOST:8080"));
+        // The client connects to what follows `@`, not to what precedes it.
+        assert!(!is_local("http://localhost:80@api.example.com/v1"));
+        assert!(!is_local("http://127.0.0.1@api.example.com/v1"));
+        // A name that starts like a loopback address is a name.
+        assert!(!is_local("http://127.foo.example.com/v1"));
+        assert!(!is_local("http://127.0.0.256/v1"));
     }
 
     #[test]

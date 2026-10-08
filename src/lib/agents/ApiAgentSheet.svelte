@@ -45,8 +45,10 @@
 	let key = $state('');
 	let model = $state(start?.model ?? '');
 	let jobs = $state<Jobs>(start?.jobs ?? { review: true, merge: true, farm: false });
-	let perRun = $state(start?.tokensPerRun?.toString() ?? '40000');
-	let perDay = $state(start?.tokensPerDay?.toString() ?? '400000');
+	// The defaults are for a new agent. An agent kept with no limit (null)
+	// shows an empty field, so saving it does not add one.
+	let perRun = $state(start ? (start.tokensPerRun?.toString() ?? '') : '40000');
+	let perDay = $state(start ? (start.tokensPerDay?.toString() ?? '') : '400000');
 	let models = $state<string[]>([]);
 	let tested = $state<Tested | null>(null);
 	let testing = $state(false);

@@ -62,6 +62,8 @@ let error = $state<string | null>(null);
 let assignments = $state<Assignment[]>([]);
 let lines = $state<Record<string, string[]>>({});
 let unlisten: UnlistenFn[] = [];
+/** Guards a slow read for one repository landing after a newer one. */
+let loadSeq = 0;
 const listeners = new Set<Listener>();
 
 function absorb(next: Assignment): void {
@@ -120,6 +122,7 @@ export const agents = {
 	/** Read the machine list and, for `repo`, its rules and assignments. */
 	async load(repo: string | null): Promise<void> {
 		if (!inTauri()) return;
+		const mine = ++loadSeq;
 		loading = true;
 		error = null;
 		try {
@@ -127,15 +130,16 @@ export const agents = {
 				api.snapshot(repo),
 				repo ? api.list(repo) : Promise.resolve([] as Assignment[])
 			]);
+			if (mine !== loadSeq) return;
 			snapshot = next;
 			if (loadedFor !== repo) lines = {};
 			loadedFor = repo;
 			assignments = kept;
 			await this.listen();
 		} catch (cause) {
-			error = failure(cause).message;
+			if (mine === loadSeq) error = failure(cause).message;
 		} finally {
-			loading = false;
+			if (mine === loadSeq) loading = false;
 		}
 	},
 
@@ -228,7 +232,12 @@ export const agents = {
 					confirmLabel: 'Agree'
 				});
 				if (!agreed) return null;
-				await api.consent(request.repo, slug);
+				try {
+					await api.consent(request.repo, slug);
+				} catch (refused) {
+					notice.failed('The agent was not assigned', failure(refused).message);
+					return null;
+				}
 				await this.load(request.repo);
 				return this.start(request, providerLabel, null);
 			}

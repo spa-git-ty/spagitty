@@ -609,6 +609,10 @@ fn stop_cuts_a_running_step_and_keeps_what_was_proposed() {
     assert_eq!(end.state, State::Stopped);
     assert_eq!(comments(&end).len(), 1);
     assert!(end.steps.iter().all(|s| s.state != StepState::Running));
+    // The file it was reading when stopped is not done: a resume reads it.
+    let cut = end.steps.last().expect("the cut step");
+    assert!(matches!(cut.kind, StepKind::File { .. }));
+    assert_eq!(cut.state, StepState::Superseded);
 }
 
 #[test]
