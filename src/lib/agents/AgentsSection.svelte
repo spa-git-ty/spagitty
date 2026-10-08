@@ -184,6 +184,16 @@
 										{result.ok ? `Answered in ${(result.ms / 1000).toFixed(1)} s` : result.said}
 									</span>
 								{/if}
+
+								{#if agent.provider === 'codex' && usable}
+									<div class="group" role="group" aria-label="Codex access">
+										<Chip active={!snapshot.codexFullAccess} onclick={() => act('Not changed', () => api.setCodexFullAccess(false))}>Sandboxed</Chip>
+										<Chip active={snapshot.codexFullAccess} onclick={() => act('Not changed', () => api.setCodexFullAccess(true))}>Full Access</Chip>
+									</div>
+									{#if snapshot.codexFullAccess}
+										<span class="note">Codex commands can access files outside the repository and use the network.</span>
+									{/if}
+								{/if}
 							</div>
 							{#if usable}
 								<div class="jobs" role="group" aria-label="What {agent.name} may do">

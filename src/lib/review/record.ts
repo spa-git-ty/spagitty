@@ -74,6 +74,8 @@ export interface ReviewRecord {
 	 * rather than a yes.
 	 */
 	viewed: Record<string, string>;
+	/** Completed agent steps already synced, so a person's untick stays. */
+	agentViewedSteps?: string[];
 	/** Comments waiting for Finish review. */
 	drafts: PendingComment[];
 	/** The text for the pull request as a whole, waiting with them. */
@@ -186,6 +188,7 @@ export function normalise(value: unknown): ReviewRecord {
 	const raw = value as Record<string, unknown>;
 
 	if (typeof raw.headSha === 'string') record.headSha = raw.headSha;
+	if (Array.isArray(raw.agentViewedSteps)) record.agentViewedSteps = strings(raw.agentViewedSteps);
 	if (typeof raw.viewed === 'object' && raw.viewed !== null && !Array.isArray(raw.viewed)) {
 		for (const [path, blob] of Object.entries(raw.viewed as Record<string, unknown>)) {
 			if (typeof blob === 'string') record.viewed[path] = blob;

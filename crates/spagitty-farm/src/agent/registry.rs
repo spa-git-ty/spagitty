@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent::adapter::AgentAdapter;
 use crate::agent::adapters::{
-    claude::ClaudeAdapter, codex::CodexAdapter, cursor::CursorAdapter, custom::CustomAdapter,
-    pi::PiAdapter,
+    agy::AgyAdapter, claude::ClaudeAdapter, codex::CodexAdapter, cursor::CursorAdapter,
+    custom::CustomAdapter, pi::PiAdapter,
 };
 use crate::error::{Error, Result};
 use crate::model::{
@@ -42,6 +42,7 @@ pub fn adapter_for(provider: AgentProvider) -> &'static dyn AgentAdapter {
         AgentProvider::Codex => &CodexAdapter,
         AgentProvider::Cursor => &CursorAdapter,
         AgentProvider::OhMyPi => &PiAdapter,
+        AgentProvider::Agy => &AgyAdapter,
         AgentProvider::Custom => &CustomAdapter,
     }
 }
@@ -314,6 +315,7 @@ mod tests {
             AgentProvider::Codex,
             AgentProvider::Cursor,
             AgentProvider::OhMyPi,
+            AgentProvider::Agy,
             AgentProvider::Custom,
         ] {
             assert_eq!(adapter_for(provider).provider(), provider);

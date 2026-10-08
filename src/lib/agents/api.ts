@@ -32,6 +32,10 @@ export function setJobs(id: string, jobs: Jobs): Promise<void> {
 	return invoke('agents_set_jobs', { id, jobs });
 }
 
+export function setCodexFullAccess(enabled: boolean): Promise<void> {
+	return invoke('agents_set_codex_full_access', { enabled });
+}
+
 export function saveCustom(definition: AgentDefinition): Promise<void> {
 	return invoke('agents_save_custom', { definition });
 }

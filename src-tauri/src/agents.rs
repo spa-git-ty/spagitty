@@ -210,6 +210,8 @@ impl Default for Notify {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Machine {
+    /// Opt-in: Codex commands run without its filesystem or network sandbox.
+    pub codex_full_access: bool,
     /// Per built-in or custom agent id.
     pub jobs: BTreeMap<String, Jobs>,
     /// Command-line agents added by hand.
@@ -318,6 +320,7 @@ pub struct RemoteView {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentsSnapshot {
+    pub codex_full_access: bool,
     pub local: Vec<LocalView>,
     pub remote: Vec<RemoteView>,
     pub defaults: Defaults,
@@ -338,7 +341,8 @@ fn locals(machine: &Machine) -> Vec<LocalView> {
                 .path()
                 .cloned()
                 .unwrap_or_else(|| PathBuf::from(adapter.executables()[0]));
-            let definition = adapter.default_definition(executable);
+            let mut definition = adapter.default_definition(executable);
+            codex_access(&mut definition, machine.codex_full_access);
             let id = definition.id.as_str().to_string();
             LocalView {
                 name: definition.display_name.clone(),
@@ -378,6 +382,14 @@ fn remotes(machine: &Machine) -> Vec<RemoteView> {
         .collect()
 }
 
+fn codex_access(definition: &mut AgentDefinition, full_access: bool) {
+    if definition.provider == AgentProvider::Codex && full_access {
+        definition
+            .extra_args
+            .extend(["--sandbox".into(), "danger-full-access".into()]);
+    }
+}
+
 /// Custom agents in the farm registries of repositories this machine knows,
 /// not yet on the machine list. Built-in ones are detected anyway.
 fn offer<R: Runtime>(app: &AppHandle<R>, machine: &Machine) -> Vec<AgentDefinition> {
@@ -411,6 +423,7 @@ pub fn agents_snapshot<R: Runtime>(
 ) -> Result<AgentsSnapshot> {
     let machine = load(&app);
     Ok(AgentsSnapshot {
+        codex_full_access: machine.codex_full_access,
         local: locals(&machine),
         remote: remotes(&machine),
         defaults: machine.defaults.clone(),
@@ -418,6 +431,19 @@ pub fn agents_snapshot<R: Runtime>(
         rules: repo.map(|repo| machine.rules(&repo)),
         offer: offer(&app, &machine),
     })
+}
+
+#[tauri::command(async)]
+pub fn agents_set_codex_full_access<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AgentsState>,
+    enabled: bool,
+) -> Result<()> {
+    change(&app, &state, |machine| {
+        machine.codex_full_access = enabled;
+        Ok(())
+    })?;
+    Ok(())
 }
 
 #[tauri::command(async)]
@@ -723,15 +749,34 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
     drop(timer);
     let _ = std::fs::remove_dir_all(&dir);
     let lines = collected.lines();
+    Ok(local_test_result(
+        ended,
+        &lines,
+        started.elapsed().as_millis() as u64,
+    ))
+}
+
+fn local_test_result(ended: Ended, lines: &[String], ms: u64) -> Tested {
     let said = lines
         .iter()
         .rev()
         .find(|line| !line.trim().is_empty())
         .cloned()
         .unwrap_or_default();
-    let ms = started.elapsed().as_millis() as u64;
-    Ok(match ended {
-        Ended::Ok => Tested { ok: true, said, ms },
+    let answered = lines
+        .iter()
+        .any(|line| line.trim().eq_ignore_ascii_case("ok"));
+    match ended {
+        Ended::Ok if answered => Tested { ok: true, said, ms },
+        Ended::Ok => Tested {
+            ok: false,
+            said: if said.is_empty() {
+                "The agent exited without answering the test.".into()
+            } else {
+                said
+            },
+            ms,
+        },
         Ended::Cancelled => Tested {
             ok: false,
             said: format!("No answer in {} seconds", TEST_TIMEOUT.as_secs()),
@@ -746,7 +791,7 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
             },
             ms,
         },
-    })
+    }
 }
 
 fn tempfile_dir() -> Result<PathBuf> {
@@ -1292,6 +1337,40 @@ mod tests {
         assert_eq!(machine.defaults.review_level, Level::StepByStep);
         assert_eq!(machine.rules("/work/app").highest, Level::SignOff);
         assert!(machine.notify.waiting);
+        assert!(!machine.codex_full_access);
+    }
+
+    #[test]
+    fn full_access_is_saved_and_used_by_codex_only() {
+        let machine: Machine = serde_json::from_str(r#"{"codexFullAccess":true}"#).unwrap();
+        assert!(machine.codex_full_access);
+        assert_eq!(
+            serde_json::to_value(&machine).unwrap()["codexFullAccess"],
+            true
+        );
+        let mut codex = adapter_for(AgentProvider::Codex).default_definition("codex".into());
+        codex_access(&mut codex, true);
+        let request = AgentRunRequest {
+            workdir: "/tmp/test".into(),
+            prompt: "ok".into(),
+            unattended: false,
+        };
+        let command = read_only(
+            AgentProvider::Codex,
+            adapter_for(AgentProvider::Codex).command(&codex, &request),
+        );
+        assert_eq!(
+            command
+                .args
+                .iter()
+                .filter(|arg| arg.as_str() == "--sandbox")
+                .count(),
+            1
+        );
+        assert!(command.args.iter().any(|arg| arg == "danger-full-access"));
+        let mut agy = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        codex_access(&mut agy, true);
+        assert!(agy.extra_args.is_empty());
     }
 
     /// A file that is there but does not parse is an error to a change, not
@@ -1449,5 +1528,26 @@ mod tests {
         assert!(agent.is_local());
         agent.base = "https://openrouter.ai/api/v1".into();
         assert!(!agent.is_local());
+    }
+
+    #[test]
+    fn a_successful_exit_without_the_test_answer_is_not_a_pass() {
+        let failed = local_test_result(Ended::Ok, &["No default model selected".into()], 12);
+        assert!(!failed.ok);
+        assert_eq!(failed.said, "No default model selected");
+        assert!(!local_test_result(Ended::Ok, &[], 12).ok);
+        assert!(
+            local_test_result(
+                Ended::Ok,
+                &[
+                    "codex".into(),
+                    "ok".into(),
+                    "tokens used".into(),
+                    "100".into()
+                ],
+                12,
+            )
+            .ok
+        );
     }
 }

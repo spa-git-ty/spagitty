@@ -83,6 +83,7 @@ export function someRules(overrides: Partial<RepoRules> = {}): RepoRules {
 
 export function aSnapshot(overrides: Partial<AgentsSnapshot> = {}): AgentsSnapshot {
 	return {
+		codexFullAccess: false,
 		local: [aLocal(), aMissing('cursor', 'Cursor')],
 		remote: [aRemote()],
 		defaults: { review: 'claude', reviewLevel: 'stepByStep', merge: null, mergeLevel: 'stepByStep' },

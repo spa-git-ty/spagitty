@@ -14,6 +14,27 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- Settings detects the `agy` CLI and runs it in print mode for Review, Merger
+  and Farm. Codex has a saved **Full Access** option in Settings → Agents for
+  machines where its sandbox cannot start; sandboxed access remains the default.
+
+### Fixed
+
+- Codex's Settings test can run in a temporary directory, and assignments
+  explicitly use their scratch worktree. Headless runs use current CLI flags.
+  A Windows sandbox startup failure stops a review step with its error instead
+  of allowing an empty review to count as completed.
+- Oh My Pi is detected as `omp`, uses print mode, and can find Bun when it was
+  installed through npm. Detection and execution also include standard user
+  installation directories that may be absent from a desktop app's PATH.
+- Settings' local-agent test requires an answer, so a CLI that exits zero with
+  a configuration error is shown as failed with its message.
+- A file the agent finishes reviewing is marked viewed against the version it
+  read. Failed, unfinished and stale steps do not tick files; manually unticking
+  a completed file is preserved when its assignment is synced again.
+
 ## [2.0.0] - 2026-10-08
 
 A MAJOR: agents can review and merge, and you choose how far each one goes

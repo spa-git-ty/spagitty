@@ -44,12 +44,26 @@ impl LocalDriver {
     }
 }
 
-/// The provider's own read-only mode, where it has one. Inserted before the
-/// prompt, which every built-in adapter puts last.
+/// The provider's own read-only mode, where it has one. Keep options outside
+/// the prompt, whether it is a positional argument, a flag's value or stdin.
 pub fn read_only(provider: AgentProvider, mut command: AgentCommand) -> AgentCommand {
+    // Settings may explicitly opt Codex into Full Access. Do not add a
+    // conflicting sandbox argument to that saved choice.
+    if provider == AgentProvider::Codex
+        && command.args.iter().any(|arg| {
+            arg == "--sandbox"
+                || arg == "-s"
+                || arg.starts_with("--sandbox=")
+                || arg == "--dangerously-bypass-approvals-and-sandbox"
+        })
+    {
+        return command;
+    }
     let flags: &[&str] = match provider {
         AgentProvider::ClaudeCode => &["--permission-mode", "plan"],
         AgentProvider::Codex => &["--sandbox", "read-only"],
+        AgentProvider::Agy => &["--mode", "plan"],
+        AgentProvider::OhMyPi => &["--tools", "read,grep,glob"],
         _ => &[],
     };
     if flags.is_empty() {
@@ -58,6 +72,8 @@ pub fn read_only(provider: AgentProvider, mut command: AgentCommand) -> AgentCom
     let at = match provider {
         // `codex exec` must stay first: the flags belong to the subcommand.
         AgentProvider::Codex => 1.min(command.args.len()),
+        AgentProvider::Agy => 0,
+        _ if command.stdin.is_some() => command.args.len(),
         _ => command.args.len().saturating_sub(1),
     };
     for (offset, flag) in flags.iter().enumerate() {
@@ -150,6 +166,11 @@ impl Driver for LocalDriver {
         }
         let ended = session.wait();
         let raw = raw.lock().map(|text| text.clone()).unwrap_or_default();
+        if self.definition.provider == AgentProvider::Codex {
+            if let Some(reason) = codex_launch_failure(&raw) {
+                return Err(reason);
+            }
+        }
         match ended {
             Ended::Ok => Ok(Reply {
                 answer: Answer::find(&raw),
@@ -161,10 +182,18 @@ impl Driver for LocalDriver {
             Ended::Cancelled => Err("was stopped".into()),
             Ended::Failed {
                 code: Some(code), ..
-            } => Err(format!("exited with {code}")),
+            } => Err(format!("exited with {code}: {}", last.join("\n"))),
             Ended::Failed { message, .. } => Err(message),
         }
     }
+}
+
+/// Codex can exit zero after its shell failed to start and still emit an
+/// answer. A broken sandbox must stop the step, not become a clean review.
+fn codex_launch_failure(raw: &str) -> Option<String> {
+    raw.lines().find(|line| line.contains("setup refresh had errors") &&
+        (line.contains("ERROR codex_core") || line.starts_with("Failed to create unified exec process")))
+        .map(|line| format!("Codex could not start its Windows sandbox: {line}\nRepair the Codex sandbox or select Full Access in Settings > Agents > Codex, then resume."))
 }
 
 /// The command line as the timeline shows it: the prompt is long and is in
@@ -181,6 +210,15 @@ fn shorten(line: &str) -> String {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn a_zero_exit_with_a_broken_sandbox_is_a_failed_step() {
+        let raw = "ERROR codex_core::tools::router: error=exec_command failed: setup refresh had errors\nNo findings.";
+        assert!(codex_launch_failure(raw)
+            .unwrap()
+            .contains("Settings > Agents > Codex"));
+        assert!(codex_launch_failure("The file discusses setup refresh had errors").is_none());
+    }
 
     fn command(args: &[&str]) -> AgentCommand {
         AgentCommand {
@@ -206,6 +244,33 @@ mod tests {
     fn codex_keeps_exec_first_and_reads_only() {
         let out = read_only(AgentProvider::Codex, command(&["exec", "PROMPT"]));
         assert_eq!(out.args, ["exec", "--sandbox", "read-only", "PROMPT"]);
+    }
+
+    #[test]
+    fn codex_full_access_is_not_overridden_by_review_mode() {
+        let out = read_only(
+            AgentProvider::Codex,
+            command(&["exec", "--sandbox", "danger-full-access", "PROMPT"]),
+        );
+        assert_eq!(
+            out.args,
+            ["exec", "--sandbox", "danger-full-access", "PROMPT"]
+        );
+    }
+
+    #[test]
+    fn agy_reviews_in_plan_mode() {
+        let out = read_only(AgentProvider::Agy, command(&["--print", "PROMPT"]));
+        assert_eq!(out.args, ["--mode", "plan", "--print", "PROMPT"]);
+    }
+
+    #[test]
+    fn omp_print_mode_limits_tools_and_preserves_stdin() {
+        let mut cmd = command(&["--print"]);
+        cmd.stdin = Some("PROMPT".into());
+        let out = read_only(AgentProvider::OhMyPi, cmd);
+        assert_eq!(out.args, ["--print", "--tools", "read,grep,glob"]);
+        assert_eq!(out.stdin.as_deref(), Some("PROMPT"));
     }
 
     #[test]
