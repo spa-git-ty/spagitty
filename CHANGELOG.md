@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-08
+
 ### Fixed
 
 - Review lists the pull requests you opened, last, under **Yours**. It used to
@@ -21,6 +23,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   said there was nothing to review.
 - A long comment in the review room's Conversation card can be read in full:
   **Show more** opens the whole comment and its replies.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 1.3.1. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, the download is
+  corrupt: compare it with `SHA256SUMS-*.txt` and download it again. After
+  updating, macOS may ask once for the keychain password to read a connected
+  account's token; choose **Always Allow**.
 
 ## [1.3.1] - 2026-10-08
 
