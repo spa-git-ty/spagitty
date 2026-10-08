@@ -868,6 +868,7 @@ fn merge(level: Level, lines: Vec<Line>, rules: RepoRules, world: Fake, lands: b
         b_tip: "b1".into(),
         base: "c0".into(),
         strategy: "merge".into(),
+        into: String::new(),
     };
     start(
         assignment,

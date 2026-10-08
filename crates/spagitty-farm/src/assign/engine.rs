@@ -1468,11 +1468,20 @@ impl Engine {
     fn merge(&mut self, work: &MergeWork) -> Flow<()> {
         let policy = self.world.policy();
         let (note, names, lands, into) = self.read(|a| {
-            let names = match &a.target {
-                Target::Merge { a: x, b: y, .. } => (x.clone(), y.clone()),
-                Target::Review { .. } => (String::new(), String::new()),
+            let (names, into) = match &a.target {
+                Target::Merge {
+                    a: x, b: y, into, ..
+                } => (
+                    (x.clone(), y.clone()),
+                    if into.is_empty() {
+                        x.clone()
+                    } else {
+                        into.clone()
+                    },
+                ),
+                Target::Review { .. } => ((String::new(), String::new()), String::new()),
             };
-            (a.note.clone(), names.clone(), a.lands, names.0)
+            (a.note.clone(), names, a.lands, into)
         });
         let opening = format!(
             "{}{}",

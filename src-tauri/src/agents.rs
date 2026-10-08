@@ -1260,6 +1260,7 @@ mod tests {
             b_tip: "2".into(),
             base: "0".into(),
             strategy: String::new(),
+            into: String::new(),
         };
         assert!(same_job(&merge("feat"), &merge("feat")));
         assert!(!same_job(&merge("feat"), &review(1)));
