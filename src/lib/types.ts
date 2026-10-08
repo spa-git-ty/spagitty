@@ -345,6 +345,18 @@ export interface PullRequest {
 	repliesToYou: number;
 	/** `owner/name` when the row came from a search across repositories (FEAT-087). */
 	repository: string | null;
+	/**
+	 * The person's own latest review, when the host says (BUG-064). Absent or
+	 * null from a host that does not, and when they have left none.
+	 */
+	yourReview?: YourReview | null;
+}
+
+/** What the person last said on a pull request, and on which head (BUG-064). */
+export interface YourReview {
+	verdict: ReviewVerdict;
+	/** The head the review was left on. Empty when the host did not say. */
+	sha: string;
 }
 
 export type ReviewState = 'awaitingReview' | 'changesRequested' | 'approved' | 'noReviewers';

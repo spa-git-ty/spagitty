@@ -2,7 +2,7 @@
 <script lang="ts">
 	import { relativeTime } from '$lib/format';
 	import type { PullRequest } from '$lib/types';
-	import { chipsOf, progressOf, sizeLabel, sizeOf, type GroupId } from './inbox';
+	import { chipsOf, progressOf, pushedSince, sizeLabel, sizeOf, type GroupId } from './inbox';
 	import type { ReviewRecord } from './record';
 
 	/**
@@ -56,6 +56,9 @@
 				<span class="tag mono">{pr.repository}</span>
 			{/if}
 			<span class="tag mono">{pr.sourceBranch}</span>
+			{#if chips.reviewed}
+				<span class="tag" class:on={pushedSince(pr)}>{chips.reviewed}</span>
+			{/if}
 			{#if chips.conflict}<span class="tag resolve">{chips.conflict}</span>{/if}
 			{#if chips.threads}<span class="tag on">{chips.threads}</span>{/if}
 		</span>

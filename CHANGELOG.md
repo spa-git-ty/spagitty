@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Review no longer files pull requests you have already reviewed under *nobody asked you yet*: they have their own *Reviewed by you* group, each card says what you said, and one the author has pushed to since says *changed since* (GitHub).
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed
