@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { expect, it } from 'vitest';
 import type { DiffLine } from '../types';
-import { draftsByPlace, pendingOn, placeAt, toDraft, whereOfDraft } from './drafts';
+import { draftsByPlace, pendingOn, placeAt, placeDraft, toDraft, whereOfDraft } from './drafts';
 import { normalise } from './record';
 import { placeOf } from './threads';
 
@@ -78,4 +78,21 @@ it('keeps a pending comment whole through the record, places and all', () => {
 	const mangled = normalise({ drafts: [{ ...range, place: { kind: 'sideways', old: 1, new: 1 } }] }).drafts[0];
 	expect(mangled.place).toBeNull();
 	expect(mangled.body).toBe('These');
+});
+
+it('places a draft written by line, with both ends of its range, or says it cannot', () => {
+	const draft = {
+		...pendingOn('src/a.rs', null, LINES, 2, 3, 'Two new lines.', 'h1', 100),
+		place: null,
+		startPlace: null
+	};
+	expect(placeDraft(draft, LINES, 'src/old.rs')).toMatchObject({
+		line: 3,
+		startLine: 2,
+		place: { kind: 'added', old: 3, new: 3 },
+		startPlace: { kind: 'added', old: 3, new: 2 },
+		oldPath: 'src/old.rs'
+	});
+	expect(placeDraft({ ...draft, line: 40 }, LINES, null)).toBeNull();
+	expect(placeDraft({ ...draft, startLine: 40 }, LINES, null)).toBeNull();
 });

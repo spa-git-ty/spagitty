@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Levels and gates</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--soft:rgba(42,31,26,.1);--pane-edge:rgba(42,31,26,.14);--accent:#b8321f;--danger:#b3124a;--ok:#2f7d45;--agent:#075c52;--surface:#fdfaf6;--sunken:#efe7dc}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--soft:rgba(243,233,221,.1);--pane-edge:rgba(255,255,255,.09);--accent:#f2715a;--danger:#ff5c7c;--ok:#7cc68d;--agent:#86e3d2;--surface:#2a2321;--sunken:#130e0d}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:5px 12px;font-size:13px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;background:var(--surface)}
+.cell{height:64px;display:grid;place-items:center;border-top:1px solid var(--soft)}
+.head{height:44px;display:grid;place-items:center;font-size:13px;color:var(--muted)}
+.lvl{height:64px;display:flex;align-items:center;padding-left:24px;font-size:17px;border-top:1px solid var(--soft)}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--accent)}
+.dash{width:22px;height:2px;border-radius:2px;background:var(--soft)}
+.ring{width:14px;height:14px;border-radius:50%;border:2px solid var(--agent);box-sizing:border-box}
+</style>
+</helmet>
+<div class="t-{{theme}}" style="width: 1440px; height: 900px; box-sizing: border-box; padding: 64px 80px; display: flex; flex-direction: column; gap: 36px; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif">
+
+<h1 style="margin: 0; font-size: 34px; font-weight: 500; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif">Levels</h1>
+
+<div style="display: grid; grid-template-columns: 220px repeat(4, minmax(0, 1fr)) 24px repeat(3, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 16px; overflow: hidden">
+<div class="head"></div>
+<div class="head" style="grid-column: span 4; color: var(--ink); font-size: 15px; border-bottom: 1px solid var(--soft)">Review</div>
+<div class="head"></div>
+<div class="head" style="grid-column: span 3; color: var(--ink); font-size: 15px; border-bottom: 1px solid var(--soft)">Merge</div>
+
+<div class="head"></div>
+<div class="head">Plan</div><div class="head">Each file</div><div class="head">Verdict</div><div class="head">Send</div>
+<div class="head"></div>
+<div class="head">Each conflict</div><div class="head">Checks</div><div class="head">Land</div>
+
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<div style="display: contents">
+<div class="lvl" style="{{r.lvlStyle}}">{{r.name}}</div>
+<sc-for list="{{r.cells}}" as="c" hint-placeholder-count="8">
+<div class="cell" style="{{c.style}}">
+<sc-if value="{{c.stop}}" hint-placeholder-val="{{false}}"><span class="dot" title="Stops for you"></span></sc-if>
+<sc-if value="{{c.go}}" hint-placeholder-val="{{true}}"><span class="dash" title="Goes on"></span></sc-if>
+<sc-if value="{{c.held}}" hint-placeholder-val="{{false}}"><span class="ring" title="Waits as a proposal"></span></sc-if>
+<sc-if value="{{c.you}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-label="You"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"></path></svg></sc-if>
+<sc-if value="{{c.agent}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--agent)" stroke-width="2" stroke-linejoin="round" aria-label="Agent"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+<div style="display: flex; gap: 22px; align-items: center; font-size: 14px; color: var(--muted)">
+<span style="display: flex; align-items: center; gap: 8px"><span class="dot"></span>stops for you</span>
+<span style="display: flex; align-items: center; gap: 8px"><span class="ring"></span>waits as a proposal</span>
+<span style="display: flex; align-items: center; gap: 8px"><span class="dash"></span>goes on</span>
+<span style="display: flex; align-items: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.9" stroke-linecap="round"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"></path></svg>you do it</span>
+<span style="display: flex; align-items: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--agent)" stroke-width="2" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg>agent does it</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 15px">Always stops</span>
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="chip"><span class="dot" style="width: 8px; height: 8px"></span>Unsure</span><span class="chip"><span class="dot" style="width: 8px; height: 8px"></span>Checks fail</span><span class="chip"><span class="dot" style="width: 8px; height: 8px"></span>Limit reached</span><span class="chip"><span class="dot" style="width: 8px; height: 8px"></span>Head moved</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 15px">Never</span>
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="chip" style="color: var(--danger)">Push</span><span class="chip" style="color: var(--danger)">Your working copy</span><span class="chip" style="color: var(--danger)">Others' threads</span><span class="chip" style="color: var(--danger)">Its own PR</span><span class="chip" style="color: var(--danger)">Outside conflicts</span><span class="chip" style="color: var(--danger)">Approve, unless allowed</span></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var GRID = {
+ 'Suggest':      ['held','held','held','you','gap','held','go','you'],
+ 'Step by step': ['stop','stop','stop','you','gap','stop','stop','you'],
+ 'Sign off':     ['go','go','go','you','gap','go','go','you'],
+ 'Unattended':   ['go','go','go','agent','gap','go','go','agent']
+};
+class Component extends DCLogic {
+ renderVals() {
+  var rows = Object.keys(GRID).map(function (name) {
+   return {
+    name: name,
+    lvlStyle: name === 'Unattended' ? 'color: var(--agent);' : '',
+    cells: GRID[name].map(function (k) {
+     return { stop: k === 'stop', held: k === 'held', go: k === 'go', you: k === 'you', agent: k === 'agent', style: k === 'gap' ? 'border-top-color: transparent;' : k === 'you' || k === 'agent' ? 'background: var(--sunken);' : '' };
+    })
+   };
+  });
+  return { theme: this.props.theme || 'dark', rows: rows };
+ }
+}
+</script>
+</body>
+</html>

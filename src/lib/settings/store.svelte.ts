@@ -29,6 +29,7 @@ import type {
 
 export type Section =
 	| 'you'
+	| 'agents'
 	| 'remotes'
 	| 'hooks'
 	| 'tools'
@@ -52,6 +53,8 @@ export type ChoiceSetting = Exclude<keyof Settings, BooleanSetting>;
 /** The chip index, in the order it is shown. */
 export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'you', label: 'You' },
+	// After You: agents are about who works with you (2.0).
+	{ id: 'agents', label: 'Agents' },
 	{ id: 'remotes', label: 'Remotes' },
 	{ id: 'hooks', label: 'Hooks' },
 	{ id: 'tools', label: 'External Tools' },

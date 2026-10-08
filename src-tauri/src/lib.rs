@@ -8,6 +8,7 @@
 
 mod about;
 mod accounts;
+mod agents;
 mod clone_worker;
 mod command_log;
 mod commands;
@@ -204,6 +205,26 @@ pub fn run() {
             desktop::desktop_theme,
             desktop::desktop_theme_watch,
             desktop::desktop_theme_unwatch,
+            // Agents in Review and Merger (2.0): the machine list, each
+            // repository's rules, and the assignments. Its own module: see
+            // its header.
+            agents::agents_snapshot,
+            agents::agents_set_jobs,
+            agents::agents_save_custom,
+            agents::agents_take_offer,
+            agents::agents_save_remote,
+            agents::agents_remove,
+            agents::agents_set_defaults,
+            agents::agents_set_rules,
+            agents::agents_consent,
+            agents::agents_test_local,
+            agents::agents_models,
+            agents::agents_test_remote,
+            agents::assignment_start,
+            agents::assignment_control,
+            agents::assignment_list,
+            agents::assignment_transcript,
+            agents::assignment_forget,
             // The agent farm (FEAT-073). A separate module rather than more of
             // `commands.rs`: see its header.
             farm::farm_open,
@@ -289,6 +310,9 @@ pub fn run() {
 
             // The extension host. Nothing starts until an extension is used.
             extensions::manage(app.handle());
+
+            // Agents' assignments. Nothing runs until one is assigned.
+            agents::manage(app.handle());
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -297,6 +321,7 @@ pub fn run() {
             // Workers are asked to stop rather than left to notice that
             // their stdin closed.
             if let tauri::RunEvent::Exit = event {
+                agents::shutdown(app);
                 extensions::shutdown(app);
             }
         });

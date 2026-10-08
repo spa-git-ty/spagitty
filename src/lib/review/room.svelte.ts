@@ -31,7 +31,9 @@ import type {
 	PullRequestComment,
 	ReviewVerdict
 } from '../types';
-import { pendingOn, toDraft } from './drafts';
+import { pendingOn, placeDraft, toDraft } from './drafts';
+import { marked, reviewBody, sendable } from './agent-drafts';
+import { agents } from '../agents/store.svelte';
 import type { PendingComment } from './record';
 import { blocksOf, blocksOfHunks, lineKey, type Block, type Laid, type Scope, type SideName, type Composing } from './rows';
 import { review } from './store.svelte';
@@ -41,7 +43,7 @@ export type Layout = 'one' | 'all';
 export type Phase = 'idle' | 'reading' | 'ready' | 'failed';
 export type Panel = 'open' | 'resolved';
 /** Every file; the ones with the author's own changes; the ones with conflict fixes. */
-export type Filter = 'all' | 'author' | 'conflict';
+export type Filter = 'all' | 'author' | 'conflict' | 'agent';
 
 /** A file the pull request touches, as the files list shows it. */
 export interface RoomFile {
@@ -410,6 +412,10 @@ export const room = {
 	get visible(): RoomFile[] {
 		if (filter === 'author') return files.filter((file) => this.isAuthors(file.path));
 		if (filter === 'conflict') return files.filter((file) => this.hasFix(file.path));
+		if (filter === 'agent') {
+			const waiting = new Set(this.drafts.filter((d) => d.agent?.state === 'proposed').map((d) => d.path));
+			return files.filter((file) => waiting.has(file.path));
+		}
 		return files;
 	},
 
@@ -663,6 +669,26 @@ export const room = {
 		composer = null;
 	},
 
+	/**
+	 * An agent's comments name their lines by number only. GitLab places a
+	 * comment by both versions' counters, so each is worked out from its file,
+	 * as the room's own comments are, before it is sent.
+	 */
+	async place(drafts: PendingComment[]): Promise<void> {
+		const unplaced = drafts.filter((draft) => draft.agent && !draft.place);
+		if (!current || !unplaced.length) return;
+		for (const path of new Set(unplaced.map((d) => d.path))) await this.ensure(path);
+		const placed = new Map<string, PendingComment>();
+		for (const draft of unplaced) {
+			const done = placeDraft(draft, contents[draft.path]?.lines ?? [], fileAt(draft.path)?.oldPath ?? null);
+			if (done) placed.set(draft.id, done);
+		}
+		if (!placed.size) return;
+		await review.saveRecord(current.key, (record) => {
+			record.drafts = record.drafts.map((draft) => placed.get(draft.id) ?? draft);
+		});
+	},
+
 	/** Every comment waiting for Finish review, against any head. */
 	get drafts(): PendingComment[] {
 		return (current ? review.recordAt(current.key)?.drafts : null) ?? [];
@@ -734,11 +760,20 @@ export const room = {
 	async finish(verdict: ReviewVerdict): Promise<boolean> {
 		if (!current || sending) return false;
 		const opened = current;
-		const sendNow = this.currentDrafts;
-		const text = body;
+		// What an agent proposed and nobody decided waits; everything else goes.
+		const sendNow = sendable(this.currentDrafts);
+		const mark = agents.rules?.markComments ?? true;
+		const text = reviewBody(body, sendNow, mark);
 		sending = true;
 		try {
-			await api.submitReview(opened.pr.number, verdict, text, sendNow.map(toDraft));
+			await this.place(sendNow);
+			const placed = sendable(this.currentDrafts).filter((draft) => sendNow.some((d) => d.id === draft.id));
+			await api.submitReview(
+				opened.pr.number,
+				verdict,
+				text,
+				placed.map((draft) => ({ ...toDraft(draft), body: marked(draft.body, draft.agent, mark) }))
+			);
 			if (bodyTimer) clearTimeout(bodyTimer);
 			bodyTimer = null;
 			const sent = new Set(sendNow.map((draft) => draft.id));

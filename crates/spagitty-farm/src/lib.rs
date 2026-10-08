@@ -44,6 +44,7 @@
 //! and neither can be skipped by an agent's own report.
 
 pub mod agent;
+pub mod assign;
 pub mod context;
 pub mod error;
 pub mod execution;
