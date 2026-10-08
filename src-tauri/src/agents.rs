@@ -237,11 +237,30 @@ fn file<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
     app.path().app_config_dir().ok().map(|dir| dir.join(FILE))
 }
 
+/// The machine list, for reading: a file that cannot be read reads as none.
 pub fn load<R: Runtime>(app: &AppHandle<R>) -> Machine {
     file(app)
-        .and_then(|path| std::fs::read(path).ok())
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .map(|path| read_at(&path).unwrap_or_default())
         .unwrap_or_default()
+}
+
+/// The file at `path`, telling *not there yet* (an empty list) apart from
+/// *there and unreadable*. A change must not write an empty list over a file
+/// it could not read: that would drop every agent, rule and consent in it.
+fn read_at(path: &Path) -> Result<Machine> {
+    match std::fs::read(path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| {
+            Failure::new(
+                "io",
+                format!(
+                    "{} could not be read, so it was left as it is: {e}",
+                    path.display()
+                ),
+            )
+        }),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Machine::default()),
+        Err(e) => Err(Failure::new("io", e.to_string())),
+    }
 }
 
 fn save<R: Runtime>(app: &AppHandle<R>, machine: &Machine) -> Result<()> {
@@ -263,7 +282,10 @@ fn change<R: Runtime>(
     edit: impl FnOnce(&mut Machine) -> Result<()>,
 ) -> Result<Machine> {
     let _held = state.config.lock().expect("agents config lock");
-    let mut machine = load(app);
+    let mut machine = match file(app) {
+        Some(path) => read_at(&path)?,
+        None => Machine::default(),
+    };
     edit(&mut machine)?;
     save(app, &machine)?;
     Ok(machine)
@@ -1270,6 +1292,31 @@ mod tests {
         assert_eq!(machine.defaults.review_level, Level::StepByStep);
         assert_eq!(machine.rules("/work/app").highest, Level::SignOff);
         assert!(machine.notify.waiting);
+    }
+
+    /// A file that is there but does not parse is an error to a change, not
+    /// an empty list to write back over it; one that is not there yet is.
+    #[test]
+    fn an_unreadable_machine_file_is_not_taken_for_an_empty_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        assert!(read_at(&path).unwrap().remote.is_empty());
+
+        std::fs::write(
+            &path,
+            br#"{"defaults": {"reviewLevel": "fromANewerBuild"}}"#,
+        )
+        .unwrap();
+        let refused = read_at(&path).unwrap_err();
+        assert!(
+            refused.message.contains("left as it is"),
+            "{}",
+            refused.message
+        );
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            r#"{"defaults": {"reviewLevel": "fromANewerBuild"}}"#
+        );
     }
 
     #[test]
