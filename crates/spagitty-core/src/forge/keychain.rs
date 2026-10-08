@@ -20,9 +20,33 @@
 //! reason the application should stop. Screens that do not need a token are
 //! unaffected.
 
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+
 use keyring::Entry;
 
 use crate::{Error, Result};
+
+/// Tokens already read this session, by [`key`].
+///
+/// macOS asks for the keychain password on every read by a build it does not
+/// trust yet — and an ad-hoc signed update is one it does not trust. Every
+/// forge request reads the token, so a session could ask ten times. Reading
+/// each account once and keeping it here makes that once per launch. Only
+/// found tokens are kept: a refusal or a missing entry is asked again.
+fn cache() -> &'static Mutex<HashMap<String, String>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    CACHE.get_or_init(Mutex::default)
+}
+
+fn remember(host: &str, user: &str, token: Option<&str>) {
+    if let Ok(mut held) = cache().lock() {
+        match token {
+            Some(token) => held.insert(key(host, user), token.to_string()),
+            None => held.remove(&key(host, user)),
+        };
+    }
+}
 
 /// The service name entries are filed under.
 ///
@@ -47,7 +71,9 @@ fn entry(host: &str, user: &str) -> Result<Entry> {
 pub fn store(host: &str, user: &str, token: &str) -> Result<()> {
     entry(host, user)?
         .set_password(token)
-        .map_err(|error| Error::Keychain(error.to_string()))
+        .map_err(|error| Error::Keychain(error.to_string()))?;
+    remember(host, user, Some(token));
+    Ok(())
 }
 
 /// Read a token back.
@@ -56,8 +82,18 @@ pub fn store(host: &str, user: &str, token: &str) -> Result<()> {
 /// was removed from the keychain by hand is a disconnected account, which the
 /// screen can say, and not a failure it has to report as one.
 pub fn read(host: &str, user: &str) -> Result<Option<String>> {
+    if let Some(token) = cache()
+        .lock()
+        .ok()
+        .and_then(|held| held.get(&key(host, user)).cloned())
+    {
+        return Ok(Some(token));
+    }
     match entry(host, user)?.get_password() {
-        Ok(token) => Ok(Some(token)),
+        Ok(token) => {
+            remember(host, user, Some(&token));
+            Ok(Some(token))
+        }
         Err(keyring::Error::NoEntry) => Ok(None),
         Err(error) => Err(Error::Keychain(error.to_string())),
     }
@@ -66,6 +102,7 @@ pub fn read(host: &str, user: &str) -> Result<Option<String>> {
 /// Remove a token. Removing one that is not there is not an error — the
 /// intended state is "no token for this account", and it already holds.
 pub fn forget(host: &str, user: &str) -> Result<()> {
+    remember(host, user, None);
     match entry(host, user)?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(error) => Err(Error::Keychain(error.to_string())),
@@ -92,6 +129,20 @@ mod tests {
     #[test]
     fn the_key_carries_both_parts_so_neither_can_be_confused_for_the_other() {
         assert_eq!(key("github.com", "ada"), "github.com:ada");
+    }
+
+    #[test]
+    fn a_token_read_once_is_not_read_from_the_keychain_again() {
+        // The cache is checked before the keychain is touched, so this needs
+        // no secret service — and a second read would be a second macOS prompt.
+        remember("cache.example", "ada", Some("t0ken"));
+        assert_eq!(
+            read("cache.example", "ada").unwrap().as_deref(),
+            Some("t0ken")
+        );
+
+        remember("cache.example", "ada", None);
+        assert!(cache().lock().unwrap().get(&key("cache.example", "ada")).is_none());
     }
 
     // Reading and writing a real keychain is not tested here. It needs a

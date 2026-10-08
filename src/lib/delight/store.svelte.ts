@@ -231,11 +231,11 @@ export const delight = {
 		actors = { ...actors, [actor.id]: after };
 		persist();
 
+		// Sound is its own setting: the personality decides what is shown, not
+		// what is heard, so Off with sound chosen still plays the cue.
 		const cue = CUES[event.kind];
-		if (cue && this.on) {
-			play(cue, settings.settings.sound);
-			pulse += 1;
-		}
+		if (cue) play(cue, settings.settings.sound);
+		if (cue && this.on) pulse += 1;
 
 		for (const found of unlocked) this.announce(found, after.name);
 

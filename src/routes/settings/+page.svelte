@@ -50,9 +50,12 @@
 	 */
 	/**
 	 * God mode drives the delight layer by hand, so it is only offered while the
-	 * layer is on (TASK-045). `#godmode` still lands on it.
+	 * layer is on (TASK-045), and only to the author's account. `#godmode` lands
+	 * on it for nobody else.
 	 */
-	const chips = $derived(SECTIONS.filter((section) => section.id !== 'godmode' || delight.on));
+	const chips = $derived(
+		SECTIONS.filter((section) => section.id !== 'godmode' || (delight.on && settings.godMode))
+	);
 
 	function follow() {
 		settings.showFromHash(location.hash);
@@ -107,7 +110,7 @@
 		{:else if settings.section === 'personality'}
 			<PersonalitySection />
 		{:else if settings.section === 'godmode'}
-			<GodModeSection />
+			{#if settings.godMode}<GodModeSection />{/if}
 		{:else if settings.section === 'appearance'}
 			<AppearanceSection />
 		{:else if settings.section === 'reading'}

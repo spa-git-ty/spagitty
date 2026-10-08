@@ -16,21 +16,20 @@
 	 * screen works at all three, because a record of what somebody did is not
 	 * decoration and taking it away would be taking away the useful half.
 	 *
-	 * **Professional silences the sound as well.** Choosing it writes both keys
-	 * in one go rather than leaving a sound level that the personality quietly
-	 * overrules — a setting that shows `full` and plays nothing is a setting
-	 * that looks broken.
+	 * **Sound is its own choice.** The personality decides what is *shown*; the
+	 * sound level decides what is *heard*. Somebody who wants the commit sound
+	 * and no badges at all can have exactly that.
 	 */
 	const LEVELS: { id: Personality; label: string; what: string }[] = [
 		{
 			id: 'off',
 			label: 'Off',
-			what: 'Nothing shown, nothing played. Badges are still recorded. The default.'
+			what: 'Nothing shown. Badges are still recorded. The default.'
 		},
 		{
 			id: 'professional',
 			label: 'Professional',
-			what: 'No reward moments, no jokes, no sound. Badges are still earned.'
+			what: 'No reward moments, no jokes. Badges are still earned.'
 		},
 		{
 			id: 'balanced',
@@ -52,15 +51,8 @@
 
 	const personality = $derived(settings.settings.personality);
 	const sound = $derived(settings.settings.sound);
-	/** Off and Professional are both silent (TASK-045). */
-	const silent = $derived(personality === 'off' || personality === 'professional');
 
 	async function choosePersonality(next: Personality): Promise<void> {
-		if (next === 'off' || next === 'professional') {
-			// One write, both keys. See the note in the header.
-			await settings.write({ ...settings.settings, personality: next, sound: 'off' });
-			return;
-		}
 		await settings.choose('personality', next);
 	}
 
@@ -100,11 +92,8 @@
 			<div class="row">
 				<Chip
 					active={sound === level.id}
-					disabled={silent && level.id !== 'off'}
 					onclick={() => chooseSound(level.id)}
-					title={personality === 'professional'
-						? 'Off and Professional are silent. Choose Balanced or Full Spagitty to enable sound.'
-						: level.what}
+					title={level.what}
 				>
 					{level.label}
 				</Chip>

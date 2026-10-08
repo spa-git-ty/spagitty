@@ -4,7 +4,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import { AUTONOMY_LEVELS, FARM_COPY as C, whereYouComeIn } from '../describe';
+	import { AUTONOMY_LEVELS, FARM_COPY as C } from '../describe';
 	import { farmStore } from '../store.svelte';
 	import * as api from '../api';
 	import type { Autonomy, FarmSettings, Permissions, SupplementalPolicy } from '../types';
@@ -114,10 +114,6 @@
 				</button>
 			{/each}
 		</div>
-		<p class="come-in">
-			<span class="muted">{C.youComeIn}</span>
-			{whereYouComeIn(autonomy)}
-		</p>
 	</section>
 
 	<section>
@@ -318,10 +314,6 @@
 	.level.on {
 		border-color: var(--accent);
 		background: var(--accent-soft);
-	}
-
-	.come-in {
-		margin: 10px 0 0;
 	}
 
 	.checks {

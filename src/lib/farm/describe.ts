@@ -319,8 +319,6 @@ export const PANES = ['Board', 'Crew', 'Activity'] as const;
 export const TASK_TABS = ['Output', 'Changes', 'Checks', 'Review', 'Hand-off'] as const;
 export const FARM_COPY = {
 	setupTitle: 'Put a crew of agents on one goal',
-	setupBrief:
-		'One agent plans the work. Each task then gets its own agent and its own worktree, your checks run on it, a second agent reviews it, and it lands on your branch. You choose where you come in.',
 	paused: 'Paused. Nothing new starts; the agents already working are left to finish.',
 	ready: 'Ready to land. It needs your yes.',
 	crew: 'Your crew',
@@ -331,9 +329,6 @@ export const FARM_COPY = {
 	working: 'Working',
 	checking: 'Checking',
 	landed: 'Landed',
-	upNextDetail: 'Waits for a free agent or an earlier task',
-	workingDetail: 'Each agent in its own worktree',
-	checkingDetail: 'Your commands run, then another agent reviews',
 	firstFree: 'First free agent',
 	planReady: 'The plan is ready',
 	nothingRuns: 'Nothing runs until you accept the plan.',
@@ -364,13 +359,6 @@ export const FARM_COPY = {
 	moreRules: 'More rules',
 	saveRules: 'Save rules',
 	onCrew: 'On the crew',
-	crewFound: 'How the crew is found',
-	crewFoundDetail:
-		"Spagitty looks on PATH for command-line agents and runs each once to read its version. Only agents that run headless from a terminal can join; editor plug-ins can't.",
-	assignment: 'Who gets which task',
-	assignmentDetail:
-		"A task goes to its suggested agent. If that one is busy, the first free agent whose skills match the task's kind takes it. An agent never reviews its own work.",
-	anotherAgent: 'Another agent',
 	cliDetail: 'Any CLI that takes a prompt as an argument or on stdin and exits when it is done.',
 	arguments: 'Arguments',
 	landedStat: 'landed',
@@ -383,7 +371,6 @@ export const FARM_COPY = {
 	failures: 'Failures',
 	whatLanded: 'What landed',
 	raised: 'The agents raised',
-	raisedDetail: 'from their hand-offs, not acted on yet',
 	whoDidWhat: 'Who did what',
 	tidyUp: 'Tidy up',
 	removeWorktrees: 'Remove worktrees and branches',
@@ -426,47 +413,16 @@ export const FARM_COPY = {
 	supplemental: 'CodeRabbit',
 	quiet: 'quiet',
 	cancelled: 'Show cancelled',
-	planningDoing: 'What the planner is doing',
 	givenBrief: 'The brief it was given',
 	plannerReadOnly: 'Read-only. It changes no files.',
-	plannerGiven: 'It was given',
-	plannerGivenDetail:
-		"The goal, your notes, AGENTS.md, the repository's layout, and the agents on the crew.",
-	plannerTaskSays: 'Each task it proposes says',
-	plannerTaskParts: [
-		'what to do, and when it is done',
-		'which files it may touch',
-		'what it waits for',
-		'which agent suits it'
-	],
-	plannerThen: 'Then',
-	plannerThenDetail: 'You review the plan. Nothing runs until you accept it.',
-	plannerReading: 'reading the repository and the goal',
-	setupFlow: [
-		'Goal',
-		'Plan',
-		'Task in its own worktree',
-		'Your checks',
-		'Another agent reviews',
-		'Lands on main'
-	],
-	crewDetail: 'Command-line agents found on PATH. Only CLI agents can join a farm.',
-	crewAnother: 'Another CLI agent? Give Spagitty its command and how it takes a prompt.',
-	goalDetail:
-		'One outcome. The planner splits it into tasks; you can edit every one before anything runs.',
 	goalQuestion: 'What should be true when the farm is done?',
 	goalKnow: 'Anything the agents should know',
-	rulesDetail:
-		'Where you come in, what counts as done, and how many agents work at once. You can change these while it runs.',
 	howMuch: 'How much it does on its own',
-	youComeIn: 'You come in:',
 	mustPass: 'Checks every task must pass',
 	addCommand: 'Add a command',
 	atOnce: 'Agents at once',
 	triesBefore: 'Tries before a task needs you',
 	policyAttached: 'AGENTS.md is attached to every prompt',
-	planningBar:
-		'Planning reads the goal and the repository, then proposes tasks. Nothing runs until you accept them.',
 	onTheCrew: 'Ready · on the crew',
 	leftOut: 'Ready · left out',
 	noTasksYet: 'no tasks yet',

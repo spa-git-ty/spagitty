@@ -193,7 +193,7 @@
 					{landed.length === 1 ? 'task' : 'tasks'} in {elapsed(
 						farm.updatedMs - farm.createdMs
 					)}{commits ? ` · ${commits} ${commits === 1 ? 'commit' : 'commits'} on ${target}` : ''} · checks
-					passed on {checked} of {landed.length} task branches
+					passed {checked}/{landed.length}
 				</p>
 			</div>
 		</section>
@@ -215,7 +215,7 @@
 		</section>
 
 		<section class="section">
-			<h3>{C.raised} <span class="muted">· {C.raisedDetail}</span></h3>
+			<h3>{C.raised}</h3>
 			{#if raised.length}
 				<div class="card rows">
 					{#each raised as item, i (i)}
@@ -274,9 +274,7 @@
 
 		<section class="rule">
 			<h3>{C.tidyUp}</h3>
-			<p class="muted">
-				Merged farm branches and clean worktrees are removed. Uncommitted or unmerged work stays.
-			</p>
+			<p class="muted">Unmerged work is kept.</p>
 			<Btn disabled={busy} onclick={sweep}>{C.removeWorktrees}</Btn>
 			{#if swept}<p class="muted">{swept}</p>{/if}
 		</section>

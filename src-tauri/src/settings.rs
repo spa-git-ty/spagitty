@@ -44,8 +44,8 @@ const FILE: &str = "settings.json";
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Personality {
-    /// Recorded and never shown: no notice, no reward moment, no sound, and no
-    /// Badges or God mode offered.
+    /// Recorded and never shown: no notice, no reward moment, and no Badges or
+    /// God mode offered. Sound is a separate setting.
     #[default]
     Off,
     /// Badges, quietly. No reward moment, no jokes, no Hall of Shame.

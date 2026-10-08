@@ -355,6 +355,26 @@ describe('AccountsSection', () => {
 		mounted.destroy();
 	});
 
+	it('offers God mode only to the author's GitHub account', async () => {
+		forgeAccounts.mockResolvedValueOnce([
+			{ kind: 'gitHub' as const, host: 'github.com', user: 'ada' }
+		]);
+		await settings.load();
+		expect(settings.godMode).toBe(false);
+
+		forgeAccounts.mockResolvedValueOnce([
+			{ kind: 'gitHub' as const, host: 'github.example.com', user: 'maxmya' }
+		]);
+		await settings.load();
+		expect(settings.godMode, 'the login must be on github.com itself').toBe(false);
+
+		forgeAccounts.mockResolvedValueOnce([
+			{ kind: 'gitHub' as const, host: 'github.com', user: 'MaxMya' }
+		]);
+		await settings.load();
+		expect(settings.godMode).toBe(true);
+	});
+
 	it('says which token scopes it needs, and nothing more (TASK-050)', () => {
 		const mounted = render(AccountsSection, {});
 		const text = readable(mounted);

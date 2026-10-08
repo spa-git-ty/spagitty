@@ -14,6 +14,22 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Changed
+
+- **Sound is its own setting.** Personality Off or Professional no longer
+  forces sound off or greys out the Sound choices.
+- **The Farm says less.** Explanatory paragraphs, column captions and repeated
+  lines are gone from setup, planning, plan review, the board, crew and wrap-up.
+- **God mode is offered only to the author's connected GitHub account.**
+
+### Fixed
+
+- **Check for updates reports a GitHub rate limit as a rate limit**, not as
+  "the token does not have access to this repository". Every forge request now
+  keeps the host's error body, so its message reaches the screen.
+- **macOS asks for the keychain password once per account per launch**, not on
+  every forge request.
+
 ## [1.2.0] - 2026-10-07
 
 ### Added

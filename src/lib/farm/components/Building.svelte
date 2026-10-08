@@ -27,8 +27,7 @@
 		runningCheck,
 		segment,
 		statsLine,
-		waitingOn,
-		whereYouComeIn
+		waitingOn
 	} from '../describe';
 	import { farmStore } from '../store.svelte';
 	import * as api from '../api';
@@ -60,21 +59,15 @@
 	let showCancelled = $state(false);
 	let expanded = $state<string[]>([]);
 
-	const COLUMNS: { name: string; caption: string; statuses: TaskStatus[]; colour: string }[] = [
+	const COLUMNS: { name: string; statuses: TaskStatus[]; colour: string }[] = [
 		{
 			name: C.upNext,
-			caption: C.upNextDetail,
 			statuses: ['ready', 'assigned', 'waiting', 'blocked'],
 			colour: 'var(--warn)'
 		},
-		{ name: C.working, caption: C.workingDetail, statuses: ['running'], colour: 'var(--accent)' },
-		{
-			name: C.checking,
-			caption: C.checkingDetail,
-			statuses: ['verification', 'review'],
-			colour: 'var(--lane-5)'
-		},
-		{ name: C.landed, caption: '', statuses: ['done'], colour: 'var(--ok)' }
+		{ name: C.working, statuses: ['running'], colour: 'var(--accent)' },
+		{ name: C.checking, statuses: ['verification', 'review'], colour: 'var(--lane-5)' },
+		{ name: C.landed, statuses: ['done'], colour: 'var(--ok)' }
 	];
 
 	const SLOTS = [1, 2, 3, 4, 6];
@@ -83,7 +76,6 @@
 	const tasks = $derived(farmStore.tasks);
 	const needs = $derived(farmStore.needsYou);
 	const needIds = $derived(new Set(needs.map((task) => task.id)));
-	const target = $derived(tasks.find((t) => t.mergeTarget)?.mergeTarget ?? 'main');
 
 	/** The tasks that count: a container is counted through its children. */
 	const leaves = $derived(
@@ -200,8 +192,7 @@
 				</p>
 				<p class="muted">
 					Started {relativeTime(farm.createdMs, now)} ago ·
-					{AUTONOMY_LEVELS.find((a) => a.id === farm.autonomy)?.label}: you come in
-					{whereYouComeIn(farm.autonomy)}
+					{AUTONOMY_LEVELS.find((a) => a.id === farm.autonomy)?.label}
 				</p>
 			</div>
 			<div>
@@ -210,7 +201,6 @@
 						><strong class="total">{landed}</strong>
 						<span class="muted">of {leaves.length} landed</span></span
 					>
-					<span class="muted">{leaves.length - landed} to go</span>
 				</div>
 				<div class="segments" role="img" aria-label="{landed} of {leaves.length} landed">
 					{#each segments as id, i (i)}
@@ -232,7 +222,7 @@
 			<section class="section">
 				<h3>
 					{C.needsYou}
-					<span class="muted">· {needs.length} · nothing else is waiting on a person</span>
+					<span class="muted">{needs.length}</span>
 				</h3>
 				<div class="attention-grid">
 					{#each needs as task (task.id)}
@@ -308,7 +298,6 @@
 						<span class="dot" style:background={col.colour}></span>
 						{col.name} <span class="muted">{list.length}</span>
 					</h3>
-					<p class="muted board-caption">{col.caption || `Merged into ${target}`}</p>
 					<div class="stack">
 						{#each list as task (task.id)}{@render taskCard(task)}{/each}
 					</div>

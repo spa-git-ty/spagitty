@@ -72,13 +72,6 @@
 		leftOut = leftOut.includes(id) ? leftOut.filter((x) => x !== id) : [...leftOut, id];
 	}
 
-	function caption(index: number, unordered: boolean): string {
-		if (unordered) return C.missingDependency;
-		if (index === 0) return 'Starts at once';
-		if (index === layers.length - 1 && index > 1) return 'Last; each waits for its own tasks';
-		return `When what it needs from wave ${index} lands`;
-	}
-
 	async function start() {
 		const keep = kept.map((t) => t.id);
 		const discard = [...leftOut];
@@ -105,8 +98,7 @@
 				{drafts.length}
 				{drafts.length === 1 ? 'task' : 'tasks'} in {layers.length}
 				{layers.length === 1 ? 'wave' : 'waves'}</strong
-			>. A wave starts when what it needs has landed; inside a wave, tasks run side by side. Untick
-			anything you don't want; every brief stays editable until its task starts.
+			>.
 		</p>
 
 		<div class="waves">
@@ -116,7 +108,7 @@
 						{layer.unordered ? C.cycle : `Wave ${i + 1}`}
 						<span class="muted">{layer.tasks.length}</span>
 					</h3>
-					<p class="muted caption" class:warn={layer.unordered}>{caption(i, layer.unordered)}</p>
+					{#if layer.unordered}<p class="caption warn">{C.missingDependency}</p>{/if}
 					<div class="stack">
 						{#each layer.tasks as task (task.id)}
 							{@const keep = !leftOut.includes(task.id)}
@@ -199,9 +191,6 @@
 					</div>
 				{/each}
 			</div>
-			<p class="muted">
-				Suggestions. A task goes to the first free agent that suits it if its own is busy.
-			</p>
 		</section>
 
 		<section class="rule">
@@ -213,7 +202,7 @@
 					<li><span class="dot warn-dot"></span>No checks: nothing proves a task works</li>
 				{/if}
 				<li>
-					<span class="dot ok-dot"></span>Up to {farm?.maxParallel} agents at once, each in its own worktree
+					<span class="dot ok-dot"></span>Up to {farm?.maxParallel} agents at once
 				</li>
 				<li>
 					<span class="dot"></span>{AUTONOMY_LEVELS.find((a) => a.id === farm?.autonomy)?.label}:
@@ -248,11 +237,11 @@
 	}
 
 	.waves h3 {
-		margin: 0;
+		margin: 0 0 12px;
 	}
 
 	.caption {
-		margin: 2px 0 12px;
+		margin: -8px 0 12px;
 	}
 
 	.draft {

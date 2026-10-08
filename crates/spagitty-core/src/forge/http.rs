@@ -296,6 +296,10 @@ fn agent() -> ureq::Agent {
         // See the header: a redirect that changed host would carry the token
         // with it.
         .max_redirects(0)
+        // A 4xx is an answer, and its body says which one. Left as an error,
+        // ureq drops the body and headers, so a spent rate limit (403 with
+        // "API rate limit exceeded") read as a refused token.
+        .http_status_as_error(false)
         .user_agent(user_agent())
         // **Chosen, not inherited.** `TlsProvider` defaults to Rustls whichever
         // feature is compiled in, so building with `native-tls` alone leaves an
@@ -399,6 +403,14 @@ mod tests {
             agent.config().tls_config().provider(),
             ureq::tls::TlsProvider::NativeTls
         );
+    }
+
+    #[test]
+    fn the_agent_hands_back_an_error_status_with_its_body() {
+        // Left at ureq's default, a 4xx is an `Err(StatusCode)` with no body
+        // and no headers, so GitHub's "API rate limit exceeded" 403 reached
+        // `status_error` empty and was reported as a refused token.
+        assert!(!agent().config().http_status_as_error());
     }
 
     #[test]

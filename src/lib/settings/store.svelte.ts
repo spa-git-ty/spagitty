@@ -96,6 +96,8 @@ let identity = $state<Identity | null>(null);
 let signing = $state<Signing | null>(null);
 /** Connected hosting accounts (FEAT-017). Hosts and logins; never tokens. */
 let accounts = $state<ForgeAccount[]>([]);
+/** The one GitHub login God mode is offered to. */
+const GOD_MODE_LOGIN = 'maxmya';
 /** What the last update check found, and what it failed with. */
 let update = $state<Update | null>(null);
 let updateError = $state<string | null>(null);
@@ -142,6 +144,18 @@ export const settings = {
 	},
 	get accounts(): ForgeAccount[] {
 		return accounts;
+	},
+	/**
+	 * God mode is the author's testing surface, so it is offered only while
+	 * the author's GitHub account is connected. A presentation gate, not a
+	 * security boundary: anyone rebuilding the source can remove it.
+	 */
+	get godMode(): boolean {
+		return accounts.some(
+			(account) =>
+				account.host.toLowerCase() === 'github.com' &&
+				account.user.toLowerCase() === GOD_MODE_LOGIN
+		);
 	},
 	get update(): Update | null {
 		return update;

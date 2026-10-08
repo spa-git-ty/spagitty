@@ -78,13 +78,6 @@
 <div class="setup">
 	<section class="intro">
 		<h2>{C.setupTitle}</h2>
-		<p>{C.setupBrief}</p>
-		<ol class="flow">
-			{#each C.setupFlow as step, i}
-				{#if i > 0}<li class="arrow" aria-hidden="true">→</li>{/if}
-				<li class="step" class:last={i === C.setupFlow.length - 1}>{step}</li>
-			{/each}
-		</ol>
 	</section>
 
 	<section class="card part">
@@ -92,12 +85,12 @@
 			<span class="number">1</span>
 			<div>
 				<h3>{C.crew}</h3>
-				<p class="muted">{C.crewDetail}</p>
 			</div>
 			<Btn disabled={busy} onclick={() => act('Could not look for agents', api.detectAgents)}>
 				<Icon name="refresh" />
 				{C.lookAgain}
 			</Btn>
+			<Btn onclick={() => (adding = true)}>{C.addCli}</Btn>
 		</header>
 		<div class="tiles">
 			{#each found as agent (agent.definition.id)}
@@ -142,10 +135,6 @@
 		{#if missing.length}
 			<p class="muted">Not found: {missing.join(', ')}.</p>
 		{/if}
-		<p class="another muted">
-			{C.crewAnother}
-			<Btn onclick={() => (adding = true)}>{C.addCli}</Btn>
-		</p>
 	</section>
 
 	<section class="card part">
@@ -153,7 +142,6 @@
 			<span class="number">2</span>
 			<div>
 				<h3>{C.goal}</h3>
-				<p class="muted">{C.goalDetail}</p>
 			</div>
 		</header>
 		<label>
@@ -175,14 +163,12 @@
 			<span class="number">3</span>
 			<div>
 				<h3>{C.rules}</h3>
-				<p class="muted">{C.rulesDetail}</p>
 			</div>
 		</header>
 		<RulesEditor bind:settings {busy} {act} />
 	</section>
 
 	<footer class="bar ornament">
-		<p class="muted">{C.planningBar}</p>
 		<Btn disabled={busy || !title.trim()} onclick={() => create(false)}>{C.manualTasks}</Btn>
 		<Btn primary disabled={busy || !title.trim() || !planner} onclick={() => create(true)}>
 			Plan it with {agentName(planner?.definition.id, farmStore.agents)}
@@ -209,37 +195,6 @@
 		margin-bottom: 8px;
 	}
 
-	.intro p {
-		font-size: calc(var(--fs-ui) * 1.15);
-		color: var(--muted);
-		max-width: 760px;
-	}
-
-	.flow {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 8px;
-		list-style: none;
-		margin: 14px 0 0;
-		padding: 0;
-	}
-
-	.flow .step {
-		padding: 4px 12px;
-		border: 1px solid var(--soft);
-		border-radius: var(--r-pill);
-	}
-
-	.flow .arrow {
-		color: var(--muted);
-	}
-
-	.flow li.last {
-		color: var(--ok);
-		border-color: color-mix(in srgb, var(--ok) 55%, transparent);
-	}
-
 	.part {
 		padding: 18px;
 		display: flex;
@@ -249,7 +204,7 @@
 
 	.part header {
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		gap: 12px;
 	}
 
@@ -259,10 +214,6 @@
 
 	.part h3 {
 		font-size: calc(var(--fs-ui) * 1.2);
-		margin: 0 0 2px;
-	}
-
-	.part header p {
 		margin: 0;
 	}
 
@@ -337,14 +288,6 @@
 		background: var(--ok);
 	}
 
-	.another {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex-wrap: wrap;
-		margin: 0;
-	}
-
 	.goal {
 		font-size: calc(var(--fs-ui) * 1.15);
 		padding: 10px 12px;
@@ -357,13 +300,9 @@
 		z-index: 3;
 		display: flex;
 		align-items: center;
+		justify-content: flex-end;
 		gap: 12px;
 		padding: 12px 16px;
 		border-radius: var(--r-ornament);
-	}
-
-	.bar p {
-		flex: 1;
-		margin: 0;
 	}
 </style>

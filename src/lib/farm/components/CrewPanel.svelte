@@ -194,20 +194,10 @@
 
 	<aside class="card farm-aside how">
 		<section>
-			<h3>{C.crewFound}</h3>
-			<p class="muted">{C.crewFoundDetail}</p>
 			<Btn disabled={busy} onclick={() => act('Could not look for agents', api.detectAgents)}>
 				<Icon name="refresh" />
 				{C.lookAgain}
 			</Btn>
-		</section>
-		<section class="rule">
-			<h3>{C.assignment}</h3>
-			<p class="muted">{C.assignmentDetail}</p>
-		</section>
-		<section class="rule">
-			<h3>{C.anotherAgent}</h3>
-			<p class="muted">{C.cliDetail}</p>
 			<Btn onclick={() => (adding = true)}>
 				<Icon name="plus" />
 				{C.addCli}
@@ -355,10 +345,6 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 8px;
-	}
-
-	.how h3 {
-		margin: 0;
 	}
 
 	@media (max-width: 1100px) {

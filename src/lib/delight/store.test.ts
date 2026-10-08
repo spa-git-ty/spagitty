@@ -20,6 +20,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { delight } from './store.svelte';
+import { useContextFactory } from './sound';
 import { settings } from '$lib/settings/store.svelte';
 import { notice } from '$lib/ui/notice.svelte';
 import type { DelightEvent } from './events';
@@ -273,5 +274,35 @@ describe('forgetting', () => {
 
 		expect(delight.list).toEqual([]);
 		expect(localStorage.getItem('spagitty.delight:/repos/one')).toBeNull();
+	});
+});
+
+describe('sound', () => {
+	afterEach(() => {
+		settings.settings.sound = 'off';
+		useContextFactory(() => null);
+	});
+
+	it('is its own setting: Off personality with sound chosen still plays the cue', () => {
+		// The personality decides what is shown, never what is heard.
+		const asked = vi.fn(() => null);
+		useContextFactory(asked);
+		personality('off');
+		settings.settings.sound = 'full';
+
+		delight.record(COMMIT);
+
+		expect(asked).toHaveBeenCalled();
+	});
+
+	it('stays silent when sound is off, whatever the personality', () => {
+		const asked = vi.fn(() => null);
+		useContextFactory(asked);
+		personality('fullSpagitty');
+		settings.settings.sound = 'off';
+
+		delight.record(COMMIT);
+
+		expect(asked).not.toHaveBeenCalled();
 	});
 });
