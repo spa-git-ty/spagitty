@@ -89,6 +89,10 @@ all still open one.
 ## Non-scope
 
 - **A model of our own, or an API key.** Spagitty runs what is installed.
+  *Half reversed in 2.0 by FEAT-115:* Spagitty still has no model of its own
+  and ships no key, but it now holds the person's own key, in the keychain, and
+  makes model requests for an API agent they assign in Review or Merger. The
+  farm itself still runs only what is installed.
 - **Cross-repository farms.** A farm belongs to one repository, and lives in it.
 - **Agents talking to each other directly.** See above; this is a rule, not a
   gap.

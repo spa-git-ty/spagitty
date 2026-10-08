@@ -4,7 +4,7 @@
 
 **Prepared:** 2026-10-08  
 **Target:** 2.0.0  
-**Status:** Proposed. A description of the feature only: no implementation, no work items, no identifiers assigned yet.  
+**Status:** Accepted and built as [FEAT-115](../../agile/items/FEAT-115-agents-in-review-and-merge.md), shipping in 2.0.0. The open questions of section 18 were answered with the author on 2026-10-08; the answers, and what was left for later, are in the item.  
 **Raised by:** the author, 2026-10-08: attach agents in Settings — a local agent CLI, or a remote agent through an API key — then assign them in Review and in Merger to do the review or the merge; show their work as it happens, in a decent way; let the person choose how much is automated, from fully to an approval on every step; and do not redesign the screens people use to review and merge by hand.  
 **Screens:** 1K (Settings › Agents, a new section), 1R (Review), 1S (Merger), chrome (the rail's dots, notifications). 1Q (Farm) reads the same agents.  
 **Designs:** the Claude Design canvas *Spagitty 2.0 — Agents in Review and Merger*, listed in [section 13](#13-designs). To be exported to `design_handoff_agents/` the way `design_handoff_review/` and `design_handoff_merger/` were.
