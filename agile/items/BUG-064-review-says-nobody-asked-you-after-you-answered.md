@@ -4,7 +4,7 @@
 
 **Status:** Backlog — reported 2026-10-08, not started.
 **Screens:** 1R.
-**Raised by:** Claude (Claude Code), 2026-10-08, while recording the Review demo against `maxmya/trattoria-demo`.
+**Raised by:** the author, 2026-10-08, while recording the Review demo against `maxmya/trattoria-demo`.
 
 ## What happens
 

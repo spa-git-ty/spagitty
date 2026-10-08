@@ -4,7 +4,7 @@
 
 **Status:** Backlog — reported 2026-10-08, not started.
 **Screens:** 1S.
-**Raised by:** Claude (Claude Code), 2026-10-08, while recording the demo videos with the 1.3.2 release build.
+**Raised by:** the author, 2026-10-08, while recording the demo videos with the 1.3.2 release build.
 
 ## What happens
 
