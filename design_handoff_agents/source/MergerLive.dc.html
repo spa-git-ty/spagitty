@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Merger, agent resolving</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--side-a:#2f6fb0;--side-b:#a35a00;--typed:#6c4fa3;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--side-a:#6aa7e0;--side-b:#f0a64a;--typed:#b99af0;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--a-soft:color-mix(in srgb,var(--side-a) 14%,transparent);--b-soft:color-mix(in srgb,var(--side-b) 13%,transparent);--agent-soft:color-mix(in srgb,var(--agent) 12%,transparent);--agent-edge:color-mix(in srgb,var(--agent) 50%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--font-mono:ui-monospace,'Atkinson Hyperlegible Mono',Menlo,Consolas,monospace;--read-font:'Atkinson Hyperlegible',system-ui,sans-serif;--code-font:'Atkinson Hyperlegible Mono',ui-monospace,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px;--fs-title:19.2px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+input{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:12px;box-shadow:var(--shadow-1)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.btn.agent{background:var(--agent);color:#062a25;border-color:transparent;box-shadow:none}
+.pill{border:1px solid var(--pane-edge);border-radius:999px;padding:6px 12px;font-size:var(--fs-secondary);display:inline-flex;align-items:center;gap:7px;white-space:nowrap;background:var(--surface-veil)}
+.tool{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.cap{font-size:var(--fs-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rail-item{width:46px;height:46px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.bdg{width:17px;height:17px;border-radius:5px;display:inline-grid;place-items:center;font-size:10.5px;font-weight:700;flex:none}
+.ba{background:var(--side-a);color:#0b1d30}
+.bb{background:var(--side-b);color:#2b1700}
+.bt{background:var(--typed);color:#1e1033}
+.bg{background:var(--agent-soft);color:var(--agent);outline:1px solid var(--agent-edge)}
+.icon-btn{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;border:1px solid var(--pane-edge);background:var(--surface-veil)}
+.code{font-family:var(--code-font);font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.ln{font-family:var(--font-mono);font-size:var(--fs-mono);color:var(--muted);text-align:right;padding-right:10px;line-height:1.95}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 12px; font-size: var(--fs-secondary)">
+<span style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); font-weight: 550">spagitty</span>
+<span style="height: 28px; display: flex; align-items: center; padding: 0 12px; color: var(--muted)">quiblo</span>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 62px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 999px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="12">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 4px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg><sc-if value="{{it.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent)"></span></sc-if></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px 12px">
+<button class="pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 6 8.5 12l6 6"></path></svg>Plan</button>
+<div style="flex: 1 1 360px; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<span style="font-size: var(--fs-title)">Merging</span>
+<span class="chip" style="font-family: var(--font-mono); font-size: var(--fs-secondary); color: var(--side-b); border-color: var(--side-b)">feat/tab-drag</span>
+<span style="font-size: var(--fs-title)">into</span>
+<span class="chip" style="font-family: var(--font-mono); font-size: var(--fs-secondary); color: var(--side-a); border-color: var(--side-a)">main</span>
+</div>
+<span class="note">3 / 4</span>
+<span style="width: 110px; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden"><span style="display: block; height: 100%; width: 75%; background: var(--ok)"></span></span>
+<button class="btn">Abort</button>
+<button class="btn primary" aria-disabled="true" style="opacity: .55">Complete merge · 1 left</button>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 10px">
+
+<aside aria-label="Files" style="width: 210px; flex: none; display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 12px">
+<span class="cap" style="padding: 4px 8px">Conflicted</span>
+<button style="text-align: left; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, transparent); display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-mono); font-size: var(--fs-secondary); font-weight: 600">Tabs.svelte</span><span style="display: flex; gap: 5px"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--ok)"></span><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--ok)"></span></span></button>
+<button style="text-align: left; padding: 8px 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-mono); font-size: var(--fs-secondary); font-weight: 600">metrics.ts</span><span style="display: flex; gap: 5px; align-items: center"><span style="width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--danger); box-sizing: border-box"></span><span style="font-size: var(--fs-mono); color: var(--accent)">needs you</span></span></button>
+<button style="text-align: left; padding: 8px 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-mono); font-size: var(--fs-secondary); font-weight: 600">CHANGELOG.md</span><span style="display: flex; gap: 5px"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--ok)"></span></span></button>
+<span class="cap" style="padding: 14px 8px 4px">Merge on their own</span>
+<span style="padding: 2px 10px; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted)">repo.rs</span>
+<span style="padding: 2px 10px; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted)">nav.ts</span>
+<span style="flex: 1"></span>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 0 8px; font-size: var(--fs-secondary)">
+<span style="display: flex; align-items: center; gap: 8px"><span class="bdg ba">A</span>main</span>
+<span style="display: flex; align-items: center; gap: 8px"><span class="bdg bb">B</span>feat/tab-drag</span>
+<span style="display: flex; align-items: center; gap: 8px"><span class="bdg bt">✎</span>You</span>
+<span style="display: flex; align-items: center; gap: 8px"><span class="bdg bg"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg></span>Codex</span>
+</div>
+</aside>
+
+<section aria-label="Conflicts" style="flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column">
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 4px 4px 96px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="font-family: var(--font-mono); font-size: var(--fs-secondary)"><span style="color: var(--muted)">src/lib/chrome/</span>Tabs.svelte</span>
+<span style="flex: 1"></span>
+<button class="pill"><span class="bdg ba">A</span>All from main</button>
+<button class="pill"><span class="bdg bb">B</span>All from feat/tab-drag</button>
+</div>
+
+<div class="card" style="padding: 10px 14px; display: flex; align-items: center; gap: 10px">
+<span style="font-weight: 600">Conflict 1</span><span class="note" style="font-family: var(--font-mono)">:3</span>
+<span class="chip" style="color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent)">Took main</span>
+<span style="flex: 1"></span>
+<button class="icon-btn" aria-label="Open conflict 1"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+
+<div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 12px; border-color: var(--agent-edge)">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="font-weight: 600">Conflict 2</span><span class="note" style="font-family: var(--font-mono)">:22</span>
+<span class="chip" style="color: var(--agent); border-color: var(--agent-edge); background: var(--agent-soft)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg>Codex · Edit</span>
+<span class="note" style="font-family: var(--read-font)">Keeps pinned from main and dragging from feat/tab-drag.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<div style="border-radius: 10px; background: var(--sunken); overflow: hidden; padding: 6px 0">
+<sc-for list="{{colA}}" as="r" hint-placeholder-count="4"><div style="{{r.style}} display: grid; grid-template-columns: 38px minmax(0, 1fr)"><span class="ln">{{r.n}}</span><span class="code" style="{{r.ink}}">{{r.t}}</span></div></sc-for>
+</div>
+<div style="border-radius: 10px; background: var(--sunken); overflow: hidden; padding: 6px 0; outline: 1px solid var(--agent-edge)">
+<sc-for list="{{colR}}" as="r" hint-placeholder-count="6"><div style="{{r.style}} display: grid; grid-template-columns: 38px minmax(0, 1fr) 26px; align-items: start"><span class="ln">{{r.n}}</span><span class="code">{{r.t}}</span><sc-if value="{{r.mine}}" hint-placeholder-val="{{false}}"><span class="bdg bg" style="margin-top: 5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg></span></sc-if></div></sc-for>
+</div>
+<div style="border-radius: 10px; background: var(--sunken); overflow: hidden; padding: 6px 0">
+<sc-for list="{{colB}}" as="r" hint-placeholder-count="5"><div style="{{r.style}} display: grid; grid-template-columns: 38px minmax(0, 1fr)"><span class="ln">{{r.n}}</span><span class="code" style="{{r.ink}}">{{r.t}}</span></div></sc-for>
+</div>
+</div>
+
+<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center">
+<button class="pill"><span class="bdg ba">A</span>Take main</button>
+<button class="pill"><span class="bdg bb">B</span>Take feat/tab-drag</button>
+<button class="pill"><span class="bdg ba">A</span><span class="bdg bb">B</span>Both</button>
+<button class="pill"><span class="bdg bb">B</span><span class="bdg ba">A</span>Both</button>
+<button class="pill">Pick lines</button>
+<button class="pill">Edit by hand</button>
+<span class="vr" style="align-self: center"></span>
+<button class="pill" style="color: var(--agent); border-color: var(--agent-edge)">Why?</button>
+</div>
+</div>
+</div>
+
+<div class="ornament" role="toolbar" aria-label="Resolving" style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 9px; border-radius: 999px; white-space: nowrap">
+<button class="tool" aria-label="Previous conflict" style="width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M14.5 6 8.5 12l6 6"></path></svg></button>
+<span style="display: flex; flex-direction: column; line-height: 1.15"><span style="font-size: var(--fs-secondary); font-weight: 600">2 of 4</span><span class="note" style="font-family: var(--font-mono); font-size: 11px">Tabs.svelte</span></span>
+<button class="tool" aria-label="Next conflict" style="width: 32px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg></button>
+<span class="vr"></span>
+<button class="tool">Base</button>
+<button class="tool"><span class="bdg ba">A</span>Take</button>
+<button class="tool"><span class="bdg bb">B</span>Take</button>
+<button class="tool" style="background: var(--ok); color: #fff; font-weight: 600">Next unresolved</button>
+</div>
+</section>
+
+<aside aria-label="Agent" style="width: 300px; flex: none; display: flex; flex-direction: column; min-height: 0; margin: 0 0 10px; padding: 12px 10px 0; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px">
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 0 4px 12px; border-bottom: 1px solid var(--soft)">
+<div style="display: flex; align-items: center; gap: 8px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--agent)" stroke-width="2.2" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg>
+<span style="font-weight: 600; flex: 1">Codex</span>
+<button class="chip" aria-haspopup="menu">Sign off<span class="note">▾</span></button>
+<button class="icon-btn" aria-label="Pause"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 6v12M15 6v12"></path></svg></button>
+<button class="icon-btn" aria-label="Stop"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"></path></svg></button>
+</div>
+<span style="display: flex; align-items: center; gap: 8px; font-size: var(--fs-secondary); color: var(--accent)"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span>Waiting for you</span>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex: 1; height: 5px; border-radius: 999px; background: var(--soft); overflow: hidden"><span style="display: block; height: 100%; width: 75%; background: var(--agent)"></span></span>
+<span class="note" style="font-family: var(--font-mono); font-size: var(--fs-mono)">3 / 4 · 2:05</span>
+</div>
+</div>
+
+<ol style="list-style: none; margin: 0; padding: 12px 4px; flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+<li style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px; opacity: {{s.fade}}">
+<span style="width: 15px; display: grid; place-items: center; flex: none; color: {{s.ink}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><sc-for list="{{s.icon}}" as="p" hint-placeholder-count="1"><path d="{{p}}"></path></sc-for></svg></span>
+<span style="flex: 1; min-width: 0; font-size: var(--fs-secondary)">{{s.label}}</span>
+<span class="note" style="font-family: var(--font-mono); font-size: var(--fs-mono)">{{s.time}}</span>
+</div>
+<sc-if value="{{s.gate}}" hint-placeholder-val="{{false}}">
+<div style="margin-left: 25px; padding: 10px 12px; border-radius: 12px; background: var(--agent-soft); border: 1px solid var(--agent-edge); display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: var(--fs-secondary); font-family: var(--read-font)">Two rounding rules. Not sure which the tests expect.</span>
+<div style="display: flex; gap: 6px"><button class="btn agent">Go to it</button></div>
+</div>
+</sc-if>
+</li>
+</sc-for>
+</ol>
+
+<div style="padding: 10px 4px 12px; border-top: 1px solid var(--soft); display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; gap: 6px">
+<input type="text" aria-label="Tell the agent" placeholder="Tell the agent…" style="flex: 1; min-width: 0; border: 1px solid var(--pane-edge); background: var(--sunken); border-radius: 999px; padding: 7px 14px; font-size: var(--fs-secondary)">
+<button class="icon-btn" aria-label="Send" style="width: 34px; height: 34px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+</div>
+<button class="note" style="align-self: flex-start; font-size: var(--fs-mono); display: flex; align-items: center; gap: 4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9.5 6l6 6-6 6"></path></svg>Raw output</button>
+</div>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="white-space: nowrap; overflow: hidden">Merge in progress · nothing written</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 12px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<sc-for list="{{tools}}" as="tl" hint-placeholder-count="5">
+<div style="display: contents"><sc-if value="{{tl.sep}}" hint-placeholder-val="{{false}}"><span class="vr"></span></sc-if><sc-if value="{{tl.btn}}" hint-placeholder-val="{{true}}"><button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{tl.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{tl.label}}</button></sc-if></div>
+</sc-for>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden; font-family: var(--font-mono); font-size: var(--fs-mono)">v2.0.0</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ conflict: ['M4 9h8','M9 6 12 9l-3 3','M20 15h-8','M15 12l-3 3 3 3'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z'],
+ pull: ['M12 3v12','M7.5 10.5 12 15l4.5-4.5','M4 20h16'],
+ fetch: ['M12 3v9','M8.5 8.5 12 12l3.5-3.5','M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'],
+ push: ['M12 21V9','M7.5 13.5 12 9l4.5 4.5','M4 4h16'],
+ stash: ['M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M3 8l2-4h14l2 4','M9.5 13h5']
+};
+var RAIL = ['farm','|','graph','edit','conflict','merge','branch','request','review','|','search','|','folder','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', conflict:'Conflicts', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', search:'Log', folder:'All repositories', settings:'Settings'};
+var TOOLS = [['pull','Pull'],['fetch','Fetch'],['push','Push'],'|',['branch','Branch'],['stash','Stash']];
+var CHECK = ['M5 12.5 10 17.5 19 7'];
+var ASK = ['M12 7v6', 'M12 17h.01'];
+var WAIT = ['M12 6v6l4 2'];
+class Component extends DCLogic {
+ renderVals() {
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'merge' ? 'on' : '', dot: k === 'merge' };
+  });
+  var tools = TOOLS.map(function (t) { return t === '|' ? { sep: true, btn: false, paths: [] } : { sep: false, btn: true, label: t[1], paths: ICONS[t[0]] }; });
+  var side = function (soft, edge) { return function (r) { return { n: r[0], t: r[1], style: r[2] ? 'background: ' + soft + '; box-shadow: inset 3px 0 0 ' + edge + ';' : '', ink: '' }; }; };
+  var colA = [
+   [20, '<div role="tablist">'],
+   [21, '  {#each tabs as tab (tab.id)}'],
+   [22, '    <Tab {tab} pinned={tab.pinned}', true],
+   [23, '      onclose={() => repos.close(tab.id)} />', true],
+   [24, '  {/each}']
+  ].map(side('var(--a-soft)', 'var(--side-a)'));
+  var colB = [
+   [21, '  {#each tabs as tab (tab.id)}'],
+   [22, '    <Tab {tab}', true],
+   [23, '      draggable="true"', true],
+   [24, '      ondragstart={() => (dragging = tab.id)}', true],
+   [25, '      onclose={() => repos.close(tab.id)} />', true],
+   [26, '  {/each}']
+  ].map(side('var(--b-soft)', 'var(--side-b)'));
+  var colR = [
+   [21, '  {#each tabs as tab (tab.id)}'],
+   [22, '    <Tab {tab} pinned={tab.pinned}', true],
+   [23, '      draggable="true"', true],
+   [24, '      ondragstart={() => (dragging = tab.id)}', true],
+   [25, '      onclose={() => repos.close(tab.id)} />', true],
+   [26, '  {/each}']
+  ].map(function (r) { return { n: r[0], t: r[1], mine: !!r[2], style: r[2] ? 'background: var(--agent-soft); box-shadow: inset 3px 0 0 var(--agent);' : '' }; });
+  var steps = [
+   { icon: CHECK, ink: 'var(--ok)', fade: 1, label: 'Read the merge', time: '0:06' },
+   { icon: CHECK, ink: 'var(--ok)', fade: 1, label: 'Tabs.svelte · 2 · Edit', time: '0:41' },
+   { icon: CHECK, ink: 'var(--ok)', fade: 1, label: 'CHANGELOG.md · Both', time: '0:52' },
+   { icon: ASK, ink: 'var(--accent)', fade: 1, label: 'metrics.ts · unsure', time: '1:30', gate: true },
+   { icon: WAIT, ink: 'var(--muted)', fade: 0.55, label: 'Checks', time: '' }
+  ];
+  return { theme: this.props.theme || 'dark', rail: rail, tools: tools, colA: colA, colB: colB, colR: colR, steps: steps };
+ }
+}
+</script>
+</body>
+</html>

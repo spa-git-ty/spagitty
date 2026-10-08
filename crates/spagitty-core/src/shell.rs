@@ -1892,6 +1892,83 @@ pub fn scratch_merge(scratch: &Path, source: &str) -> Result<bool> {
     Ok(code == 0)
 }
 
+/// What `git status` reports in a scratch worktree: each changed, added or
+/// untracked path with its two-letter code. How an assignment sees what an
+/// agent wrote where it was only meant to read (2.0, agents).
+pub fn changed_paths(dir: &Path) -> Result<Vec<(String, String)>> {
+    let raw = run(
+        dir,
+        &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    )?;
+    Ok(parse_status_z(&raw))
+}
+
+/// Parse `status --porcelain=v1 -z`. A rename carries its old path as the
+/// next field, which is skipped: the new path is the one that changed.
+pub(crate) fn parse_status_z(raw: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut fields = raw.split('\0').filter(|field| !field.is_empty());
+    while let Some(field) = fields.next() {
+        if field.len() < 4 {
+            continue;
+        }
+        let (code, path) = field.split_at(2);
+        if code.starts_with('R') || code.starts_with('C') {
+            fields.next();
+        }
+        out.push((code.to_string(), path[1..].to_string()));
+    }
+    out
+}
+
+/// A file's text at `revision`, for an agent's read tool. `None` when the
+/// file is not there at that revision.
+pub fn show_text(repo: &Path, revision: &str, path: &str) -> Result<Option<String>> {
+    let spec = format!("{revision}:{path}");
+    let (code, out) = run_extra(
+        repo,
+        &["show", "--no-color", "--no-ext-diff", &spec],
+        Extra {
+            ok: &[128],
+            ..Extra::default()
+        },
+    )?;
+    Ok((code == 0).then_some(out))
+}
+
+/// Lines matching `pattern` in the files checked out in `dir`: `path:line:
+/// text`, fixed strings, text files only. For an agent's search tool. No
+/// match is an empty answer, not a failure.
+pub fn grep_tree(dir: &Path, pattern: &str) -> Result<String> {
+    let (_, out) = run_extra(
+        dir,
+        &["grep", "-n", "-I", "-F", "--no-color", "-e", pattern],
+        Extra {
+            ok: &[1],
+            ..Extra::default()
+        },
+    )?;
+    Ok(out)
+}
+
+/// Every commit message in `from..to`, whole, separated by NUL. How an agent
+/// is found to have written commits in what it is asked to review.
+pub fn messages_between(repo: &Path, from: &str, to: &str) -> Result<String> {
+    let range = format!("{from}..{to}");
+    run(repo, &["log", "--format=%B%x00", &range])
+}
+
+/// Put `paths` back as `HEAD` has them, in a scratch worktree.
+pub fn restore_paths(dir: &Path, paths: &[String]) -> Result<()> {
+    if paths.is_empty() {
+        return Ok(());
+    }
+    let mut args = vec!["checkout", "HEAD", "--"];
+    args.extend(paths.iter().map(String::as_str));
+    run(dir, &args)?;
+    Ok(())
+}
+
 /// The index's unmerged entries, `-z`: `<mode> <blob> <stage>\t<path>`.
 pub fn unmerged_entries(repo: &Path) -> Result<String> {
     run(repo, &["ls-files", "-u", "-z"])
@@ -1928,6 +2005,20 @@ pub fn last_touch(repo: &Path, range: &str, path: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn status_z_reads_each_path_with_its_code() {
+        let raw = " M src/a.rs\0?? notes.txt\0R  new.rs\0old.rs\0UU both.rs\0";
+        assert_eq!(
+            parse_status_z(raw),
+            vec![
+                (" M".to_string(), "src/a.rs".to_string()),
+                ("??".to_string(), "notes.txt".to_string()),
+                ("R ".to_string(), "new.rs".to_string()),
+                ("UU".to_string(), "both.rs".to_string()),
+            ]
+        );
+    }
 
     /// BUG-046. Only [`program`] keeps a console window from opening on
     /// Windows, so nothing else in the crate may build a process. Test modules
