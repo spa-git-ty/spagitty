@@ -576,6 +576,11 @@ export const requests = {
 		if (!api.inTauri()) return false;
 		const request = this.open;
 		if (request === null) return false;
+		// The host would refuse it; say why before asking (BUG-063).
+		if (request.mergeable === false) {
+			mergeError = `${request.sourceBranch} conflicts with ${request.targetBranch}`;
+			return false;
+		}
 
 		merging = true;
 		mergeError = null;

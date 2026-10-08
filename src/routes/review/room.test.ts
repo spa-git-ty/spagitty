@@ -157,6 +157,22 @@ it('fetches the pull request and lands on the first file not yet viewed', async 
 	expect((files().querySelector(`input[aria-label="Viewed types.ts"]`) as HTMLInputElement).checked).toBe(false);
 });
 
+it('says in the header when the pull request conflicts with its base (BUG-063)', async () => {
+	vi.mocked(api.pullRequests).mockResolvedValue([{ ...PR, mergeable: false }]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.all('button.row')).toHaveLength(1));
+	await review.open({ ...PR, mergeable: false });
+	await vi.waitFor(() => expect(view.find('.meta .conflicts')).not.toBeNull());
+
+	expect(view.get('.meta .conflicts').textContent).toBe('Conflicts with main');
+});
+
+it('says nothing of conflicts while the host has not said (BUG-063)', async () => {
+	await openRoom();
+
+	expect(view.find('.meta .conflicts')).toBeNull();
+});
+
 it('shows the changed part with its folds, and opens a fold on asking', async () => {
 	await openRoom();
 

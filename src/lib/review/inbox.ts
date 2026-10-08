@@ -115,18 +115,21 @@ export function progressOf(pr: PullRequest, record: ReviewRecord | null): Progre
 
 /** What the card's chips say, beside the branch. */
 export interface Chips {
+	/** The host cannot merge it into its base as it stands (BUG-063). */
+	base: string | null;
 	conflict: string | null;
 	threads: string | null;
 }
 
 export function chipsOf(pr: PullRequest, record: ReviewRecord | null, group: GroupId): Chips {
+	const base = pr.mergeable === false ? `conflicts with ${pr.targetBranch}` : null;
 	const conflict = record && record.conflictFiles.length > 0 ? 'conflict fixes' : null;
 	if (group === 'back') {
 		const n = pr.repliesToYou;
-		return { conflict, threads: `${n} ${n === 1 ? 'reply' : 'replies'} to you` };
+		return { base, conflict, threads: `${n} ${n === 1 ? 'reply' : 'replies'} to you` };
 	}
 	const n = pr.openThreads;
-	return { conflict, threads: n > 0 ? `${n} open ${n === 1 ? 'thread' : 'threads'}` : null };
+	return { base, conflict, threads: n > 0 ? `${n} open ${n === 1 ? 'thread' : 'threads'}` : null };
 }
 
 export type FactTone = 'resolve' | 'accent' | 'ok' | 'danger' | 'warn' | 'muted';
@@ -139,6 +142,13 @@ export interface Fact {
 /** The preview card's "Before you start": what is worth knowing first. */
 export function factsOf(pr: PullRequest, record: ReviewRecord | null): Fact[] {
 	const facts: Fact[] = [];
+
+	if (pr.mergeable === false) {
+		facts.push({
+			tone: 'danger',
+			text: `Conflicts with ${pr.targetBranch}: it cannot be merged as it stands`
+		});
+	}
 
 	if (record && record.conflictFiles.length > 0) {
 		const n = record.conflictFiles.length;

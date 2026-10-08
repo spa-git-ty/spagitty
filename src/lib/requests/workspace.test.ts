@@ -36,6 +36,7 @@ import PRDiffPane from './PRDiffPane.svelte';
 import PRMarkdown from './PRMarkdown.svelte';
 import PRWorkspace from './PRWorkspace.svelte';
 import { requests } from './store.svelte';
+import { merger } from '$lib/merger/store.svelte';
 
 const forgeRepo = vi.mocked(api.forgeRepo);
 const pullRequests = vi.mocked(api.pullRequests);
@@ -142,6 +143,8 @@ function comment(id = 101): PullRequestComment {
 		resolved: false
 	};
 }
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -293,6 +296,53 @@ describe('PR workspace store flow', () => {
 		const ok = await requests.close();
 		expect(ok).toBe(true);
 		expect(closePullRequest).toHaveBeenCalledWith(412);
+	});
+
+	it('does not send a merge the host would refuse for conflicts (BUG-063)', async () => {
+		requests.present([request({ mergeable: false })]);
+
+		expect(await requests.merge('merge')).toBe(false);
+
+		expect(mergePullRequest).not.toHaveBeenCalled();
+		expect(requests.mergeError).toBe('feature/workspace conflicts with main');
+	});
+
+	it('explains a conflicting merge and hands the pair to Merger (BUG-063)', async () => {
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		const present = vi.spyOn(merger, 'present');
+
+		const view = render(PRWorkspace, {});
+		expect(view.get('.head-meta').textContent).toContain('conflicts');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Merge')!);
+		await settle();
+
+		expect(view.text()).toContain('feature/workspace conflicts with main');
+		expect(view.all('button').some((b) => b.textContent?.trim() === 'Confirm Merge')).toBe(false);
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Resolve in Merger')!);
+
+		expect(present).toHaveBeenCalledWith({ a: 'main', b: 'feature/workspace', into: 'b' });
+		expect(goto).toHaveBeenCalledWith('/merge');
+		expect(mergePullRequest).not.toHaveBeenCalled();
+		present.mockRestore();
+		merger.reset();
+		view.destroy();
+	});
+
+	it('clears the mark once the host says it can merge again (BUG-063)', async () => {
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		const view = render(PRWorkspace, {});
+		expect(view.get('.head-meta').textContent).toContain('conflicts');
+
+		pullRequests.mockResolvedValue([request({ mergeable: true })]);
+		await requests.load();
+		await settle();
+
+		expect(view.get('.head-meta').textContent).not.toContain('conflicts');
+		view.destroy();
 	});
 
 	it('toggles draft status via store (FEAT-071)', async () => {

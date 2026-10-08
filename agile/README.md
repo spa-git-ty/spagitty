@@ -235,7 +235,7 @@ rather than an audit.
 | [BUG-060](items/BUG-060-merger-forecast-lost-on-first-open.md) | Merger sits on "Working out the merge…" when it is first opened | 1S | Backlog |
 | [BUG-061](items/BUG-061-merger-shows-the-previous-pairs-forecast.md) | Merger shows the previous pair's forecast under a new branch name | 1S | Backlog |
 | [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Backlog |
-| [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Backlog |
+| [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Fixed |
 | [BUG-064](items/BUG-064-review-says-nobody-asked-you-after-you-answered.md) | Review says "nobody asked you yet" about pull requests you have already reviewed | 1R | Backlog |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same

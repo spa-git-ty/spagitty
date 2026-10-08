@@ -12,6 +12,7 @@
 	} from '$lib/requests/store.svelte';
 	import type { MergeMethod, ReviewVerdict } from '$lib/types';
 	import { goto } from '$app/navigation';
+	import { merger } from '$lib/merger/store.svelte';
 	import { review } from '$lib/review/store.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -115,6 +116,17 @@
 		}
 	}
 
+	/**
+	 * The host says it conflicts with its base (BUG-063): Merger can resolve
+	 * that, bringing the base into the pull request's branch to be pushed.
+	 */
+	function resolveInMerger() {
+		if (!request) return;
+		merger.present({ a: request.targetBranch, b: request.sourceBranch, into: 'b' });
+		mergeModalOpen = false;
+		void goto('/merge');
+	}
+
 	async function handleClose() {
 		const ok = await requests.close();
 		if (ok) {
@@ -168,6 +180,12 @@
 
 					{#if request.draft}
 						<Chip>draft</Chip>
+					{/if}
+
+					{#if request.mergeable === false}
+						<Chip active title="The host cannot merge it into {request.targetBranch} as it stands">
+							conflicts
+						</Chip>
 					{/if}
 				</div>
 			</div>
@@ -594,6 +612,19 @@
 			>
 				<h2 class="modal-title">Merge Pull Request #{request.number}</h2>
 
+				{#if request.mergeable === false}
+				<p class="close-warning">
+					{request.sourceBranch} conflicts with {request.targetBranch}, so it cannot be merged as it
+					stands. Resolve it in Merger by bringing {request.targetBranch} into
+					{request.sourceBranch}, then push the branch.
+				</p>
+
+				<div class="modal-actions">
+					<Btn onclick={() => (mergeModalOpen = false)}>Cancel</Btn>
+					<Btn primary onclick={resolveInMerger}>Resolve in Merger</Btn>
+				</div>
+				{:else}
+
 				<div class="verdict-options">
 					<label class="verdict-option" class:selected={mergeMethod === 'merge'}>
 						<input
@@ -674,6 +705,7 @@
 						{requests.merging ? 'Merging…' : 'Confirm Merge'}
 					</Btn>
 				</div>
+				{/if}
 			</div>
 		</div>
 	{/if}

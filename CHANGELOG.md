@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- A pull request the host reports as conflicting with its base is marked in the Review inbox, its preview and its room, and in the Pull requests list and workspace; *Merge* on it explains why and offers *Resolve in Merger* with the pair already chosen, instead of failing at the host.
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed
