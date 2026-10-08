@@ -116,8 +116,8 @@ impl World for Fake {
     fn snapshot(&self) -> Snapshot {
         Snapshot::default()
     }
-    fn restore(&self, _snapshot: &Snapshot) -> Vec<String> {
-        Vec::new()
+    fn restore(&self, _snapshot: &Snapshot) -> Result<Vec<String>, String> {
+        Ok(Vec::new())
     }
 }
 

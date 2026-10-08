@@ -149,7 +149,7 @@ pub trait World: Send {
     fn snapshot(&self) -> guard::Snapshot {
         guard::Snapshot::take(&self.workdir())
     }
-    fn restore(&self, snapshot: &guard::Snapshot) -> Vec<String> {
+    fn restore(&self, snapshot: &guard::Snapshot) -> Result<Vec<String>, String> {
         snapshot.restore(&self.workdir())
     }
 }
@@ -827,7 +827,8 @@ impl Engine {
         };
         let cancel = self.shared.cancel.clone();
         let result = self.driver.run(&ask, &*self.world, &mut hear, &cancel);
-        let refused = self.world.restore(&snapshot);
+        let restored = self.world.restore(&snapshot);
+        let refused = restored.clone().unwrap_or_default();
 
         let reply = match &result {
             Ok(reply) => Some(reply.clone()),
@@ -852,6 +853,13 @@ impl Engine {
             }
         });
 
+        // What it wrote is still there: say so and stop, rather than carry
+        // on as though it had been put back.
+        if let Err(why) = restored {
+            return Err(Halt::Failed(format!(
+                "What it wrote where it was not asked to could not be put back: {why}"
+            )));
+        }
         if self.stop_asked() {
             return Err(Halt::Stopped);
         }

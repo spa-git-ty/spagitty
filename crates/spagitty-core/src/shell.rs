@@ -1903,9 +1903,9 @@ pub fn changed_paths(dir: &Path) -> Result<Vec<(String, String)>> {
     Ok(parse_status_z(&raw))
 }
 
-/// Parse `status --porcelain=v1 -z`. A rename or copy carries its old path
-/// as the next field. A rename's old path is gone from the index, so it is
-/// listed too, as deleted (`D `), for whatever puts the tree back; a copy's
+/// Parse `status --porcelain=v1 -z`. A rename or copy, in either column,
+/// carries its old path as the next field. A rename's old path is gone, so it
+/// is listed too, as deleted (`D `), for whatever puts the tree back; a copy's
 /// is untouched and is skipped.
 pub(crate) fn parse_status_z(raw: &str) -> Vec<(String, String)> {
     let mut out = Vec::new();
@@ -1916,9 +1916,9 @@ pub(crate) fn parse_status_z(raw: &str) -> Vec<(String, String)> {
         }
         let (code, path) = field.split_at(2);
         out.push((code.to_string(), path[1..].to_string()));
-        if code.starts_with('R') || code.starts_with('C') {
+        if code.contains(['R', 'C']) {
             let old = fields.next();
-            if let (true, Some(old)) = (code.starts_with('R'), old) {
+            if let (true, Some(old)) = (code.contains('R'), old) {
                 out.push(("D ".to_string(), old.to_string()));
             }
         }
@@ -1970,11 +1970,19 @@ pub fn restore_paths(dir: &Path, paths: &[String]) -> Result<()> {
     }
     // Unstage first, and check out only what `HEAD` has: a path added to the
     // index is not in `HEAD`, and naming it to `checkout` would fail the call
-    // for every other path in it. What `HEAD` does not have is removed.
-    let mut reset = vec!["reset", "-q", "HEAD", "--"];
+    // for every other path in it. What `HEAD` does not have is removed. Every
+    // path is literal: a file named `*.txt` names that file, not a pattern.
+    let mut reset = vec!["--literal-pathspecs", "reset", "-q", "HEAD", "--"];
     reset.extend(paths.iter().map(String::as_str));
     run(dir, &reset)?;
-    let mut listed = vec!["ls-tree", "-z", "--name-only", "HEAD", "--"];
+    let mut listed = vec![
+        "--literal-pathspecs",
+        "ls-tree",
+        "-z",
+        "--name-only",
+        "HEAD",
+        "--",
+    ];
     listed.extend(paths.iter().map(String::as_str));
     let in_head: std::collections::HashSet<String> = run(dir, &listed)?
         .split('\0')
@@ -1984,12 +1992,15 @@ pub fn restore_paths(dir: &Path, paths: &[String]) -> Result<()> {
     let (back, gone): (Vec<&String>, Vec<&String>) =
         paths.iter().partition(|path| in_head.contains(*path));
     if !back.is_empty() {
-        let mut checkout = vec!["checkout", "HEAD", "--"];
+        let mut checkout = vec!["--literal-pathspecs", "checkout", "HEAD", "--"];
         checkout.extend(back.iter().map(|path| path.as_str()));
         run(dir, &checkout)?;
     }
     for path in gone {
-        let _ = std::fs::remove_file(dir.join(path));
+        match std::fs::remove_file(dir.join(path)) {
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
+            _ => {}
+        }
     }
     Ok(())
 }
@@ -2042,6 +2053,15 @@ mod tests {
                 ("R ".to_string(), "new.rs".to_string()),
                 ("D ".to_string(), "old.rs".to_string()),
                 ("UU".to_string(), "both.rs".to_string()),
+            ]
+        );
+        // An unstaged rename (after `git add -N`) carries its old path too.
+        assert_eq!(
+            parse_status_z(" R b.rs\0a.rs\0 M c.rs\0"),
+            vec![
+                (" R".to_string(), "b.rs".to_string()),
+                ("D ".to_string(), "a.rs".to_string()),
+                (" M".to_string(), "c.rs".to_string()),
             ]
         );
     }

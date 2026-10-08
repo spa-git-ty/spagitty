@@ -94,4 +94,5 @@ it('places a draft written by line, with both ends of its range, or says it cann
 		oldPath: 'src/old.rs'
 	});
 	expect(placeDraft({ ...draft, line: 40 }, LINES, null)).toBeNull();
+	expect(placeDraft({ ...draft, startLine: 40 }, LINES, null)).toBeNull();
 });
