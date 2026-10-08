@@ -14,10 +14,28 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- Settings detects the `agy` CLI and runs it in print mode for Review, Merger
+  and Farm. Codex has a saved **Full Access** option in Settings → Agents for
+  machines where its sandbox cannot start; sandboxed access remains the default.
+
 ### Fixed
 
 - CI and release builds stop waiting for a stalled Rust cache download: each segment has a two-minute limit and each cache step has a five-minute limit, after which Cargo compiles dependencies and the required checks still run.
 - A Gemini agent from Google AI Studio no longer gets "Bad request". Gemini 3 and thinking models sign each tool call and refuse the next turn unless the signature comes back, so Spagitty now sends back each signature on the part that carried it. Also fixed: Gemini's `default_api:` tool-name prefix, a tool that takes nothing, an empty turn in the history, a reply cut off while thinking, an error that arrives wrapped in a list, and *Test* running out of output allowance on a thinking model.
+- Codex's Settings test can run in a temporary directory, and assignments
+  explicitly use their scratch worktree. Headless runs use current CLI flags.
+  A Windows sandbox startup failure stops a review step with its error instead
+  of allowing an empty review to count as completed.
+- Oh My Pi is detected as `omp`, uses print mode, and can find Bun when it was
+  installed through npm. Detection and execution also include standard user
+  installation directories that may be absent from a desktop app's PATH.
+- Settings' local-agent test requires an answer, so a CLI that exits zero with
+  a configuration error is shown as failed with its message.
+- A file the agent finishes reviewing is marked viewed against the version it
+  read. Failed, unfinished and stale steps do not tick files; manually unticking
+  a completed file is preserved when its assignment is synced again.
 
 ## [2.0.1] - 2026-10-11
 

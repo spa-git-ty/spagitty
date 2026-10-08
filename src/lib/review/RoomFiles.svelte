@@ -117,8 +117,7 @@
 </aside>
 
 <style>
-	/* The agent's marks (2.0): its colour and its hexagon, kept apart from
-	   the viewed tick, which only a person sets. */
+	/* Findings keep the agent's colour and hexagon beside the viewed tick. */
 	.found,
 	.agent-mark,
 	.agent-legend {

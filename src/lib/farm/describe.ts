@@ -37,6 +37,7 @@ export const PROVIDER_LABELS: Record<AgentProvider, string> = {
 	codex: 'Codex',
 	cursor: 'Cursor',
 	ohMyPi: 'Oh My Pi',
+	agy: 'agy',
 	custom: 'Custom'
 };
 
@@ -441,7 +442,7 @@ export function agentName(id: string | null | undefined, agents: AgentStatus[]):
 	);
 }
 export function agentColour(agent: AgentDefinition | undefined): string {
-	return `var(--${({ claudeCode: 'lane-1', codex: 'lane-5', cursor: 'lane-4', ohMyPi: 'lane-3', custom: 'muted' } as const)[agent?.provider ?? 'custom']})`;
+	return `var(--${({ claudeCode: 'lane-1', codex: 'lane-5', cursor: 'lane-4', ohMyPi: 'lane-3', agy: 'lane-2', custom: 'muted' } as const)[agent?.provider ?? 'custom']})`;
 }
 export function agentMonogram(agent: AgentDefinition | undefined): string {
 	if (!agent) return '—';
@@ -451,6 +452,7 @@ export function agentMonogram(agent: AgentDefinition | undefined): string {
 			codex: 'CX',
 			cursor: 'CU',
 			ohMyPi: 'PI',
+			agy: 'AGY',
 			custom: agent.displayName.slice(0, 2).toUpperCase()
 		} as const
 	)[agent.provider];

@@ -57,14 +57,19 @@ impl AgentAdapter for CodexAdapter {
     }
 
     fn command(&self, definition: &AgentDefinition, request: &AgentRunRequest) -> AgentCommand {
-        let mut args = vec!["exec".to_string()];
+        let mut args = vec![
+            "exec".to_string(),
+            "--skip-git-repo-check".into(),
+            "--cd".into(),
+            request.workdir.to_string_lossy().into_owned(),
+            "-c".into(),
+            "approval_policy=\"never\"".into(),
+        ];
 
         if request.unattended {
-            // Sandboxing is the farm's job, not the provider's: the agent is
-            // already confined to a worktree of its own. Asking Codex to also
-            // sandbox would stop it running the repository's own test command,
-            // which is the whole point of the verification step.
-            args.push("--full-auto".into());
+            // Headless execution cannot answer approval prompts. Keep the
+            // sandbox; a worktree alone is not an OS security boundary.
+            args.extend(["--sandbox".into(), "workspace-write".into()]);
         }
 
         args.extend(definition.extra_args.iter().cloned());
@@ -116,12 +121,28 @@ mod tests {
             .command(&definition(), &request(true))
             .args
             .iter()
-            .any(|arg| arg == "--full-auto"));
+            .any(|arg| arg == "workspace-write"));
         assert!(!CodexAdapter
             .command(&definition(), &request(false))
             .args
             .iter()
-            .any(|arg| arg == "--full-auto"));
+            .any(|arg| arg == "workspace-write"));
+    }
+
+    #[test]
+    fn temporary_directories_and_scratch_worktrees_can_start_headless() {
+        let out = CodexAdapter.command(&definition(), &request(false));
+        assert!(out.args.iter().any(|arg| arg == "--skip-git-repo-check"));
+        assert!(out
+            .args
+            .windows(2)
+            .any(|args| args == ["--cd", "/tmp/task-2"]));
+        assert!(out
+            .args
+            .iter()
+            .any(|arg| arg == "approval_policy=\"never\""));
+        assert!(!out.args.iter().any(|arg| arg == "--full-auto"));
+        assert!(!out.args.iter().any(|arg| arg == "danger-full-access"));
     }
 
     #[test]

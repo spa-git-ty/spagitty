@@ -14,6 +14,7 @@ vi.mock('./api', () => ({
 	snapshot: vi.fn(),
 	list: vi.fn(() => Promise.resolve([])),
 	setJobs: vi.fn(() => Promise.resolve()),
+	setCodexFullAccess: vi.fn(() => Promise.resolve()),
 	setRules: vi.fn(() => Promise.resolve()),
 	setDefaults: vi.fn(() => Promise.resolve()),
 	remove: vi.fn(() => Promise.resolve()),
@@ -48,6 +49,18 @@ beforeEach(() => {
 });
 
 describe('the section', () => {
+	it('saves Codex Full Access and shows its scope', async () => {
+		agents.reset(aSnapshot({ local: [aLocal({ id: 'codex', name: 'Codex', provider: 'codex' })] }));
+		const view = render(AgentsSection, {});
+		expect(view.text()).not.toContain('Codex commands can access');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Full Access')!);
+		await vi.waitFor(() => expect(api.setCodexFullAccess).toHaveBeenCalledWith(true));
+		agents.reset(aSnapshot({ codexFullAccess: true, local: [aLocal({ id: 'codex', name: 'Codex', provider: 'codex' })] }));
+		flushSync();
+		expect(view.text()).toContain('Codex commands can access files outside the repository and use the network.');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Sandboxed')!);
+		await vi.waitFor(() => expect(api.setCodexFullAccess).toHaveBeenCalledWith(false));
+	});
 	it('lists what detection found, with versions and paths, and what was not', () => {
 		const view = render(AgentsSection, {});
 		expect(view.text()).toContain('On this machine');

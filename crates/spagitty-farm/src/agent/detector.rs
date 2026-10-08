@@ -39,7 +39,52 @@ const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 /// The first entry on this process's `PATH` that holds an executable named one
 /// of `names`.
 pub fn find(names: &[&str]) -> Option<PathBuf> {
-    find_in(&std::env::var_os("PATH")?, names)
+    find_in(&search_path()?, names)
+}
+
+/// Desktop apps can inherit an older PATH than a terminal. Include standard
+/// per-user CLI installs, after PATH, and Bun's npm-installed native runtime.
+/// The same path is used for probing and execution so a Bun shim can run.
+pub fn search_path() -> Option<std::ffi::OsString> {
+    let base = std::env::var_os("PATH").unwrap_or_default();
+    let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
+    let mut extra = Vec::new();
+    if let Some(home) = home {
+        let home = PathBuf::from(home);
+        extra.extend([home.join(".bun/bin"), home.join(".local/bin")]);
+    }
+    if let Some(bun) = std::env::var_os("BUN_INSTALL") {
+        extra.push(PathBuf::from(bun).join("bin"));
+    }
+    #[cfg(windows)]
+    {
+        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+            extra.push(PathBuf::from(local).join("agy/bin"));
+        }
+        if let Some(roaming) = std::env::var_os("APPDATA") {
+            extra.push(PathBuf::from(roaming).join("npm"));
+        }
+    }
+    expanded_path(&base, extra)
+}
+
+fn expanded_path(base: &std::ffi::OsStr, extra: Vec<PathBuf>) -> Option<std::ffi::OsString> {
+    let mut dirs: Vec<PathBuf> = std::env::split_paths(base).collect();
+    for dir in extra {
+        if dir.is_dir() && !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+    let runtimes: Vec<PathBuf> = dirs
+        .iter()
+        .map(|dir| dir.join("node_modules/bun/bin"))
+        .filter(|dir| {
+            dir.join(if cfg!(windows) { "bun.exe" } else { "bun" })
+                .is_file()
+        })
+        .collect();
+    dirs.extend(runtimes);
+    std::env::join_paths(dirs).ok()
 }
 
 /// The same search against a `PATH` supplied by the caller.
@@ -58,16 +103,16 @@ pub fn find(names: &[&str]) -> Option<PathBuf> {
 pub fn find_in(path: &std::ffi::OsStr, names: &[&str]) -> Option<PathBuf> {
     for name in names {
         for directory in std::env::split_paths(path) {
-            let candidate = directory.join(name);
-            if is_executable(&candidate) {
-                return Some(candidate);
-            }
             // Windows keeps the extension out of the command name.
             for extension in EXTENSIONS {
                 let candidate = directory.join(format!("{name}{extension}"));
                 if is_executable(&candidate) {
                     return Some(candidate);
                 }
+            }
+            let candidate = directory.join(name);
+            if is_executable(&candidate) {
+                return Some(candidate);
             }
         }
     }
@@ -153,6 +198,7 @@ pub fn probe(path: &Path, args: &[&str]) -> AgentAvailability {
 fn run_briefly(path: &Path, args: &[&str]) -> Result<String, String> {
     let mut child = spagitty_core::shell::program(path)
         .args(args)
+        .env("PATH", search_path().unwrap_or_default())
         // A version probe must never wait on a prompt. Same reasoning as
         // `GIT_TERMINAL_PROMPT=0` in `spagitty_core::shell`.
         .stdin(std::process::Stdio::null())
@@ -211,6 +257,27 @@ fn first_line(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn desktop_detection_includes_install_dirs_and_bun_runtime() {
+        let temp = tempfile::tempdir().unwrap();
+        let installed = temp.path().join(".bun/bin");
+        let npm = temp.path().join("npm");
+        let runtime = npm.join("node_modules/bun/bin");
+        std::fs::create_dir_all(&installed).unwrap();
+        std::fs::create_dir_all(&runtime).unwrap();
+        std::fs::write(
+            runtime.join(if cfg!(windows) { "bun.exe" } else { "bun" }),
+            "",
+        )
+        .unwrap();
+        let base = std::env::join_paths([&npm]).unwrap();
+        let path = expanded_path(&base, vec![installed.clone(), npm.clone()]).unwrap();
+        assert_eq!(
+            std::env::split_paths(&path).collect::<Vec<_>>(),
+            [npm, installed, runtime]
+        );
+    }
 
     /// A file on disk with the right name and the execute bit set.
     ///

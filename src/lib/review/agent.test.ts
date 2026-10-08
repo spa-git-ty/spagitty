@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { aFinding, aReview, aSnapshot } from '../../testing/agent-fixtures';
+import { aFinding, aReview, aSnapshot, aStep } from '../../testing/agent-fixtures';
 import { request } from '../../testing/git-fixtures';
 
 vi.mock('$lib/api');
@@ -21,7 +21,7 @@ import * as api from '$lib/api';
 import * as agentsApi from '$lib/agents/api';
 import { agents } from '$lib/agents/store.svelte';
 import { control as repoControl } from '../../testing/repo-store.svelte';
-import { draftOf, marked, reviewBody, sendable, syncRecord } from './agent-drafts';
+import { draftOf, marked, reviewBody, sendable, syncRecord, syncViewed } from './agent-drafts';
 import * as work from './agent.svelte';
 import { emptyRecord, type PendingComment } from './record';
 import { review } from './store.svelte';
@@ -43,6 +43,35 @@ beforeEach(() => {
 });
 
 describe('a finding as a pending comment', () => {
+	it('ticks only completed files against their blobs, once, and ignores newer heads', () => {
+		const record = emptyRecord();
+		const assignment = aReview({ steps: [
+			aStep({ index: 0, kind: { kind: 'file', path: 'done.rs' }, state: 'done' }),
+			aStep({ index: 1, kind: { kind: 'file', path: 'waiting.rs' }, state: 'waiting' }),
+			aStep({ index: 2, kind: { kind: 'file', path: 'failed.rs' }, state: 'failed' }),
+			aStep({ index: 3, kind: { kind: 'file', path: 'deleted.rs' }, state: 'done' })
+		] });
+		const files = ['done.rs', 'waiting.rs', 'failed.rs', 'deleted.rs'].map((path) => ({
+			path, newBlob: path === 'deleted.rs' ? null : `blob:${path}`, oldBlob: 'old'
+		})) as Parameters<typeof syncViewed>[2];
+		expect(syncViewed(record, assignment, files)).toBe(true);
+		expect(record.viewed).toEqual({ 'done.rs': 'blob:done.rs', 'deleted.rs': 'gone:old' });
+		delete record.viewed['done.rs'];
+		expect(syncViewed(record, assignment, files)).toBe(false);
+		expect(record.viewed['done.rs']).toBeUndefined();
+		const newer = { ...emptyRecord(), headSha: 'new-head' };
+		expect(syncViewed(newer, assignment, files)).toBe(false);
+	});
+
+	it('persists completed file ticks when an assignment event arrives', async () => {
+		vi.mocked(api.reviewFiles).mockResolvedValue([{ path: 'done.rs', newBlob: 'blob-done' }] as never);
+		work.follow();
+		agents.absorb(aReview({ repo: '/work/spagitty', proposals: [], steps: [
+			aStep({ kind: { kind: 'file', path: 'done.rs' }, state: 'done' })
+		] }));
+		await vi.waitFor(() => expect(review.recordAt(KEY)?.viewed).toEqual({ 'done.rs': 'blob-done' }));
+		expect(api.reviewFiles).toHaveBeenCalledWith('aaa', 'bbb');
+	});
 	it('is placed by side and number, against the head it was made on', () => {
 		const draft = draftOf(aReview(), comment(aFinding({}, { line: 7 })));
 		expect(draft).toMatchObject({ id: 'agent:review-1:p2-0', line: 7, side: 'RIGHT', headSha: 'bbb' });

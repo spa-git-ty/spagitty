@@ -210,6 +210,7 @@ pub fn run() {
             // its header.
             agents::agents_snapshot,
             agents::agents_set_jobs,
+            agents::agents_set_codex_full_access,
             agents::agents_save_custom,
             agents::agents_take_offer,
             agents::agents_save_remote,

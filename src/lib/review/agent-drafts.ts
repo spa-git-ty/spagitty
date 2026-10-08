@@ -9,6 +9,7 @@
 import type { ReviewKey } from '../api';
 import type { Assignment, Finding, Proposal } from '$lib/agents/types';
 import type { AgentNote, PendingComment, ReviewRecord } from './record';
+import type { FileChange } from '../types';
 
 /** A pending comment's id for a proposal: the same every time it is synced. */
 export function draftId(assignment: string, proposal: string): string {
@@ -81,6 +82,32 @@ export function syncRecord(record: ReviewRecord, a: Assignment): boolean {
 			record.drafts[at] = { ...record.drafts[at], agent: { ...note, state: 'applied' } };
 			changed = true;
 		}
+	}
+	return changed;
+}
+
+/** Completed file steps still owed a viewed tick. */
+export function completedFiles(record: ReviewRecord, a: Assignment) {
+	return a.steps.filter((step) => step.kind.kind === 'file' && step.state === 'done'
+		&& !record.agentViewedSteps?.includes(`${a.id}:${step.index}`));
+}
+
+/** Tick the blobs the agent actually read, without ticking a newer head. */
+export function syncViewed(record: ReviewRecord, a: Assignment, files: FileChange[]): boolean {
+	if (a.target.kind !== 'review' || (record.headSha && record.headSha !== a.target.head)) return false;
+	let changed = false;
+	for (const step of completedFiles(record, a)) {
+		if (step.kind.kind !== 'file') continue;
+		const path = step.kind.path;
+		const file = files.find((file) => file.path === path);
+		if (!file) continue;
+		record.viewed[file.path] = file.newBlob ?? (file.oldBlob ? `gone:${file.oldBlob}` : `head:${a.target.head}`);
+		(record.agentViewedSteps ??= []).push(`${a.id}:${step.index}`);
+		changed = true;
+	}
+	if (changed) {
+		record.headSha = a.target.head;
+		record.files = files.length;
 	}
 	return changed;
 }

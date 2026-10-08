@@ -79,6 +79,7 @@ export interface RepoRules {
 }
 
 export interface AgentsSnapshot {
+	codexFullAccess: boolean;
 	local: LocalAgent[];
 	remote: RemoteAgent[];
 	defaults: Defaults;
