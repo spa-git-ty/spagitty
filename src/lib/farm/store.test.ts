@@ -4,6 +4,8 @@
  * Unit tests for the Farm store (FEAT-073).
  */
 
+import { agents as machineAgents } from '$lib/agents/store.svelte';
+import { aLocal, aSnapshot } from '../../testing/agent-fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Farm, FarmSnapshot, Task } from './types';
 
@@ -226,6 +228,11 @@ describe('farmStore.open & getters', () => {
 		// Usable agents filter by enabled && available
 		expect(farmStore.usable.length).toBe(1);
 		expect(farmStore.usable[0].definition.id).toBe('claude-1');
+		// ...and by the machine's word: switched off for the farm in
+		// Settings › Agents, it is not offered (2.0).
+		machineAgents.reset(aSnapshot({ local: [aLocal({ id: 'claude-1', jobs: { review: true, merge: true, farm: false } })] }));
+		expect(farmStore.usable).toEqual([]);
+		machineAgents.reset(null);
 
 		expect(farmStore.undetected).toEqual(['ohMyPi']);
 		expect(farmStore.policy.sources.map((s) => s.path)).toEqual(['AGENTS.md']);
