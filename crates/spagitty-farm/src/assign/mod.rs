@@ -19,6 +19,7 @@
 //! record.rs    the record: who decided what
 //! engine.rs    the steps, the gates, the controls
 //! local.rs     a command-line agent, as a driver
+//! remote.rs    a model behind an API, as a driver: Spagitty is its loop
 //! world.rs     the repository, as the engine reaches it
 //! ```
 
@@ -30,6 +31,7 @@ pub mod local;
 pub mod prompt;
 pub mod protocol;
 pub mod record;
+pub mod remote;
 pub mod rules;
 pub mod world;
 
