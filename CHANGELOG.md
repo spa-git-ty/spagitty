@@ -14,6 +14,15 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserved and echoed `thoughtSignature` / `thought_signature` for Google
+  Gemini thinking models (such as Gemini 3 and 2.5) across multi-turn tool
+  exchanges, preventing 400 validation failures.
+- Handled the `default_api:` tool prefix emitted by Gemini function calls so
+  remote tools execute and narrate cleanly while preserving the original name
+  in function responses.
+
 ## [2.0.0] - 2026-10-08
 
 A MAJOR: agents can review and merge, and you choose how far each one goes

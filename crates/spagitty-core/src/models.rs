@@ -112,11 +112,21 @@ pub enum Part {
     Text {
         text: String,
     },
+    /// The model's reasoning/thought trace (e.g. Gemini thinking models).
+    #[serde(rename_all = "camelCase")]
+    Thought {
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        signature: Option<String>,
+    },
     /// The model asks for a tool.
+    #[serde(rename_all = "camelCase")]
     Call {
         id: String,
         name: String,
         input: Value,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        signature: Option<String>,
     },
     /// Spagitty's answer to a call.
     #[serde(rename_all = "camelCase")]
@@ -190,7 +200,7 @@ impl Turn {
         self.parts
             .iter()
             .filter_map(|part| match part {
-                Part::Call { id, name, input } => Some((id.clone(), name.clone(), input.clone())),
+                Part::Call { id, name, input, .. } => Some((id.clone(), name.clone(), input.clone())),
                 _ => None,
             })
             .collect()
@@ -346,17 +356,18 @@ fn anthropic_message(message: &Message) -> Value {
     let content: Vec<Value> = message
         .parts
         .iter()
-        .map(|part| match part {
-            Part::Text { text } => json!({"type": "text", "text": text}),
-            Part::Call { id, name, input } => {
-                json!({"type": "tool_use", "id": id, "name": name, "input": input})
+        .filter_map(|part| match part {
+            Part::Text { text } => Some(json!({"type": "text", "text": text})),
+            Part::Thought { .. } => None,
+            Part::Call { id, name, input, .. } => {
+                Some(json!({"type": "tool_use", "id": id, "name": name, "input": input}))
             }
             Part::Result {
                 id,
                 content,
                 is_error,
                 ..
-            } => json!({"type": "tool_result", "tool_use_id": id, "content": content, "is_error": is_error}),
+            } => Some(json!({"type": "tool_result", "tool_use_id": id, "content": content, "is_error": is_error})),
         })
         .collect();
     json!({"role": role(message.role), "content": content})
@@ -376,7 +387,7 @@ fn openai_messages(message: &Message) -> Vec<Value> {
         .parts
         .iter()
         .filter_map(|p| match p {
-            Part::Call { id, name, input } => Some(json!({
+            Part::Call { id, name, input, .. } => Some(json!({
                 "id": id, "type": "function",
                 "function": {"name": name, "arguments": input.to_string()}
             })),
@@ -404,11 +415,43 @@ fn google_message(message: &Message) -> Value {
         .iter()
         .map(|part| match part {
             Part::Text { text } => json!({"text": text}),
-            Part::Call { name, input, .. } => {
-                json!({"functionCall": {"name": name, "args": input}})
+            Part::Thought { text, signature } => {
+                let mut obj = json!({"text": text, "thought": true});
+                if let Some(sig) = signature {
+                    obj["thoughtSignature"] = json!(sig);
+                }
+                obj
             }
-            Part::Result { name, content, .. } => {
-                json!({"functionResponse": {"name": name, "response": {"content": content}}})
+            Part::Call {
+                id,
+                name,
+                input,
+                signature,
+            } => {
+                let mut call = json!({"name": name, "args": input});
+                if !id.is_empty() && !id.starts_with("call-") {
+                    call["id"] = json!(id);
+                }
+                if let Some(sig) = signature {
+                    call["thoughtSignature"] = json!(sig);
+                }
+                let mut obj = json!({"functionCall": call});
+                if let Some(sig) = signature {
+                    obj["thoughtSignature"] = json!(sig);
+                }
+                obj
+            }
+            Part::Result {
+                id,
+                name,
+                content,
+                ..
+            } => {
+                let mut fr = json!({"name": name, "response": {"content": content}});
+                if !id.is_empty() && !id.starts_with("call-") {
+                    fr["id"] = json!(id);
+                }
+                json!({"functionResponse": fr})
             }
         })
         .collect();
@@ -473,6 +516,7 @@ pub fn read_turn(provider: Provider, value: &Value) -> Option<Turn> {
                         id: block.get("id")?.as_str()?.to_string(),
                         name: block.get("name")?.as_str()?.to_string(),
                         input: block.get("input").cloned().unwrap_or(json!({})),
+                        signature: None,
                     }),
                     _ => None,
                 })
@@ -521,6 +565,7 @@ pub fn read_turn(provider: Provider, value: &Value) -> Option<Turn> {
                         .to_string(),
                     name: function.get("name")?.as_str()?.to_string(),
                     input: serde_json::from_str(arguments).unwrap_or(json!({})),
+                    signature: None,
                 });
             }
             let has_calls = parts.iter().any(|p| matches!(p, Part::Call { .. }));
@@ -541,26 +586,59 @@ pub fn read_turn(provider: Provider, value: &Value) -> Option<Turn> {
         }
         Provider::Google => {
             let candidate = value.get("candidates")?.as_array()?.first()?;
-            let mut parts = Vec::new();
-            for (index, part) in candidate
+            let content_parts = candidate
                 .get("content")
                 .and_then(|c| c.get("parts"))
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-                .enumerate()
-            {
-                if let Some(text) = part.get("text").and_then(Value::as_str) {
-                    parts.push(Part::Text {
-                        text: text.to_string(),
-                    });
-                } else if let Some(call) = part.get("functionCall") {
+                .and_then(Value::as_array)?;
+
+            // Fallback thought signature from anywhere in the candidate's turn.
+            let turn_sig = content_parts.iter().find_map(|p| {
+                p.get("thoughtSignature")
+                    .or_else(|| p.get("thought_signature"))
+                    .or_else(|| p.get("functionCall").and_then(|c| c.get("thoughtSignature")))
+                    .or_else(|| p.get("functionCall").and_then(|c| c.get("thought_signature")))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            });
+
+            let mut parts = Vec::new();
+            for (index, part) in content_parts.iter().enumerate() {
+                if let Some(call) = part.get("functionCall") {
+                    let sig = part
+                        .get("thoughtSignature")
+                        .or_else(|| part.get("thought_signature"))
+                        .or_else(|| call.get("thoughtSignature"))
+                        .or_else(|| call.get("thought_signature"))
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .or_else(|| turn_sig.clone());
+                    let id = call
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .unwrap_or_else(|| format!("call-{index}"));
                     parts.push(Part::Call {
-                        // Google gives a call no id; one is made up so the
-                        // answer can be matched to it.
-                        id: format!("call-{index}"),
+                        id,
                         name: call.get("name")?.as_str()?.to_string(),
                         input: call.get("args").cloned().unwrap_or(json!({})),
+                        signature: sig,
+                    });
+                } else if part.get("thought").and_then(Value::as_bool) == Some(true) {
+                    if let Some(text) = part.get("text").and_then(Value::as_str) {
+                        let sig = part
+                            .get("thoughtSignature")
+                            .or_else(|| part.get("thought_signature"))
+                            .and_then(Value::as_str)
+                            .map(str::to_string)
+                            .or_else(|| turn_sig.clone());
+                        parts.push(Part::Thought {
+                            text: text.to_string(),
+                            signature: sig,
+                        });
+                    }
+                } else if let Some(text) = part.get("text").and_then(Value::as_str) {
+                    parts.push(Part::Text {
+                        text: text.to_string(),
                     });
                 }
             }
@@ -638,6 +716,7 @@ mod tests {
                         id: "c1".into(),
                         name: "read_file".into(),
                         input: json!({"path": "a.rs"}),
+                        signature: None,
                     },
                 ],
             },
@@ -740,6 +819,82 @@ mod tests {
             body["tools"][0]["functionDeclarations"][0]["name"],
             "read_file"
         );
+    }
+
+    #[test]
+    fn google_preserves_and_echoes_thought_signatures() {
+        let google_resp = json!({
+            "candidates": [{
+                "content": {
+                    "parts": [
+                        {
+                            "text": "Planning steps...",
+                            "thought": true,
+                            "thoughtSignature": "thought-sig-123"
+                        },
+                        {
+                            "functionCall": {
+                                "id": "f-1",
+                                "name": "default_api:list_changed_files",
+                                "args": {}
+                            }
+                        }
+                    ]
+                },
+                "finishReason": "STOP"
+            }],
+            "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5}
+        });
+        let turn = read_turn(Provider::Google, &google_resp).unwrap();
+        assert_eq!(turn.stop, Stop::Tools);
+        // Thought text is kept out of user-facing prose.
+        assert_eq!(turn.text(), "");
+        assert_eq!(turn.calls().len(), 1);
+        assert_eq!(turn.calls()[0].1, "default_api:list_changed_files");
+
+        let messages = vec![
+            Message::user("Inspect."),
+            Message {
+                role: Role::Assistant,
+                parts: turn.parts,
+            },
+            Message {
+                role: Role::User,
+                parts: vec![Part::Result {
+                    id: "f-1".into(),
+                    name: "default_api:list_changed_files".into(),
+                    content: "a.rs +1 -0".into(),
+                    is_error: false,
+                }],
+            },
+        ];
+
+        let (_, _, body) = request(&endpoint(Provider::Google), "sys", &messages, &tools(), 1000);
+        let assistant_turn = &body["contents"][1];
+        assert_eq!(assistant_turn["role"], "model");
+        assert_eq!(assistant_turn["parts"][0]["thought"], true);
+        assert_eq!(assistant_turn["parts"][0]["thoughtSignature"], "thought-sig-123");
+        // The functionCall part has the thoughtSignature echoed back.
+        assert_eq!(
+            assistant_turn["parts"][1]["functionCall"]["name"],
+            "default_api:list_changed_files"
+        );
+        assert_eq!(
+            assistant_turn["parts"][1]["thoughtSignature"],
+            "thought-sig-123"
+        );
+        assert_eq!(
+            assistant_turn["parts"][1]["functionCall"]["thoughtSignature"],
+            "thought-sig-123"
+        );
+        // FunctionResponse includes the call id and matching name.
+        let user_turn = &body["contents"][2];
+        assert_eq!(user_turn["role"], "user");
+        assert_eq!(
+            user_turn["parts"][0]["functionResponse"]["name"],
+            "default_api:list_changed_files"
+        );
+        assert_eq!(user_turn["parts"][0]["functionResponse"]["id"], "f-1");
     }
 
     #[test]
