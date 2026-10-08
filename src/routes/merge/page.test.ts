@@ -105,7 +105,8 @@ it('offers every strategy, and says why fast-forward is not one', async () => {
 it('asks again when another branch is picked', async () => {
 	view = render(Page, {});
 	await vi.waitFor(() => expect(result()).toContain('main gets'));
-	vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast({ b: forecast().b }));
+	// The backend names each side as it was asked for.
+	vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast({ b: { ...forecast().b, name: 'old' } }));
 
 	click(view.all('button[aria-label^="Branch B"]')[0]);
 	const entry = await vi.waitFor(() => {
@@ -121,15 +122,13 @@ it('asks again when another branch is picked', async () => {
 });
 
 it('a remote branch cannot receive the merge', async () => {
-	vi.mocked(api.mergerForecast).mockResolvedValue(
-		forecast({ b: { ...forecast().b, name: 'origin/main', kind: 'remote' } })
-	);
+	vi.mocked(api.mergerForecast).mockResolvedValue(forecast({ b: { ...forecast().b, kind: 'remote' } }));
 	view = render(Page, {});
 	await vi.waitFor(() => expect(result()).toContain('main gets'));
 
 	click(view.all('button.segment')[1]);
 	await vi.waitFor(() =>
-		expect(result()).toContain('origin/main is a remote branch; merge into a new branch instead')
+		expect(result()).toContain('feat/tab-drag is a remote branch; merge into a new branch instead')
 	);
 });
 
@@ -240,4 +239,31 @@ it('opens on the pair the graph’s drag asked for, the dragged branch coming in
 	view = render(Page, {});
 	await vi.waitFor(() => expect(api.mergerForecast).toHaveBeenCalledWith('feat/tab-drag', 'main'));
 	expect(merger.into).toBe('a');
+});
+
+it('does not show the previous pair’s plan under a new branch name (BUG-061)', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(result()).toContain('4 conflicts in 3 files'));
+
+	// The next forecast takes its time.
+	let answer!: (value: ReturnType<typeof forecast>) => void;
+	vi.mocked(api.mergerForecast).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+	merger.pickB('old');
+	await vi.waitFor(() => expect(result()).toContain('Working out the merge…'));
+	expect(result()).not.toContain('feat/tab-drag');
+	expect(view.all('button').find((b) => text(b) === 'Resolve 4 conflicts')).toBeUndefined();
+	expect(view.all('button').find((b) => text(b) === 'Merge now')).toBeUndefined();
+
+	answer(forecast({ b: { ...forecast().b, name: 'old' }, conflicts: 0, files: [] }));
+	await vi.waitFor(() => expect(result()).not.toContain('Working out the merge…'));
+	expect(result()).toContain('old');
+});
+
+it('changing only the strategy keeps the plan without a loader (BUG-061)', async () => {
+	view = render(Page, {});
+	await vi.waitFor(() => expect(result()).toContain('4 conflicts in 3 files'));
+	merger.setStrategy('squash');
+	await vi.waitFor(() => expect(result()).toContain('after the squash'));
+	expect(result()).not.toContain('Working out the merge…');
+	expect(api.mergerForecast).toHaveBeenCalledTimes(1);
 });
