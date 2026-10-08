@@ -4,8 +4,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { click, render } from '../../testing/mount';
-import type { PullRequest } from '$lib/types';
+import type { FileDiff, PullRequest } from '$lib/types';
 
+import PRDiffPane from './PRDiffPane.svelte';
 import RequestDetail from './RequestDetail.svelte';
 import RequestRow from './RequestRow.svelte';
 import { CHECK_LABELS, REVIEW_LABELS, requests } from './store.svelte';
@@ -253,6 +254,45 @@ describe('RequestDetail', () => {
 		}
 		view.destroy();
 	});
+});
+
+describe('PRDiffPane', () => {
+	const file: FileDiff = {
+		path: 'src/Playback.kt',
+		status: 'modified',
+		binary: false,
+		tooLarge: false,
+		added: 2,
+		removed: 1,
+		hunks: [
+			{
+				oldStart: 1,
+				oldLines: 2,
+				newStart: 1,
+				newLines: 3,
+				header: '@@ -1,2 +1,3 @@',
+				lines: [
+					{ origin: 'context', old: 1, new: 1, text: '/* a comment' },
+					{ origin: 'removed', old: 2, new: null, text: '   that ends here */' },
+					{ origin: 'added', old: null, new: 2, text: '   that ends */' },
+					{ origin: 'added', old: null, new: 3, text: 'val code = "x"' }
+				]
+			}
+		]
+	};
+
+	for (const view of ['unified', 'split'] as const) {
+		it(`colours the code in the ${view} view`, () => {
+			const pane = render(PRDiffPane, { file, path: file.path, error: null, loading: false, view });
+
+			const coloured = (kind: string) => pane.all(`.tok-${kind}`).map((span) => span.textContent);
+			expect(coloured('keyword')).toContain('val');
+			expect(coloured('string')).toContain('"x"');
+			// A comment opened on one line stays a comment on the next.
+			expect(coloured('comment')).toContain('   that ends */');
+			pane.destroy();
+		});
+	}
 });
 
 describe('the promises this screen makes', () => {

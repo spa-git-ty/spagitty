@@ -14,6 +14,11 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- The pull request diff colours its code, in both the unified and the split view,
+  the same way as the Diff screen.
+
 ## [1.3.0] - 2026-10-08
 
 ### Added
