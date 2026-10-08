@@ -29,7 +29,9 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 # Pull request notifications in the operating system's notification centre
 # (FEAT-114). Called from Rust only, so there is no frontend package.
-tauri-plugin-notification = "2"
+# Held at 2.4: 2.5 needs tauri 2.12, and the CLI refuses a build whose
+# Rust crates and `@tauri-apps/api` differ in minor version.
+tauri-plugin-notification = "~2.4"
 serde = { workspace = true }
 serde_json = { workspace = true }
 notify = "8"
