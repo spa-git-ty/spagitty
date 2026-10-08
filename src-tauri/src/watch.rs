@@ -17,7 +17,8 @@
 //! thousands of ignored files asks for nothing.
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::ffi::OsString;
+use std::path::{Component, Path, PathBuf, Prefix};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -119,7 +120,9 @@ fn canonical(path: &Path) -> PathBuf {
 /// `\\?\UNC\server\share` is `\\server\share`. Any other path is itself.
 fn plain(path: &Path) -> PathBuf {
     let Some(text) = path.to_str() else {
-        return path.to_path_buf();
+        // Not Unicode, which Windows allows: take the prefix off by its
+        // components rather than leave it on and miss every event.
+        return plain_parts(path);
     };
     if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
         return PathBuf::from(format!(r"\\{rest}"));
@@ -128,6 +131,45 @@ fn plain(path: &Path) -> PathBuf {
         return PathBuf::from(rest);
     }
     path.to_path_buf()
+}
+
+/// [`plain`] for a path that is not Unicode. Only Windows parses a prefix
+/// component; anywhere else the path comes back as it went in.
+fn plain_parts(path: &Path) -> PathBuf {
+    let mut parts = path.components();
+    let Some(Component::Prefix(prefix)) = parts.next() else {
+        return path.to_path_buf();
+    };
+    let mut out = match prefix.kind() {
+        Prefix::VerbatimDisk(drive) => PathBuf::from(format!("{}:", char::from(drive))),
+        Prefix::VerbatimUNC(server, share) => {
+            let mut unc = OsString::from(r"\\");
+            unc.push(server);
+            unc.push(r"\");
+            unc.push(share);
+            PathBuf::from(unc)
+        }
+        _ => return path.to_path_buf(),
+    };
+    out.extend(parts);
+    out
+}
+
+/// What follows `base` in `full`, compared without regard to ASCII case, when
+/// `full` is `base` or lies under it. Whole components only: `.gitignore` is
+/// not inside `.git`.
+fn fold_inside<'a>(full: &'a str, base: &str) -> Option<&'a str> {
+    if full.len() < base.len()
+        || !full.is_char_boundary(base.len())
+        || !full[..base.len()].eq_ignore_ascii_case(base)
+    {
+        return None;
+    }
+    let rest = &full[base.len()..];
+    if !rest.is_empty() && !rest.starts_with(['\\', '/']) {
+        return None;
+    }
+    Some(rest.trim_start_matches(['\\', '/']))
 }
 
 /// Where `path` is inside `git_dir`, if it is: both without a verbatim
@@ -140,14 +182,7 @@ fn inside(path: &Path, git_dir: &Path) -> Option<PathBuf> {
         return Some(rest.to_path_buf());
     }
     if cfg!(windows) {
-        let (full, base) = (path.to_str()?, git_dir.to_str()?);
-        if full.len() > base.len()
-            && full.is_char_boundary(base.len())
-            && full[..base.len()].eq_ignore_ascii_case(base)
-        {
-            let rest = full[base.len()..].trim_start_matches(['\\', '/']);
-            return Some(PathBuf::from(rest));
-        }
+        return fold_inside(path.to_str()?, git_dir.to_str()?).map(PathBuf::from);
     }
     None
 }
@@ -443,6 +478,48 @@ mod tests {
             candidates.is_empty(),
             "a write in .git is not a working-tree change"
         );
+    }
+
+    /// The case-blind comparison Windows falls back on takes whole components:
+    /// the git directory itself, in another case, is inside it; a file whose
+    /// name merely starts with `.git` is not.
+    #[test]
+    fn a_case_blind_match_takes_whole_components() {
+        let base = r"C:\work\app\.git";
+        assert_eq!(
+            fold_inside(r"c:\work\app\.git\refs\heads\main", base),
+            Some(r"refs\heads\main")
+        );
+        assert_eq!(fold_inside(r"c:\Work\App\.GIT", base), Some(""));
+        assert_eq!(fold_inside(r"C:\work\app\.gitignore", base), None);
+        assert_eq!(fold_inside(r"C:\work\app\.git-blame-ignore", base), None);
+        assert_eq!(fold_inside(r"C:\work", base), None);
+    }
+
+    /// Anywhere but Windows a path has no prefix component to take off, so a
+    /// path that is not Unicode comes back as it is.
+    #[cfg(unix)]
+    #[test]
+    fn a_path_that_is_not_unicode_comes_back_as_it_is() {
+        use std::os::unix::ffi::OsStrExt;
+        let odd = Path::new(std::ffi::OsStr::from_bytes(b"/work/\xff/.git"));
+        assert_eq!(plain(odd), odd.to_path_buf());
+    }
+
+    /// On Windows a path that is not Unicode still loses its verbatim prefix.
+    #[cfg(windows)]
+    #[test]
+    fn a_verbatim_path_that_is_not_unicode_loses_its_prefix() {
+        use std::os::windows::ffi::OsStringExt;
+        let mut wide: Vec<u16> = r"\\?\C:\work\".encode_utf16().collect();
+        wide.push(0xD800);
+        wide.extend(r"\.git".encode_utf16());
+        let odd = PathBuf::from(OsString::from_wide(&wide));
+        assert!(odd.to_str().is_none());
+        let mut expected: Vec<u16> = r"C:\work\".encode_utf16().collect();
+        expected.push(0xD800);
+        expected.extend(r"\.git".encode_utf16());
+        assert_eq!(plain(&odd), PathBuf::from(OsString::from_wide(&expected)));
     }
 
     #[test]
