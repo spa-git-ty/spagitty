@@ -34,8 +34,9 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Oh My Pi is detected as `omp`, uses print mode, and can find Bun when it was
   installed through npm. Detection and execution also include standard user
   installation directories that may be absent from a desktop app's PATH.
-- Settings' local-agent test requires an answer, so a CLI that exits zero with
-  a configuration error is shown as failed with its message.
+- Settings' local-agent test reads a temporary file to verify repository access.
+  Configuration and permission errors fail the test even when the CLI exits zero.
+  Test waits for access choices to save, and changing a choice clears its old result.
 - A file the agent finishes reviewing is marked viewed against the version it
   read. Failed, unfinished and stale steps do not tick files; manually unticking
   a completed file is preserved when its assignment is synced again.

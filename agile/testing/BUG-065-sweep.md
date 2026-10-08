@@ -34,6 +34,16 @@ requires the CLI to read that marker without editing the workspace.
   Settings now saves those choices and passes them to Test, Review and Merger;
   no global OMP configuration is changed.
 
+The ignored `agents::tests::live_settings_tests_use_saved_codex_and_agy_permissions`
+test also passed through the actual Settings save and Test handlers. It uses an
+isolated application identifier, preserves the normal CLI authentication environment,
+and requires an unpredictable file marker absent from the prompt. Codex passed
+with saved Full Access in 11,118 ms; agy passed with saved tool approval in 12,915 ms.
+
+```text
+cargo test -p spagitty --lib agents::tests::live_settings_tests_use_saved_codex_and_agy_permissions -- --ignored --nocapture
+```
+
 ```text
 cargo test -p spagitty-farm --test live_cli_access -- --ignored --nocapture
 ```

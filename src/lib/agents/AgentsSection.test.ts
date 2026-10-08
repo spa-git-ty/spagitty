@@ -51,11 +51,40 @@ beforeEach(() => {
 });
 
 describe('the section', () => {
+	it('waits for access settings to save before testing and clears the old error', async () => {
+		const local = [aLocal({ id: 'agy', name: 'agy', provider: 'agy' })];
+		const snapshot = aSnapshot({ local });
+		const load = vi.spyOn(agents, 'load').mockResolvedValueOnce(undefined)
+			.mockImplementationOnce(async () => { agents.reset(aSnapshot({ local, agyAutoApprove: true })); });
+		vi.mocked(api.testLocal).mockResolvedValueOnce({ ok: false, said: 'old permission denial', ms: 10 });
+		let saved!: () => void;
+		vi.mocked(api.setAgyAutoApprove).mockImplementationOnce(() => new Promise<void>((resolve) => { saved = resolve; }));
+		agents.reset(snapshot);
+		const view = render(AgentsSection, {});
+		const test = view.all('button').find((b) => b.textContent?.trim() === 'Test')! as HTMLButtonElement;
+		try {
+			await vi.waitFor(() => expect(test.disabled).toBe(false));
+			click(test);
+			await vi.waitFor(() => expect(view.text()).toContain('old permission denial'));
+			click(view.all('button').find((b) => b.textContent?.trim() === 'Auto-approve tools')!);
+			expect(view.text()).not.toContain('old permission denial');
+			expect(test.disabled).toBe(true);
+			test.click();
+			expect(api.testLocal).toHaveBeenCalledTimes(1);
+			saved();
+			await vi.waitFor(() => expect(test.disabled).toBe(false));
+			await vi.waitFor(() => expect(view.text()).toContain('agy can run commands and access files without asking.'));
+		} finally {
+			load.mockRestore();
+		}
+	});
+
 	it('saves agy tool auto-approval and explains command access', async () => {
 		agents.reset(aSnapshot({ local: [aLocal({ id: 'agy', name: 'agy', provider: 'agy' })] }));
 		const view = render(AgentsSection, {});
 		click(view.all('button').find((b) => b.textContent?.trim() === 'Auto-approve tools')!);
 		await vi.waitFor(() => expect(api.setAgyAutoApprove).toHaveBeenCalledWith(true));
+		await vi.waitFor(() => expect((view.all('button').find((b) => b.textContent?.trim() === 'Configured rules') as HTMLButtonElement).disabled).toBe(false));
 		agents.reset(aSnapshot({ agyAutoApprove: true, local: [aLocal({ id: 'agy', name: 'agy', provider: 'agy' })] }));
 		flushSync();
 		expect(view.text()).toContain('agy can run commands and access files without asking.');
@@ -89,6 +118,7 @@ describe('the section', () => {
 		expect(view.text()).not.toContain('Codex commands can access');
 		click(view.all('button').find((b) => b.textContent?.trim() === 'Full Access')!);
 		await vi.waitFor(() => expect(api.setCodexFullAccess).toHaveBeenCalledWith(true));
+		await vi.waitFor(() => expect((view.all('button').find((b) => b.textContent?.trim() === 'Sandboxed') as HTMLButtonElement).disabled).toBe(false));
 		agents.reset(aSnapshot({ codexFullAccess: true, local: [aLocal({ id: 'codex', name: 'Codex', provider: 'codex' })] }));
 		flushSync();
 		expect(view.text()).toContain('Codex commands can access files outside the repository and use the network.');

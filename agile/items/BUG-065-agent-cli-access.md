@@ -28,8 +28,9 @@ CLI has no built-in adapter. Completed agent file steps leave viewed ticks unset
   Review and Merger use its plan mode; unattended Farm permissions are explicit.
 - Settings offers persisted, opt-in agy tool auto-approval for headless Test,
   Review and Merger. A permission denial fails the assignment with guidance.
-- Settings Test requires its requested answer; a configuration error is not a
-  successful test just because the CLI exits zero.
+- Settings Test requires reading an unpredictable value from a temporary file;
+  a configuration or permission error is not a pass just because the CLI exits zero.
+  Test waits for permission changes to save and clears the previous result.
 - Completed file steps tick the read blob once. Failed or unfinished steps and
   assignments for an older head do not tick files. A person's untick survives sync.
 - Relevant tests, type checks and builds pass. No dependencies are added.

@@ -16,6 +16,8 @@ Persist OMP's selected model and optional profile for fresh background launches;
 expose them in Settings rather than relying on another terminal's active session.
 Persist an opt-in agy auto-approval switch for headless tool requests, preserving
 plan mode and surfacing permission denials as failed assignment steps.
+Share startup-error handling with Settings Test, verify actual file access there,
+and prevent Test from racing an unsaved permission choice.
 
 Sync completed review file steps into the room's viewed record against their
 blobs, keeping completion ids so manual unticks survive replay. Test stale heads,

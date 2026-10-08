@@ -9,6 +9,8 @@
 - OMP tests cover persisted model/profile arguments in headless commands and
   editing those choices in mounted Settings.
 - Mounted Settings tests cover enabling and disabling Codex Full Access.
+- Settings Test verifies a temporary-file marker, rejects permission failures,
+  and waits for access choices to save while clearing the old result.
 - agy tests cover persisted tool approval, plan/print argument ordering, avoiding
   duplicate approval flags and reporting a headless permission denial as failed.
 - Review tests cover completed-file event persistence, blob marks, deletions,
@@ -17,7 +19,7 @@
 
 ## Results — Windows, 2026-10-08
 
-- `bun run test`: 177 files, 3,670 tests passed with the final changes.
+- `bun run test`: 177 files, 3,671 tests passed with the final changes.
 - Focused Settings, agent sheets, review-agent, review-record and provider-description
   suites: 94 tests passed after adding OMP model/profile configuration. Settings
   and agent sheets passed 32 tests after adding agy auto-approval.
@@ -27,10 +29,11 @@
 - `cargo clippy --workspace --all-targets -- -D warnings`: passed.
 - `cargo build -p spagitty`: desktop build passed after staging the extension
   with `bun tools/extensions/bundle.ts --debug`.
-- `cargo test -p spagitty --lib agents::tests`: 11 tests passed, including
+- `cargo test -p spagitty --lib agents::tests`: 12 tests passed, 1 live test ignored, including
   configuration persistence, Full Access argument propagation and zero-exit
   configuration errors in Settings Test, OMP's saved model/profile arguments,
-  and agy's opt-in tool approval while retaining plan mode.
+  and agy's opt-in tool approval while retaining plan mode. The ignored live
+  test was run separately and passed for both providers through the Settings handlers.
 - The Windows-compatible farm library run passed 386 tests, with 25 filtered:
 
   ```text

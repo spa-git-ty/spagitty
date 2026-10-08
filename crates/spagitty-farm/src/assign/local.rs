@@ -166,15 +166,8 @@ impl Driver for LocalDriver {
         }
         let ended = session.wait();
         let raw = raw.lock().map(|text| text.clone()).unwrap_or_default();
-        if self.definition.provider == AgentProvider::Codex {
-            if let Some(reason) = codex_launch_failure(&raw) {
-                return Err(reason);
-            }
-        }
-        if self.definition.provider == AgentProvider::Agy {
-            if let Some(reason) = agy_permission_failure(&raw) {
-                return Err(reason);
-            }
+        if let Some(reason) = launch_failure(self.definition.provider, &raw) {
+            return Err(reason);
         }
         match ended {
             Ended::Ok => Ok(Reply {
@@ -199,6 +192,16 @@ fn codex_launch_failure(raw: &str) -> Option<String> {
     raw.lines().find(|line| line.contains("setup refresh had errors") &&
         (line.contains("ERROR codex_core") || line.starts_with("Failed to create unified exec process")))
         .map(|line| format!("Codex could not start its Windows sandbox: {line}\nRepair the Codex sandbox or select Full Access in Settings > Agents > Codex, then resume."))
+}
+
+/// A provider can report a launch or tool-permission failure even when it
+/// exits zero. Used by assignment steps and the Settings connection test.
+pub fn launch_failure(provider: AgentProvider, raw: &str) -> Option<String> {
+    match provider {
+        AgentProvider::Codex => codex_launch_failure(raw),
+        AgentProvider::Agy => agy_permission_failure(raw),
+        _ => None,
+    }
 }
 
 fn agy_permission_failure(raw: &str) -> Option<String> {
