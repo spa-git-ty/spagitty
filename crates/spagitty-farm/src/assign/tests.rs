@@ -1022,3 +1022,183 @@ fn a_region_with_no_choice_keeps_its_markers() {
     );
     assert_eq!(text, "top\nmine\nend\n");
 }
+
+// ── End to end: a real repository, a real worktree, a real process ───────
+
+/// A command-line agent as a script: it answers each step from its prompt,
+/// and on the file step it also writes where it was only meant to read.
+#[cfg(unix)]
+#[test]
+fn a_command_line_agent_reviews_in_a_scratch_worktree_and_what_it_wrote_is_put_back() {
+    use super::local::LocalDriver;
+    use super::world::Repository;
+    use crate::agent::adapters::custom::CustomAdapter;
+    use crate::agent::AgentAdapter;
+    use std::os::unix::fs::PermissionsExt;
+
+    let fixture = spagitty_core::fixture::Fixture::empty();
+    fixture.write("a.txt", "one\n");
+    fixture.git(&["add", "a.txt"]);
+    let base = fixture.commit("base");
+    fixture.write("a.txt", "one\ntwo\n");
+    let head = fixture.commit_all("head");
+    // The person's working copy, which nothing may touch.
+    fixture.write("a.txt", "the person's own edit\n");
+
+    let tools = tempfile::tempdir().unwrap();
+    let script = tools.path().join("review-bot");
+    std::fs::write(
+        &script,
+        r#"#!/bin/sh
+case "$1" in
+  *"This step: plan"*) printf '%s\n' '```spagitty-agent' '{"plan":[{"path":"a.txt","why":"the new line"}],"lookFor":"typos"}' '```' ;;
+  *"This step: review"*) echo hacked > a.txt; printf '%s\n' 'Reading.' '```spagitty-agent' '{"findings":[{"line":2,"severity":"low","body":"Say why two.","sure":true}]}' '```' ;;
+  *"This step: sum up"*) printf '%s\n' '```spagitty-agent' '{"summary":"Adds a line.","verdict":"approve"}' '```' ;;
+esac
+"#,
+    )
+    .unwrap();
+    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let mut definition = CustomAdapter.default_definition(script);
+    definition.extra_args = vec!["{prompt}".into()];
+
+    let mut assignment = sample(&fixture.path().to_string_lossy(), "e2e");
+    assignment.level = Level::Suggest;
+    assignment.target = Target::Review {
+        host: "github.com".into(),
+        owner: "team".into(),
+        name: "app".into(),
+        number: 7,
+        title: "A second line".into(),
+        base,
+        head,
+        target: "main".into(),
+    };
+    let world = Repository::open(fixture.path(), &assignment.target, "e2e").unwrap();
+    let scratch = world.workdir();
+    assert!(scratch.join("a.txt").exists());
+
+    let records = tempfile::tempdir().unwrap();
+    let store = Store::new(records.path());
+    let (handle, engine) = engine::prepare(Setup {
+        assignment,
+        work: engine::Work::Review(ReviewWork::default()),
+        rules: RepoRules::default(),
+        limits: Limits::default(),
+        world: Box::new(world),
+        driver: Box::new(LocalDriver::new(definition, records.path().join("logs"))),
+        store,
+        sink: Arc::new(Seen::default()),
+    });
+    engine.run();
+    let end = handle.snapshot();
+
+    assert_eq!(end.state, State::Done, "{:?}", end.reason);
+    assert_eq!(
+        comments(&end),
+        [(ProposalState::Proposed, true)],
+        "the finding on line 2 is kept"
+    );
+    let file = end
+        .steps
+        .iter()
+        .find(|s| matches!(s.kind, StepKind::File { .. }))
+        .unwrap();
+    assert_eq!(file.refused, ["a.txt"], "what it wrote is listed");
+    assert!(file.command.as_deref().unwrap().contains("review-bot"));
+    // The scratch worktree is gone, and the person's copy is as they left it.
+    assert!(!scratch.exists());
+    assert_eq!(fixture.read("a.txt"), "the person's own edit\n");
+}
+
+/// A merge, end to end: the scratch worktree holds the merge with its
+/// markers, the agent answers with text, and Spagitty names the choice.
+#[cfg(unix)]
+#[test]
+fn a_command_line_agent_proposes_a_resolution_that_spagitty_names() {
+    use super::local::LocalDriver;
+    use super::world::Repository;
+    use crate::agent::adapters::custom::CustomAdapter;
+    use crate::agent::AgentAdapter;
+    use std::os::unix::fs::PermissionsExt;
+
+    let fixture = spagitty_core::fixture::Fixture::empty();
+    fixture.write("shared.txt", "one\ntwo\nthree\n");
+    fixture.git(&["add", "-A"]);
+    let base = fixture.commit("Base");
+    fixture.git(&["switch", "-q", "-c", "theirs"]);
+    fixture.write("shared.txt", "one\nTHEIRS\nthree\n");
+    let b_tip = fixture.commit_all("Their change");
+    fixture.git(&["switch", "-q", "main"]);
+    fixture.write("shared.txt", "one\nOURS\nthree\n");
+    let a_tip = fixture.commit_all("Our change");
+
+    let tools = tempfile::tempdir().unwrap();
+    let script = tools.path().join("merge-bot");
+    std::fs::write(
+        &script,
+        "#!/bin/sh\ngrep -q '<<<<<<<' shared.txt || exit 3\nprintf '%s\\n' '```spagitty-agent' '{\"resolution\":{\"text\":\"OURS\\nTHEIRS\",\"why\":\"Both lines matter.\",\"sure\":true}}' '```'\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let mut definition = CustomAdapter.default_definition(script);
+    definition.extra_args = vec!["{prompt}".into()];
+
+    let mut assignment = sample(&fixture.path().to_string_lossy(), "e2e-merge");
+    assignment.job = Job::Merge;
+    assignment.level = Level::Suggest;
+    assignment.target = Target::Merge {
+        a: "main".into(),
+        b: "theirs".into(),
+        a_tip,
+        b_tip,
+        base,
+        strategy: "merge".into(),
+        into: String::new(),
+    };
+    let world = Repository::open(fixture.path(), &assignment.target, "e2e-merge").unwrap();
+    let s = |lines: &[&str]| lines.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+    let work = MergeWork {
+        files: vec![MergeFile {
+            path: "shared.txt".into(),
+            merged: s(&[
+                "one",
+                "<<<<<<< HEAD",
+                "OURS",
+                "=======",
+                "THEIRS",
+                ">>>>>>> theirs",
+                "three",
+            ]),
+            eol: true,
+            whole: false,
+            regions: vec![MergeRegion {
+                index: 0,
+                start: 1,
+                end: 5,
+                a: s(&["OURS"]),
+                b: s(&["THEIRS"]),
+                base: None,
+                a_from: None,
+                b_from: None,
+            }],
+        }],
+    };
+    let records = tempfile::tempdir().unwrap();
+    let (handle, engine) = engine::prepare(Setup {
+        assignment,
+        work: engine::Work::Merge(work),
+        rules: RepoRules::default(),
+        limits: Limits::default(),
+        world: Box::new(world),
+        driver: Box::new(LocalDriver::new(definition, records.path().join("logs"))),
+        store: Store::new(records.path()),
+        sink: Arc::new(Seen::default()),
+    });
+    engine.run();
+    let end = handle.snapshot();
+    assert_eq!(end.state, State::Done, "{:?}", end.reason);
+    assert_eq!(resolutions(&end), [(Choice::Ab, ProposalState::Proposed)]);
+    // Nothing was merged where the person works.
+    assert_eq!(fixture.read("shared.txt"), "one\nOURS\nthree\n");
+}
