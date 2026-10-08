@@ -22,7 +22,7 @@ import { agents } from '$lib/agents/store.svelte';
 import { consentSlug, isLive } from '$lib/agents/levels';
 import type { Assigned, Assignment, Proposal, StartRequest, ThreadBrief } from '$lib/agents/types';
 import type { AgentNote, PendingComment, ReviewRecord } from './record';
-import { draftId, keyOf, marked, reviewBody, sendable, syncRecord } from './agent-drafts';
+import { completedFiles, draftId, keyOf, marked, reviewBody, sendable, syncRecord, syncViewed } from './agent-drafts';
 
 export { draftId, draftOf, keyOf, marked, reviewBody, sendable, syncRecord } from './agent-drafts';
 import { placeDraft } from './drafts';
@@ -33,9 +33,21 @@ async function sync(a: Assignment): Promise<void> {
 	if (!key) return;
 	const kept = await review.recordFor(key);
 	const probe = structuredClone($state.snapshot(kept)) as ReviewRecord;
-	if (!syncRecord(probe, a)) return;
+	let changed = syncRecord(probe, a);
+	let files: Awaited<ReturnType<typeof api.reviewFiles>> = [];
+	if (a.target.kind === 'review' && repo.info?.path === a.repo && completedFiles(probe, a).length
+		&& (!probe.headSha || probe.headSha === a.target.head)) {
+		try {
+			files = await api.reviewFiles(a.target.base, a.target.head);
+			if (repo.info?.path === a.repo) changed = syncViewed(probe, a, files) || changed;
+		} catch {
+			// Keep drafts. The viewed ticks can be retried on the next sync.
+		}
+	}
+	if (!changed) return;
 	await review.saveRecord(key, (record) => {
 		syncRecord(record, a);
+		if (repo.info?.path === a.repo) syncViewed(record, a, files);
 	});
 }
 

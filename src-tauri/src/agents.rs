@@ -35,7 +35,7 @@ use spagitty_core::models::{self, Endpoint, Provider};
 use spagitty_farm::agent::{adapter_for, AgentRunRequest};
 use spagitty_farm::assign::engine::{self, Control, Limits, Setup, Sink, Work};
 use spagitty_farm::assign::level::{Job, Level};
-use spagitty_farm::assign::local::{read_only, LocalDriver};
+use spagitty_farm::assign::local::{launch_failure, read_only, LocalDriver};
 use spagitty_farm::assign::record::{AgentRef, Assignment, Reach, State as Life, Store, Target};
 use spagitty_farm::assign::remote::RemoteDriver;
 use spagitty_farm::assign::rules::RepoRules;
@@ -210,6 +210,11 @@ impl Default for Notify {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Machine {
+    /// Opt-in: Codex commands run without its filesystem or network sandbox.
+    pub codex_full_access: bool,
+    /// Opt-in: headless agy runs approve tool permission requests.
+    pub agy_auto_approve: bool,
+    pub omp: OmpOptions,
     /// Per built-in or custom agent id.
     pub jobs: BTreeMap<String, Jobs>,
     /// Command-line agents added by hand.
@@ -221,6 +226,27 @@ pub struct Machine {
     pub repos: BTreeMap<String, RepoRules>,
     /// The first-start offer of agents found in repositories was answered.
     pub offered: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OmpOptions {
+    pub model: String,
+    pub profile: String,
+}
+
+impl OmpOptions {
+    fn apply(&self, definition: &mut AgentDefinition) {
+        if definition.provider != AgentProvider::OhMyPi {
+            return;
+        }
+        for (flag, value) in [("--model", &self.model), ("--profile", &self.profile)] {
+            let value = value.trim();
+            if !value.is_empty() {
+                definition.extra_args.extend([flag.into(), value.into()]);
+            }
+        }
+    }
 }
 
 impl Machine {
@@ -318,6 +344,9 @@ pub struct RemoteView {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentsSnapshot {
+    pub codex_full_access: bool,
+    pub agy_auto_approve: bool,
+    pub omp: OmpOptions,
     pub local: Vec<LocalView>,
     pub remote: Vec<RemoteView>,
     pub defaults: Defaults,
@@ -338,7 +367,10 @@ fn locals(machine: &Machine) -> Vec<LocalView> {
                 .path()
                 .cloned()
                 .unwrap_or_else(|| PathBuf::from(adapter.executables()[0]));
-            let definition = adapter.default_definition(executable);
+            let mut definition = adapter.default_definition(executable);
+            codex_access(&mut definition, machine.codex_full_access);
+            agy_access(&mut definition, machine.agy_auto_approve);
+            machine.omp.apply(&mut definition);
             let id = definition.id.as_str().to_string();
             LocalView {
                 name: definition.display_name.clone(),
@@ -378,6 +410,22 @@ fn remotes(machine: &Machine) -> Vec<RemoteView> {
         .collect()
 }
 
+fn codex_access(definition: &mut AgentDefinition, full_access: bool) {
+    if definition.provider == AgentProvider::Codex && full_access {
+        definition
+            .extra_args
+            .extend(["--sandbox".into(), "danger-full-access".into()]);
+    }
+}
+
+fn agy_access(definition: &mut AgentDefinition, auto_approve: bool) {
+    if definition.provider == AgentProvider::Agy && auto_approve {
+        definition
+            .extra_args
+            .push("--dangerously-skip-permissions".into());
+    }
+}
+
 /// Custom agents in the farm registries of repositories this machine knows,
 /// not yet on the machine list. Built-in ones are detected anyway.
 fn offer<R: Runtime>(app: &AppHandle<R>, machine: &Machine) -> Vec<AgentDefinition> {
@@ -411,6 +459,9 @@ pub fn agents_snapshot<R: Runtime>(
 ) -> Result<AgentsSnapshot> {
     let machine = load(&app);
     Ok(AgentsSnapshot {
+        codex_full_access: machine.codex_full_access,
+        agy_auto_approve: machine.agy_auto_approve,
+        omp: machine.omp.clone(),
         local: locals(&machine),
         remote: remotes(&machine),
         defaults: machine.defaults.clone(),
@@ -418,6 +469,48 @@ pub fn agents_snapshot<R: Runtime>(
         rules: repo.map(|repo| machine.rules(&repo)),
         offer: offer(&app, &machine),
     })
+}
+
+#[tauri::command(async)]
+pub fn agents_set_codex_full_access<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AgentsState>,
+    enabled: bool,
+) -> Result<()> {
+    change(&app, &state, |machine| {
+        machine.codex_full_access = enabled;
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub fn agents_set_agy_auto_approve<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AgentsState>,
+    enabled: bool,
+) -> Result<()> {
+    change(&app, &state, |machine| {
+        machine.agy_auto_approve = enabled;
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub fn agents_set_omp_options<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AgentsState>,
+    options: OmpOptions,
+) -> Result<()> {
+    change(&app, &state, |machine| {
+        machine.omp = OmpOptions {
+            model: options.model.trim().into(),
+            profile: options.profile.trim().into(),
+        };
+        Ok(())
+    })?;
+    Ok(())
 }
 
 #[tauri::command(async)]
@@ -671,10 +764,10 @@ pub struct Tested {
     pub ms: u64,
 }
 
-const TEST_PROMPT: &str = "Reply with the single word: ok";
 const TEST_TIMEOUT: Duration = Duration::from_secs(90);
 
-/// Run a local agent once on a tiny prompt in a temporary directory.
+/// Verify local file access in a temporary directory. The expected value is
+/// absent from the prompt, so echoing instructions cannot pass the test.
 #[tauri::command(async)]
 pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Tested> {
     let machine = load(&app);
@@ -689,10 +782,13 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
         ));
     }
     let dir = tempfile_dir()?;
+    let expected = format!("spagitty-access-{}", nanos());
+    std::fs::write(dir.join("access.txt"), &expected)
+        .map_err(|e| Failure::new("io", e.to_string()))?;
     let adapter = adapter_for(view.provider);
     let request = AgentRunRequest {
         workdir: dir.clone(),
-        prompt: TEST_PROMPT.into(),
+        prompt: "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file.".into(),
         unattended: false,
     };
     let command = read_only(view.provider, adapter.command(&view.definition, &request));
@@ -723,15 +819,47 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
     drop(timer);
     let _ = std::fs::remove_dir_all(&dir);
     let lines = collected.lines();
+    Ok(local_test_result(
+        view.provider,
+        ended,
+        &lines,
+        &expected,
+        started.elapsed().as_millis() as u64,
+    ))
+}
+
+fn local_test_result(
+    provider: AgentProvider,
+    ended: Ended,
+    lines: &[String],
+    expected: &str,
+    ms: u64,
+) -> Tested {
+    if let Some(said) = launch_failure(provider, &lines.join("\n")) {
+        return Tested {
+            ok: false,
+            said,
+            ms,
+        };
+    }
     let said = lines
         .iter()
         .rev()
         .find(|line| !line.trim().is_empty())
         .cloned()
         .unwrap_or_default();
-    let ms = started.elapsed().as_millis() as u64;
-    Ok(match ended {
-        Ended::Ok => Tested { ok: true, said, ms },
+    let answered = lines.iter().any(|line| line.contains(expected));
+    match ended {
+        Ended::Ok if answered => Tested { ok: true, said, ms },
+        Ended::Ok => Tested {
+            ok: false,
+            said: if said.is_empty() {
+                "The agent exited without reading the test file.".into()
+            } else {
+                said
+            },
+            ms,
+        },
         Ended::Cancelled => Tested {
             ok: false,
             said: format!("No answer in {} seconds", TEST_TIMEOUT.as_secs()),
@@ -746,7 +874,7 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
             },
             ms,
         },
-    })
+    }
 }
 
 fn tempfile_dir() -> Result<PathBuf> {
@@ -1292,6 +1420,118 @@ mod tests {
         assert_eq!(machine.defaults.review_level, Level::StepByStep);
         assert_eq!(machine.rules("/work/app").highest, Level::SignOff);
         assert!(machine.notify.waiting);
+        assert!(!machine.codex_full_access);
+        assert!(!machine.agy_auto_approve);
+        assert_eq!(machine.omp, OmpOptions::default());
+    }
+
+    #[test]
+    fn agy_auto_approval_is_saved_and_keeps_review_plan_mode() {
+        let machine: Machine = serde_json::from_str(r#"{"agyAutoApprove":true}"#).unwrap();
+        assert_eq!(
+            serde_json::to_value(&machine).unwrap()["agyAutoApprove"],
+            true
+        );
+        let mut definition = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        agy_access(&mut definition, machine.agy_auto_approve);
+        let command = read_only(
+            AgentProvider::Agy,
+            adapter_for(AgentProvider::Agy).command(
+                &definition,
+                &AgentRunRequest {
+                    workdir: "/tmp/t".into(),
+                    prompt: "ok".into(),
+                    unattended: false,
+                },
+            ),
+        );
+        assert_eq!(
+            command.args,
+            [
+                "--mode",
+                "plan",
+                "--dangerously-skip-permissions",
+                "--print",
+                "ok"
+            ]
+        );
+        let mut other = adapter_for(AgentProvider::Codex).default_definition("codex".into());
+        agy_access(&mut other, true);
+        assert!(other.extra_args.is_empty());
+    }
+
+    #[test]
+    fn omp_model_and_profile_survive_save_and_reach_the_headless_command() {
+        let machine: Machine =
+            serde_json::from_str(r#"{"omp":{"model":"provider/test-model","profile":"work"}}"#)
+                .unwrap();
+        let saved: Machine =
+            serde_json::from_slice(&serde_json::to_vec(&machine).unwrap()).unwrap();
+        let mut definition = adapter_for(AgentProvider::OhMyPi).default_definition("omp".into());
+        saved.omp.apply(&mut definition);
+        let command = read_only(
+            AgentProvider::OhMyPi,
+            adapter_for(AgentProvider::OhMyPi).command(
+                &definition,
+                &AgentRunRequest {
+                    workdir: "/tmp/test".into(),
+                    prompt: "ok".into(),
+                    unattended: false,
+                },
+            ),
+        );
+        assert_eq!(command.stdin.as_deref(), Some("ok"));
+        assert_eq!(
+            command.args,
+            [
+                "--print",
+                "--model",
+                "provider/test-model",
+                "--profile",
+                "work",
+                "--tools",
+                "read,grep,glob"
+            ]
+        );
+        let mut other = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        saved.omp.apply(&mut other);
+        assert!(other.extra_args.is_empty());
+        let mut unset = adapter_for(AgentProvider::OhMyPi).default_definition("omp".into());
+        OmpOptions::default().apply(&mut unset);
+        assert!(unset.extra_args.is_empty());
+    }
+
+    #[test]
+    fn full_access_is_saved_and_used_by_codex_only() {
+        let machine: Machine = serde_json::from_str(r#"{"codexFullAccess":true}"#).unwrap();
+        assert!(machine.codex_full_access);
+        assert_eq!(
+            serde_json::to_value(&machine).unwrap()["codexFullAccess"],
+            true
+        );
+        let mut codex = adapter_for(AgentProvider::Codex).default_definition("codex".into());
+        codex_access(&mut codex, true);
+        let request = AgentRunRequest {
+            workdir: "/tmp/test".into(),
+            prompt: "ok".into(),
+            unattended: false,
+        };
+        let command = read_only(
+            AgentProvider::Codex,
+            adapter_for(AgentProvider::Codex).command(&codex, &request),
+        );
+        assert_eq!(
+            command
+                .args
+                .iter()
+                .filter(|arg| arg.as_str() == "--sandbox")
+                .count(),
+            1
+        );
+        assert!(command.args.iter().any(|arg| arg == "danger-full-access"));
+        let mut agy = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        codex_access(&mut agy, true);
+        assert!(agy.extra_args.is_empty());
     }
 
     /// A file that is there but does not parse is an error to a change, not
@@ -1449,5 +1689,91 @@ mod tests {
         assert!(agent.is_local());
         agent.base = "https://openrouter.ai/api/v1".into();
         assert!(!agent.is_local());
+    }
+
+    #[test]
+    fn a_successful_exit_without_the_test_answer_is_not_a_pass() {
+        let failed = local_test_result(
+            AgentProvider::OhMyPi,
+            Ended::Ok,
+            &["No default model selected".into()],
+            "test-value",
+            12,
+        );
+        assert!(!failed.ok);
+        assert_eq!(failed.said, "No default model selected");
+        assert!(!local_test_result(AgentProvider::OhMyPi, Ended::Ok, &[], "test-value", 12).ok);
+        assert!(
+            !local_test_result(
+                AgentProvider::Agy,
+                Ended::Ok,
+                &["ok".into()],
+                "test-value",
+                12
+            )
+            .ok
+        );
+        assert!(
+            local_test_result(
+                AgentProvider::Codex,
+                Ended::Ok,
+                &[
+                    "codex".into(),
+                    "test-value".into(),
+                    "tokens used".into(),
+                    "100".into()
+                ],
+                "test-value",
+                12,
+            )
+            .ok
+        );
+    }
+
+    #[test]
+    fn settings_reports_permission_denials_with_the_saved_choice_to_use() {
+        let denied = local_test_result(AgentProvider::Agy, Ended::Ok,
+            &["test-value".into(), "jetski: no output produced — a tool required command permission that headless mode cannot prompt for".into()], "test-value", 12);
+        assert!(!denied.ok);
+        assert!(denied.said.contains("Settings > Agents > agy"));
+    }
+
+    #[test]
+    #[ignore = "requires authenticated Codex and agy; exercises actual Settings handlers"]
+    fn live_settings_tests_use_saved_codex_and_agy_permissions() {
+        let identifier = format!(
+            "dev.spagitty.access-test-{}-{}",
+            std::process::id(),
+            nanos()
+        );
+        let mut context = tauri::test::mock_context(tauri::test::noop_assets());
+        context.config_mut().identifier = identifier.clone();
+        let app = tauri::test::mock_builder()
+            .manage(AgentsState::default())
+            .build(context)
+            .unwrap();
+        let settings_path = file(app.handle()).unwrap();
+        assert!(settings_path.parent().unwrap().ends_with(&identifier));
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+                let _ = std::fs::remove_file(self.0.with_extension("json.partial"));
+                let _ = std::fs::remove_dir(self.0.parent().unwrap());
+            }
+        }
+        let _cleanup = Cleanup(settings_path);
+        agents_set_codex_full_access(app.handle().clone(), app.state::<AgentsState>(), true)
+            .unwrap();
+        agents_set_agy_auto_approve(app.handle().clone(), app.state::<AgentsState>(), true)
+            .unwrap();
+        for id in ["codex", "agy"] {
+            let tested = agents_test_local(app.handle().clone(), id.into()).unwrap();
+            assert!(tested.ok, "{id}: {}", tested.said);
+            println!(
+                "{id} Settings test passed with saved permissions in {} ms",
+                tested.ms
+            );
+        }
     }
 }

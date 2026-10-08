@@ -13,6 +13,7 @@
 	import { LEVELS, perRun } from './levels';
 	import ApiAgentSheet from './ApiAgentSheet.svelte';
 	import CustomAgentSheet from './CustomAgentSheet.svelte';
+	import OmpSettingsSheet from './OmpSettingsSheet.svelte';
 	import type { AgentDefinition } from '$lib/farm/types';
 	import type { Defaults, Jobs, Level, LocalAgent, Notify, RemoteAgent, RepoRules, Tested } from './types';
 
@@ -28,7 +29,9 @@
 
 	let adding = $state<'custom' | 'api' | null>(null);
 	let editing = $state<RemoteAgent | null>(null);
+	let editingOmp = $state(false);
 	let tests = $state<Record<string, Tested | 'testing'>>({});
+	let saving = $state(0);
 
 	const snapshot = $derived(agents.snapshot);
 	const path = $derived(repo.info?.path ?? null);
@@ -38,6 +41,7 @@
 	});
 
 	async function act(what: string, run: () => Promise<unknown>): Promise<boolean> {
+		saving += 1;
 		try {
 			await run();
 			await agents.load(path);
@@ -45,7 +49,14 @@
 		} catch (cause) {
 			notice.failed(what, agents.failure(cause).message);
 			return false;
+		} finally {
+			saving -= 1;
 		}
+	}
+
+	function setAccess(id: string, run: () => Promise<unknown>) {
+		delete tests[id];
+		void act('Not changed', run);
 	}
 
 	function stateLine(agent: LocalAgent): string {
@@ -184,6 +195,29 @@
 										{result.ok ? `Answered in ${(result.ms / 1000).toFixed(1)} s` : result.said}
 									</span>
 								{/if}
+								{#if agent.provider === 'ohMyPi' && usable}
+									<span class="note">Model: {snapshot.omp.model || 'OMP default'}{snapshot.omp.profile ? ` · Profile: ${snapshot.omp.profile}` : ''}</span>
+									<Btn onclick={() => (editingOmp = true)}>Model and profile…</Btn>
+								{/if}
+
+								{#if agent.provider === 'codex' && usable}
+									<div class="group" role="group" aria-label="Codex access">
+										<Chip active={!snapshot.codexFullAccess} disabled={saving > 0 || result === 'testing'} onclick={() => setAccess(agent.id, () => api.setCodexFullAccess(false))}>Sandboxed</Chip>
+										<Chip active={snapshot.codexFullAccess} disabled={saving > 0 || result === 'testing'} onclick={() => setAccess(agent.id, () => api.setCodexFullAccess(true))}>Full Access</Chip>
+									</div>
+									{#if snapshot.codexFullAccess}
+										<span class="note">Codex commands can access files outside the repository and use the network.</span>
+									{/if}
+								{/if}
+								{#if agent.provider === 'agy' && usable}
+									<div class="group" role="group" aria-label="agy tool permissions">
+										<Chip active={!snapshot.agyAutoApprove} disabled={saving > 0 || result === 'testing'} onclick={() => setAccess(agent.id, () => api.setAgyAutoApprove(false))}>Configured rules</Chip>
+										<Chip active={snapshot.agyAutoApprove} disabled={saving > 0 || result === 'testing'} onclick={() => setAccess(agent.id, () => api.setAgyAutoApprove(true))}>Auto-approve tools</Chip>
+										</div>
+									{#if snapshot.agyAutoApprove}
+										<span class="note">agy can run commands and access files without asking.</span>
+									{/if}
+								{/if}
 							</div>
 							{#if usable}
 								<div class="jobs" role="group" aria-label="What {agent.name} may do">
@@ -191,7 +225,7 @@
 									<Chip active={agent.jobs.merge} title="Offer {agent.name} for merges" onclick={() => flip(agent.id, agent.jobs, 'merge')}>Merge</Chip>
 									<Chip active={agent.jobs.farm} title="Offer {agent.name} for the farm" onclick={() => flip(agent.id, agent.jobs, 'farm')}>Farm</Chip>
 								</div>
-								<Btn busy={result === 'testing'} onclick={() => test(agent.id, () => api.testLocal(agent.id))}>Test</Btn>
+								<Btn busy={result === 'testing'} disabled={saving > 0 || agents.loading} onclick={() => test(agent.id, () => api.testLocal(agent.id))}>Test</Btn>
 							{/if}
 							{#if agent.custom}
 								<Chip danger title="Remove {agent.name}" onclick={() => removeAgent(agent.id, agent.name)}>remove</Chip>
@@ -349,6 +383,14 @@
 		</div>
 	{/if}
 </section>
+
+{#if editingOmp && snapshot}
+	<OmpSettingsSheet
+		initial={snapshot.omp}
+		onclose={() => (editingOmp = false)}
+		onsave={(options) => act('Not changed', () => api.setOmpOptions(options))}
+	/>
+{/if}
 
 {#if adding === 'custom'}
 	<CustomAgentSheet
