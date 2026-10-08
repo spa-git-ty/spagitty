@@ -151,8 +151,14 @@ export const merger = {
 	get into(): Into {
 		return into;
 	},
+	/**
+	 * The forecast for the pair picked now, or null while it is being worked
+	 * out. The one in hand is kept until the next lands, and is not handed out
+	 * for another pair: drawn under new names it would describe a merge
+	 * nobody asked for, and Resolve or Merge now would act on it (BUG-061).
+	 */
 	get forecast(): MergerForecast | null {
-		return forecast;
+		return forecast && forecast.a.name === a && forecast.b.name === b ? forecast : null;
 	},
 	get loading(): boolean {
 		return loading;
@@ -171,11 +177,13 @@ export const merger = {
 		return typedName ?? (a && b ? defaultNewName(a, b) : '');
 	},
 	get roles(): Roles | null {
-		return forecast ? roles(forecast, into, this.newName) : null;
+		const plan = this.forecast;
+		return plan ? roles(plan, into, this.newName) : null;
 	},
 	get choices(): StrategyChoice[] {
 		const who = this.roles;
-		return forecast && who ? strategies(forecast, who) : [];
+		const plan = this.forecast;
+		return plan && who ? strategies(plan, who) : [];
 	},
 	/** The strategy shown: the one asked for, unless it is not possible here. */
 	get strategy(): Strategy {
@@ -231,7 +239,8 @@ export const merger = {
 
 	/** What the backend needs to land or replay the merge planned now. */
 	ask(resolutions: MergerResolution[] = []): MergerLandAsk | null {
-		const plan = forecast;
+		// Never a plan for another pair than the one named (BUG-061).
+		const plan = this.forecast;
 		if (!plan || !a || !b) return null;
 		const strategy = this.strategy;
 		return {
