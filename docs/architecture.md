@@ -383,7 +383,7 @@ directly rather than substituting a message of their own.
 
 ## Branching and releases
 
-Git Flow, per Amendments 13 to 15: `main` and `dev` are protected, work happens
+Git Flow: `main` and `dev` are protected, work happens
 on `feature/`, `task/`, `bugfix/`, `hotfix/` and `release/` branches named after
 their work item ID in `agile/`.
 

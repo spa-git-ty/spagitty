@@ -3,8 +3,8 @@
 # A draft release, built on demand from whatever branch it is run on.
 #
 # This is not the release lane. Gate 6 in gates.yml publishes `main` and
-# prerelease.yml publishes an alpha from `dev`; both tag, and Amendment 14
-# forbids moving a tag. This one **creates no tag at all** and leaves the
+# prerelease.yml publishes an alpha from `dev`; both tag, and a tag is
+# never moved. This one **creates no tag at all** and leaves the
 # release as a draft — nothing is published to anyone until a person opens it
 # and presses the button. That is what makes it safe to run from a feature
 # branch.
@@ -123,7 +123,7 @@ jobs:
           echo "tag=v$base-alpha.$next" >> "$GITHUB_OUTPUT"
           echo "Next tag: v$base-alpha.$next (last was ${last:-none})"
 
-      # Amendment 14: a tag that exists is a release that happened, and moving
+      # A tag that exists is a release that happened, and moving
       # one is forbidden. The count above should make this unreachable; if it is
       # ever reached, something else created the tag and stopping is right.
       - name: Refuse to move an existing tag

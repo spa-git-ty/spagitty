@@ -120,7 +120,7 @@ handoff (AGENTS.md: no dependency without a reason).
 
 ## Suggested slices
 
-Each slice is one work item under Amendment 12 (an item, a plan, testing
+Each slice is one work item in `agile/` (an item, a plan, testing
 documents and a branch). Assign the next free `FEAT-###` numbers when you start
 each one, not before: the record test refuses identifiers that point at nothing.
 

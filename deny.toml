@@ -57,7 +57,7 @@ yanked = "warn"
 # Advisories accepted, with reasons (TASK-010).
 #
 # Gate 4 had never run before 2026-08-18: gate 3 failed on every build in this
-# repository's history, and Amendment 16 halts the pipeline at the first red
+# repository's history, and the pipeline halts at the first red
 # gate. Fixing gate 3 in TASK-005 let the pipeline reach gate 4 for the first
 # time, and it failed on sixteen advisories.
 #
@@ -71,7 +71,7 @@ yanked = "warn"
 # They are listed one by one rather than by a blanket setting, so a *new*
 # advisory — including any actual vulnerability — still fails this gate. That is
 # the difference between recording an accepted risk and switching the gate off,
-# and Amendment 16 forbids only the second.
+# and only the second is forbidden.
 #
 # Each entry is reviewed when Tauri is upgraded: the GTK3 set goes when Tauri
 # moves to GTK4, which is the upstream fix this project is waiting on.

@@ -7,8 +7,8 @@
  * through Svelte's reactivity, and one built from plain properties would render
  * the initial value and then never change.
  *
- * Lives outside `src/lib` so it is not counted as first-party code under
- * Amendment 10.
+ * Lives outside `src/lib` so it is not counted as first-party code by the
+ * coverage floor.
  */
 
 import type { FileDiff, WorkingCopy, Signing } from '$lib/types';

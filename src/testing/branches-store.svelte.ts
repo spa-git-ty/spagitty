@@ -7,8 +7,8 @@
  * fills in after `load()` resolves, and a stub built from plain properties
  * would render the empty list and then never change.
  *
- * Lives outside `src/lib` so it is not counted as first-party code under
- * Amendment 10.
+ * Lives outside `src/lib` so it is not counted as first-party code by the
+ * coverage floor.
  */
 
 import type { BranchRow } from '$lib/types';

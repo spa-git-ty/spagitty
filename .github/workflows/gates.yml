@@ -28,7 +28,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # The Amendment 10 floor, in one place so no gate can disagree with another.
+  # The coverage floor, in one place so no gate can disagree with another.
   COVERAGE_FLOOR: 70
 
 jobs:
@@ -87,7 +87,7 @@ jobs:
           done
 
           # A version whose tag already exists has been released. Gate 6
-          # refuses to move that tag (Amendment 14), so running gates 5 and 6
+          # refuses to move that tag, so running gates 5 and 6
           # here only builds four platforms and then fails. Code merged
           # without a version bump goes out with the next release, the same
           # way documentation does. Gate 6 still refuses the tag in case this
@@ -459,7 +459,7 @@ jobs:
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
       # A tag that already exists is a release that already happened. Moving it
-      # is forbidden (Amendment 14), so the job stops instead.
+      # is forbidden, so the job stops instead.
       - name: Refuse to move an existing tag
         run: |
           if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
@@ -467,7 +467,7 @@ jobs:
             exit 1
           fi
 
-      # Amendment 20: the notes are the version's changelog section, not notes
+      # The notes are the version's changelog section, not notes
       # generated from the commit log. No section, no release — the gate fails
       # before anything is tagged, which is the right order to fail in.
       - name: Read the notes out of the changelog
@@ -476,7 +476,7 @@ jobs:
           cat notes.md
 
       # Everything that can be checked is checked before the tag is pushed,
-      # because a pushed tag cannot be taken back (Amendment 14) and a version
+      # because a pushed tag cannot be taken back and a version
       # whose tag exists can never be released. v0.2.0 is tagged and has no
       # release for exactly this reason: the asset upload failed *after* the
       # push, and there is no second attempt at a version.

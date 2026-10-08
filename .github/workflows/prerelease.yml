@@ -2,7 +2,7 @@
 #
 # The `dev` pre-release, triggered by hand.
 #
-# Amendment 15: merges into `dev` run gates 1 to 4 and stop. Producing a build
+# Merges into `dev` run gates 1 to 4 and stop. Producing a build
 # and an alpha release from `dev` is an explicit action someone takes when they
 # want a pre-release — never something a landing does on its own.
 #
@@ -61,7 +61,7 @@ jobs:
 
           echo "tag=v$base-alpha.${{ inputs.alpha }}" >> "$GITHUB_OUTPUT"
 
-      # Amendment 14: a tag that exists is a release that happened, and moving
+      # A tag that exists is a release that happened, and moving
       # one is forbidden.
       - name: Refuse to move an existing tag
         run: |
@@ -181,7 +181,7 @@ jobs:
       # a second copy of that arithmetic is a second thing to get wrong.
 
       # An alpha's notes are the changelog's Unreleased section — that is what
-      # an alpha is a preview of (Amendment 20). Empty Unreleased, no alpha.
+      # an alpha is a preview of. Empty Unreleased, no alpha.
       - name: Read the notes out of the changelog
         run: |
           bun tools/release-notes.mjs Unreleased > notes.md

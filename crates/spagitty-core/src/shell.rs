@@ -1146,7 +1146,7 @@ pub fn stash_drop(repo: &Path, index: usize) -> Result<()> {
 /// `prune` deletes remote-tracking refs the remote no longer has. It used to be
 /// passed unconditionally, which meant a destructive operation ran on every
 /// fetch without anybody choosing it — the opposite of what FEAT-018 asked for
-/// and of what Amendment 6 means. It is a parameter now, and the choice is the
+/// and of a destructive step nobody chose. It is a parameter now, and the choice is the
 /// caller's.
 ///
 /// An empty `remote` means every remote.

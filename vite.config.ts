@@ -90,7 +90,7 @@ export default defineConfig({
 		include: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
 		coverage: {
 			provider: 'v8',
-			// First-party frontend code only. Amendment 10 counts nothing else,
+			// First-party frontend code only. The floor counts nothing else,
 			// in either direction.
 			// The extension SDK ships to extension authors, so it is counted too
 			// (FEAT-096).

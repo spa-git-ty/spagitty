@@ -7,8 +7,8 @@ can be named in one token in a commit message or a conversation. The codes and
 their order come from the design handoff and are declared in `src/lib/nav.ts`.
 
 **This document is updated by each screen's own work item**, in the same change
-as the code. A section describing something that no longer exists is a defect
-under Amendment 11.
+as the code. A section describing something that no longer exists is a
+defect.
 
 | Code | Screen | Route | Rail | State | Item |
 | --- | --- | --- | --- | --- | --- |

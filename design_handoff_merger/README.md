@@ -187,7 +187,7 @@ apart must also differ in lightness, not hue alone.
 
 ## Suggested slices
 
-Each slice is one work item under Amendment 12. Assign the next free `FEAT-###`
+Each slice is one work item in `agile/`. Assign the next free `FEAT-###`
 when you start each one, not before.
 
 1. **Merger screen, the plan, read-only.** The route, the rail row and icon, the

@@ -13,7 +13,7 @@
 #     HTTP 422  ReleaseAsset.name already exists
 #
 # after all five gates had passed and, worse, after the tag had been pushed.
-# Amendment 14 forbids moving a tag, so v0.2.0 can never be released: the only
+# A tag is never moved, so v0.2.0 can never be released: the only
 # way out is a version bump.
 #
 # draft-release.yml had always collected only the installers, which is why that
