@@ -78,8 +78,15 @@ export interface RepoRules {
 	markComments: boolean;
 }
 
+export interface OmpOptions {
+	model: string;
+	profile: string;
+}
+
 export interface AgentsSnapshot {
 	codexFullAccess: boolean;
+	agyAutoApprove: boolean;
+	omp: OmpOptions;
 	local: LocalAgent[];
 	remote: RemoteAgent[];
 	defaults: Defaults;

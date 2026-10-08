@@ -2,7 +2,7 @@
 
 # BUG-065 — Command-line agents cannot start or finish reviews correctly
 
-**Status:** Open — implemented on `bugfix/BUG-065-agent-cli-access`; local validation complete, PR awaiting review and merge. OMP's authenticated smoke test needs a default model.
+**Status:** Open — implemented on `bugfix/BUG-065-agent-cli-access`; local validation complete, PR awaiting review and merge. OMP's authenticated smoke test needs the selected model/profile.
 **Screens:** Settings → Agents, Review, Merger, Farm.
 
 ## What happens
@@ -22,8 +22,12 @@ CLI has no built-in adapter. Completed agent file steps leave viewed ticks unset
 - A known Windows sandbox startup failure fails the step even if Codex exits zero.
 - `omp` is detected before legacy names, launched in print mode, and receives a
   PATH containing the native Bun runtime when installed via npm.
+- Settings persists OMP's model and optional profile and passes them to fresh
+  Test, Review and Merger launches. Blank fields inherit OMP's defaults.
 - `agy` is detected, offered in Settings and Farm, and launched headlessly.
   Review and Merger use its plan mode; unattended Farm permissions are explicit.
+- Settings offers persisted, opt-in agy tool auto-approval for headless Test,
+  Review and Merger. A permission denial fails the assignment with guidance.
 - Settings Test requires its requested answer; a configuration error is not a
   successful test just because the CLI exits zero.
 - Completed file steps tick the read blob once. Failed or unfinished steps and

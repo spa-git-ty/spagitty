@@ -10,7 +10,7 @@ use spagitty_farm::model::AgentProvider;
 use std::sync::Arc;
 use std::time::Duration;
 
-fn reads_file(provider: AgentProvider, full_access: bool) {
+fn reads_file(provider: AgentProvider, expanded_access: bool) {
     let adapter = adapter_for(provider);
     let availability = adapter.detect();
     assert!(availability.is_available(), "{availability:?}");
@@ -24,14 +24,38 @@ fn reads_file(provider: AgentProvider, full_access: bool) {
     );
     std::fs::write(dir.path().join("access.txt"), &marker).unwrap();
     let mut definition = adapter.default_definition(availability.path().unwrap().clone());
-    if full_access {
+    if provider == AgentProvider::OhMyPi {
+        for (flag, env) in [
+            ("--model", "SPAGITTY_TEST_OMP_MODEL"),
+            ("--profile", "SPAGITTY_TEST_OMP_PROFILE"),
+        ] {
+            if let Ok(value) = std::env::var(env) {
+                if !value.trim().is_empty() {
+                    definition
+                        .extra_args
+                        .extend([flag.into(), value.trim().into()]);
+                }
+            }
+        }
+    }
+    if expanded_access && provider == AgentProvider::Codex {
         definition
             .extra_args
             .extend(["--sandbox".into(), "danger-full-access".into()]);
     }
+    if expanded_access && provider == AgentProvider::Agy {
+        definition
+            .extra_args
+            .push("--dangerously-skip-permissions".into());
+    }
+    let prompt = if expanded_access && provider == AgentProvider::Agy {
+        "Repository access test only. Use your command/terminal tool to run a read-only shell command that prints access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file."
+    } else {
+        "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file."
+    };
     let request = AgentRunRequest {
         workdir: dir.path().to_path_buf(),
-        prompt: "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file.".into(),
+        prompt: prompt.into(),
         unattended: false,
     };
     let command = read_only(provider, adapter.command(&definition, &request));
@@ -71,4 +95,10 @@ fn omp_is_detected_and_reads_in_print_mode() {
 #[ignore = "requires authenticated agy"]
 fn agy_is_detected_and_reads_in_print_plan_mode() {
     reads_file(AgentProvider::Agy, false);
+}
+
+#[test]
+#[ignore = "requires authenticated agy; explicitly tests opt-in tool approval"]
+fn agy_auto_approved_command_reads_a_temporary_workspace() {
+    reads_file(AgentProvider::Agy, true);
 }

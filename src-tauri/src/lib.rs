@@ -211,6 +211,8 @@ pub fn run() {
             agents::agents_snapshot,
             agents::agents_set_jobs,
             agents::agents_set_codex_full_access,
+            agents::agents_set_omp_options,
+            agents::agents_set_agy_auto_approve,
             agents::agents_save_custom,
             agents::agents_take_offer,
             agents::agents_save_remote,

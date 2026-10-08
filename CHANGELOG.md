@@ -19,6 +19,11 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Settings detects the `agy` CLI and runs it in print mode for Review, Merger
   and Farm. Codex has a saved **Full Access** option in Settings → Agents for
   machines where its sandbox cannot start; sandboxed access remains the default.
+- Oh My Pi's model and profile can be saved in Settings → Agents and are used
+  by Test, Review and Merger, including fresh background launches.
+- agy has a saved **Auto-approve tools** choice in Settings → Agents for
+  headless Test, Review and Merger runs. Its configured permission rules remain
+  the default; a headless permission denial stops the assignment with guidance.
 
 ### Fixed
 

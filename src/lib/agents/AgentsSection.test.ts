@@ -6,7 +6,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync } from 'svelte';
-import { click, render } from '../../testing/mount';
+import { click, fire, render } from '../../testing/mount';
 import { aLocal, aRemote, aReview, aSnapshot, nothingSetUp, someRules } from '../../testing/agent-fixtures';
 
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
@@ -15,6 +15,8 @@ vi.mock('./api', () => ({
 	list: vi.fn(() => Promise.resolve([])),
 	setJobs: vi.fn(() => Promise.resolve()),
 	setCodexFullAccess: vi.fn(() => Promise.resolve()),
+	setOmpOptions: vi.fn(() => Promise.resolve()),
+	setAgyAutoApprove: vi.fn(() => Promise.resolve()),
 	setRules: vi.fn(() => Promise.resolve()),
 	setDefaults: vi.fn(() => Promise.resolve()),
 	remove: vi.fn(() => Promise.resolve()),
@@ -49,6 +51,38 @@ beforeEach(() => {
 });
 
 describe('the section', () => {
+	it('saves agy tool auto-approval and explains command access', async () => {
+		agents.reset(aSnapshot({ local: [aLocal({ id: 'agy', name: 'agy', provider: 'agy' })] }));
+		const view = render(AgentsSection, {});
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Auto-approve tools')!);
+		await vi.waitFor(() => expect(api.setAgyAutoApprove).toHaveBeenCalledWith(true));
+		agents.reset(aSnapshot({ agyAutoApprove: true, local: [aLocal({ id: 'agy', name: 'agy', provider: 'agy' })] }));
+		flushSync();
+		expect(view.text()).toContain('agy can run commands and access files without asking.');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Configured rules')!);
+		await vi.waitFor(() => expect(api.setAgyAutoApprove).toHaveBeenCalledWith(false));
+	});
+
+	it('edits and saves the model and profile for OMP launches', async () => {
+		const snapshot = aSnapshot({ omp: { model: 'provider/old-model', profile: 'work' },
+			local: [aLocal({ id: 'pi', name: 'Oh My Pi', provider: 'ohMyPi' })] });
+		vi.mocked(api.snapshot).mockResolvedValueOnce(snapshot);
+		agents.reset(snapshot);
+		const view = render(AgentsSection, {});
+		expect(view.text()).toContain('Model: provider/old-model · Profile: work');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Model and profile…')!);
+		const model = view.get('#omp-model') as HTMLInputElement;
+		const profile = view.get('#omp-profile') as HTMLInputElement;
+		expect(model.value).toBe('provider/old-model');
+		expect(profile.value).toBe('work');
+		model.value = ' provider/new-model ';
+		profile.value = '';
+		fire(model, 'input');
+		fire(profile, 'input');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Save')!);
+		await vi.waitFor(() => expect(api.setOmpOptions).toHaveBeenCalledWith({ model: 'provider/new-model', profile: '' }));
+	});
+
 	it('saves Codex Full Access and shows its scope', async () => {
 		agents.reset(aSnapshot({ local: [aLocal({ id: 'codex', name: 'Codex', provider: 'codex' })] }));
 		const view = render(AgentsSection, {});

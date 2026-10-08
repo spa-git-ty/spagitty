@@ -16,6 +16,7 @@ import type {
 	Defaults,
 	Jobs,
 	Notify,
+	OmpOptions,
 	Probe,
 	RemoteAgent,
 	RemoteInput,
@@ -34,6 +35,14 @@ export function setJobs(id: string, jobs: Jobs): Promise<void> {
 
 export function setCodexFullAccess(enabled: boolean): Promise<void> {
 	return invoke('agents_set_codex_full_access', { enabled });
+}
+
+export function setOmpOptions(options: OmpOptions): Promise<void> {
+	return invoke('agents_set_omp_options', { options });
+}
+
+export function setAgyAutoApprove(enabled: boolean): Promise<void> {
+	return invoke('agents_set_agy_auto_approve', { enabled });
 }
 
 export function saveCustom(definition: AgentDefinition): Promise<void> {
