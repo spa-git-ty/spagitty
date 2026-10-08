@@ -89,6 +89,10 @@ pub enum Target {
         base: String,
         #[serde(default)]
         strategy: String,
+        /// The branch that receives the merge, when it is not `a`: Merger
+        /// can land into either side, or a new branch.
+        #[serde(default)]
+        into: String,
     },
 }
 
