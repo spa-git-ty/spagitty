@@ -31,10 +31,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   not notarized: on first open macOS says the developer cannot be verified.
   Open the app once from the right-click **Open** menu, or allow it under
   **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
-  the choice. If macOS says the app is **damaged** instead, the download is
-  corrupt: compare it with `SHA256SUMS-*.txt` and download it again. After
-  updating, macOS may ask once for the keychain password to read a connected
-  account's token; choose **Always Allow**.
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token; choose **Always Allow**.
 
 ## [1.3.1] - 2026-10-08
 
