@@ -54,6 +54,8 @@ export function placeDraft(
 	const index = find(draft.side, draft.line);
 	if (index < 0) return null;
 	const start = draft.startLine !== null ? find(draft.startSide, draft.startLine) : -1;
+	// Half a range is not placed: it goes by its lines, as it was.
+	if (draft.startLine !== null && start < 0) return null;
 	return {
 		...draft,
 		place: placeAt(lines, index),

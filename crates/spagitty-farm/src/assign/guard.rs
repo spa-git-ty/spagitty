@@ -34,8 +34,9 @@ impl Snapshot {
     }
 
     /// The paths a step changed since the snapshot was taken, put back as
-    /// they were. Returns them sorted, for the timeline.
-    pub fn restore(&self, dir: &Path) -> Vec<String> {
+    /// they were. Returns them sorted, for the timeline, or why one could not
+    /// be put back: a path still on disk is never reported as not kept.
+    pub fn restore(&self, dir: &Path) -> Result<Vec<String>, String> {
         let now = shell::changed_paths(dir).unwrap_or_default();
         let mut touched = Vec::new();
         let mut back_to_head = Vec::new();
@@ -46,12 +47,12 @@ impl Snapshot {
                     let after = std::fs::read(dir.join(path)).ok();
                     if &after != before {
                         touched.push(path.clone());
-                        put_back(dir, path, before.as_deref());
+                        put_back(dir, path, before.as_deref())?;
                     }
                 }
                 None if code == "??" => {
                     touched.push(path.clone());
-                    let _ = std::fs::remove_file(dir.join(path));
+                    put_back(dir, path, None)?;
                 }
                 None => {
                     touched.push(path.clone());
@@ -64,29 +65,29 @@ impl Snapshot {
         for (path, before) in &self.files {
             if !now.iter().any(|(_, listed)| listed == path) {
                 touched.push(path.clone());
-                put_back(dir, path, before.as_deref());
+                put_back(dir, path, before.as_deref())?;
             }
         }
-        let _ = shell::restore_paths(dir, &back_to_head);
+        shell::restore_paths(dir, &back_to_head).map_err(|e| e.to_string())?;
         touched.sort();
         touched.dedup();
-        touched
+        Ok(touched)
     }
 }
 
-fn put_back(dir: &Path, path: &str, bytes: Option<&[u8]>) {
+fn put_back(dir: &Path, path: &str, bytes: Option<&[u8]>) -> Result<(), String> {
     let file = dir.join(path);
-    match bytes {
-        Some(bytes) => {
-            if let Some(parent) = file.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            let _ = std::fs::write(file, bytes);
-        }
-        None => {
-            let _ = std::fs::remove_file(file);
-        }
-    }
+    let done = match bytes {
+        Some(bytes) => file
+            .parent()
+            .map_or(Ok(()), std::fs::create_dir_all)
+            .and_then(|()| std::fs::write(&file, bytes)),
+        None => match std::fs::remove_file(&file) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            other => other,
+        },
+    };
+    done.map_err(|error| format!("{path}: {error}"))
 }
 
 #[cfg(test)]
@@ -106,7 +107,7 @@ mod tests {
     fn a_clean_step_touches_nothing() {
         let fixture = committed();
         let snapshot = Snapshot::take(fixture.path());
-        assert!(snapshot.restore(fixture.path()).is_empty());
+        assert!(snapshot.restore(fixture.path()).unwrap().is_empty());
     }
 
     #[test]
@@ -118,7 +119,7 @@ mod tests {
         std::fs::write(fixture.path().join("new.txt"), "agent\n").unwrap();
 
         assert_eq!(
-            snapshot.restore(fixture.path()),
+            snapshot.restore(fixture.path()).unwrap(),
             vec!["a.txt".to_string(), "new.txt".to_string()]
         );
         assert_eq!(
@@ -145,7 +146,7 @@ mod tests {
         std::fs::write(fixture.path().join("a.txt"), "two\n").unwrap();
 
         assert_eq!(
-            snapshot.restore(fixture.path()),
+            snapshot.restore(fixture.path()).unwrap(),
             vec![
                 "a.txt".to_string(),
                 "b.txt".to_string(),
@@ -161,6 +162,29 @@ mod tests {
         assert!(shell::changed_paths(fixture.path()).unwrap().is_empty());
     }
 
+    /// A file named like a pattern is put back by its name alone: the edit
+    /// that was already on `a.txt` is not taken back with `*.txt`.
+    #[test]
+    fn a_path_is_put_back_by_its_name_not_as_a_pattern() {
+        let fixture = committed();
+        fixture.write("*.txt", "star\n");
+        fixture.git(&["add", "--", ":(literal)*.txt"]);
+        fixture.commit("star");
+        std::fs::write(fixture.path().join("a.txt"), "merged\n").unwrap();
+        let snapshot = Snapshot::take(fixture.path());
+
+        std::fs::write(fixture.path().join("*.txt"), "agent\n").unwrap();
+        fixture.git(&["add", "--", ":(literal)*.txt"]);
+
+        assert_eq!(
+            snapshot.restore(fixture.path()).unwrap(),
+            vec!["*.txt".to_string()]
+        );
+        let read = |name: &str| std::fs::read_to_string(fixture.path().join(name)).unwrap();
+        assert_eq!(read("*.txt"), "star\n");
+        assert_eq!(read("a.txt"), "merged\n");
+    }
+
     #[test]
     fn a_change_that_was_there_before_the_step_is_kept_as_it_was() {
         let fixture = committed();
@@ -168,7 +192,10 @@ mod tests {
         let snapshot = Snapshot::take(fixture.path());
 
         std::fs::write(fixture.path().join("a.txt"), "agent\n").unwrap();
-        assert_eq!(snapshot.restore(fixture.path()), vec!["a.txt".to_string()]);
+        assert_eq!(
+            snapshot.restore(fixture.path()).unwrap(),
+            vec!["a.txt".to_string()]
+        );
         assert_eq!(
             std::fs::read_to_string(fixture.path().join("a.txt")).unwrap(),
             "merged\n"
