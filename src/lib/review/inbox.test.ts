@@ -32,9 +32,12 @@ describe('groupInbox', () => {
 		expect(groups[1].hint).toBe('the author answered you');
 	});
 
-	it('leaves out your own pull requests, whatever case your login is in', () => {
-		const ids = inboxOrder(groupInbox([mine, open], 'me')).map((pr) => pr.id);
-		expect(ids).toEqual(['c']);
+	it('puts your own pull requests last, under Yours, whatever case your login is in', () => {
+		const groups = groupInbox([mine, open], 'me');
+		expect(inboxOrder(groups).map((pr) => pr.id)).toEqual(['c', 'd']);
+		expect(groups.at(-1)?.title).toBe('Yours');
+		// Requested or not, your own is not in Needs you.
+		expect(groups[0].id).toBe('open');
 	});
 
 	it('keeps a requested review in Needs you even when it also has replies', () => {

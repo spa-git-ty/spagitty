@@ -574,6 +574,31 @@ it('lists comments on the whole pull request', async () => {
 	expect(conversation().textContent).toContain('Open 2');
 });
 
+it('reads a thread in full from the Conversation card, replies and all', async () => {
+	// BUG-058: the card showed three lines of the first comment and no way to the rest.
+	const long = 'Review in Change Stack. '.repeat(40).trim();
+	vi.mocked(api.reviewComments).mockResolvedValue([
+		...COMMENTS,
+		comment(9, { path: '', line: null, body: long }),
+		comment(10, { path: '', line: null, inReplyTo: 9, author: 'mahmoud', body: 'Thanks, nothing to change.' })
+	]);
+	await openRoom();
+	await vi.waitFor(() => expect(conversation().textContent).toContain('whole PR'));
+	const card = [...conversation().querySelectorAll('.thread')].find((t) => t.textContent?.includes('whole PR'))!;
+	const more = card.querySelector<HTMLButtonElement>('button.more')!;
+	expect(more.textContent?.trim()).toBe('Show more');
+	expect(card.textContent).not.toContain('Thanks, nothing to change.');
+
+	click(more);
+	await vi.waitFor(() => expect(card.textContent).toContain('Thanks, nothing to change.'));
+	expect(card.querySelector('.body.full')?.textContent).toBe(long);
+	expect(more.getAttribute('aria-expanded')).toBe('true');
+
+	click(more);
+	await vi.waitFor(() => expect(card.textContent).not.toContain('Thanks, nothing to change.'));
+	expect(more.textContent?.trim()).toBe('Show more');
+});
+
 it('colours each line by its language, and keeps the changed words marked', async () => {
 	// FEAT-094.
 	await openRoom();

@@ -14,6 +14,14 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Review lists the pull requests you opened, last, under **Yours**. It used to
+  leave them out, so on a repository where every open pull request was yours it
+  said there was nothing to review.
+- A long comment in the review room's Conversation card can be read in full:
+  **Show more** opens the whole comment and its replies.
+
 ## [1.3.1] - 2026-10-08
 
 ### Fixed

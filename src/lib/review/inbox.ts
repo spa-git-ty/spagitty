@@ -12,7 +12,7 @@
 import type { PullRequest } from '../types';
 import { viewedCount, type ReviewRecord } from './record';
 
-export type GroupId = 'needs' | 'back' | 'open';
+export type GroupId = 'needs' | 'back' | 'open' | 'mine';
 
 export interface InboxGroup {
 	id: GroupId;
@@ -22,15 +22,15 @@ export interface InboxGroup {
 }
 
 /**
- * Three groups, by what each pull request needs from you.
+ * Four groups, by what each pull request needs from you.
  *
  * - **Needs you**: you are a requested reviewer.
  * - **Back with you**: not requested now, but a thread you started has an
  *   answer — the author replied and it is your move.
  * - **Open**: everything else somebody else opened.
- *
- * Your own pull requests are left out. They are not yours to review, and the
- * Pull requests screen is where you follow them.
+ * - **Yours**: what you opened, last, so its threads can be read and answered
+ *   here. Leaving them out told the author of every pull request on a
+ *   repository that there was nothing to review (BUG-057).
  */
 export function groupInbox(
 	list: PullRequest[],
@@ -52,7 +52,8 @@ export function groupInbox(
 			title: scope === 'repo' ? 'Open on this repo' : 'Involving you',
 			hint: 'nobody asked you yet',
 			items: open
-		}
+		},
+		{ id: 'mine', title: 'Yours', hint: 'you opened these', items: list.filter(mine) }
 	];
 	return groups.filter((group) => group.items.length > 0);
 }
