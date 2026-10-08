@@ -292,7 +292,10 @@ fn gitlab_row(item: &Value, me: &str, host: &str, asked: bool) -> Option<Watched
 /// Add a row, or fold it into the one already there for the same pull
 /// request: the searches overlap, and each flag is true if any said so.
 fn merge(found: &mut Vec<Watched>, watched: Watched) {
-    match found.iter_mut().find(|existing| existing.key == watched.key) {
+    match found
+        .iter_mut()
+        .find(|existing| existing.key == watched.key)
+    {
         Some(existing) => {
             existing.mine |= watched.mine;
             existing.review_requested |= watched.review_requested;
