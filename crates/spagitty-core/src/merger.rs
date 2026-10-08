@@ -519,7 +519,7 @@ fn short(id: &str) -> String {
 
 /// A worktree of Spagitty's own under the repository's git directory, removed
 /// when dropped — whatever happened in it.
-pub(crate) struct Scratch {
+pub struct Scratch {
     repo: PathBuf,
     path: PathBuf,
 }
@@ -529,6 +529,23 @@ impl Scratch {
     pub fn add(repo: &gix::Repository, commit: &str) -> Result<Self> {
         let dir = workdir(repo)?.to_path_buf();
         let path = scratch_root(repo).join(unique_name());
+        std::fs::create_dir_all(path.parent().expect("scratch has a parent"))?;
+        shell::worktree_add(&dir, &path, Some(commit), None, true)?;
+        Ok(Scratch { repo: dir, path })
+    }
+
+    /// A detached worktree at `commit` for an agent's assignment, found again
+    /// by `name` after a restart: under `spagitty/agents/` beside Merger's own.
+    /// One already there by that name is removed first — what an agent left in
+    /// it is not something to build on.
+    pub fn for_agent(repo: &gix::Repository, commit: &str, name: &str) -> Result<Self> {
+        let dir = workdir(repo)?.to_path_buf();
+        let path = repo.common_dir().join("spagitty").join("agents").join(name);
+        if path.exists() {
+            let _ = shell::worktree_remove(&dir, &path, true);
+            let _ = std::fs::remove_dir_all(&path);
+            let _ = shell::worktree_prune(&dir);
+        }
         std::fs::create_dir_all(path.parent().expect("scratch has a parent"))?;
         shell::worktree_add(&dir, &path, Some(commit), None, true)?;
         Ok(Scratch { repo: dir, path })

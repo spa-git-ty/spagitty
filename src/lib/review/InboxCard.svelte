@@ -4,6 +4,9 @@
 	import type { PullRequest } from '$lib/types';
 	import { chipsOf, progressOf, pushedSince, sizeLabel, sizeOf, type GroupId } from './inbox';
 	import type { ReviewRecord } from './record';
+	import Icon from '$lib/ui/Icon.svelte';
+	import { cardLine } from '$lib/agents/levels';
+	import type { Assignment } from '$lib/agents/types';
 
 	/**
 	 * One pull request in the Review inbox (FEAT-087): what it is, how big,
@@ -18,9 +21,11 @@
 		showRepository: boolean;
 		onselect: () => void;
 		onopen: () => void;
+		/** The agent assigned to it, so it can be followed from the list (2.0). */
+		agent?: Assignment | null;
 	}
 
-	let { pr, record, group, selected, showRepository, onselect, onopen }: Props = $props();
+	let { pr, record, group, selected, showRepository, onselect, onopen, agent = null }: Props = $props();
 
 	const size = $derived(sizeOf(pr));
 	const sizes = $derived(sizeLabel(pr));
@@ -61,6 +66,9 @@
 			{/if}
 			{#if chips.conflict}<span class="tag resolve">{chips.conflict}</span>{/if}
 			{#if chips.threads}<span class="tag on">{chips.threads}</span>{/if}
+			{#if agent}
+				<span class="agent" title={agent.sentence}><Icon name="agent" size="0.95em" weight={2} />{cardLine(agent)}</span>
+			{/if}
 		</span>
 	</span>
 
@@ -85,6 +93,13 @@
 </button>
 
 <style>
+	.agent {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		color: var(--agent);
+	}
+
 	.row {
 		display: flex;
 		flex-wrap: wrap;

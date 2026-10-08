@@ -17,6 +17,7 @@
 	import ExternalToolsSection from '$lib/settings/ExternalToolsSection.svelte';
 	import ProfilesSection from '$lib/settings/ProfilesSection.svelte';
 	import ExtensionsSection from '$lib/extensions/ExtensionsSection.svelte';
+	import AgentsSection from '$lib/agents/AgentsSection.svelte';
 	import { SECTIONS, settings } from '$lib/settings/store.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { delight } from '$lib/delight/store.svelte';
@@ -97,6 +98,8 @@
 			<SigningSection />
 			<ProfilesSection />
 			<AccountsSection />
+		{:else if settings.section === 'agents'}
+			<AgentsSection />
 		{:else if settings.section === 'remotes'}
 			<RemotesSection />
 		{:else if settings.section === 'hooks'}

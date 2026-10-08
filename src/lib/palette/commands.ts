@@ -31,6 +31,9 @@ import { worktrees } from '$lib/worktrees/store.svelte';
 import { worktreeModal } from '$lib/worktrees/modal.svelte';
 import { submodules } from '$lib/submodules/store.svelte';
 import { submoduleModal } from '$lib/submodules/modal.svelte';
+import { agents } from '$lib/agents/store.svelte';
+import { isLive } from '$lib/agents/levels';
+import type { Control } from '$lib/agents/types';
 
 
 /** True when a repository is open. Most commands are meaningless without one. */
@@ -263,6 +266,54 @@ function repository(): Command[] {
 }
 
 /** Everything the shell contributes, in one call. */
+/** The agent at work here: one waiting for you first, then any still live. */
+function working() {
+	const live = agents.assignments.filter(isLive);
+	return live.find((a) => a.state === 'waiting') ?? live[0] ?? null;
+}
+
+/**
+ * The Agent card's controls (2.0). Every control there is a button, and each
+ * is here too, acting on the agent at work in this repository. Greyed with
+ * the reason when there is none, as every command here is, never hidden.
+ */
+function agentCommands(): Command[] {
+	const NONE = 'No agent is working here';
+	const on = (id: string, title: string, keywords: string[], kind: 'pause' | 'resume' | 'stop' | 'takeOver', when: (state: string) => boolean): Command => ({
+		id,
+		title,
+		group: 'Agent',
+		keywords: ['agent', 'assignment', ...keywords],
+		enabled: () => {
+			const a = working();
+			return a !== null && when(a.state);
+		},
+		unavailable: () => {
+			const a = working();
+			if (!a) return NONE;
+			return when(a.state) ? null : `${a.agent.name} is ${a.state}`;
+		},
+		run: () => {
+			const a = working();
+			const control: Control = { kind };
+			if (a) void agents.control(a.id, control);
+		}
+	});
+	return [
+		on('agent.pause', 'Pause the agent after this step', ['hold', 'wait'], 'pause', (s) => s === 'working' || s === 'waiting'),
+		on('agent.resume', 'Resume the agent', ['continue', 'go on'], 'resume', (s) => s === 'paused'),
+		on('agent.stop', 'Stop the agent', ['cancel', 'halt'], 'stop', () => true),
+		on('agent.takeOver', 'Take over from the agent', ['manual', 'by hand'], 'takeOver', () => true),
+		{
+			id: 'go.settings.agents',
+			title: 'Go to Settings › Agents',
+			group: 'Go',
+			keywords: ['agents', 'claude', 'codex', 'api', 'key', 'model', 'review', 'merge'],
+			run: () => goto('/settings#agents')
+		}
+	];
+}
+
 export function registerCommands(): void {
-	palette.register(...navigation(), ...view(), ...appearance(), ...repository());
+	palette.register(...navigation(), ...view(), ...appearance(), ...repository(), ...agentCommands());
 }
