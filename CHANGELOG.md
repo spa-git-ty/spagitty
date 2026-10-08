@@ -17,6 +17,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Fixed
 
 - Merger no longer sits on *Working out the merge…* when it is first opened or a branch is chosen. A refresh that moved neither branch threw away the forecast still on its way; on Windows that happened every time.
+- On Windows a commit, merge or branch move — made in Spagitty or outside it — shows on the graph again, and an idle repository stops refreshing itself every few hundred milliseconds. The watcher compared Windows' two spellings of the same folder and never matched them.
 
 ## [2.0.0] - 2026-10-08
 
