@@ -2,7 +2,7 @@
 
 # BUG-060 — Merger sits on "Working out the merge…" when it is first opened
 
-**Status:** Backlog — reported 2026-10-08, not started.
+**Status:** Fixed — on `bugfix/BUG-060-merger-forecast-lost-on-first-open`. The check on Windows, with BUG-059 merged, is owed to the sweep.
 **Screens:** 1S.
 **Raised by:** the author, 2026-10-08, while recording the demo videos on Windows 11 with the 1.3.0 and 1.3.2 release builds.
 
@@ -37,3 +37,7 @@ A forecast that takes longer than the gap between two refreshes is discarded eve
 - **Where:** `src/lib/merger/store.svelte.ts` (`prime`, `load`, `seq`), `src/routes/merge/+page.svelte`.
 - **Test:** a store test where a second `prime()` with identical inputs arrives while the first forecast is pending, and the first answer still lands.
 - **Branch:** `bugfix/BUG-060-merger-forecast-lost-on-first-open`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+`prime()` in `src/lib/merger/store.svelte.ts` keeps each picker name's commit from the refs it reads, and `load()` records what its forecast was asked for: the repository, the pair and both tips. A refresh that changes none of them, while a forecast is on its way or already in hand, does not ask again, so the answer on its way is not thrown away. A moved tip, another pair or another repository still asks. BUG-059 removes the refresh loop that made this happen on every first open; this makes the forecast survive any refresh that moves nothing.

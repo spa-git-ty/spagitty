@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Merger no longer sits on *Working out the merge…* when it is first opened or a branch is chosen. A refresh that moved neither branch threw away the forecast still on its way; on Windows that happened every time.
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed

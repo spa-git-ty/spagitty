@@ -232,7 +232,7 @@ rather than an audit.
 | [BUG-057](items/BUG-057-your-own-pull-requests-in-review.md) | Review lists your own pull requests | 1R | Fixed |
 | [BUG-058](items/BUG-058-conversation-reads-in-full.md) | A conversation thread can be read in full | 1R | Fixed |
 | [BUG-059](items/BUG-059-windows-watcher-never-sees-refs.md) | On Windows the watcher never sees a ref move, and refreshes forever | chrome, 1A, 1S | Backlog |
-| [BUG-060](items/BUG-060-merger-forecast-lost-on-first-open.md) | Merger sits on "Working out the merge…" when it is first opened | 1S | Backlog |
+| [BUG-060](items/BUG-060-merger-forecast-lost-on-first-open.md) | Merger sits on "Working out the merge…" when it is first opened | 1S | Fixed |
 | [BUG-061](items/BUG-061-merger-shows-the-previous-pairs-forecast.md) | Merger shows the previous pair's forecast under a new branch name | 1S | Backlog |
 | [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Backlog |
 | [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Backlog |
