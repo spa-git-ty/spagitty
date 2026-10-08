@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- On Windows a commit, merge or branch move — made in Spagitty or outside it — shows on the graph again, and an idle repository stops refreshing itself every few hundred milliseconds. The watcher compared Windows' two spellings of the same folder and never matched them.
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed

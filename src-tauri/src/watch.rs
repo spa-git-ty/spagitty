@@ -103,8 +103,53 @@ pub fn watch<R: Runtime>(
     })
 }
 
+/// The real path, as the platform watcher names paths.
+///
+/// On Windows `canonicalize` answers with a verbatim path, `\\?\C:\…\.git`,
+/// while the watcher reports `C:\…\.git\refs\heads\main`. Kept verbatim, no
+/// event ever fell under the git directory: every `.git` write looked like a
+/// working-tree change, no ref move was ever seen, and the refresh each one
+/// caused touched `.git` again, for ever (BUG-059). So the prefix is taken
+/// off here, and off every event path in [`classify`], without a dependency.
 fn canonical(path: &Path) -> PathBuf {
-    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+    plain(&path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
+}
+
+/// `path` without Windows' verbatim prefix: `\\?\C:\x` is `C:\x`, and
+/// `\\?\UNC\server\share` is `\\server\share`. Any other path is itself.
+fn plain(path: &Path) -> PathBuf {
+    let Some(text) = path.to_str() else {
+        return path.to_path_buf();
+    };
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{rest}"));
+    }
+    if let Some(rest) = text.strip_prefix(r"\\?\") {
+        return PathBuf::from(rest);
+    }
+    path.to_path_buf()
+}
+
+/// Where `path` is inside `git_dir`, if it is: both without a verbatim
+/// prefix, and on Windows, where a drive letter can come in either case,
+/// compared without regard to case.
+fn inside(path: &Path, git_dir: &Path) -> Option<PathBuf> {
+    let path = plain(path);
+    let git_dir = plain(git_dir);
+    if let Ok(rest) = path.strip_prefix(&git_dir) {
+        return Some(rest.to_path_buf());
+    }
+    if cfg!(windows) {
+        let (full, base) = (path.to_str()?, git_dir.to_str()?);
+        if full.len() > base.len()
+            && full.is_char_boundary(base.len())
+            && full[..base.len()].eq_ignore_ascii_case(base)
+        {
+            let rest = full[base.len()..].trim_start_matches(['\\', '/']);
+            return Some(PathBuf::from(rest));
+        }
+    }
+    None
 }
 
 /// Working-tree paths a burst may name before the rest are not looked at: one
@@ -218,9 +263,9 @@ fn classify(
             continue;
         }
 
-        let Ok(inside) = path.strip_prefix(git_dir) else {
+        let Some(inside) = inside(path, git_dir) else {
             if candidates.len() < CANDIDATES {
-                candidates.insert(path.clone());
+                candidates.insert(plain(path));
             }
             continue;
         };
@@ -352,6 +397,67 @@ mod tests {
         assert!(out.refs);
         assert!(out.worktree);
         assert!(!out.is_empty());
+    }
+
+    #[test]
+    fn a_verbatim_prefix_is_taken_off() {
+        assert_eq!(
+            plain(Path::new(r"\\?\C:\work\app\.git")),
+            PathBuf::from(r"C:\work\app\.git")
+        );
+        assert_eq!(
+            plain(Path::new(r"\\?\UNC\server\share\.git")),
+            PathBuf::from(r"\\server\share\.git")
+        );
+        assert_eq!(
+            plain(Path::new("/work/app/.git")),
+            PathBuf::from("/work/app/.git")
+        );
+    }
+
+    /// BUG-059. The git directory as `canonicalize` answers on Windows, the
+    /// event as the watcher reports it — and the other way round. Both are
+    /// `.git` paths: a ref move is a ref move, and nothing in `.git` is a
+    /// working-tree candidate.
+    #[test]
+    fn a_verbatim_git_dir_still_owns_the_events_under_it() {
+        let verbatim = Path::new(r"\\?\/work/app/.git");
+        let plain_dir = Path::new("/work/app/.git");
+        for (git_dir, path) in [
+            (verbatim, r"/work/app/.git/refs/heads/main"),
+            (plain_dir, r"\\?\/work/app/.git/refs/heads/main"),
+        ] {
+            let mut candidates = HashSet::new();
+            let out = super::classify(&event(WROTE, &[path]), git_dir, &mut candidates);
+            assert!(out.refs, "{git_dir:?} and {path}");
+            assert!(candidates.is_empty(), "{git_dir:?} and {path}");
+        }
+        let mut candidates = HashSet::new();
+        let quiet = super::classify(
+            &event(WROTE, &["/work/app/.git/objects/ab/cd"]),
+            verbatim,
+            &mut candidates,
+        );
+        assert!(quiet.is_empty());
+        assert!(
+            candidates.is_empty(),
+            "a write in .git is not a working-tree change"
+        );
+    }
+
+    #[test]
+    fn a_working_tree_path_is_still_a_candidate() {
+        let mut candidates = HashSet::new();
+        let out = super::classify(
+            &event(WROTE, &["/work/app/src/main.rs"]),
+            Path::new(r"\\?\/work/app/.git"),
+            &mut candidates,
+        );
+        assert!(out.is_empty());
+        assert_eq!(
+            candidates.into_iter().collect::<Vec<_>>(),
+            [PathBuf::from("/work/app/src/main.rs")]
+        );
     }
 
     #[test]
