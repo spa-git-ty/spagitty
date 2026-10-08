@@ -12,6 +12,7 @@
 	} from '$lib/requests/store.svelte';
 	import type { MergeMethod, ReviewVerdict } from '$lib/types';
 	import { goto } from '$app/navigation';
+	import * as api from '$lib/api';
 	import { merger } from '$lib/merger/store.svelte';
 	import { review } from '$lib/review/store.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
@@ -120,11 +121,30 @@
 	 * The host says it conflicts with its base (BUG-063): Merger can resolve
 	 * that, bringing the base into the pull request's branch to be pushed.
 	 */
-	function resolveInMerger() {
-		if (!request) return;
-		merger.present({ a: request.targetBranch, b: request.sourceBranch, into: 'b' });
-		mergeModalOpen = false;
-		void goto('/merge');
+	let handingOver = $state(false);
+
+	async function resolveInMerger() {
+		const pr = request;
+		if (!pr || handingOver) return;
+		handingOver = true;
+		try {
+			// Merger lands into a local branch. One that is only on the host is
+			// checked out first, the way the review room does it.
+			let local = true;
+			try {
+				const rows = await api.branches();
+				local = rows.some((row) => row.kind === 'branch' && row.name === pr.sourceBranch);
+			} catch {
+				// Not known: go with the name, and Merger says if it is not there.
+			}
+			const branch = local ? pr.sourceBranch : await review.checkOut(pr);
+			if (!branch) return;
+			merger.present({ a: pr.targetBranch, b: branch, into: 'b' });
+			mergeModalOpen = false;
+			void goto('/merge');
+		} finally {
+			handingOver = false;
+		}
 	}
 
 	async function handleClose() {
@@ -621,7 +641,7 @@
 
 				<div class="modal-actions">
 					<Btn onclick={() => (mergeModalOpen = false)}>Cancel</Btn>
-					<Btn primary onclick={resolveInMerger}>Resolve in Merger</Btn>
+					<Btn primary busy={handingOver} onclick={resolveInMerger}>Resolve in Merger</Btn>
 				</div>
 				{:else}
 
