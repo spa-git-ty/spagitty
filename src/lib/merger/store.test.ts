@@ -80,6 +80,21 @@ describe('a refresh while the forecast is on its way', () => {
 		expect(api.mergerForecast).toHaveBeenCalledTimes(1);
 	});
 
+	it('a failed forecast is asked again on the next refresh', async () => {
+		vi.mocked(api.branches).mockResolvedValue(rows());
+		vi.mocked(api.mergerForecast)
+			.mockRejectedValueOnce(new Error('index.lock exists'))
+			.mockResolvedValueOnce(forecast());
+		await merger.prime('/repo', 'main');
+		expect(merger.error).toContain('index.lock exists');
+
+		await merger.prime('/repo', 'main');
+
+		expect(api.mergerForecast).toHaveBeenCalledTimes(2);
+		expect(merger.error).toBeNull();
+		expect(merger.forecast).not.toBeNull();
+	});
+
 	it('choosing another branch still asks', async () => {
 		vi.mocked(api.branches).mockResolvedValue([...rows(), branchRow('old', { id: 'o1' })]);
 		vi.mocked(api.mergerForecast).mockResolvedValue(forecast());

@@ -319,8 +319,9 @@ export const merger = {
 		// Refreshed with neither branch moved: the forecast in hand, or the one
 		// still on its way, is the answer. Asking again would drop it — and on
 		// a repository that refreshes faster than a forecast takes, it would
-		// never land (BUG-060).
-		if (!changed && question(path, a, b) === requested && (loading || forecast !== null || error !== null)) return;
+		// never land (BUG-060). A failed ask is not an answer: the refresh
+		// tries again, so a passing failure does not outlive its cause.
+		if (!changed && question(path, a, b) === requested && (loading || forecast !== null)) return;
 		await this.load();
 	},
 
