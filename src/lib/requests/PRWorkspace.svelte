@@ -109,8 +109,10 @@
 	async function handleMerge() {
 		const title = mergeTitle.trim() || undefined;
 		const message = mergeMessage.trim() || undefined;
+		const merged = requests.open;
 		const ok = await requests.merge(mergeMethod, title, message);
 		if (ok) {
+			if (merged) notice.ok(`#${merged.number} merged`, merged.title);
 			mergeModalOpen = false;
 			mergeTitle = '';
 			mergeMessage = '';
@@ -148,8 +150,10 @@
 	}
 
 	async function handleClose() {
+		const closed = requests.open;
 		const ok = await requests.close();
 		if (ok) {
+			if (closed) notice.ok(`#${closed.number} closed`, closed.title);
 			closeConfirmOpen = false;
 		}
 	}

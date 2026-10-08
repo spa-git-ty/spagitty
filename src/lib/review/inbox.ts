@@ -12,7 +12,7 @@
 import type { PullRequest } from '../types';
 import { viewedCount, type ReviewRecord } from './record';
 
-export type GroupId = 'needs' | 'back' | 'open' | 'mine';
+export type GroupId = 'needs' | 'back' | 'reviewed' | 'open' | 'mine';
 
 export interface InboxGroup {
 	id: GroupId;
@@ -22,11 +22,14 @@ export interface InboxGroup {
 }
 
 /**
- * Four groups, by what each pull request needs from you.
+ * Five groups, by what each pull request needs from you.
  *
  * - **Needs you**: you are a requested reviewer.
  * - **Back with you**: not requested now, but a thread you started has an
  *   answer — the author replied and it is your move.
+ * - **Reviewed by you**: you have left a review, which takes you off the
+ *   host's requested reviewers. Under *Open* they read as pull requests
+ *   nobody had asked you about (BUG-064). Pushed past since come first.
  * - **Open**: everything else somebody else opened.
  * - **Yours**: what you opened, last, so its threads can be read and answered
  *   here. Leaving them out told the author of every pull request on a
@@ -42,11 +45,16 @@ export function groupInbox(
 
 	const needs = others.filter((pr) => pr.reviewRequested);
 	const back = others.filter((pr) => !pr.reviewRequested && pr.repliesToYou > 0);
-	const open = others.filter((pr) => !pr.reviewRequested && pr.repliesToYou === 0);
+	const rest = others.filter((pr) => !pr.reviewRequested && pr.repliesToYou === 0);
+	const reviewed = rest
+		.filter((pr) => pr.yourReview)
+		.sort((x, y) => Number(pushedSince(y)) - Number(pushedSince(x)));
+	const open = rest.filter((pr) => !pr.yourReview);
 
 	const groups: InboxGroup[] = [
 		{ id: 'needs', title: 'Needs you', hint: 'you are a requested reviewer', items: needs },
 		{ id: 'back', title: 'Back with you', hint: 'the author answered you', items: back },
+		{ id: 'reviewed', title: 'Reviewed by you', hint: 'you left a review', items: reviewed },
 		{
 			id: 'open',
 			title: scope === 'repo' ? 'Open on this repo' : 'Involving you',
@@ -56,6 +64,25 @@ export function groupInbox(
 		{ id: 'mine', title: 'Yours', hint: 'you opened these', items: list.filter(mine) }
 	];
 	return groups.filter((group) => group.items.length > 0);
+}
+
+/** The author pushed after your latest review: the head is not the one you reviewed. */
+export function pushedSince(pr: PullRequest): boolean {
+	const sha = pr.yourReview?.sha;
+	return !!sha && !!pr.headSha && sha !== pr.headSha;
+}
+
+const SAID = {
+	approve: 'you approved',
+	requestChanges: 'you asked for changes',
+	comment: 'you commented'
+} as const;
+
+/** What your latest review was, and whether the author has pushed since. */
+export function reviewedLabel(pr: PullRequest): string | null {
+	if (!pr.yourReview) return null;
+	const said = SAID[pr.yourReview.verdict];
+	return pushedSince(pr) ? `${said} · changed since` : said;
 }
 
 /** Every pull request in the order the groups show them. */
@@ -117,6 +144,8 @@ export function progressOf(pr: PullRequest, record: ReviewRecord | null): Progre
 export interface Chips {
 	/** The host cannot merge it into its base as it stands (BUG-063). */
 	base: string | null;
+	/** Your latest review, on its own row of the inbox (BUG-064). */
+	reviewed: string | null;
 	conflict: string | null;
 	threads: string | null;
 }
@@ -124,12 +153,17 @@ export interface Chips {
 export function chipsOf(pr: PullRequest, record: ReviewRecord | null, group: GroupId): Chips {
 	const base = pr.mergeable === false ? `conflicts with ${pr.targetBranch}` : null;
 	const conflict = record && record.conflictFiles.length > 0 ? 'conflict fixes' : null;
+	const reviewed = reviewedLabel(pr);
 	if (group === 'back') {
 		const n = pr.repliesToYou;
-		return { base, conflict, threads: `${n} ${n === 1 ? 'reply' : 'replies'} to you` };
+		return { reviewed, conflict, threads: `${n} ${n === 1 ? 'reply' : 'replies'} to you` };
 	}
 	const n = pr.openThreads;
-	return { base, conflict, threads: n > 0 ? `${n} open ${n === 1 ? 'thread' : 'threads'}` : null };
+	return {
+		reviewed,
+		conflict,
+		threads: n > 0 ? `${n} open ${n === 1 ? 'thread' : 'threads'}` : null
+	};
 }
 
 export type FactTone = 'resolve' | 'accent' | 'ok' | 'danger' | 'warn' | 'muted';

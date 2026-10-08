@@ -109,6 +109,25 @@ it('marks a pull request that conflicts with its base on its card and preview (B
 	expect(cards()[1].querySelector('.tag.danger')).toBeNull();
 	const preview = view.get('aside[aria-label="Pull request preview"]').textContent ?? '';
 	expect(preview).toContain('Conflicts with main: it cannot be merged as it stands');
+  });
+
+it('puts what you reviewed under Reviewed by you, not under nobody asked you (BUG-064)', async () => {
+	const reviewed = {
+		...ASKED,
+		reviewRequested: false,
+		headSha: 'new',
+		yourReview: { verdict: 'requestChanges' as const, sha: 'old' }
+	};
+	vi.mocked(api.pullRequests).mockResolvedValue([MINE, reviewed]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(2));
+
+	const text = view.text();
+	expect(text).toContain('Reviewed by you · you left a review');
+	expect(text).not.toContain('nobody asked you yet');
+	expect(cards()[0].querySelector('.tag.on')?.textContent).toBe(
+		'you asked for changes · changed since'
+	);
 });
 
 it('shows how far a saved review got, and goes on from there', async () => {

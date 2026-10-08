@@ -8,6 +8,8 @@ import {
 	groupInbox,
 	inboxOrder,
 	progressOf,
+	pushedSince,
+	reviewedLabel,
 	sizeLabel,
 	sizeOf
 } from './inbox';
@@ -51,6 +53,54 @@ describe('groupInbox', () => {
 		expect(groupInbox([], 'me')).toEqual([]);
 		expect(groupInbox([open], 'me', 'repo')[0].title).toBe('Open on this repo');
 		expect(groupInbox([open], 'me', 'all')[0].title).toBe('Involving you');
+	});
+});
+
+describe('reviewed by you (BUG-064)', () => {
+	const approved = request({
+		id: 'r1',
+		headSha: 'h1',
+		yourReview: { verdict: 'approve', sha: 'h1' }
+	});
+	const pushed = request({
+		id: 'r2',
+		headSha: 'h2',
+		yourReview: { verdict: 'requestChanges', sha: 'h1' }
+	});
+	const never = request({ id: 'n' });
+
+	it('keeps what you reviewed out of the group nobody asked you about', () => {
+		const groups = groupInbox([never, approved, pushed], 'me');
+
+		expect(groups.map((group) => group.id)).toEqual(['reviewed', 'open']);
+		expect(groups[0].title).toBe('Reviewed by you');
+		expect(groups[0].hint).toBe('you left a review');
+		expect(groups[1].hint).toBe('nobody asked you yet');
+		expect(groups[1].items.map((pr) => pr.id)).toEqual(['n']);
+	});
+
+	it('puts the ones pushed past since your review first', () => {
+		const groups = groupInbox([approved, pushed], 'me');
+		expect(groups[0].items.map((pr) => pr.id)).toEqual(['r2', 'r1']);
+	});
+
+	it('leaves a requested review, or one with replies, where it was', () => {
+		const asked = request({ id: 'a', reviewRequested: true, yourReview: approved.yourReview });
+		const answered = request({ id: 'b', repliesToYou: 1, yourReview: approved.yourReview });
+		const groups = groupInbox([asked, answered], 'me');
+		expect(groups.map((group) => group.id)).toEqual(['needs', 'back']);
+	});
+
+	it('says what you said, and whether the head moved since', () => {
+		expect(reviewedLabel(approved)).toBe('you approved');
+		expect(reviewedLabel(pushed)).toBe('you asked for changes · changed since');
+		expect(
+			reviewedLabel(request({ yourReview: { verdict: 'comment', sha: '' }, headSha: 'h9' }))
+		).toBe('you commented');
+		expect(reviewedLabel(never)).toBeNull();
+		expect(pushedSince(approved)).toBe(false);
+		expect(pushedSince(pushed)).toBe(true);
+		expect(chipsOf(pushed, null, 'reviewed').reviewed).toBe('you asked for changes · changed since');
 	});
 });
 

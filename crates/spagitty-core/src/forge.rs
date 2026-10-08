@@ -41,6 +41,7 @@ pub mod review;
 pub mod snapshot;
 pub mod watch;
 pub use review::MergeMethod;
+pub use review::ReviewVerdict;
 
 use serde::{Deserialize, Serialize};
 
@@ -199,6 +200,19 @@ pub struct PullRequest {
     /// `owner/name` when the row came from a search across repositories rather
     /// than from one repository's list.
     pub repository: Option<String>,
+    /// The person's own latest review, when they have left one and the host
+    /// says (BUG-064). None from a host that does not.
+    pub your_review: Option<YourReview>,
+}
+
+/// What the person last said on a pull request, and on which commit: a review
+/// left on an older head is one the author has pushed past (BUG-064).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YourReview {
+    pub verdict: ReviewVerdict,
+    /// The head the review was left on. Empty when the host did not say.
+    pub sha: String,
 }
 
 /// What the Review inbox learns about a pull request after the list (FEAT-088).

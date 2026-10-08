@@ -312,6 +312,7 @@ fn parse_single_mr(node: &Value, me: &str) -> Option<PullRequest> {
         added: 0,
         removed: 0,
         mergeable,
+        your_review: None,
         head_sha: node
             .get("sha")
             .and_then(Value::as_str)

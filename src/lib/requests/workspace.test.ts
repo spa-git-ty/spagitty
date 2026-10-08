@@ -44,6 +44,7 @@ import PRMarkdown from './PRMarkdown.svelte';
 import PRWorkspace from './PRWorkspace.svelte';
 import { requests } from './store.svelte';
 import { merger } from '$lib/merger/store.svelte';
+import { notice } from '$lib/ui/notice.svelte';
 
 const forgeRepo = vi.mocked(api.forgeRepo);
 const pullRequests = vi.mocked(api.pullRequests);
@@ -370,6 +371,56 @@ describe('PR workspace store flow', () => {
 		await requests.load();
 		requests.openWorkspace('PR_1');
 		const present = vi.spyOn(merger, 'present');
+	it('goes back to the list when the open one is merged, not to another (BUG-062)', async () => {
+		pullRequests.mockResolvedValue([request(), request({ id: 'PR_2', number: 2 })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		mergePullRequest.mockResolvedValueOnce(undefined);
+		pullRequests.mockResolvedValue([request({ id: 'PR_2', number: 2 })]);
+
+		expect(await requests.merge('merge')).toBe(true);
+
+		expect(requests.viewMode).toBe('list');
+		expect(requests.openId).toBe('PR_2');
+	});
+
+	it('goes back to the list when the open one is closed (BUG-062)', async () => {
+		pullRequests.mockResolvedValue([request(), request({ id: 'PR_2', number: 2 })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		closePullRequest.mockResolvedValueOnce(undefined);
+		pullRequests.mockResolvedValue([request({ id: 'PR_2', number: 2 })]);
+
+		expect(await requests.close()).toBe(true);
+
+		expect(requests.viewMode).toBe('list');
+	});
+
+	it('reads what another pull request opened in the workspace holds (BUG-062)', async () => {
+		requests.present([request()]);
+		requests.openWorkspace('PR_1');
+		await requests.loadWorkspaceData();
+		vi.clearAllMocks();
+
+		// Nothing was open, then the list arrives: the one it lands on is read.
+		requests.clear();
+		requests.openWorkspace();
+		requests.present([request({ id: 'PR_2', number: 2 })]);
+		await settle();
+
+		expect(requests.viewMode).toBe('workspace');
+		expect(pullRequestFiles).toHaveBeenCalledWith(2);
+		expect(pullRequestCommits).toHaveBeenCalledWith(2);
+		expect(requests.files).toHaveLength(1);
+		expect(requests.commits).toHaveLength(1);
+	});
+
+	it('says the merged one was merged (BUG-062)', async () => {
+		pullRequests.mockResolvedValue([request(), request({ id: 'PR_2', number: 2 })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		mergePullRequest.mockResolvedValueOnce(undefined);
+		pullRequests.mockResolvedValue([request({ id: 'PR_2', number: 2 })]);
 
 		const view = render(PRWorkspace, {});
 		click(view.all('button').find((b) => b.textContent?.trim() === 'Merge')!);
@@ -413,6 +464,12 @@ describe('PR workspace store flow', () => {
 
 		expect(view.get('.head-meta').textContent).not.toContain('conflicts');
 		view.destroy();
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Confirm Merge')!);
+		await settle();
+		await settle();
+
+		expect(notice.current?.title).toBe('#412 merged');
+		expect(requests.viewMode).toBe('list');
 	});
 
 	it('toggles draft status via store (FEAT-071)', async () => {

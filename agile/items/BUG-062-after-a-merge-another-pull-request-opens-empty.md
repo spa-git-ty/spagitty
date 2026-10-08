@@ -2,7 +2,7 @@
 
 # BUG-062 — After a merge, Pull requests opens another pull request with nothing in it
 
-**Status:** Backlog — reported 2026-10-08, not started.
+**Status:** Fixed — on `bugfix/BUG-062-after-a-merge-another-pull-request-opens-empty`.
 **Screens:** 1H.
 **Raised by:** the author, 2026-10-08, while recording the Review demo against `maxmya/trattoria-demo` with the 1.3.2 release build.
 
@@ -33,3 +33,7 @@ There is no word that #4 was merged; the screen simply turns into an empty view 
 - **Reproduce for real:** the demo repository `maxmya/trattoria-demo` on GitHub is disposable; open a pull request there and merge it from the workspace.
 - **Related:** the success notice for your own merged pull request comes from the notification watcher, a poll later (FEAT-114), not from the merge itself. A notice at merge time may be part of the fix.
 - **Branch:** `bugfix/BUG-062-after-a-merge-another-pull-request-opens-empty`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+`present()` in `src/lib/requests/store.svelte.ts` now sends the workspace back to the list when the pull request on screen is no longer in the re-read list, which is what a merge or a close leaves behind, instead of opening the first one in its place. If the workspace does land on another pull request, as when it was opened before the list arrived, `present()` reads that one's files, commits and comments; `clearFiles()` already restores its drafts. `PRWorkspace.svelte` says *#N merged* or *#N closed*, with the title, once the host has accepted it.
