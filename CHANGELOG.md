@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- Merger no longer shows the previous pair's plan under a newly chosen branch while the new one is worked out, and *Resolve* and *Merge now* wait for the plan of the pair they name.
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed
