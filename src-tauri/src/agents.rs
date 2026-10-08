@@ -851,6 +851,57 @@ pub struct StartRequest {
     /// For a merge: resolve, check and land, rather than resolve only.
     #[serde(default)]
     pub lands: bool,
+    /// Resume this assignment: a new run from its last finished step, told
+    /// what was already done. Its record — steps, proposals, decisions — is
+    /// kept and carried on.
+    #[serde(default)]
+    pub resume: Option<String>,
+}
+
+/// An assignment carried on from its record: what it made is kept, the step
+/// that was cut short is marked superseded, and the agent is told how far
+/// the earlier run got.
+pub fn resumed(mut kept: Assignment, level: Level, note: &str) -> Assignment {
+    use spagitty_farm::assign::record::{StepKind, StepState};
+    let unit = match kept.job {
+        Job::Review => "file",
+        Job::Merge => "conflict",
+    };
+    let done = kept
+        .steps
+        .iter()
+        .filter(|s| {
+            s.state == StepState::Done
+                && matches!(s.kind, StepKind::File { .. } | StepKind::Conflict { .. })
+        })
+        .count();
+    for step in &mut kept.steps {
+        if matches!(step.state, StepState::Running | StepState::Waiting) {
+            step.state = StepState::Superseded;
+            step.gate = None;
+        }
+    }
+    let mut told = note.trim().to_string();
+    if done > 0 {
+        if !told.is_empty() {
+            told.push(' ');
+        }
+        told.push_str(&format!(
+            "This carries on an earlier run, which finished {}: do not do those again.",
+            engine::plural(done, unit)
+        ));
+    }
+    kept.note = told;
+    kept.level = level;
+    kept.state = Life::Starting;
+    kept.sentence = "Resuming".into();
+    kept.ended_at = None;
+    kept.reason = None;
+    kept.took_over = None;
+    kept.last_act = None;
+    kept.pausing = false;
+    kept.quiet_since = None;
+    kept
 }
 
 /// Two assignments on one job are left for later: one per pull request, one
@@ -910,13 +961,21 @@ pub fn assignment_start<R: Runtime>(
         }
     }
 
-    let id = format!(
-        "{}-{:08x}",
-        job_word(job),
-        spagitty_farm::assign::record::fnv(format!("{}{}", request.repo, nanos()).as_bytes())
-            as u32
-    );
     let store = store(&app)?;
+    let kept = request
+        .resume
+        .as_deref()
+        .and_then(|id| store.load(&request.repo, id))
+        .filter(|kept| kept.state.is_over() && kept.agent.id == request.agent);
+    let id = match &kept {
+        Some(kept) => kept.id.clone(),
+        None => format!(
+            "{}-{:08x}",
+            job_word(job),
+            spagitty_farm::assign::record::fnv(format!("{}{}", request.repo, nanos()).as_bytes())
+                as u32
+        ),
+    };
     let level = rules.cap(request.level);
 
     let (agent, driver, limits): (AgentRef, Box<dyn engine::Driver>, Limits) = if let Some(remote) =
@@ -1028,7 +1087,7 @@ pub fn assignment_start<R: Runtime>(
 
     let world = Repository::open(Path::new(&request.repo), &request.target, &id)
         .map_err(|e| Failure::new("git", e))?;
-    let assignment = Assignment {
+    let fresh = Assignment {
         id: id.clone(),
         repo: request.repo.clone(),
         job,
@@ -1051,6 +1110,10 @@ pub fn assignment_start<R: Runtime>(
         last_act: None,
         pausing: false,
         quiet_since: None,
+    };
+    let assignment = match kept {
+        Some(kept) => resumed(kept, level, &request.note),
+        None => fresh,
     };
     let _ = store.save(&assignment);
     let handle = engine::start(Setup {
@@ -1264,6 +1327,60 @@ mod tests {
         };
         assert!(same_job(&merge("feat"), &merge("feat")));
         assert!(!same_job(&merge("feat"), &review(1)));
+    }
+
+    #[test]
+    fn a_resumed_assignment_keeps_its_work_and_is_told_how_far_it_got() {
+        use spagitty_farm::assign::record::{Step, StepKind, StepState};
+        let step = |index, kind, state| Step {
+            index,
+            kind,
+            label: String::new(),
+            state,
+            started_at: 0,
+            ended_at: None,
+            gate: None,
+            events: Vec::new(),
+            sent: Vec::new(),
+            refused: Vec::new(),
+            note: None,
+            command: None,
+            checks: Vec::new(),
+            tokens: Default::default(),
+        };
+        let mut kept: Assignment = serde_json::from_value(serde_json::json!({
+            "id": "review-1", "repo": "/w", "job": "review",
+            "agent": {"id": "claude", "name": "Claude Code", "reach": "local", "provider": "claudeCode"},
+            "level": "signOff", "state": "stopped", "sentence": "Stopped when Spagitty closed",
+            "reason": "Stopped when Spagitty closed.", "startedAt": 1,
+            "target": {"kind": "review", "host": "h", "owner": "o", "name": "n", "number": 1, "title": "t", "base": "a", "head": "b"}
+        }))
+        .unwrap();
+        kept.steps = vec![
+            step(
+                0,
+                StepKind::File {
+                    path: "a.rs".into(),
+                },
+                StepState::Done,
+            ),
+            step(
+                1,
+                StepKind::File {
+                    path: "b.rs".into(),
+                },
+                StepState::Running,
+            ),
+        ];
+        let next = resumed(kept, Level::StepByStep, "mind the cache");
+        assert_eq!(next.state, Life::Starting);
+        assert_eq!(next.level, Level::StepByStep);
+        assert_eq!(next.reason, None);
+        assert_eq!(next.steps[1].state, StepState::Superseded);
+        assert_eq!(
+            next.note,
+            "mind the cache This carries on an earlier run, which finished 1 file: do not do those again."
+        );
     }
 
     #[test]
