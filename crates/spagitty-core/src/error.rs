@@ -102,6 +102,11 @@ pub enum Error {
     #[error("the system keychain could not be used: {0}")]
     Keychain(String),
 
+    /// A model provider refused, failed or could not be reached (2.0). The
+    /// provider's own sentence where it gave one; never the key.
+    #[error("{provider}: {detail}")]
+    Model { provider: String, detail: String },
+
     #[error("{0}")]
     Io(#[from] std::io::Error),
 }
