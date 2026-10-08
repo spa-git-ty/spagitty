@@ -24,6 +24,7 @@
  * point of the pane is the last few hundred.
  */
 
+import { agents as machineAgents } from '$lib/agents/store.svelte';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from './api';
 import { attention } from './describe';
@@ -311,10 +312,18 @@ export const farmStore = {
 		return new Map((farm?.tasks ?? []).map((task) => [task.id, task]));
 	},
 
-	/** Agents that could be given a task right now. */
+	/**
+	 * Agents that could be given a task right now. An agent switched off for
+	 * the farm in Settings › Agents (2.0) is never offered here: which agents
+	 * exist is the machine's, which of them the farm may use is too.
+	 */
 	get usable(): AgentStatus[] {
+		const machine = machineAgents.snapshot?.local ?? [];
 		return agents.filter(
-			(agent) => agent.definition.enabled && agent.availability.state === 'available'
+			(agent) =>
+				agent.definition.enabled &&
+				agent.availability.state === 'available' &&
+				machine.find((m) => m.id === agent.definition.id)?.jobs.farm !== false
 		);
 	},
 

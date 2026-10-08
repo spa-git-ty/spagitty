@@ -35,6 +35,7 @@ pub mod hooks;
 pub mod identity;
 pub mod ignore;
 pub mod merger;
+pub mod models;
 pub mod ops;
 pub mod pull;
 pub mod rebase;

@@ -15,6 +15,9 @@
 	import { draftsByPlace } from './drafts';
 	import { paint } from '$lib/diff/highlight';
 	import { threadsByPlace, type Thread } from './threads';
+	import * as agentWork from './agent.svelte';
+	import { agents } from '$lib/agents/store.svelte';
+	import type { PendingComment } from './record';
 
 	/**
 	 * The review room's diff column (FEAT-091).
@@ -51,6 +54,19 @@
 		if (!writing) return null;
 		return { path: writing.path, from: Math.min(writing.from, writing.to), to: Math.max(writing.from, writing.to) };
 	});
+	/** The agent's finding being edited, and its words as they are typed (2.0). */
+	let rewriting = $state<{ id: string; text: string } | null>(null);
+
+	function levelOf(draft: PendingComment) {
+		return agents.assignments.find((a) => a.id === draft.agent?.assignment)?.level ?? null;
+	}
+
+	async function keepRewrite(draft: PendingComment) {
+		if (!rewriting) return;
+		await agentWork.edit(draft, rewriting.text);
+		rewriting = null;
+	}
+
 	/** What is typed into the composer, and into each thread's reply box. */
 	let draftText = $state('');
 	let replies = $state<Record<number, string>>({});
@@ -361,12 +377,46 @@
 					</div>
 				</div>
 			</div>
+		{:else if row.kind === 'draft' && row.draft.agent?.state === 'proposed'}
+			{@const note = row.draft.agent}
+			{@const why = agentWork.whyOf(row.draft)}
+			<div class="slot" class:gap={row.last}>
+				<div class="part {row.tone}" class:end={row.last}>
+					<div class="proposal" aria-label="{note.name} proposes">
+						<div class="pending-head">
+							<span class="by"><Icon name="agent" size="1em" weight={2} />{note.name}</span>
+							<span class="note">proposed</span>
+							<Chip><span class="severity {note.severity}">{note.severity}</span></Chip>
+							{#if !note.sure}<Chip><span class="unsure">unsure</span></Chip>{/if}
+						</div>
+						{#if rewriting?.id === row.draft.id}
+							<textarea rows="3" aria-label="Your words for this comment" bind:value={rewriting.text}></textarea>
+							<div class="composer-actions">
+								<Btn onclick={() => (rewriting = null)}>Cancel</Btn>
+								<Btn primary quiet disabled={!rewriting.text.trim()} onclick={() => keepRewrite(row.draft)}>Keep as mine</Btn>
+							</div>
+						{:else}
+							<div class="body"><Markdown source={row.draft.body} compact /></div>
+							{#if why}<p class="why note">{why}</p>{/if}
+							<div class="proposal-actions">
+								<Btn primary quiet onclick={() => agentWork.accept(row.draft)}>Accept</Btn>
+								<Btn onclick={() => (rewriting = { id: row.draft.id, text: row.draft.body })}>Edit</Btn>
+								<Btn onclick={() => agentWork.dismiss(row.draft)}>Dismiss</Btn>
+								{#if levelOf(row.draft) !== 'unattended' && !why}
+									<Btn title="The agent says what it read and why" onclick={() => agentWork.askWhy(row.draft)}>Why?</Btn>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
 		{:else if row.kind === 'draft'}
 			<div class="slot" class:gap={row.last}>
 				<div class="part {row.tone}" class:end={row.last}>
 					<div class="pending">
 						<div class="pending-head">
 							<span class="pending-title">Pending · goes out with Finish review</span>
+							{#if row.draft.agent}<span class="note">drafted with {row.draft.agent.name}</span>{/if}
 							<span class="grow"></span>
 							<button class="delete note" onclick={() => room.removeDraft(row.draft.id)}>Delete</button>
 						</div>
@@ -757,6 +807,62 @@
 		border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
 		display: flex;
 		flex-direction: column;
+		gap: 6px;
+	}
+
+	/* An agent's finding, waiting for the person (2.0): in the agent's colour,
+	   so it is never taken for the person's own words or the host's. */
+	.proposal {
+		margin: 8px 14px 12px calc(3px + var(--diff-gutter-w) + 48px);
+		padding: 12px 14px;
+		border-radius: var(--r-floating);
+		background: var(--agent-soft);
+		border: 1px solid var(--agent-edge);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.proposal textarea {
+		border: 1px solid var(--pane-edge);
+		background: var(--sunken);
+		border-radius: var(--r-field);
+		padding: 9px 12px;
+		font-family: var(--read-font);
+		font-size: var(--read-size);
+		line-height: 1.6;
+		resize: vertical;
+	}
+
+	.by {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--agent);
+		font-weight: 600;
+	}
+
+	.severity.high {
+		color: var(--danger);
+	}
+
+	.severity.medium {
+		color: var(--warn);
+	}
+
+	.unsure {
+		color: var(--warn);
+	}
+
+	.why {
+		margin: 0;
+		padding-left: 10px;
+		border-left: 2px solid var(--agent-edge);
+	}
+
+	.proposal-actions {
+		display: flex;
+		flex-wrap: wrap;
 		gap: 6px;
 	}
 

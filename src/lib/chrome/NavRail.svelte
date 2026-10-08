@@ -7,6 +7,7 @@
 	import { isItemActive, navRows } from '$lib/nav';
 	import { repo } from '$lib/repo.svelte';
 	import { review } from '$lib/review/store.svelte';
+	import { agents } from '$lib/agents/store.svelte';
 	import { farmStore } from '$lib/farm/store.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { NavItem } from '$lib/nav';
@@ -59,10 +60,11 @@
 		}
 		// Review has no count to show: its dot is a pull request waiting on
 		// your review (FEAT-087).
-		if (item.code === '1R') return review.waiting;
+		// An agent waiting for you there draws the same dot (2.0).
+		if (item.code === '1R') return review.waiting || agents.waiting('review');
 		// Merger's dot is a merge started there with conflicts still to
 		// resolve (FEAT-102). Conflicts keeps its own for what git stopped on.
-		if (item.code === '1S') return resolving.unresolved > 0;
+		if (item.code === '1S') return resolving.unresolved > 0 || agents.waiting('merge');
 		const key = item.count;
 		if (key !== 'working' && key !== 'conflicts') return false;
 		return (counts[key] ?? 0) > 0;

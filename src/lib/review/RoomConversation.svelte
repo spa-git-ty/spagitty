@@ -1,11 +1,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { relativeTime } from '$lib/format';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { markdownText } from '$lib/ui/markdown';
 	import { room } from './room.svelte';
 	import { whereOfDraft } from './drafts';
+	import { sendable } from './agent-drafts';
 	import { whereOf } from './threads';
 
 	/**
@@ -20,9 +22,14 @@
 	interface Props {
 		/** Put the card away; the room offers it back at its edge (BUG-054). */
 		onhide?: () => void;
+		/** The card's tabs, when an agent shares its place (2.0). */
+		tabs?: Snippet;
 	}
 
-	let { onhide }: Props = $props();
+	let { onhide, tabs }: Props = $props();
+
+	/** Yours to send: what an agent proposed and nobody decided is not. */
+	const pending = $derived(sendable(room.currentDrafts));
 
 	const open = $derived(room.threads.filter((thread) => !thread.resolved));
 	const resolved = $derived(room.threads.filter((thread) => thread.resolved));
@@ -55,7 +62,7 @@
 
 <aside class="conversation" aria-label="Conversation">
 	<div class="head">
-		<span class="title">Conversation</span>
+		{#if tabs}{@render tabs()}{:else}<span class="title">Conversation</span>{/if}
 		<Chip active={room.panel === 'open'} onclick={() => room.setPanel('open')}>Open {open.length}</Chip>
 		<Chip active={room.panel === 'resolved'} onclick={() => room.setPanel('resolved')}>
 			Resolved {resolved.length}
@@ -100,9 +107,9 @@
 				{/if}
 			</div>
 		{/each}
-		{#if room.currentDrafts.length > 0}
-			<span class="note mine">Your pending · {room.currentDrafts.length}</span>
-			{#each room.currentDrafts as draft (draft.id)}
+		{#if pending.length > 0}
+			<span class="note mine">Your pending · {pending.length}</span>
+			{#each pending as draft (draft.id)}
 				<button class="draft" onclick={() => room.jumpToDraft(draft)}>
 					<Chip><span class="mono">{whereOfDraft(draft)}</span></Chip>
 					<span class="body">{markdownText(draft.body)}</span>

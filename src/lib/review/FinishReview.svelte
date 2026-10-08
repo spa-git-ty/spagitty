@@ -2,7 +2,9 @@
 <script lang="ts">
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import { untrack } from 'svelte';
 	import type { ReviewVerdict } from '$lib/types';
+	import { sendable } from './agent-drafts';
 	import { room } from './room.svelte';
 
 	/**
@@ -14,12 +16,27 @@
 
 	interface Props {
 		onclose: () => void;
+		/**
+		 * An agent at *Sign off* stops here (2.0): the card opens filled in
+		 * with its summary and its suggested verdict, for the person to read,
+		 * change and send.
+		 */
+		suggested?: { verdict: ReviewVerdict; summary: string } | null;
+		/** Told when the review went, so the agent's assignment can finish. */
+		onsent?: () => void;
 	}
 
-	let { onclose }: Props = $props();
+	let { onclose, suggested = null, onsent }: Props = $props();
 
-	let verdict = $state<ReviewVerdict>('comment');
-	const count = $derived(room.currentDrafts.length);
+	let verdict = $state<ReviewVerdict>(untrack(() => suggested?.verdict ?? 'comment'));
+	untrack(() => {
+		if (suggested && !room.body.trim()) room.setBody(suggested.summary);
+	});
+	const goes = $derived(sendable(room.currentDrafts));
+	const count = $derived(goes.length);
+	/** How many of them an agent drafted. */
+	const drafted = $derived(goes.filter((draft) => draft.agent).length);
+	const waiting = $derived(room.currentDrafts.length - count);
 	const older = $derived(room.olderDrafts.length);
 	/** A comment, or changes asked for, with nothing written says nothing. */
 	const empty = $derived(verdict !== 'approve' && count === 0 && room.body.trim() === '');
@@ -30,7 +47,10 @@
 	}
 
 	async function send() {
-		if (await room.finish(verdict)) onclose();
+		if (await room.finish(verdict)) {
+			onsent?.();
+			onclose();
+		}
 	}
 </script>
 
@@ -58,7 +78,9 @@
 		oninput={(event) => room.setBody(event.currentTarget.value)}
 	></textarea>
 	<p class="note">
-		{going(count)}{#if older > 0}
+		{going(count)}{#if drafted > 0}
+			{drafted === count ? ' An agent drafted them.' : ` ${drafted} of them an agent drafted.`}{/if}{#if waiting > 0}
+			{waiting === 1 ? ' 1 finding still waits for you and stays.' : ` ${waiting} findings still wait for you and stay.`}{/if}{#if older > 0}
 			{older === 1 ? ' 1 written before the last push stays here.' : ` ${older} written before the last push stay here.`}{/if}
 	</p>
 	<div class="actions">
