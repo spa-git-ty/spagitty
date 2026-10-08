@@ -112,7 +112,7 @@ pub struct Settings {
     ///
     /// A setting rather than something that always happens (FEAT-018).
     /// Pruning deletes refs, and a destructive step that nobody chose is the
-    /// thing Amendment 6 exists to stop — it was passed on every fetch before
+    /// thing this setting exists to stop — it was passed on every fetch before
     /// this was added.
     pub prune_on_fetch: bool,
     /// Fetch each author's real picture for the graph's nodes (FEAT-079).

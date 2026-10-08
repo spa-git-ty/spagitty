@@ -53,8 +53,8 @@
 //! `key = "value"` pairs with comments. It has no tables, no arrays, no
 //! datetimes, no multi-line strings and no nesting. A TOML crate would parse a
 //! language where this file is a sentence, and it would be a new direct
-//! dependency in the binary to do it — which Amendment's forbidden-changes rule
-//! asks to be justified rather than assumed.
+//! dependency in the binary to do it — which `AGENTS.md`'s forbidden-changes
+//! rule asks to be justified rather than assumed.
 //!
 //! So the scanner below reads exactly that sentence: top-level quoted scalars,
 //! a bounded number of them, from a bounded number of bytes, stopping dead at

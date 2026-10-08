@@ -9,7 +9,7 @@
  * that survives being flattened to HTML.
  *
  * This file sits outside `src/lib` on purpose, so it is not counted as
- * first-party code under Amendment 10. It is scaffolding, not product.
+ * first-party code by the coverage floor. It is scaffolding, not product.
  */
 
 import { createRawSnippet, flushSync, mount, unmount, type Component } from 'svelte';

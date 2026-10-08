@@ -2,9 +2,8 @@
 
 # Working record
 
-This directory is the working record of what is being built, as required by
-Amendment 12 of the amendments book (`docs/AMENDMENTS.md` points at the
-canonical copy).
+This directory is the working record of what is being built, and it is
+authoritative.
 
 ```
 agile/
@@ -283,7 +282,7 @@ of its own.
 
 These were assigned and never became items. They are listed so a reader can tell
 a *missing* document from an identifier that was never real, and because
-Amendment 12 forbids reusing any of them.
+none of them may be reused.
 
 | ID | What is known |
 | --- | --- |

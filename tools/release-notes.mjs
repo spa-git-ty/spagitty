@@ -3,7 +3,7 @@
 /**
  * Print one version's section of CHANGELOG.md, for a release's notes.
  *
- * Amendment 20: every tag carries notes, and the notes are that version's
+ * Every tag carries notes, and the notes are that version's
  * changelog section — not notes generated from the commit log at release time.
  * Gate 6 runs this with the version it is about to tag, and the prerelease
  * workflow runs it with `Unreleased`; either way, an empty answer is a failure,
@@ -56,7 +56,7 @@ function main(argv) {
 	try {
 		changelog = readFileSync(path, 'utf8');
 	} catch {
-		process.stderr.write(`${path} is missing — Amendment 20 requires it\n`);
+		process.stderr.write(`${path} is missing — every release needs it\n`);
 		return 1;
 	}
 

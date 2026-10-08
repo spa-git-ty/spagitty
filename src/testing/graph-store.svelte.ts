@@ -8,8 +8,8 @@
  * fields are ordinary properties would render once and then never update — and
  * every test about a change would silently pass by rendering the initial value.
  *
- * Lives outside `src/lib` so it is not counted as first-party code under
- * Amendment 10.
+ * Lives outside `src/lib` so it is not counted as first-party code by the
+ * coverage floor.
  */
 
 import { lanesNeeded } from '$lib/graph/lanes';

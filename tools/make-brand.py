@@ -12,7 +12,7 @@ into a second version of the icon.
       lockups/               wordmark lockups for dark and light surfaces (PNG + SVG)
       favicon/               favicon.ico + 16/32/64 PNGs
       hero.png               the README banner
-      preview.html           the sweep page (open in a browser, per Amendment 4)
+      preview.html           the sweep page (open in a browser)
       font/Sora.ttf          the wordmark typeface (SIL OFL 1.1), committed so
                              generation is hermetic — no network fetch
     src-tauri/icons/

@@ -198,7 +198,7 @@ pub struct Farm {
     /// must not hand its identifier to the next piece of work: identifiers
     /// appear in branch names, worktree directories and commit messages, and a
     /// reused one makes the history lie about which task produced a commit.
-    /// This is the same rule Amendment 12 applies to the working record's own
+    /// This is the same rule `agile/` applies to the working record's own
     /// identifiers, for the same reason.
     #[serde(default)]
     task_sequence: u32,

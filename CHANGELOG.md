@@ -3,7 +3,7 @@
 # Changelog
 
 All notable changes to Spagitty, newest first. Entries are written into
-`Unreleased` in the same change as the work they describe (Amendment 20), and a
+`Unreleased` in the same change as the work they describe, and a
 version's section becomes that version's release notes verbatim — gate 6 reads
 it with `tools/release-notes.mjs` and refuses to release without it.
 

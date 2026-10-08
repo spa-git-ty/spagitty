@@ -2,7 +2,7 @@
 /**
  * The working record checks itself (TASK-012).
  *
- * `agile/` is the record Amendment 12 asks for, and it had drifted from the tree
+ * `agile/` is the project's working record, and it had drifted from the tree
  * in six separate ways before anyone audited it: an index covering 40% of the
  * items, five statuses that contradicted the code, an item with no documents at
  * all, and four identifiers cited as dependencies that resolved to nothing. None
