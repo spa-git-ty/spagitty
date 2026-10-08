@@ -2,7 +2,7 @@
 
 # BUG-061 — Merger shows the previous pair's forecast under a new branch name
 
-**Status:** Backlog — reported 2026-10-08, not started.
+**Status:** Fixed — on `bugfix/BUG-061-merger-shows-the-previous-pairs-forecast`.
 **Screens:** 1S.
 **Raised by:** the author, 2026-10-08, while recording the demo videos with the 1.3.2 release build.
 
@@ -33,3 +33,7 @@ Nothing on the screen says the result is out of date. With BUG-060 in play, it s
 - **Independent of BUG-059 and BUG-060:** a slow forecast on any platform shows the stale plan for as long as it takes.
 - **Test:** a component test that seeds a forecast, changes B while the next forecast is pending, and expects no *Resolve* button for the old pair.
 - **Branch:** `bugfix/BUG-061-merger-shows-the-previous-pairs-forecast`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+`merger.forecast` in `src/lib/merger/store.svelte.ts` hands out the forecast only when its two sides are the pair picked now; while the next one is worked out the plan shows *Working out the merge…*, with no *Resolve* or *Merge now*. `roles`, `choices` and `ask()` read the same guarded forecast, so nothing lands a plan for another pair. Changing only the strategy, or the direction, keeps the pair and re-derives from the forecast in hand with no loader.

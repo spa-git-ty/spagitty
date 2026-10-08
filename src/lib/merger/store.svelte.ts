@@ -47,6 +47,20 @@ let error = $state<string | null>(null);
 let pickables = $state<Pickable[]>([]);
 let current = $state<string | null>(null);
 let seq = 0;
+/** Each picker name's commit, as the last read of the refs found it. */
+let tips = new Map<string, string>();
+/**
+ * What the forecast in hand — or on its way — was asked for: the repository,
+ * the pair and both tips. A refresh that changes none of them has nothing new
+ * to ask, and asking again would throw away an answer still on its way
+ * (BUG-060).
+ */
+let requested: string | null = null;
+
+/** The question a forecast answers, as one string. */
+function question(path: string | null, x: string | null, y: string | null): string {
+	return [path ?? '', x ?? '', y ?? '', tips.get(x ?? '') ?? '', tips.get(y ?? '') ?? ''].join('\u0000');
+}
 
 /** Where the screen is: the plan, resolving, the commit dialog, or done. */
 export type Phase = 'plan' | 'resolve' | 'commit' | 'done';
@@ -137,8 +151,14 @@ export const merger = {
 	get into(): Into {
 		return into;
 	},
+	/**
+	 * The forecast for the pair picked now, or null while it is being worked
+	 * out. The one in hand is kept until the next lands, and is not handed out
+	 * for another pair: drawn under new names it would describe a merge
+	 * nobody asked for, and Resolve or Merge now would act on it (BUG-061).
+	 */
 	get forecast(): MergerForecast | null {
-		return forecast;
+		return forecast && forecast.a.name === a && forecast.b.name === b ? forecast : null;
 	},
 	get loading(): boolean {
 		return loading;
@@ -157,11 +177,13 @@ export const merger = {
 		return typedName ?? (a && b ? defaultNewName(a, b) : '');
 	},
 	get roles(): Roles | null {
-		return forecast ? roles(forecast, into, this.newName) : null;
+		const plan = this.forecast;
+		return plan ? roles(plan, into, this.newName) : null;
 	},
 	get choices(): StrategyChoice[] {
 		const who = this.roles;
-		return forecast && who ? strategies(forecast, who) : [];
+		const plan = this.forecast;
+		return plan && who ? strategies(plan, who) : [];
 	},
 	/** The strategy shown: the one asked for, unless it is not possible here. */
 	get strategy(): Strategy {
@@ -217,7 +239,8 @@ export const merger = {
 
 	/** What the backend needs to land or replay the merge planned now. */
 	ask(resolutions: MergerResolution[] = []): MergerLandAsk | null {
-		const plan = forecast;
+		// Never a plan for another pair than the one named (BUG-061).
+		const plan = this.forecast;
 		if (!plan || !a || !b) return null;
 		const strategy = this.strategy;
 		return {
@@ -284,6 +307,7 @@ export const merger = {
 		}
 		const [rows, tags] = await Promise.all([api.branches(), api.tags().catch(() => [] as Tag[])]);
 		pickables = pickablesFrom(rows, tags);
+		tips = new Map([...rows.map((row) => [row.name, row.id] as const), ...tags.map((tag) => [tag.name, tag.target] as const)]);
 		const wanted = preset;
 		preset = null;
 		if (wanted) {
@@ -301,12 +325,19 @@ export const merger = {
 				asked = last.strategy;
 			}
 		}
+		// Refreshed with neither branch moved: the forecast in hand, or the one
+		// still on its way, is the answer. Asking again would drop it — and on
+		// a repository that refreshes faster than a forecast takes, it would
+		// never land (BUG-060). A failed ask is not an answer: the refresh
+		// tries again, so a passing failure does not outlive its cause.
+		if (!changed && question(path, a, b) === requested && (loading || forecast !== null)) return;
 		await this.load();
 	},
 
 	/** Ask for the forecast of the pair picked now. */
 	async load(): Promise<void> {
 		const mine = ++seq;
+		requested = question(repoPath, a, b);
 		if (!a || !b) {
 			forecast = null;
 			loading = false;
@@ -393,6 +424,8 @@ export const merger = {
 		loading = false;
 		error = null;
 		pickables = [];
+		tips = new Map();
+		requested = null;
 		current = null;
 		repoPath = null;
 		preset = null;

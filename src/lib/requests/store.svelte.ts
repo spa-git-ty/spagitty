@@ -639,9 +639,14 @@ export const requests = {
 		error = null;
 		const was = openId;
 		if (openId === null || !next.some((request) => request.id === openId)) {
+			// The one on screen is gone — merged, closed — so the workspace goes
+			// back to the list rather than turning into another (BUG-062).
+			if (was !== null) viewMode = 'list';
 			openId = next[0]?.id ?? null;
 		}
-		if (openId !== was) this.clearFiles();
+		if (openId === was) return;
+		this.clearFiles();
+		if (viewMode === 'workspace') void this.loadWorkspaceData();
 	},
 
 	fail(reason: string): void {

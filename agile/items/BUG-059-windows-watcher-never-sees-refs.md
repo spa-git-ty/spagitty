@@ -2,7 +2,7 @@
 
 # BUG-059 — On Windows the watcher never sees a ref move, and refreshes forever
 
-**Status:** Backlog — reported 2026-10-08, not started.
+**Status:** Fixed — on `bugfix/BUG-059-windows-watcher-never-sees-refs`. The check on a real Windows machine is owed to the sweep.
 **Screens:** chrome, 1A, 1S, and every screen that keys off `repo.token`.
 **Raised by:** the author, 2026-10-08, while recording the demo videos on Windows 11 with the 1.3.2 release build.
 
@@ -40,3 +40,7 @@ The refresh that follows touches `.git` again (snapshot, status), which is the n
 - **Check on a real Windows machine:** commit in a terminal and watch the graph; leave the app idle and confirm no `repo-changed` traffic. Listening for `repo-changed` from the webview is a quick way to see it.
 - **Unblocks:** BUG-060's lost forecast, which is very likely this loop at work.
 - **Branch:** `bugfix/BUG-059-windows-watcher-never-sees-refs`. Write the plan and testing documents when the work starts, and a `## [Unreleased]` changelog entry with the fix.
+
+## Fix
+
+`canonical()` in `src-tauri/src/watch.rs` takes Windows' verbatim prefix (`\\?\` and `\\?\UNC\`) off the path `canonicalize` answers with, and `classify()` compares each event path the same way, through `inside()`, which on Windows also ignores the case of the drive letter. No dependency was added: `dunce` would have done the same thing for one function.

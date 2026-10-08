@@ -17,6 +17,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Fixed
 
 - Review no longer files pull requests you have already reviewed under *nobody asked you yet*: they have their own *Reviewed by you* group, each card says what you said, and one the author has pushed to since says *changed since* (GitHub).
+- Merging or closing a pull request from its workspace returns to the list with a notice, instead of turning the workspace into another pull request with no files or commits.
+- Merger no longer shows the previous pair's plan under a newly chosen branch while the new one is worked out, and *Resolve* and *Merge now* wait for the plan of the pair they name.
+- Merger no longer sits on *Working out the merge…* when it is first opened or a branch is chosen. A refresh that moved neither branch threw away the forecast still on its way; on Windows that happened every time.
+- On Windows a commit, merge or branch move — made in Spagitty or outside it — shows on the graph again, and an idle repository stops refreshing itself every few hundred milliseconds. The watcher compared Windows' two spellings of the same folder and never matched them.
 
 ## [2.0.0] - 2026-10-08
 
