@@ -35,7 +35,7 @@ use spagitty_core::models::{self, Endpoint, Provider};
 use spagitty_farm::agent::{adapter_for, AgentRunRequest};
 use spagitty_farm::assign::engine::{self, Control, Limits, Setup, Sink, Work};
 use spagitty_farm::assign::level::{Job, Level};
-use spagitty_farm::assign::local::{read_only, LocalDriver};
+use spagitty_farm::assign::local::{launch_failure, read_only, LocalDriver};
 use spagitty_farm::assign::record::{AgentRef, Assignment, Reach, State as Life, Store, Target};
 use spagitty_farm::assign::remote::RemoteDriver;
 use spagitty_farm::assign::rules::RepoRules;
@@ -764,10 +764,10 @@ pub struct Tested {
     pub ms: u64,
 }
 
-const TEST_PROMPT: &str = "Reply with the single word: ok";
 const TEST_TIMEOUT: Duration = Duration::from_secs(90);
 
-/// Run a local agent once on a tiny prompt in a temporary directory.
+/// Verify local file access in a temporary directory. The expected value is
+/// absent from the prompt, so echoing instructions cannot pass the test.
 #[tauri::command(async)]
 pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Tested> {
     let machine = load(&app);
@@ -782,10 +782,13 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
         ));
     }
     let dir = tempfile_dir()?;
+    let expected = format!("spagitty-access-{}", nanos());
+    std::fs::write(dir.join("access.txt"), &expected)
+        .map_err(|e| Failure::new("io", e.to_string()))?;
     let adapter = adapter_for(view.provider);
     let request = AgentRunRequest {
         workdir: dir.clone(),
-        prompt: TEST_PROMPT.into(),
+        prompt: "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file.".into(),
         unattended: false,
     };
     let command = read_only(view.provider, adapter.command(&view.definition, &request));
@@ -817,28 +820,41 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
     let _ = std::fs::remove_dir_all(&dir);
     let lines = collected.lines();
     Ok(local_test_result(
+        view.provider,
         ended,
         &lines,
+        &expected,
         started.elapsed().as_millis() as u64,
     ))
 }
 
-fn local_test_result(ended: Ended, lines: &[String], ms: u64) -> Tested {
+fn local_test_result(
+    provider: AgentProvider,
+    ended: Ended,
+    lines: &[String],
+    expected: &str,
+    ms: u64,
+) -> Tested {
+    if let Some(said) = launch_failure(provider, &lines.join("\n")) {
+        return Tested {
+            ok: false,
+            said,
+            ms,
+        };
+    }
     let said = lines
         .iter()
         .rev()
         .find(|line| !line.trim().is_empty())
         .cloned()
         .unwrap_or_default();
-    let answered = lines
-        .iter()
-        .any(|line| line.trim().eq_ignore_ascii_case("ok"));
+    let answered = lines.iter().any(|line| line.contains(expected));
     match ended {
         Ended::Ok if answered => Tested { ok: true, said, ms },
         Ended::Ok => Tested {
             ok: false,
             said: if said.is_empty() {
-                "The agent exited without answering the test.".into()
+                "The agent exited without reading the test file.".into()
             } else {
                 said
             },
@@ -1677,22 +1693,87 @@ mod tests {
 
     #[test]
     fn a_successful_exit_without_the_test_answer_is_not_a_pass() {
-        let failed = local_test_result(Ended::Ok, &["No default model selected".into()], 12);
+        let failed = local_test_result(
+            AgentProvider::OhMyPi,
+            Ended::Ok,
+            &["No default model selected".into()],
+            "test-value",
+            12,
+        );
         assert!(!failed.ok);
         assert_eq!(failed.said, "No default model selected");
-        assert!(!local_test_result(Ended::Ok, &[], 12).ok);
+        assert!(!local_test_result(AgentProvider::OhMyPi, Ended::Ok, &[], "test-value", 12).ok);
+        assert!(
+            !local_test_result(
+                AgentProvider::Agy,
+                Ended::Ok,
+                &["ok".into()],
+                "test-value",
+                12
+            )
+            .ok
+        );
         assert!(
             local_test_result(
+                AgentProvider::Codex,
                 Ended::Ok,
                 &[
                     "codex".into(),
-                    "ok".into(),
+                    "test-value".into(),
                     "tokens used".into(),
                     "100".into()
                 ],
+                "test-value",
                 12,
             )
             .ok
         );
+    }
+
+    #[test]
+    fn settings_reports_permission_denials_with_the_saved_choice_to_use() {
+        let denied = local_test_result(AgentProvider::Agy, Ended::Ok,
+            &["test-value".into(), "jetski: no output produced — a tool required command permission that headless mode cannot prompt for".into()], "test-value", 12);
+        assert!(!denied.ok);
+        assert!(denied.said.contains("Settings > Agents > agy"));
+    }
+
+    #[test]
+    #[ignore = "requires authenticated Codex and agy; exercises actual Settings handlers"]
+    fn live_settings_tests_use_saved_codex_and_agy_permissions() {
+        let identifier = format!(
+            "dev.spagitty.access-test-{}-{}",
+            std::process::id(),
+            nanos()
+        );
+        let mut context = tauri::test::mock_context(tauri::test::noop_assets());
+        context.config_mut().identifier = identifier.clone();
+        let app = tauri::test::mock_builder()
+            .manage(AgentsState::default())
+            .build(context)
+            .unwrap();
+        let settings_path = file(app.handle()).unwrap();
+        assert!(settings_path.parent().unwrap().ends_with(&identifier));
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+                let _ = std::fs::remove_file(self.0.with_extension("json.partial"));
+                let _ = std::fs::remove_dir(self.0.parent().unwrap());
+            }
+        }
+        let _cleanup = Cleanup(settings_path);
+        agents_set_codex_full_access(app.handle().clone(), app.state::<AgentsState>(), true)
+            .unwrap();
+        agents_set_agy_auto_approve(app.handle().clone(), app.state::<AgentsState>(), true)
+            .unwrap();
+        for id in ["codex", "agy"] {
+            let tested = agents_test_local(app.handle().clone(), id.into()).unwrap();
+            assert!(tested.ok, "{id}: {}", tested.said);
+            println!(
+                "{id} Settings test passed with saved permissions in {} ms",
+                tested.ms
+            );
+        }
     }
 }
