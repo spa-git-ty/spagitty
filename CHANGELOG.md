@@ -14,6 +14,88 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-08
+
+A MAJOR: agents can review and merge, and you choose how far each one goes
+alone. With no agent set up, Review and Merger are exactly as they were.
+
+### Added
+
+- **Settings › Agents**, where agents are attached once for the machine. On
+  this machine: Claude Code, Codex, Cursor and Oh My Pi as Spagitty finds them,
+  with their version and path, and any command-line agent added by hand.
+  Through an API: Anthropic, OpenAI, Google, or any endpoint that speaks the
+  OpenAI-compatible chat API, such as OpenRouter, Ollama or LM Studio. Each
+  agent says what it may do — Review, Merge, Farm — and **Test** runs it once
+  and says what answered.
+- **Each repository's rules** beside them: the highest level allowed, which
+  agents may be used, the branches an agent may never land into unattended,
+  whether an agent may approve or request changes on the host, and whether its
+  comments say so. Unattended is not allowed anywhere until you raise it.
+- **Assign an agent…** in Review, beside Start review and Check out branch, and
+  in Merger, beside Resolve N conflicts. Pick the agent, the level and an
+  optional note.
+- **Four levels.** Suggest: the agent runs to the end and nothing is applied
+  until you accept it. Step by step: it stops after the plan, each file, each
+  conflict and the checks. Sign off: it drafts and resolves as it goes and stops
+  before the review is sent or the merge lands. Unattended: it sends or lands
+  itself. Whatever the level, it stops when it is unsure, when a check fails,
+  when a limit is reached, and when the pull request or a branch moves.
+- **An agent's work is your material.** In Review its findings are pending
+  comments with its name, under their lines, with Accept, Edit, Dismiss and
+  Why. Only the ones you decide go out with Finish review. In Merger its
+  resolutions are the resolver's own choices: Take A, Take B, Both, Pick lines
+  or Edit. Text it wrote gets a fourth badge, a hexagon in the agent's colour.
+- **The Agent card** shows what the agent is doing while it does it: one
+  sentence, a meter, a timeline of its steps with what it read and ran, and
+  the raw output. Pause, Stop, Take over, change the level, or tell it
+  something. A stopped run can be resumed from its last finished step.
+- The rail's dot shows on Review or Merger while an agent waits for you, with a
+  notification when Spagitty is not in front. Every agent control is also in
+  the command palette.
+
+### Changed
+
+- **Agents are set up for the machine**, in Settings, rather than per
+  repository in Farm › Setup. A repository's `.spagitty/farm/agents.json` still
+  overrides what the farm uses. Agents added by hand in your repositories'
+  farms are offered for the machine list once. A 1.x Spagitty opening a
+  repository that 2.0 has used will not see agents defined only on the machine.
+- **Spagitty can now send code to a model provider**, which 1.x never did. It
+  happens only when you assign an API agent, and only to that agent's provider,
+  with your own key. What is sent: the pull request's description, its open
+  threads and the changed files, or the conflicting regions and their sides,
+  and any other file the agent asks to read. Each repository asks once before
+  the first time, each step lists the files it sent, and an endpoint on this
+  machine, such as Ollama, sends nothing anywhere. Command-line agents run on
+  this machine, as the farm's always have.
+- An agent's comments carry *Drafted with* and its name on the host, and the
+  review says how many were drafted. A merge commit that lands an agent's
+  choices credits it in a `Co-authored-by` trailer.
+
+### Security
+
+- An API key goes to the system keychain, beside the forge tokens, and nowhere
+  else: not the settings file, not the window, not a log line or an error.
+- An agent never works in your working copy. It reads a scratch copy under the
+  git directory, in its own read-only mode where it has one. Spagitty checks
+  after every step and puts back anything it wrote. It cannot push, delete a
+  branch, touch another person's thread or review its own commits.
+- Requests to a model provider go through one module, over `https` except to an
+  endpoint on this machine, with no redirects.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 1.3.2. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
+
 ## [1.3.2] - 2026-10-08
 
 ### Fixed
