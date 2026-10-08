@@ -68,6 +68,7 @@ import type {
 	Settings,
 	Signing,
 	Update,
+	Watched,
 	Snapshot,
 	Submodule,
 	StashEntry,
@@ -721,6 +722,20 @@ export function setPrDraft(
  */
 export function involvedPullRequests(): Promise<PullRequest[]> {
 	return invoke('involved_pull_requests');
+}
+
+/**
+ * What every connected account's pull requests look like now (FEAT-114): the
+ * person's own, merged and closed included, and the ones they are asked to
+ * review or are otherwise in. The watcher compares one answer with the next.
+ */
+export function watchPullRequests(): Promise<Watched[]> {
+	return invoke('watch_pull_requests');
+}
+
+/** Show one operating-system notification, without a sound (FEAT-114). */
+export function notifyDesktop(title: string, body: string): Promise<void> {
+	return invoke('notify_desktop', { title, body });
 }
 
 /**

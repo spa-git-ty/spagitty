@@ -142,7 +142,11 @@ mod tests {
         );
 
         remember("cache.example", "ada", None);
-        assert!(cache().lock().unwrap().get(&key("cache.example", "ada")).is_none());
+        assert!(cache()
+            .lock()
+            .unwrap()
+            .get(&key("cache.example", "ada"))
+            .is_none());
     }
 
     // Reading and writing a real keychain is not tested here. It needs a

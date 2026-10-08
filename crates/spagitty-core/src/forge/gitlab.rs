@@ -78,7 +78,7 @@ fn merge_request_url(repo: &Repo, number: u64) -> String {
 }
 
 /// `GET url` as JSON, a refused status as the error that says which.
-fn get(url: &str, token: &str, host: &str) -> Result<Value> {
+pub(crate) fn get(url: &str, token: &str, host: &str) -> Result<Value> {
     let response = http::get_json(url, token, host)?;
     if response.status < 200 || response.status >= 300 {
         return Err(status_error(

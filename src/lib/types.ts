@@ -1196,6 +1196,46 @@ export interface Settings {
 	personality: Personality;
 	/** Whether Spagitty makes a sound, and how loud. Off until asked. */
 	sound: SoundLevel;
+	/**
+	 * Watch the connected accounts' pull requests and say when something
+	 * happens (FEAT-114). Off until asked: a request to every connected host on
+	 * a timer.
+	 */
+	notifyPullRequests: boolean;
+	/** Also show each one as an operating-system notification. */
+	notifyDesktop: boolean;
+	/** Your pull request was merged or closed. */
+	notifyMerged: boolean;
+	/** Somebody else commented on or reviewed a pull request you are in. */
+	notifyComments: boolean;
+	/** You were asked to review. */
+	notifyReviewRequests: boolean;
+	/** The checks on your pull request started failing. */
+	notifyChecks: boolean;
+	/** Minutes between looks: 1, 2, 5 or 15. */
+	notifyEveryMinutes: number;
+}
+
+/** Where a watched pull request stands (FEAT-114). Mirrors `watch::WatchState`. */
+export type WatchState = 'open' | 'merged' | 'closed';
+
+/** One pull request as the notification watcher compares it. Mirrors `watch::Watched`. */
+export interface Watched {
+	/** `host/owner/name#number`: the same pull request on every read. */
+	key: string;
+	host: string;
+	repository: string;
+	number: number;
+	title: string;
+	url: string;
+	state: WatchState;
+	mine: boolean;
+	reviewRequested: boolean;
+	/** Comments and reviews so far. Only ever compared with itself. */
+	activity: number;
+	lastActor: string | null;
+	lastActorIsMe: boolean;
+	checks: CheckState | null;
 }
 
 /**

@@ -39,7 +39,7 @@ const LIMIT: usize = 50;
 /// `github.com` answers at `api.github.com/graphql`; an Enterprise installation
 /// answers at `<host>/api/graphql` — note **not** `/api/v3/graphql`, which is
 /// the REST root and a different path.
-fn graphql_url(host: &str) -> String {
+pub(crate) fn graphql_url(host: &str) -> String {
     if host == "github.com" {
         "https://api.github.com/graphql".into()
     } else {
@@ -475,7 +475,7 @@ pub fn read_pull_requests(body: &str, me: &str, host: &str) -> Result<Vec<PullRe
 }
 
 /// The first GraphQL error message, if the answer carries any.
-fn graphql_error(json: &Value) -> Option<String> {
+pub(crate) fn graphql_error(json: &Value) -> Option<String> {
     let errors = json["errors"].as_array()?;
     let first = errors.first()?;
     Some(
@@ -602,7 +602,7 @@ fn mergeable_of(value: Option<&str>) -> Option<bool> {
 ///
 /// `None` when the repository runs none — which the screen shows as nothing at
 /// all, rather than as a check that has not passed.
-fn checks_of(node: &Value) -> Option<CheckState> {
+pub(crate) fn checks_of(node: &Value) -> Option<CheckState> {
     let state = node["commits"]["nodes"]
         .as_array()?
         .first()?

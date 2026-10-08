@@ -27,6 +27,9 @@ spagitty-farm = { workspace = true }
 spagitty-extensions = { workspace = true }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# Pull request notifications in the operating system's notification centre
+# (FEAT-114). Called from Rust only, so there is no frontend package.
+tauri-plugin-notification = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
 notify = "8"

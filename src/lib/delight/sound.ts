@@ -44,7 +44,14 @@ import type { Rarity } from './badges';
 export type SoundLevel = 'off' | 'subtle' | 'full';
 
 /** What can be played. One entry per moment worth marking. */
-export type Cue = 'commit' | 'merge' | 'rebase' | 'conflict' | 'recovery' | Rarity;
+export type Cue =
+	| 'commit'
+	| 'merge'
+	| 'rebase'
+	| 'conflict'
+	| 'recovery'
+	| 'notification'
+	| Rarity;
 
 /**
  * The context, built on first use and kept.
@@ -170,6 +177,19 @@ const CUES: Record<Cue, Tone[]> = {
 	recovery: [
 		{ from: 2100, to: 1500, delay: 0, length: 0.02, type: 'square', gain: 0.35 },
 		{ from: 180, to: 110, delay: 0.012, length: 0.11, type: 'sine', gain: 1 }
+	],
+
+	/*
+	 * A pull request has news (FEAT-114): a knock from somewhere else.
+	 *
+	 * Two soft notes a fifth apart, the second answering the first, then the
+	 * commit's own 660Hz settling under them — so it reads as Spagitty from
+	 * across the room, but as somebody else's doing rather than your own.
+	 */
+	notification: [
+		{ from: 988, to: 988, delay: 0, length: 0.09, type: 'sine', gain: 0.55 },
+		{ from: 1480, to: 1480, delay: 0.1, length: 0.14, type: 'sine', gain: 0.6 },
+		{ from: 660, to: 660, delay: 0.1, length: 0.22, type: 'triangle', gain: 0.35 }
 	],
 
 	// Badges, by rarity. Tiny to unmistakable.

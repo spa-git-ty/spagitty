@@ -16,6 +16,16 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [1.3.0] - 2026-10-08
 
+### Added
+
+- **Pull request notifications.** Settings → Notifications watches your
+  connected GitHub and GitLab accounts while Spagitty is open. It tells you
+  when your pull request is merged or closed, when someone comments or
+  reviews, when you are asked to review, and when your checks start failing.
+  You get a notice in the app, an optional system notification, and
+  Spagitty's own sound. Choose which kinds to hear about and how often to
+  look. Off by default.
+
 ### Changed
 
 - **Sound is its own setting.** Personality Off or Professional no longer

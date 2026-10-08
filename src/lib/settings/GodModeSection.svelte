@@ -56,6 +56,7 @@
 		{ id: 'rebase', label: 'Rebase' },
 		{ id: 'conflict', label: 'Conflict' },
 		{ id: 'recovery', label: 'Recovery' },
+		{ id: 'notification', label: 'Notification' },
 		{ id: 'common', label: 'Common' },
 		{ id: 'uncommon', label: 'Uncommon' },
 		{ id: 'rare', label: 'Rare' },

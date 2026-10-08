@@ -39,6 +39,7 @@ pub mod http;
 pub mod keychain;
 pub mod review;
 pub mod snapshot;
+pub mod watch;
 pub use review::MergeMethod;
 
 use serde::{Deserialize, Serialize};

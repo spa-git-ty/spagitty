@@ -134,6 +134,44 @@ pub struct Settings {
     /// Whether Spagitty makes a sound, and how loud (FEAT-072).
     #[serde(deserialize_with = "lenient")]
     pub sound: SoundLevel,
+    /// Watch the connected accounts' pull requests and say when something
+    /// happens (FEAT-114). Off until asked: it is a request to every connected
+    /// host on a timer, for as long as Spagitty is open.
+    pub notify_pull_requests: bool,
+    /// Also show each one as an operating-system notification.
+    pub notify_desktop: bool,
+    /// Your pull request was merged or closed.
+    pub notify_merged: bool,
+    /// Somebody else commented on or reviewed a pull request you are in.
+    pub notify_comments: bool,
+    /// You were asked to review.
+    pub notify_review_requests: bool,
+    /// The checks on your pull request started failing.
+    pub notify_checks: bool,
+    /// Minutes between looks. Clamped to [`NOTIFY_EVERY`] on the way in.
+    #[serde(deserialize_with = "lenient_minutes")]
+    pub notify_every_minutes: u32,
+}
+
+/// How often the screen offers to look, in minutes. The first is the floor:
+/// once a minute is the interval GitHub asks pollers to keep to.
+pub const NOTIFY_EVERY: [u32; 4] = [1, 2, 5, 15];
+
+/// The interval a new install starts at.
+const NOTIFY_EVERY_DEFAULT: u32 = 2;
+
+/// A hand-edited interval that is not on offer reads as the default rather than
+/// as a tighter loop than any host asked for.
+fn lenient_minutes<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(value
+        .as_u64()
+        .and_then(|minutes| u32::try_from(minutes).ok())
+        .filter(|minutes| NOTIFY_EVERY.contains(minutes))
+        .unwrap_or(NOTIFY_EVERY_DEFAULT))
 }
 
 impl Default for Settings {
@@ -161,6 +199,16 @@ impl Default for Settings {
             // Silent until asked, like every other preference here that
             // changes what the application does.
             sound: SoundLevel::Off,
+            // Off until asked: a request to every connected host on a timer.
+            // Once on, everything it can say is on, and the reader turns off
+            // what they do not want.
+            notify_pull_requests: false,
+            notify_desktop: true,
+            notify_merged: true,
+            notify_comments: true,
+            notify_review_requests: true,
+            notify_checks: true,
+            notify_every_minutes: NOTIFY_EVERY_DEFAULT,
         }
     }
 }
@@ -309,10 +357,39 @@ mod tests {
             fetch_avatars: false,
             personality: Personality::FullSpagitty,
             sound: SoundLevel::Full,
+            notify_pull_requests: true,
+            notify_desktop: false,
+            notify_merged: false,
+            notify_comments: true,
+            notify_review_requests: false,
+            notify_checks: true,
+            notify_every_minutes: 5,
         };
         let text = serde_json::to_string_pretty(&written).expect("serialising");
 
         assert_eq!(parse(&text), written);
+    }
+
+    #[test]
+    fn pull_request_notifications_are_off_until_asked() {
+        let settings = Settings::default();
+
+        assert!(!settings.notify_pull_requests);
+        assert!(settings.notify_desktop && settings.notify_merged && settings.notify_comments);
+        assert_eq!(settings.notify_every_minutes, 2);
+    }
+
+    #[test]
+    fn an_interval_that_is_not_on_offer_reads_as_the_default() {
+        // A hand-edited `0` must not become a request loop with no pause.
+        for odd in ["0", "3", "-1", "\"soon\"", "99999999999"] {
+            let settings = parse(&format!(
+                r#"{{"notifyEveryMinutes": {odd}, "showGitCommands": true}}"#
+            ));
+            assert_eq!(settings.notify_every_minutes, 2, "for {odd}");
+            assert!(settings.show_git_commands, "for {odd}");
+        }
+        assert_eq!(parse(r#"{"notifyEveryMinutes": 15}"#).notify_every_minutes, 15);
     }
 
     #[test]

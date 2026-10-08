@@ -10,6 +10,7 @@
 	import BehaviourSection from '$lib/settings/BehaviourSection.svelte';
 	import IdentitySection from '$lib/settings/IdentitySection.svelte';
 	import GodModeSection from '$lib/settings/GodModeSection.svelte';
+	import NotificationsSection from '$lib/settings/NotificationsSection.svelte';
 	import PersonalitySection from '$lib/settings/PersonalitySection.svelte';
 	import SigningSection from '$lib/settings/SigningSection.svelte';
 	import UpdateSection from '$lib/settings/UpdateSection.svelte';
@@ -107,6 +108,8 @@
 		{:else if settings.section === 'behaviour'}
 			<BehaviourSection />
 			<UpdateSection />
+		{:else if settings.section === 'notifications'}
+			<NotificationsSection />
 		{:else if settings.section === 'personality'}
 			<PersonalitySection />
 		{:else if settings.section === 'godmode'}

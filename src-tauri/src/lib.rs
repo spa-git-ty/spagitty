@@ -18,6 +18,7 @@ mod forge_bridge;
 mod graph_worker;
 mod merger_state;
 mod network_worker;
+mod notifications;
 mod platform;
 mod profiles;
 mod rebase_worker;
@@ -40,6 +41,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(commands::AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::open_repo,
@@ -171,6 +173,8 @@ pub fn run() {
             commands::merge_pull_request,
             commands::close_pull_request,
             commands::involved_pull_requests,
+            notifications::watch_pull_requests,
+            notifications::notify_desktop,
             commands::local_clone_of,
             commands::review_summaries,
             commands::review_checkout,

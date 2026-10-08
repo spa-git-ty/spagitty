@@ -21,6 +21,7 @@
 	import { commandLog } from '$lib/commandlog/store.svelte';
 	import RewardOverlay from '$lib/delight/RewardOverlay.svelte';
 	import { delight } from '$lib/delight/store.svelte';
+	import { watcher } from '$lib/notifications/watcher.svelte';
 	import NavRail from '$lib/chrome/NavRail.svelte';
 	import ResizeEdges from '$lib/chrome/ResizeEdges.svelte';
 	import { appWindow } from '$lib/chrome/window';
@@ -285,6 +286,23 @@
 	// (FEAT-087). Nothing is read for a repository with no account.
 	$effect(() => {
 		if (repo.info !== null) review.prime(repo.generation);
+	});
+
+	// Pull request notifications (FEAT-114): watch while they are on, at the
+	// chosen interval. Switching off forgets the last answer, so switching back
+	// on starts from now rather than with a burst of old news.
+	$effect(() => {
+		const on = settings.settings.notifyPullRequests;
+		const minutes = settings.settings.notifyEveryMinutes;
+		// Until the read lands the defaults say off, and forgetting then would
+		// lose what was merged while Spagitty was closed.
+		if (!settings.loaded || !api.inTauri()) return;
+		if (!on) {
+			watcher.forget();
+			return;
+		}
+		watcher.start(minutes);
+		return () => watcher.stop();
 	});
 
 	// A repository that has a farm is read once, so the rail's Farm dot says

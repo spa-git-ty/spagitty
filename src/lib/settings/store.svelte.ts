@@ -34,6 +34,7 @@ export type Section =
 	| 'tools'
 	| 'extensions'
 	| 'behaviour'
+	| 'notifications'
 	| 'personality'
 	| 'godmode'
 	| 'appearance'
@@ -56,6 +57,7 @@ export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'tools', label: 'External Tools' },
 	{ id: 'extensions', label: 'Extensions' },
 	{ id: 'behaviour', label: 'Behaviour' },
+	{ id: 'notifications', label: 'Notifications' },
 	{ id: 'personality', label: 'Personality' },
 	{ id: 'godmode', label: 'God mode' },
 	{ id: 'appearance', label: 'Appearance' },
@@ -77,7 +79,14 @@ const DEFAULTS: Settings = {
 	pruneOnFetch: false,
 	fetchAvatars: true,
 	personality: 'off',
-	sound: 'off'
+	sound: 'off',
+	notifyPullRequests: false,
+	notifyDesktop: true,
+	notifyMerged: true,
+	notifyComments: true,
+	notifyReviewRequests: true,
+	notifyChecks: true,
+	notifyEveryMinutes: 2
 };
 
 function isSection(value: string): value is Section {

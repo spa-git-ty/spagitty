@@ -167,6 +167,7 @@ rather than an audit.
 | [FEAT-111](items/FEAT-111-farm-plan-journey.md) | Farm setup and planning | 1Q | Done |
 | [FEAT-112](items/FEAT-112-farm-crew-activity.md) | Farm crew and activity | 1Q | Done |
 | [FEAT-113](items/FEAT-113-farm-wrap-up.md) | Farm wrap up and evidence | 1Q | Done |
+| [FEAT-114](items/FEAT-114-pull-request-notifications.md) | Pull request notifications | Settings, chrome | In review |
 
 ## Bugs
 
