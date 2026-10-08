@@ -18,6 +18,8 @@
 
 [Download](https://github.com/spa-git-ty/spagitty/releases/latest) · [Screens](docs/screens.md) · [Architecture](docs/architecture.md) · [Changelog](CHANGELOG.md)
 
+<img src="assets/screenshots/graph.png" alt="The commit graph in Spagitty: branch lanes, tags and commit messages" width="900">
+
 </div>
 
 ---
