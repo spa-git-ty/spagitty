@@ -13,6 +13,7 @@
 	import { LEVELS, perRun } from './levels';
 	import ApiAgentSheet from './ApiAgentSheet.svelte';
 	import CustomAgentSheet from './CustomAgentSheet.svelte';
+	import OmpSettingsSheet from './OmpSettingsSheet.svelte';
 	import type { AgentDefinition } from '$lib/farm/types';
 	import type { Defaults, Jobs, Level, LocalAgent, Notify, RemoteAgent, RepoRules, Tested } from './types';
 
@@ -28,6 +29,7 @@
 
 	let adding = $state<'custom' | 'api' | null>(null);
 	let editing = $state<RemoteAgent | null>(null);
+	let editingOmp = $state(false);
 	let tests = $state<Record<string, Tested | 'testing'>>({});
 
 	const snapshot = $derived(agents.snapshot);
@@ -184,6 +186,10 @@
 										{result.ok ? `Answered in ${(result.ms / 1000).toFixed(1)} s` : result.said}
 									</span>
 								{/if}
+								{#if agent.provider === 'ohMyPi' && usable}
+									<span class="note">Model: {snapshot.omp.model || 'OMP default'}{snapshot.omp.profile ? ` · Profile: ${snapshot.omp.profile}` : ''}</span>
+									<Btn onclick={() => (editingOmp = true)}>Model and profile…</Btn>
+								{/if}
 
 								{#if agent.provider === 'codex' && usable}
 									<div class="group" role="group" aria-label="Codex access">
@@ -192,6 +198,15 @@
 									</div>
 									{#if snapshot.codexFullAccess}
 										<span class="note">Codex commands can access files outside the repository and use the network.</span>
+									{/if}
+								{/if}
+								{#if agent.provider === 'agy' && usable}
+									<div class="group" role="group" aria-label="agy tool permissions">
+										<Chip active={!snapshot.agyAutoApprove} onclick={() => act('Not changed', () => api.setAgyAutoApprove(false))}>Configured rules</Chip>
+										<Chip active={snapshot.agyAutoApprove} onclick={() => act('Not changed', () => api.setAgyAutoApprove(true))}>Auto-approve tools</Chip>
+										</div>
+									{#if snapshot.agyAutoApprove}
+										<span class="note">agy can run commands and access files without asking.</span>
 									{/if}
 								{/if}
 							</div>
@@ -359,6 +374,14 @@
 		</div>
 	{/if}
 </section>
+
+{#if editingOmp && snapshot}
+	<OmpSettingsSheet
+		initial={snapshot.omp}
+		onclose={() => (editingOmp = false)}
+		onsave={(options) => act('Not changed', () => api.setOmpOptions(options))}
+	/>
+{/if}
 
 {#if adding === 'custom'}
 	<CustomAgentSheet

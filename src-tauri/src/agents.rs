@@ -212,6 +212,9 @@ impl Default for Notify {
 pub struct Machine {
     /// Opt-in: Codex commands run without its filesystem or network sandbox.
     pub codex_full_access: bool,
+    /// Opt-in: headless agy runs approve tool permission requests.
+    pub agy_auto_approve: bool,
+    pub omp: OmpOptions,
     /// Per built-in or custom agent id.
     pub jobs: BTreeMap<String, Jobs>,
     /// Command-line agents added by hand.
@@ -223,6 +226,27 @@ pub struct Machine {
     pub repos: BTreeMap<String, RepoRules>,
     /// The first-start offer of agents found in repositories was answered.
     pub offered: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OmpOptions {
+    pub model: String,
+    pub profile: String,
+}
+
+impl OmpOptions {
+    fn apply(&self, definition: &mut AgentDefinition) {
+        if definition.provider != AgentProvider::OhMyPi {
+            return;
+        }
+        for (flag, value) in [("--model", &self.model), ("--profile", &self.profile)] {
+            let value = value.trim();
+            if !value.is_empty() {
+                definition.extra_args.extend([flag.into(), value.into()]);
+            }
+        }
+    }
 }
 
 impl Machine {
@@ -321,6 +345,8 @@ pub struct RemoteView {
 #[serde(rename_all = "camelCase")]
 pub struct AgentsSnapshot {
     pub codex_full_access: bool,
+    pub agy_auto_approve: bool,
+    pub omp: OmpOptions,
     pub local: Vec<LocalView>,
     pub remote: Vec<RemoteView>,
     pub defaults: Defaults,
@@ -343,6 +369,8 @@ fn locals(machine: &Machine) -> Vec<LocalView> {
                 .unwrap_or_else(|| PathBuf::from(adapter.executables()[0]));
             let mut definition = adapter.default_definition(executable);
             codex_access(&mut definition, machine.codex_full_access);
+            agy_access(&mut definition, machine.agy_auto_approve);
+            machine.omp.apply(&mut definition);
             let id = definition.id.as_str().to_string();
             LocalView {
                 name: definition.display_name.clone(),
@@ -390,6 +418,14 @@ fn codex_access(definition: &mut AgentDefinition, full_access: bool) {
     }
 }
 
+fn agy_access(definition: &mut AgentDefinition, auto_approve: bool) {
+    if definition.provider == AgentProvider::Agy && auto_approve {
+        definition
+            .extra_args
+            .push("--dangerously-skip-permissions".into());
+    }
+}
+
 /// Custom agents in the farm registries of repositories this machine knows,
 /// not yet on the machine list. Built-in ones are detected anyway.
 fn offer<R: Runtime>(app: &AppHandle<R>, machine: &Machine) -> Vec<AgentDefinition> {
@@ -424,6 +460,8 @@ pub fn agents_snapshot<R: Runtime>(
     let machine = load(&app);
     Ok(AgentsSnapshot {
         codex_full_access: machine.codex_full_access,
+        agy_auto_approve: machine.agy_auto_approve,
+        omp: machine.omp.clone(),
         local: locals(&machine),
         remote: remotes(&machine),
         defaults: machine.defaults.clone(),
@@ -441,6 +479,35 @@ pub fn agents_set_codex_full_access<R: Runtime>(
 ) -> Result<()> {
     change(&app, &state, |machine| {
         machine.codex_full_access = enabled;
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub fn agents_set_agy_auto_approve<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AgentsState>,
+    enabled: bool,
+) -> Result<()> {
+    change(&app, &state, |machine| {
+        machine.agy_auto_approve = enabled;
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub fn agents_set_omp_options<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AgentsState>,
+    options: OmpOptions,
+) -> Result<()> {
+    change(&app, &state, |machine| {
+        machine.omp = OmpOptions {
+            model: options.model.trim().into(),
+            profile: options.profile.trim().into(),
+        };
         Ok(())
     })?;
     Ok(())
@@ -1338,6 +1405,84 @@ mod tests {
         assert_eq!(machine.rules("/work/app").highest, Level::SignOff);
         assert!(machine.notify.waiting);
         assert!(!machine.codex_full_access);
+        assert!(!machine.agy_auto_approve);
+        assert_eq!(machine.omp, OmpOptions::default());
+    }
+
+    #[test]
+    fn agy_auto_approval_is_saved_and_keeps_review_plan_mode() {
+        let machine: Machine = serde_json::from_str(r#"{"agyAutoApprove":true}"#).unwrap();
+        assert_eq!(
+            serde_json::to_value(&machine).unwrap()["agyAutoApprove"],
+            true
+        );
+        let mut definition = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        agy_access(&mut definition, machine.agy_auto_approve);
+        let command = read_only(
+            AgentProvider::Agy,
+            adapter_for(AgentProvider::Agy).command(
+                &definition,
+                &AgentRunRequest {
+                    workdir: "/tmp/t".into(),
+                    prompt: "ok".into(),
+                    unattended: false,
+                },
+            ),
+        );
+        assert_eq!(
+            command.args,
+            [
+                "--mode",
+                "plan",
+                "--dangerously-skip-permissions",
+                "--print",
+                "ok"
+            ]
+        );
+        let mut other = adapter_for(AgentProvider::Codex).default_definition("codex".into());
+        agy_access(&mut other, true);
+        assert!(other.extra_args.is_empty());
+    }
+
+    #[test]
+    fn omp_model_and_profile_survive_save_and_reach_the_headless_command() {
+        let machine: Machine =
+            serde_json::from_str(r#"{"omp":{"model":"provider/test-model","profile":"work"}}"#)
+                .unwrap();
+        let saved: Machine =
+            serde_json::from_slice(&serde_json::to_vec(&machine).unwrap()).unwrap();
+        let mut definition = adapter_for(AgentProvider::OhMyPi).default_definition("omp".into());
+        saved.omp.apply(&mut definition);
+        let command = read_only(
+            AgentProvider::OhMyPi,
+            adapter_for(AgentProvider::OhMyPi).command(
+                &definition,
+                &AgentRunRequest {
+                    workdir: "/tmp/test".into(),
+                    prompt: "ok".into(),
+                    unattended: false,
+                },
+            ),
+        );
+        assert_eq!(command.stdin.as_deref(), Some("ok"));
+        assert_eq!(
+            command.args,
+            [
+                "--print",
+                "--model",
+                "provider/test-model",
+                "--profile",
+                "work",
+                "--tools",
+                "read,grep,glob"
+            ]
+        );
+        let mut other = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        saved.omp.apply(&mut other);
+        assert!(other.extra_args.is_empty());
+        let mut unset = adapter_for(AgentProvider::OhMyPi).default_definition("omp".into());
+        OmpOptions::default().apply(&mut unset);
+        assert!(unset.extra_args.is_empty());
     }
 
     #[test]

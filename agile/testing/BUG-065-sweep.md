@@ -24,16 +24,27 @@ requires the CLI to read that marker without editing the workspace.
 - agy 1.3.1: detected in its normal per-user install directory and successfully
   read the temporary file in print/plan mode. The print prompt stays adjacent
   to `--print`, since that flag consumes a value.
+  A headless command permission denial was reproduced in the desktop Settings
+  test. With explicit tool auto-approval, the live print/plan test ran a read-only
+  shell command and returned the unpredictable temporary-file marker successfully.
 - OMP 18.8.6: detected as `omp` from `.bun/bin`; its native npm-installed Bun
   runtime is available for both probing and launch. Print mode starts, but the
   local configuration reports `No default model selected`. The authenticated
-  file-read check remains incomplete until a default model is configured.
+  file-read check remains incomplete until the selected model/profile is supplied.
+  Settings now saves those choices and passes them to Test, Review and Merger;
+  no global OMP configuration is changed.
 
 ```text
 cargo test -p spagitty-farm --test live_cli_access -- --ignored --nocapture
 ```
 
+To use the same model/profile as an interactive launch in the OMP smoke test,
+set `SPAGITTY_TEST_OMP_MODEL` and, if used, `SPAGITTY_TEST_OMP_PROFILE` before
+running it. These contain model/profile names, not credentials.
+
 Mounted tests cover the Settings controls and assignment-event viewed ticks.
-The complete desktop UI sweep and a hosted review/merge sweep were not performed.
+The dev app was launched with `bun run tauri dev` from the fix worktree; the
+native window opened and its Settings dev route served successfully. The complete
+desktop UI sweep and a hosted review/merge sweep were not performed.
 The new settings take effect in a build containing this change; changing another
 application's Codex permissions does not configure Spagitty's process.

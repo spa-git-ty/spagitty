@@ -171,6 +171,11 @@ impl Driver for LocalDriver {
                 return Err(reason);
             }
         }
+        if self.definition.provider == AgentProvider::Agy {
+            if let Some(reason) = agy_permission_failure(&raw) {
+                return Err(reason);
+            }
+        }
         match ended {
             Ended::Ok => Ok(Reply {
                 answer: Answer::find(&raw),
@@ -196,6 +201,12 @@ fn codex_launch_failure(raw: &str) -> Option<String> {
         .map(|line| format!("Codex could not start its Windows sandbox: {line}\nRepair the Codex sandbox or select Full Access in Settings > Agents > Codex, then resume."))
 }
 
+fn agy_permission_failure(raw: &str) -> Option<String> {
+    raw.lines()
+        .find(|line| line.starts_with("jetski: no output produced") && line.contains("headless mode cannot prompt"))
+        .map(|line| format!("{line}\nConfigure agy's permissions.allow rules or enable Auto-approve tools in Settings > Agents > agy, then resume."))
+}
+
 /// The command line as the timeline shows it: the prompt is long and is in
 /// the transcript already.
 fn shorten(line: &str) -> String {
@@ -210,6 +221,18 @@ fn shorten(line: &str) -> String {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn a_headless_agy_permission_denial_is_a_failed_step() {
+        let raw = "jetski: no output produced — a tool required the command permission that headless mode cannot prompt for, so it was auto-denied.";
+        assert!(agy_permission_failure(raw)
+            .unwrap()
+            .contains("Auto-approve tools"));
+        assert!(
+            agy_permission_failure("An ordinary finding about headless mode cannot prompt")
+                .is_none()
+        );
+    }
 
     #[test]
     fn a_zero_exit_with_a_broken_sandbox_is_a_failed_step() {

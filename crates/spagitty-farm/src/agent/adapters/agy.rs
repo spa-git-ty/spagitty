@@ -47,7 +47,12 @@ impl AgentAdapter for AgyAdapter {
     }
     fn command(&self, definition: &AgentDefinition, request: &AgentRunRequest) -> AgentCommand {
         let mut args = Vec::new();
-        if request.unattended {
+        if request.unattended
+            && !definition
+                .extra_args
+                .iter()
+                .any(|arg| arg == "--dangerously-skip-permissions")
+        {
             args.push("--dangerously-skip-permissions".into());
         }
         args.extend(definition.extra_args.iter().cloned());
@@ -84,5 +89,25 @@ mod tests {
         );
         assert_eq!(def.provider.slug(), "agy");
         assert!(def.capabilities.contains(&AgentCapability::Review));
+    }
+
+    #[test]
+    fn saved_auto_approval_stays_before_the_print_prompt() {
+        let mut definition = AgyAdapter.default_definition("agy".into());
+        definition
+            .extra_args
+            .push("--dangerously-skip-permissions".into());
+        let mut request = AgentRunRequest {
+            workdir: "/tmp/t".into(),
+            prompt: "ok".into(),
+            unattended: false,
+        };
+        for unattended in [false, true] {
+            request.unattended = unattended;
+            assert_eq!(
+                AgyAdapter.command(&definition, &request).args,
+                ["--dangerously-skip-permissions", "--print", "ok"]
+            );
+        }
     }
 }
