@@ -35,6 +35,12 @@ import { merger } from './store.svelte';
 let data = $state<MergerConflicts | null>(null);
 let files = $state<ResolverFile[]>([]);
 let choices = $state<Record<string, (Choice | null)[]>>({});
+/**
+ * Who chose each region, when an agent did (2.0): its name, and whether it
+ * applied the choice itself or the person accepted it. Absent is the person.
+ * Kept beside the choice, and dropped when the person chooses again.
+ */
+let authors = $state<Record<string, (Author | null)[]>>({});
 let loading = $state(false);
 let error = $state<string | null>(null);
 let start = $state<string | null>(null);
@@ -74,9 +80,46 @@ export function keyOf(repo: string, a: string, b: string, base: string): string 
 	return hash(text) + hash(`merger\u0000${text}`);
 }
 
+/** An agent that chose a region, and how it came to stand. */
+export interface Author {
+	agent: string;
+	/** `agent`: applied by the agent itself; `person`: accepted by the person. */
+	decided: 'agent' | 'person';
+	/** Unattended: the agent also landed it. */
+	unattended?: boolean;
+}
+
 interface Kept {
 	version: 1;
-	choices: Record<string, Record<string, { fp: string; choice: Choice }>>;
+	choices: Record<string, Record<string, { fp: string; choice: Choice; by?: Author }>>;
+}
+
+function author(value: unknown): Author | null {
+	if (!value || typeof value !== 'object') return null;
+	const raw = value as Record<string, unknown>;
+	if (typeof raw.agent !== 'string' || (raw.decided !== 'agent' && raw.decided !== 'person')) return null;
+	return { agent: raw.agent, decided: raw.decided, unattended: raw.unattended === true };
+}
+
+/** The kept authors that still fit these files: only where the choice did. */
+export function restoreAuthors(saved: unknown, against: ResolverFile[]): Record<string, (Author | null)[]> {
+	const out: Record<string, (Author | null)[]> = {};
+	const kept = (saved as Kept | null)?.version === 1 ? (saved as Kept).choices : null;
+	for (const file of against) {
+		out[file.path] = file.regions.map((region) => {
+			const entry = kept?.[file.path]?.[String(region.index)];
+			if (!entry || entry.fp !== fingerprint(region) || !valid(entry.choice, region)) return null;
+			return author(entry.by);
+		});
+	}
+	return out;
+}
+
+/** `you`, `Codex, accepted by you`, `Codex, unattended`. */
+export function whoChose(by: Author | null): string {
+	if (!by) return 'you';
+	if (by.decided === 'person') return `${by.agent}, accepted by you`;
+	return by.unattended ? `${by.agent}, unattended` : `${by.agent}, applied at Sign off`;
 }
 
 function valid(choice: unknown, region: ResolverFile['regions'][number]): choice is Choice {
@@ -119,10 +162,11 @@ export function restore(saved: unknown, against: ResolverFile[]): Record<string,
 function serialise(): Kept {
 	const out: Kept = { version: 1, choices: {} };
 	for (const file of files) {
-		const made: Record<string, { fp: string; choice: Choice }> = {};
+		const made: Record<string, { fp: string; choice: Choice; by?: Author }> = {};
 		file.regions.forEach((region) => {
 			const choice = choices[file.path]?.[region.index];
-			if (choice) made[String(region.index)] = { fp: fingerprint(region), choice };
+			const by = authors[file.path]?.[region.index] ?? null;
+			if (choice) made[String(region.index)] = { fp: fingerprint(region), choice, ...(by ? { by } : {}) };
 		});
 		if (Object.keys(made).length > 0) out.choices[file.path] = made;
 	}
@@ -305,6 +349,7 @@ export const resolving = {
 			files = read;
 			key = nextKey;
 			choices = restore(saved, read);
+			authors = restoreAuthors(saved, read);
 		} catch (e) {
 			if (mine === seq) error = String(e);
 		} finally {
@@ -312,11 +357,42 @@ export const resolving = {
 		}
 	},
 
-	choose(path: string, index: number, choice: Choice | null) {
+	/** Choose for a region. `by` is the agent that chose it; absent is the person. */
+	choose(path: string, index: number, choice: Choice | null, by: Author | null = null) {
 		const row = [...(choices[path] ?? [])];
 		row[index] = choice;
 		choices = { ...choices, [path]: row };
+		const who = [...(authors[path] ?? [])];
+		who[index] = choice ? by : null;
+		authors = { ...authors, [path]: who };
 		persist();
+	},
+
+	/** Who chose each region, where an agent did (2.0). */
+	get authors(): Record<string, (Author | null)[]> {
+		return authors;
+	},
+
+	/** Every agent whose choice stands, for the commit's trailer. */
+	get agentsInResult(): string[] {
+		const names = new Set<string>();
+		for (const file of files) {
+			file.regions.forEach((region) => {
+				const by = authors[file.path]?.[region.index];
+				if (by && choices[file.path]?.[region.index]) names.add(by.agent);
+			});
+		}
+		return [...names];
+	},
+
+	/** Mark what an agent landed itself as unattended, for the record. */
+	markUnattended(agent: string) {
+		authors = Object.fromEntries(
+			Object.entries(authors).map(([path, row]) => [
+				path,
+				row.map((by) => (by && by.agent === agent && by.decided === 'agent' ? { ...by, unattended: true } : by))
+			])
+		);
 	},
 
 	/** All from one side, for every region of a file. */
@@ -324,6 +400,7 @@ export const resolving = {
 		const file = files.find((f) => f.path === path);
 		if (!file) return;
 		choices = { ...choices, [path]: file.regions.map(() => ({ mode: side })) };
+		authors = { ...authors, [path]: file.regions.map(() => null) };
 		persist();
 	},
 
@@ -335,6 +412,7 @@ export const resolving = {
 	/** Abort: the choices are dropped and forgotten, and nothing was written. */
 	abort() {
 		choices = Object.fromEntries(files.map((file) => [file.path, file.regions.map(() => null)]));
+		authors = {};
 		forget();
 		merger.setPhase('plan');
 	},
@@ -359,11 +437,13 @@ export const resolving = {
 			return file.regions.map((region, k) => {
 				n += 1;
 				const choice = choices[file.path]?.[region.index] ?? null;
+				const by = authors[file.path]?.[region.index] ?? null;
 				return {
 					where: `Conflict ${n} · ${name}:${lineOf(region, places[k])}`,
 					label: statusLabel(choice, names),
 					badges: badgesOf(choice),
-					mine: choice?.mode === 'edit'
+					mine: choice?.mode === 'edit' && !by,
+					who: whoChose(by)
 				};
 			});
 		});
@@ -379,6 +459,7 @@ export const resolving = {
 			data = null;
 			files = [];
 			choices = {};
+			authors = {};
 			key = null;
 		}
 		return landed;
@@ -389,6 +470,7 @@ export const resolving = {
 		data = found;
 		files = filesFrom(found);
 		choices = { ...restore(null, files), ...made };
+		authors = {};
 		loading = false;
 		error = null;
 	},

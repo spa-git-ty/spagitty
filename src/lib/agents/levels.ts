@@ -219,3 +219,18 @@ export function perRun(tokens: number | null): string {
 	if (!tokens) return 'no limit';
 	return tokens >= 1000 ? `${Math.round(tokens / 1000)}k / run` : `${tokens} / run`;
 }
+
+/** The small line under an inbox card or a Result card: `Codex · 3 of 11
+ * files`, `Claude Code · waiting for you`. */
+export function cardLine(a: Assignment): string {
+	const unit = a.job === 'review' ? 'files' : 'conflicts';
+	let what: string;
+	if (a.state === 'waiting') what = 'waiting for you';
+	else if (a.state === 'done') what = 'finished';
+	else if (a.state === 'failed') what = 'failed';
+	else if (a.state === 'stopped') what = 'stopped';
+	else if (a.state === 'paused') what = 'paused';
+	else if (planned(a) > 0) what = `${unitsDone(a)} of ${planned(a)} ${unit}`;
+	else what = 'starting';
+	return `${a.agent.name} · ${what}`;
+}

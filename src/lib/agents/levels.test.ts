@@ -12,6 +12,7 @@ import {
 	consentSlug,
 	findingLabel,
 	findingsByPath,
+	cardLine,
 	grouped,
 	isLive,
 	leaves,
@@ -138,5 +139,19 @@ describe('words', () => {
 	it('tell a live assignment from a finished one', () => {
 		expect(isLive(aReview())).toBe(true);
 		expect(isLive(aReview({ state: 'failed' }))).toBe(false);
+	});
+});
+
+describe('the card line', () => {
+	it('says how far the agent got, or that it waits', () => {
+		expect(cardLine(aReview())).toBe('Claude Code · waiting for you');
+		expect(cardLine(aReview({ state: 'working', steps: [aStep({ kind: { kind: 'file', path: 'a' } })] }))).toBe(
+			'Claude Code · 1 of 4 files'
+		);
+		expect(cardLine(aMerge({ state: 'working', planned: 0, steps: [] }))).toBe('Codex · starting');
+		expect(cardLine(aReview({ state: 'done' }))).toBe('Claude Code · finished');
+		expect(cardLine(aReview({ state: 'stopped' }))).toBe('Claude Code · stopped');
+		expect(cardLine(aReview({ state: 'failed' }))).toBe('Claude Code · failed');
+		expect(cardLine(aReview({ state: 'paused' }))).toBe('Claude Code · paused');
 	});
 });

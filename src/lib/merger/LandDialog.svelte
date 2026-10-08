@@ -100,6 +100,7 @@
 								{#each row.badges as badge, index (index)}<SideBadge side={badge} small />{/each}
 								{row.label}
 							</span>
+							{#if row.who && row.who !== 'you'}<span class="note">{row.who}</span>{/if}
 						</li>
 					{/each}
 				</ul>
