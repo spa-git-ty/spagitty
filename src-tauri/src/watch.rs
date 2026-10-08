@@ -17,7 +17,8 @@
 //! thousands of ignored files asks for nothing.
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::ffi::OsString;
+use std::path::{Component, Path, PathBuf, Prefix};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -103,8 +104,87 @@ pub fn watch<R: Runtime>(
     })
 }
 
+/// The real path, as the platform watcher names paths.
+///
+/// On Windows `canonicalize` answers with a verbatim path, `\\?\C:\…\.git`,
+/// while the watcher reports `C:\…\.git\refs\heads\main`. Kept verbatim, no
+/// event ever fell under the git directory: every `.git` write looked like a
+/// working-tree change, no ref move was ever seen, and the refresh each one
+/// caused touched `.git` again, for ever (BUG-059). So the prefix is taken
+/// off here, and off every event path in [`classify`], without a dependency.
 fn canonical(path: &Path) -> PathBuf {
-    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+    plain(&path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
+}
+
+/// `path` without Windows' verbatim prefix: `\\?\C:\x` is `C:\x`, and
+/// `\\?\UNC\server\share` is `\\server\share`. Any other path is itself.
+fn plain(path: &Path) -> PathBuf {
+    let Some(text) = path.to_str() else {
+        // Not Unicode, which Windows allows: take the prefix off by its
+        // components rather than leave it on and miss every event.
+        return plain_parts(path);
+    };
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{rest}"));
+    }
+    if let Some(rest) = text.strip_prefix(r"\\?\") {
+        return PathBuf::from(rest);
+    }
+    path.to_path_buf()
+}
+
+/// [`plain`] for a path that is not Unicode. Only Windows parses a prefix
+/// component; anywhere else the path comes back as it went in.
+fn plain_parts(path: &Path) -> PathBuf {
+    let mut parts = path.components();
+    let Some(Component::Prefix(prefix)) = parts.next() else {
+        return path.to_path_buf();
+    };
+    let mut out = match prefix.kind() {
+        Prefix::VerbatimDisk(drive) => PathBuf::from(format!("{}:", char::from(drive))),
+        Prefix::VerbatimUNC(server, share) => {
+            let mut unc = OsString::from(r"\\");
+            unc.push(server);
+            unc.push(r"\");
+            unc.push(share);
+            PathBuf::from(unc)
+        }
+        _ => return path.to_path_buf(),
+    };
+    out.extend(parts);
+    out
+}
+
+/// What follows `base` in `full`, compared without regard to ASCII case, when
+/// `full` is `base` or lies under it. Whole components only: `.gitignore` is
+/// not inside `.git`.
+fn fold_inside<'a>(full: &'a str, base: &str) -> Option<&'a str> {
+    if full.len() < base.len()
+        || !full.is_char_boundary(base.len())
+        || !full[..base.len()].eq_ignore_ascii_case(base)
+    {
+        return None;
+    }
+    let rest = &full[base.len()..];
+    if !rest.is_empty() && !rest.starts_with(['\\', '/']) {
+        return None;
+    }
+    Some(rest.trim_start_matches(['\\', '/']))
+}
+
+/// Where `path` is inside `git_dir`, if it is: both without a verbatim
+/// prefix, and on Windows, where a drive letter can come in either case,
+/// compared without regard to case.
+fn inside(path: &Path, git_dir: &Path) -> Option<PathBuf> {
+    let path = plain(path);
+    let git_dir = plain(git_dir);
+    if let Ok(rest) = path.strip_prefix(&git_dir) {
+        return Some(rest.to_path_buf());
+    }
+    if cfg!(windows) {
+        return fold_inside(path.to_str()?, git_dir.to_str()?).map(PathBuf::from);
+    }
+    None
 }
 
 /// Working-tree paths a burst may name before the rest are not looked at: one
@@ -218,9 +298,9 @@ fn classify(
             continue;
         }
 
-        let Ok(inside) = path.strip_prefix(git_dir) else {
+        let Some(inside) = inside(path, git_dir) else {
             if candidates.len() < CANDIDATES {
-                candidates.insert(path.clone());
+                candidates.insert(plain(path));
             }
             continue;
         };
@@ -352,6 +432,109 @@ mod tests {
         assert!(out.refs);
         assert!(out.worktree);
         assert!(!out.is_empty());
+    }
+
+    #[test]
+    fn a_verbatim_prefix_is_taken_off() {
+        assert_eq!(
+            plain(Path::new(r"\\?\C:\work\app\.git")),
+            PathBuf::from(r"C:\work\app\.git")
+        );
+        assert_eq!(
+            plain(Path::new(r"\\?\UNC\server\share\.git")),
+            PathBuf::from(r"\\server\share\.git")
+        );
+        assert_eq!(
+            plain(Path::new("/work/app/.git")),
+            PathBuf::from("/work/app/.git")
+        );
+    }
+
+    /// BUG-059. The git directory as `canonicalize` answers on Windows, the
+    /// event as the watcher reports it — and the other way round. Both are
+    /// `.git` paths: a ref move is a ref move, and nothing in `.git` is a
+    /// working-tree candidate.
+    #[test]
+    fn a_verbatim_git_dir_still_owns_the_events_under_it() {
+        let verbatim = Path::new(r"\\?\/work/app/.git");
+        let plain_dir = Path::new("/work/app/.git");
+        for (git_dir, path) in [
+            (verbatim, r"/work/app/.git/refs/heads/main"),
+            (plain_dir, r"\\?\/work/app/.git/refs/heads/main"),
+        ] {
+            let mut candidates = HashSet::new();
+            let out = super::classify(&event(WROTE, &[path]), git_dir, &mut candidates);
+            assert!(out.refs, "{git_dir:?} and {path}");
+            assert!(candidates.is_empty(), "{git_dir:?} and {path}");
+        }
+        let mut candidates = HashSet::new();
+        let quiet = super::classify(
+            &event(WROTE, &["/work/app/.git/objects/ab/cd"]),
+            verbatim,
+            &mut candidates,
+        );
+        assert!(quiet.is_empty());
+        assert!(
+            candidates.is_empty(),
+            "a write in .git is not a working-tree change"
+        );
+    }
+
+    /// The case-blind comparison Windows falls back on takes whole components:
+    /// the git directory itself, in another case, is inside it; a file whose
+    /// name merely starts with `.git` is not.
+    #[test]
+    fn a_case_blind_match_takes_whole_components() {
+        let base = r"C:\work\app\.git";
+        assert_eq!(
+            fold_inside(r"c:\work\app\.git\refs\heads\main", base),
+            Some(r"refs\heads\main")
+        );
+        assert_eq!(fold_inside(r"c:\Work\App\.GIT", base), Some(""));
+        assert_eq!(fold_inside(r"C:\work\app\.gitignore", base), None);
+        assert_eq!(fold_inside(r"C:\work\app\.git-blame-ignore", base), None);
+        assert_eq!(fold_inside(r"C:\work", base), None);
+    }
+
+    /// Anywhere but Windows a path has no prefix component to take off, so a
+    /// path that is not Unicode comes back as it is.
+    #[cfg(unix)]
+    #[test]
+    fn a_path_that_is_not_unicode_comes_back_as_it_is() {
+        use std::os::unix::ffi::OsStrExt;
+        let odd = Path::new(std::ffi::OsStr::from_bytes(b"/work/\xff/.git"));
+        assert_eq!(plain(odd), odd.to_path_buf());
+    }
+
+    /// On Windows a path that is not Unicode still loses its verbatim prefix.
+    #[cfg(windows)]
+    #[test]
+    fn a_verbatim_path_that_is_not_unicode_loses_its_prefix() {
+        use std::os::windows::ffi::OsStringExt;
+        let mut wide: Vec<u16> = r"\\?\C:\work\".encode_utf16().collect();
+        wide.push(0xD800);
+        wide.extend(r"\.git".encode_utf16());
+        let odd = PathBuf::from(OsString::from_wide(&wide));
+        assert!(odd.to_str().is_none());
+        let mut expected: Vec<u16> = r"C:\work\".encode_utf16().collect();
+        expected.push(0xD800);
+        expected.extend(r"\.git".encode_utf16());
+        assert_eq!(plain(&odd), PathBuf::from(OsString::from_wide(&expected)));
+    }
+
+    #[test]
+    fn a_working_tree_path_is_still_a_candidate() {
+        let mut candidates = HashSet::new();
+        let out = super::classify(
+            &event(WROTE, &["/work/app/src/main.rs"]),
+            Path::new(r"\\?\/work/app/.git"),
+            &mut candidates,
+        );
+        assert!(out.is_empty());
+        assert_eq!(
+            candidates.into_iter().collect::<Vec<_>>(),
+            [PathBuf::from("/work/app/src/main.rs")]
+        );
     }
 
     #[test]
