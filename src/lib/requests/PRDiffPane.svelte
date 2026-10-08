@@ -2,6 +2,7 @@
 <script lang="ts">
 	import Loader from '$lib/ui/Loader.svelte';
 	import type { DiffView } from '$lib/diff/store.svelte';
+	import { detectLanguage, tokenizeDiff } from '$lib/diff/highlight';
 	import { splitRows } from '$lib/diff/split';
 	import { relativeTime } from '$lib/format';
 	import { requests } from '$lib/requests/store.svelte';
@@ -18,6 +19,18 @@
 	}
 
 	let { file, path, error, loading, view }: Props = $props();
+
+	/** Each line's colours: a hunk is read as the two sides of its diff, so a comment or string that spans lines stays coloured. */
+	const syntax = $derived.by(() => {
+		const colours = new Map<DiffLine, ReturnType<typeof tokenizeDiff>[number]>();
+		if (!file) return colours;
+		const language = detectLanguage(path);
+		for (const hunk of file.hunks) {
+			const runs = tokenizeDiff(hunk.lines, language);
+			hunk.lines.forEach((line, i) => colours.set(line, runs[i]));
+		}
+		return colours;
+	});
 
 	/** Line currently having an active composer open: `${side}:${lineNum}`. */
 	let activeComposer = $state<string | null>(null);
@@ -102,6 +115,11 @@
 	}
 </script>
 
+{#snippet code(line: DiffLine)}<span class="text"
+	>{#each syntax.get(line) ?? [{ type: 'plain', text: line.text }] as run, r (r)}<span class="tok-{run.type}">{run.text}</span
+		>{/each}</span
+>{/snippet}
+
 <div class="pr-diff-pane">
 	{#if error}
 		<div class="pad note error">{error}</div>
@@ -131,7 +149,7 @@
 							<span class="num">{line.old ?? ''}</span>
 							<span class="num">{line.new ?? ''}</span>
 							<span class="sign">{sign(line)}</span>
-							<span class="text">{line.text}</span>
+							{@render code(line)}
 
 							<button
 								class="comment-trigger"
@@ -236,7 +254,7 @@
 						<div class="side {row.left?.origin ?? 'blank'}">
 							{#if row.left}
 								<span class="num">{row.left.old ?? ''}</span>
-								<span class="text">{row.left.text}</span>
+								{@render code(row.left)}
 								<button
 									class="comment-trigger"
 									title="Add inline review comment"
@@ -249,7 +267,7 @@
 						<div class="side {row.right?.origin ?? 'blank'}">
 							{#if row.right}
 								<span class="num">{row.right.new ?? ''}</span>
-								<span class="text">{row.right.text}</span>
+								{@render code(row.right)}
 								<button
 									class="comment-trigger"
 									title="Add inline review comment"
