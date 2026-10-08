@@ -23,11 +23,18 @@ vi.mock('$lib/api', () => ({
 	replyComment: vi.fn(),
 	mergePullRequest: vi.fn(),
 	closePullRequest: vi.fn(),
-	setPrDraft: vi.fn()
+	setPrDraft: vi.fn(),
+	branches: vi.fn(() => Promise.resolve([]))
 }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
-vi.mock('$lib/review/store.svelte', () => ({ review: { open: vi.fn(() => Promise.resolve(true)), notHere: null } }));
+vi.mock('$lib/review/store.svelte', () => ({
+	review: {
+		open: vi.fn(() => Promise.resolve(true)),
+		checkOut: vi.fn(() => Promise.resolve('feature/workspace')),
+		notHere: null
+	}
+}));
 
 import * as api from '$lib/api';
 import { goto } from '$app/navigation';
@@ -36,6 +43,7 @@ import PRDiffPane from './PRDiffPane.svelte';
 import PRMarkdown from './PRMarkdown.svelte';
 import PRWorkspace from './PRWorkspace.svelte';
 import { requests } from './store.svelte';
+import { merger } from '$lib/merger/store.svelte';
 import { notice } from '$lib/ui/notice.svelte';
 
 const forgeRepo = vi.mocked(api.forgeRepo);
@@ -298,6 +306,71 @@ describe('PR workspace store flow', () => {
 		expect(closePullRequest).toHaveBeenCalledWith(412);
 	});
 
+	it('does not send a merge the host would refuse for conflicts (BUG-063)', async () => {
+		requests.present([request({ mergeable: false })]);
+
+		expect(await requests.merge('merge')).toBe(false);
+
+		expect(mergePullRequest).not.toHaveBeenCalled();
+		expect(requests.mergeError).toBe('feature/workspace conflicts with main');
+	});
+
+	it('explains a conflicting merge and hands the pair to Merger (BUG-063)', async () => {
+		vi.mocked(api.branches).mockResolvedValue([
+			{ kind: 'branch', name: 'feature/workspace' } as Awaited<ReturnType<typeof api.branches>>[number]
+		]);
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		const present = vi.spyOn(merger, 'present');
+
+		const view = render(PRWorkspace, {});
+		expect(view.get('.head-meta').textContent).toContain('conflicts');
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Merge')!);
+		await settle();
+
+		expect(view.text()).toContain('feature/workspace conflicts with main');
+		expect(view.all('button').some((b) => b.textContent?.trim() === 'Confirm Merge')).toBe(false);
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Resolve in Merger')!);
+		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/merge'));
+
+		expect(present).toHaveBeenCalledWith({ a: 'main', b: 'feature/workspace', into: 'b' });
+		// Already a local branch: nothing is checked out.
+		expect(review.checkOut).not.toHaveBeenCalled();
+		expect(mergePullRequest).not.toHaveBeenCalled();
+		present.mockRestore();
+		merger.reset();
+		view.destroy();
+	});
+
+	it('checks the branch out first when it is only on the host (BUG-063)', async () => {
+		vi.mocked(api.branches).mockResolvedValue([]);
+		vi.mocked(review.checkOut).mockResolvedValueOnce('pr-412');
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		const present = vi.spyOn(merger, 'present');
+
+		const view = render(PRWorkspace, {});
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Merge')!);
+		await settle();
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Resolve in Merger')!);
+		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/merge'));
+
+		expect(review.checkOut).toHaveBeenCalledWith(expect.objectContaining({ number: 412 }));
+		expect(present).toHaveBeenCalledWith({ a: 'main', b: 'pr-412', into: 'b' });
+		present.mockRestore();
+		merger.reset();
+		view.destroy();
+	});
+
+	it('stays put when the branch could not be checked out (BUG-063)', async () => {
+		vi.mocked(api.branches).mockResolvedValue([]);
+		vi.mocked(review.checkOut).mockResolvedValueOnce(null);
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		const present = vi.spyOn(merger, 'present');
 	it('goes back to the list when the open one is merged, not to another (BUG-062)', async () => {
 		pullRequests.mockResolvedValue([request(), request({ id: 'PR_2', number: 2 })]);
 		await requests.load();
@@ -352,6 +425,45 @@ describe('PR workspace store flow', () => {
 		const view = render(PRWorkspace, {});
 		click(view.all('button').find((b) => b.textContent?.trim() === 'Merge')!);
 		await settle();
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Resolve in Merger')!);
+		await settle();
+		await settle();
+
+		expect(present).not.toHaveBeenCalled();
+		expect(goto).not.toHaveBeenCalled();
+		expect(view.all('button').some((b) => b.textContent?.trim() === 'Resolve in Merger')).toBe(true);
+		present.mockRestore();
+		view.destroy();
+	});
+
+	it('forgets the conflict refusal once a re-read says it can merge (BUG-063)', async () => {
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		expect(await requests.merge('merge')).toBe(false);
+		expect(requests.mergeError).toContain('conflicts with main');
+
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		expect(requests.mergeError).toContain('conflicts with main');
+
+		pullRequests.mockResolvedValue([request({ mergeable: true })]);
+		await requests.load();
+		expect(requests.mergeError).toBeNull();
+	});
+
+	it('clears the mark once the host says it can merge again (BUG-063)', async () => {
+		pullRequests.mockResolvedValue([request({ mergeable: false })]);
+		await requests.load();
+		requests.openWorkspace('PR_1');
+		const view = render(PRWorkspace, {});
+		expect(view.get('.head-meta').textContent).toContain('conflicts');
+
+		pullRequests.mockResolvedValue([request({ mergeable: true })]);
+		await requests.load();
+		await settle();
+
+		expect(view.get('.head-meta').textContent).not.toContain('conflicts');
+		view.destroy();
 		click(view.all('button').find((b) => b.textContent?.trim() === 'Confirm Merge')!);
 		await settle();
 		await settle();

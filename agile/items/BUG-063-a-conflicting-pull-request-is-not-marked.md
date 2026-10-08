@@ -2,7 +2,7 @@
 
 # BUG-063 — A pull request that conflicts with its base is not marked, and Merge only fails
 
-**Status:** Backlog — reported 2026-10-08, not started.
+**Status:** Fixed — on `bugfix/BUG-063-a-conflicting-pull-request-is-not-marked`.
 **Screens:** 1R, 1H, 1S.
 **Raised by:** the author, 2026-10-08, while preparing a demo of reviewing a conflicting pull request (`maxmya/trattoria-demo#3`, which GitHub reports as `mergeable: CONFLICTING`).
 
@@ -26,3 +26,7 @@
 - **Merger hand-off:** `merger` has a `preset` used by `prime()` (`src/lib/merger/store.svelte.ts`). Setting `{ a: base, b: head, into: 'b' }` before navigating to `/merge` should open the right plan.
 - **Reproduce:** `maxmya/trattoria-demo#3` (`feature/new-heading-color` into `main`) is a disposable conflicting pull request.
 - **Branch:** `bugfix/BUG-063-a-conflicting-pull-request-is-not-marked`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+The forge layer already read the host's answer into `PullRequest.mergeable` (`false` for conflicting, `null` while the host is still working it out); the screens now use it. Review: the inbox card carries a red *conflicts with main* tag, the preview's *Before you start* opens with *Conflicts with main: it cannot be merged as it stands*, and the room's header line says *Conflicts with main* beside the checks. Pull requests: the list row and the workspace header carry a *conflicts* chip, as the old detail panel did. *Merge* on such a pull request opens a dialog that says why it cannot merge and offers *Resolve in Merger* in place of *Confirm Merge*; that hands Merger the base as A and the pull request's branch as B, landing *Into* B, and goes to `/merge`, checking the branch out first, as the review room's *Check out branch* does, when it is only on the host. `requests.merge()` also refuses without asking the host. The mark is derived from each re-read, so it clears on the first refresh after the host reports the branch mergeable.

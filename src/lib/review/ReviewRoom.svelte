@@ -224,6 +224,10 @@
 				<span>·</span>
 				<span class="checks {pr.checks}">{CHECK_LABELS[pr.checks]}</span>
 			{/if}
+			{#if pr.mergeable === false}
+				<span>·</span>
+				<span class="conflicts">Conflicts with {pr.targetBranch}</span>
+			{/if}
 			{#if host}<span>·</span><span>{host}</span>{/if}
 		</div>
 
@@ -452,7 +456,8 @@
 		color: var(--ok);
 	}
 
-	.checks.failing {
+	.checks.failing,
+	.conflicts {
 		color: var(--danger);
 	}
 

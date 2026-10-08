@@ -16,6 +16,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Fixed
 
+- A pull request the host reports as conflicting with its base is marked in the Review inbox, its preview and its room, and in the Pull requests list and workspace; *Merge* on it explains why and offers *Resolve in Merger* with the pair already chosen, instead of failing at the host.
 - Review no longer files pull requests you have already reviewed under *nobody asked you yet*: they have their own *Reviewed by you* group, each card says what you said, and one the author has pushed to since says *changed since* (GitHub).
 - Merging or closing a pull request from its workspace returns to the list with a notice, instead of turning the workspace into another pull request with no files or commits.
 - Merger no longer shows the previous pair's plan under a newly chosen branch while the new one is worked out, and *Resolve* and *Merge now* wait for the plan of the pair they name.

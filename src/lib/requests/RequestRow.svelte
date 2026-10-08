@@ -35,6 +35,7 @@
 			{#if request.checks}
 				<Chip active={request.checks === 'failing'}>{CHECK_LABELS[request.checks]}</Chip>
 			{/if}
+			{#if request.mergeable === false}<Chip active>conflicts</Chip>{/if}
 		</span>
 
 		<span class="who note">{request.authorName}</span>

@@ -100,6 +100,17 @@ it('previews the first pull request and then the one chosen', async () => {
 	expect(preview()).toContain('Rebase screen: keep the todo list');
 });
 
+it('marks a pull request that conflicts with its base on its card and preview (BUG-063)', async () => {
+	vi.mocked(api.pullRequests).mockResolvedValue([MINE, ANSWERED, { ...ASKED, mergeable: false }]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(cards()).toHaveLength(3));
+
+	expect(cards()[0].querySelector('.tag.danger')?.textContent).toBe('conflicts with main');
+	expect(cards()[1].querySelector('.tag.danger')).toBeNull();
+	const preview = view.get('aside[aria-label="Pull request preview"]').textContent ?? '';
+	expect(preview).toContain('Conflicts with main: it cannot be merged as it stands');
+  });
+
 it('puts what you reviewed under Reviewed by you, not under nobody asked you (BUG-064)', async () => {
 	const reviewed = {
 		...ASKED,

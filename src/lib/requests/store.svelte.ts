@@ -78,6 +78,8 @@ let reviewError = $state<string | null>(null);
 /** In flight state for merge/close/draft (FEAT-071). */
 let merging = $state(false);
 let mergeError = $state<string | null>(null);
+/** `mergeError` is the conflict refusal, which a re-read can make untrue (BUG-063). */
+let refusedForConflict = false;
 let closing = $state(false);
 let closeError = $state<string | null>(null);
 let togglingDraft = $state(false);
@@ -576,6 +578,13 @@ export const requests = {
 		if (!api.inTauri()) return false;
 		const request = this.open;
 		if (request === null) return false;
+		// The host would refuse it; say why before asking (BUG-063).
+		if (request.mergeable === false) {
+			mergeError = `${request.sourceBranch} conflicts with ${request.targetBranch}`;
+			refusedForConflict = true;
+			return false;
+		}
+		refusedForConflict = false;
 
 		merging = true;
 		mergeError = null;
@@ -637,6 +646,10 @@ export const requests = {
 		list = next;
 		connected = from.connected;
 		error = null;
+		if (refusedForConflict && this.open?.mergeable !== false) {
+			mergeError = null;
+			refusedForConflict = false;
+		}
 		const was = openId;
 		if (openId === null || !next.some((request) => request.id === openId)) {
 			// The one on screen is gone — merged, closed — so the workspace goes

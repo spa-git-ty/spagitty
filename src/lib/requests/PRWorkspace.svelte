@@ -12,6 +12,8 @@
 	} from '$lib/requests/store.svelte';
 	import type { MergeMethod, ReviewVerdict } from '$lib/types';
 	import { goto } from '$app/navigation';
+	import * as api from '$lib/api';
+	import { merger } from '$lib/merger/store.svelte';
 	import { review } from '$lib/review/store.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -117,6 +119,36 @@
 		}
 	}
 
+	/**
+	 * The host says it conflicts with its base (BUG-063): Merger can resolve
+	 * that, bringing the base into the pull request's branch to be pushed.
+	 */
+	let handingOver = $state(false);
+
+	async function resolveInMerger() {
+		const pr = request;
+		if (!pr || handingOver) return;
+		handingOver = true;
+		try {
+			// Merger lands into a local branch. One that is only on the host is
+			// checked out first, the way the review room does it.
+			let local = true;
+			try {
+				const rows = await api.branches();
+				local = rows.some((row) => row.kind === 'branch' && row.name === pr.sourceBranch);
+			} catch {
+				// Not known: go with the name, and Merger says if it is not there.
+			}
+			const branch = local ? pr.sourceBranch : await review.checkOut(pr);
+			if (!branch) return;
+			merger.present({ a: pr.targetBranch, b: branch, into: 'b' });
+			mergeModalOpen = false;
+			void goto('/merge');
+		} finally {
+			handingOver = false;
+		}
+	}
+
 	async function handleClose() {
 		const closed = requests.open;
 		const ok = await requests.close();
@@ -172,6 +204,12 @@
 
 					{#if request.draft}
 						<Chip>draft</Chip>
+					{/if}
+
+					{#if request.mergeable === false}
+						<Chip active title="The host cannot merge it into {request.targetBranch} as it stands">
+							conflicts
+						</Chip>
 					{/if}
 				</div>
 			</div>
@@ -598,6 +636,19 @@
 			>
 				<h2 class="modal-title">Merge Pull Request #{request.number}</h2>
 
+				{#if request.mergeable === false}
+				<p class="close-warning">
+					{request.sourceBranch} conflicts with {request.targetBranch}, so it cannot be merged as it
+					stands. Resolve it in Merger by bringing {request.targetBranch} into
+					{request.sourceBranch}, then push the branch.
+				</p>
+
+				<div class="modal-actions">
+					<Btn onclick={() => (mergeModalOpen = false)}>Cancel</Btn>
+					<Btn primary busy={handingOver} onclick={resolveInMerger}>Resolve in Merger</Btn>
+				</div>
+				{:else}
+
 				<div class="verdict-options">
 					<label class="verdict-option" class:selected={mergeMethod === 'merge'}>
 						<input
@@ -678,6 +729,7 @@
 						{requests.merging ? 'Merging…' : 'Confirm Merge'}
 					</Btn>
 				</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
