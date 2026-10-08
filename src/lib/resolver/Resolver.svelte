@@ -3,7 +3,7 @@
 	import { tick, type Snippet } from 'svelte';
 	import SideBadge from '$lib/merger/SideBadge.svelte';
 	import ConflictCard from './ConflictCard.svelte';
-	import { layout, type Choice, type Names, type ResolverFile, type SideKey } from './model';
+	import { layout, type AgentProposal, type Choice, type Names, type ResolverFile, type SideKey } from './model';
 	import { languageOf } from './paint';
 	import ResolverPill from './ResolverPill.svelte';
 
@@ -31,10 +31,37 @@
 		onwhole: (path: string, side: SideKey) => void;
 		/** More for the chosen file, beside All from A and All from B. */
 		fileActions?: Snippet<[ResolverFile]>;
+		/**
+		 * An agent at work on these conflicts (2.0): its name for the legend,
+		 * who chose what, what it proposes and where it is. All absent with no
+		 * agent, and then nothing here mentions one.
+		 */
+		agent?: string | null;
+		authors?: Record<string, ({ agent: string; decided: 'agent' | 'person' } | null)[]>;
+		proposals?: Record<string, (AgentProposal | null)[]>;
+		working?: { path: string; index: number } | null;
+		onaccept?: (path: string, index: number) => void;
+		onwhy?: (path: string, index: number) => void;
 	}
 
-	let { files, choices, names, roles, baseShort, others = [], start = null, onchoose, onwhole, fileActions }: Props =
-		$props();
+	let {
+		files,
+		choices,
+		names,
+		roles,
+		baseShort,
+		others = [],
+		start = null,
+		onchoose,
+		onwhole,
+		fileActions,
+		agent = null,
+		authors = {},
+		proposals = {},
+		working = null,
+		onaccept,
+		onwhy
+	}: Props = $props();
 
 	let selected = $state<string | null>(null);
 	let current = $state<{ path: string; index: number } | null>(null);
@@ -121,7 +148,13 @@
 				{#if split(f.path).dir}<span class="dir mono">{split(f.path).dir}</span>{/if}
 				<span class="dots">
 					{#each f.regions as region (region.index)}
-						<span class="dot" class:resolved={Boolean(choices[f.path]?.[region.index])}></span>
+						{@const chosen = Boolean(choices[f.path]?.[region.index])}
+						<span
+							class="dot"
+							class:resolved={chosen}
+							class:proposed={!chosen && Boolean(proposals[f.path]?.[region.index])}
+							class:working={!chosen && working?.path === f.path && working.index === region.index}
+						></span>
 					{/each}
 					<span class="note small">{done === f.regions.length ? 'all resolved' : `${done} of ${f.regions.length}`}</span>
 				</span>
@@ -141,6 +174,7 @@
 			<span><SideBadge side="a" />{names.a}</span>
 			<span><SideBadge side="b" />{names.b}</span>
 			<span><SideBadge side="mine" />Typed by you</span>
+			{#if agent}<span><SideBadge side="agent" />{agent}</span>{/if}
 		</div>
 	</aside>
 
@@ -179,6 +213,10 @@
 							onchoose(file.path, region.index, choice);
 						}}
 						onfocus={() => (current = { path: file.path, index: region.index })}
+						author={authors[file.path]?.[region.index] ?? null}
+						proposal={proposals[file.path]?.[region.index] ?? null}
+						onaccept={onaccept ? () => onaccept(file.path, region.index) : undefined}
+						onwhy={onwhy ? () => onwhy(file.path, region.index) : undefined}
 					/>
 				{/each}
 			</div>
@@ -288,6 +326,26 @@
 	.dot.resolved {
 		border: none;
 		background: var(--ok);
+	}
+
+	/* An agent at this conflict, and one it has proposed for (2.0). Green
+	   still means resolved. */
+	.dot.working {
+		border-color: var(--agent);
+	}
+
+	.dot.proposed {
+		position: relative;
+		border-color: var(--agent);
+		overflow: hidden;
+	}
+
+	/* Half filled: proposed, not yet decided. */
+	.dot.proposed::after {
+		content: '';
+		position: absolute;
+		inset: 0 50% 0 0;
+		background: var(--agent);
 	}
 
 	.dots .note {

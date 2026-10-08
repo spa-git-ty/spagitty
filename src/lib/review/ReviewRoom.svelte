@@ -15,6 +15,14 @@
 	import Loader from '$lib/ui/Loader.svelte';
 	import { room } from './room.svelte';
 	import { review } from './store.svelte';
+	import { sendable } from './agent-drafts';
+	import Chip from '$lib/ui/Chip.svelte';
+	import AgentCard from '$lib/agents/AgentCard.svelte';
+	import AssignPopover from '$lib/agents/AssignPopover.svelte';
+	import { agents } from '$lib/agents/store.svelte';
+	import { isLive, readingNow } from '$lib/agents/levels';
+	import type { Assigned, Proposal } from '$lib/agents/types';
+	import * as agentWork from './agent.svelte';
 
 	/**
 	 * The review room (FEAT-087, FEAT-091): one pull request, read file by
@@ -64,6 +72,77 @@
 	}
 
 	const openThreads = $derived(room.threads.filter((thread) => !thread.resolved).length);
+
+	// ── Agents (2.0) ──────────────────────────────────────────────────────
+	// With no agent set up, none of this draws anything: the room is the
+	// 1.3 room.
+
+	const offered = $derived(agents.usable('review').length > 0);
+	const assignment = $derived(
+		opened ? agents.forReview(opened.key.owner, opened.key.name, opened.key.number) : null
+	);
+	const working = $derived(assignment !== null && isLive(assignment));
+	let assigning = $state(false);
+	let starting = $state(false);
+	/** Which of the right-hand card's two tabs shows. */
+	let side = $state<'conversation' | 'agent'>('conversation');
+	/** Move the room with the agent: off by default, the reader is never moved. */
+	let following = $state(false);
+	let lastSeen = $state<string | null>(null);
+
+	// A new assignment brings its tab forward once.
+	$effect(() => {
+		const id = assignment?.id ?? null;
+		if (id && id !== untrack(() => lastSeen)) {
+			lastSeen = id;
+			side = 'agent';
+			setConversationHidden(false);
+		}
+	});
+
+	$effect(() => {
+		const path = assignment && following ? readingNow(assignment) : null;
+		if (path && path !== untrack(() => room.selected)) room.select(path);
+	});
+
+	// The author pushed while an agent works: it pauses and says so.
+	$effect(() => {
+		const fetched = room.head?.head;
+		if (fetched && assignment && working && opened) {
+			untrack(() => agentWork.watchHeads([{ ...opened.pr, headSha: fetched }]));
+		}
+	});
+
+	async function assign(chosen: Assigned) {
+		if (!opened) return;
+		starting = true;
+		const started = await agentWork.assign(opened.pr, opened.key, chosen);
+		starting = false;
+		if (started) assigning = false;
+	}
+
+	/** At Sign off the Finish review card opens filled in. */
+	const suggested = $derived.by(() => {
+		if (!assignment || assignment.state !== 'waiting') return null;
+		const at = assignment.steps.find((s) => s.state === 'waiting');
+		if (at?.gate !== 'send') return null;
+		const verdict = [...assignment.proposals].reverse().find((p) => p.body.kind === 'verdict');
+		return verdict && verdict.body.kind === 'verdict'
+			? { verdict: verdict.body.verdict, summary: verdict.body.summary }
+			: null;
+	});
+
+	function sent() {
+		if (assignment && assignment.state === 'waiting') {
+			void agents.control(assignment.id, { kind: 'acted', ok: true });
+		}
+	}
+
+	function goTo(proposals: Proposal[]) {
+		if (!assignment) return;
+		const first = room.drafts.find((d) => proposals.some((p) => d.id === agentWork.draftId(assignment.id, p.id)));
+		if (first) void room.jumpToDraft(first);
+	}
 	const total = $derived(room.files.length);
 
 	/**
@@ -89,6 +168,15 @@
 	});
 </script>
 
+{#snippet sideTabs()}
+	<div class="side-tabs" role="tablist" aria-label="Side card">
+		<Chip active={side === 'conversation'} onclick={() => (side = 'conversation')}>Conversation {openThreads}</Chip>
+		<Chip active={side === 'agent'} onclick={() => (side = 'agent')}>
+			<Icon name="agent" size="0.95em" weight={2} />Agent
+		</Chip>
+	</div>
+{/snippet}
+
 {#if pr}
 	<div class="screen" style={readingStyle}>
 		<header class="head">
@@ -105,14 +193,26 @@
 					<span class="bar"><span class="fill" style:width="{(viewed / total) * 100}%"></span></span>
 				</span>
 			{/if}
+			{#if offered && !working}
+				<span class="assign-anchor">
+					<Btn disabled={room.phase !== 'ready'} onclick={() => (assigning = !assigning)}>
+						<Icon name="agent" size="1em" />Assign an agent…
+					</Btn>
+					{#if assigning}
+						<div class="below">
+							<AssignPopover job="review" busy={starting} onassign={assign} oncancel={() => (assigning = false)} />
+						</div>
+					{/if}
+				</span>
+			{/if}
 			<Btn disabled={review.checkingOut !== null} onclick={() => review.checkOut(pr)}>
 				<Icon name="branch" size="1em" />Check out branch
 			</Btn>
 			<span class="finish-anchor">
 				<Btn primary disabled={room.phase !== 'ready'} onclick={() => (finishing = !finishing)}>
-					Finish review · {room.currentDrafts.length}
+					Finish review · {sendable(room.currentDrafts).length}
 				</Btn>
-				{#if finishing}<FinishReview onclose={() => (finishing = false)} />{/if}
+				{#if finishing}<FinishReview {suggested} onsent={sent} onclose={() => (finishing = false)} />{/if}
 			</span>
 		</header>
 		<div class="meta note">
@@ -132,7 +232,7 @@
 		</div>
 
 		<div class="body">
-			<RoomFiles />
+			<RoomFiles {assignment} />
 			<Splitter panel="roomFiles" label="Resize the files" />
 			<section class="diff" aria-label="Changes">
 				{#if room.fallback}
@@ -164,13 +264,58 @@
 				</button>
 			{:else}
 				<Splitter panel="roomConversation" label="Resize the conversation" />
-				<RoomConversation onhide={() => setConversationHidden(true)} />
+				{#if assignment && side === 'agent'}
+					<div class="agent-side">
+						<AgentCard
+							{assignment}
+							tabs={sideTabs}
+							follow={following}
+							onfollow={(on) => (following = on)}
+							ongo={goTo}
+							onaccept={(proposals) => agentWork.acceptAll(assignment, proposals)}
+							onlast={() => (finishing = true)}
+							onhide={() => setConversationHidden(true)}
+							onresume={opened ? () => agentWork.resume(assignment, opened.pr, opened.key) : undefined}
+						/>
+					</div>
+				{:else}
+					<RoomConversation onhide={() => setConversationHidden(true)} tabs={assignment ? sideTabs : undefined} />
+				{/if}
 			{/if}
 		</div>
 	</div>
 {/if}
 
 <style>
+	.assign-anchor {
+		position: relative;
+	}
+
+	/* The popover opens under the header button rather than over it. */
+	.below :global(.assign) {
+		top: calc(100% + 8px);
+		bottom: auto;
+	}
+
+	.agent-side {
+		width: var(--room-conversation-w);
+		flex: none;
+		display: flex;
+		min-height: 0;
+		margin: 0 0 10px;
+	}
+
+	.agent-side :global(.agent-card) {
+		flex: 1;
+		border-radius: var(--r-floating);
+	}
+
+	.side-tabs {
+		display: flex;
+		gap: 6px;
+		margin-right: auto;
+	}
+
 	/* The put-away Conversation card, as a tab down the room's right edge. */
 	.conversation-tab {
 		flex: none;

@@ -43,6 +43,24 @@ export interface PendingComment {
 	startPlace: LinePlace | null;
 	/** The file's path before the change, when it was renamed. */
 	oldPath: string | null;
+	/**
+	 * Set when an agent drafted it (2.0): which assignment and proposal, who,
+	 * how sure, and where it stands. A proposed one waits for the person and
+	 * does not go out with Finish review; accepted, edited or applied, it is
+	 * one of the person's pending comments, with an author.
+	 */
+	agent?: AgentNote | null;
+}
+
+/** What a pending comment drafted by an agent carries. */
+export interface AgentNote {
+	assignment: string;
+	proposal: string;
+	/** The agent's name, as the comment says it on the host. */
+	name: string;
+	severity: 'high' | 'medium' | 'low';
+	sure: boolean;
+	state: 'proposed' | 'accepted' | 'edited' | 'applied';
 }
 
 export interface ReviewRecord {
@@ -118,8 +136,29 @@ function pending(value: unknown): PendingComment | null {
 		createdAt: Number.isFinite(Number(raw.createdAt)) ? Number(raw.createdAt) : 0,
 		place: placeOf(raw.place),
 		startPlace: start !== null ? placeOf(raw.startPlace) : null,
-		oldPath: typeof raw.oldPath === 'string' && raw.oldPath ? raw.oldPath : null
+		oldPath: typeof raw.oldPath === 'string' && raw.oldPath ? raw.oldPath : null,
+		// Only where an agent drafted it: a person's comment reads back as it
+		// was written, with no field it never had.
+		...withAgent(agentNote(raw.agent))
 	};
+}
+
+function withAgent(note: AgentNote | null): { agent?: AgentNote } {
+	return note ? { agent: note } : {};
+}
+
+const SEVERITIES = ['high', 'medium', 'low'] as const;
+const NOTE_STATES = ['proposed', 'accepted', 'edited', 'applied'] as const;
+
+function agentNote(value: unknown): AgentNote | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const raw = value as Record<string, unknown>;
+	if (typeof raw.assignment !== 'string' || typeof raw.proposal !== 'string' || typeof raw.name !== 'string') {
+		return null;
+	}
+	const severity = SEVERITIES.find((s) => s === raw.severity) ?? 'low';
+	const state = NOTE_STATES.find((s) => s === raw.state) ?? 'proposed';
+	return { assignment: raw.assignment, proposal: raw.proposal, name: raw.name, severity, sure: raw.sure !== false, state };
 }
 
 function placeOf(value: unknown): LinePlace | null {

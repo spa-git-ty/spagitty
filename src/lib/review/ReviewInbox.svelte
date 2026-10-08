@@ -11,6 +11,12 @@
 	import InboxCard from './InboxCard.svelte';
 	import InboxPreview from './InboxPreview.svelte';
 	import { review } from './store.svelte';
+	import { untrack } from 'svelte';
+	import type { PullRequest } from '$lib/types';
+	import { agents } from '$lib/agents/store.svelte';
+	import { isLive } from '$lib/agents/levels';
+	import type { Assigned } from '$lib/agents/types';
+	import * as agentWork from './agent.svelte';
 
 	/**
 	 * The Review inbox (FEAT-087): pull requests grouped by what each needs
@@ -48,6 +54,33 @@
 	);
 
 	if (review.scope !== 'repo') review.setScope('repo');
+
+	// ── Agents (2.0): nothing here draws unless one is set up. ─────────────
+	const assignable = $derived(agents.usable('review').length > 0);
+	let starting = $state(false);
+
+	function live(a: ReturnType<typeof agentOf>): boolean {
+		return a !== null && isLive(a);
+	}
+
+	function agentOf(pr: PullRequest) {
+		const key = review.keyOf(pr);
+		return key ? agents.forReview(key.owner, key.name, key.number) : null;
+	}
+
+	$effect(() => {
+		const prs = requests.all;
+		untrack(() => agentWork.watchHeads(prs));
+	});
+
+	async function assign(pr: PullRequest, chosen: Assigned): Promise<boolean> {
+		const key = review.keyOf(pr);
+		if (!key) return false;
+		starting = true;
+		const started = await agentWork.assign(pr, key, chosen);
+		starting = false;
+		return started !== null;
+	}
 
 	async function open(id: string) {
 		const pr = review.list.find((candidate) => candidate.id === id);
@@ -115,6 +148,7 @@
 								showRepository={review.scope === 'all'}
 								onselect={() => review.select(pr.id)}
 								onopen={() => open(pr.id)}
+								agent={agentOf(pr)}
 							/>
 						{/each}
 					</section>
@@ -131,6 +165,9 @@
 				opening={opening || review.checkingOut !== null}
 				onopen={() => open(selected.id)}
 				oncheckout={review.isHere(selected) ? () => review.checkOut(selected) : undefined}
+				assignable={assignable && review.isHere(selected) && !live(agentOf(selected))}
+				{starting}
+				onassign={(chosen) => assign(selected, chosen)}
 			/>
 		{/if}
 	</div>
