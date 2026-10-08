@@ -167,7 +167,7 @@ rather than an audit.
 | [FEAT-111](items/FEAT-111-farm-plan-journey.md) | Farm setup and planning | 1Q | Done |
 | [FEAT-112](items/FEAT-112-farm-crew-activity.md) | Farm crew and activity | 1Q | Done |
 | [FEAT-113](items/FEAT-113-farm-wrap-up.md) | Farm wrap up and evidence | 1Q | Done |
-| [FEAT-114](items/FEAT-114-pull-request-notifications.md) | Pull request notifications | Settings, chrome | In review |
+| [FEAT-114](items/FEAT-114-pull-request-notifications.md) | Pull request notifications | Settings, chrome | Done |
 
 ## Bugs
 
@@ -321,3 +321,4 @@ missing documents are not listed here, and fails again if a row here is stale.
 | BUG-043 | plan, automated, sweep | Inherited from main: the merged fix has no separate verification records. A retrospective verification record is owed. |
 | BUG-001 | plan, automated, sweep | Fixed inside FEAT-003's change before it had a branch of its own; its item document says so. No separate work to plan. |
 | FEAT-073 | plan, automated, sweep | The crate landed with its own Rust tests and the screen with component tests, and the item document records the decisions a plan would have argued in advance. What is missing is the record written *before* the code, which cannot be back-dated honestly; the sweep is owed the first time a farm is driven end to end on a repository that is not this one. |
+| FEAT-114 | plan, automated, sweep | Built in one session against a request to ship it in 1.3.0. The change detection has unit tests in `changes.test.ts` and the host parsing in `watch.rs`, but there is no plan written ahead and no automated record; the sweep is owed on Windows, macOS and Linux, including whether an ad-hoc signed macOS build can post notifications. |

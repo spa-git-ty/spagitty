@@ -96,7 +96,14 @@ beforeEach(async () => {
 		showGitCommands: false, pruneOnFetch: false,
 fetchAvatars: false,
 			personality: 'balanced',
-			sound: 'off'
+			sound: 'off',
+			notifyPullRequests: false,
+			notifyDesktop: true,
+			notifyMerged: true,
+			notifyComments: true,
+			notifyReviewRequests: true,
+			notifyChecks: true,
+			notifyEveryMinutes: 2
 	});
 	licenses.mockResolvedValue(LIST);
 	about.mockResolvedValue({ version: '0.1.0', commit: 'abc1234', license: 'GPL-3.0-or-later' });
@@ -244,7 +251,14 @@ describe('BehaviourSection', () => {
 			pruneOnFetch: false,
 			fetchAvatars: false,
 			personality: 'balanced',
-			sound: 'off'
+			sound: 'off',
+			notifyPullRequests: false,
+			notifyDesktop: true,
+			notifyMerged: true,
+			notifyComments: true,
+			notifyReviewRequests: true,
+			notifyChecks: true,
+			notifyEveryMinutes: 2
 		});
 		mounted.destroy();
 	});
@@ -257,7 +271,14 @@ describe('BehaviourSection', () => {
 			pruneOnFetch: false,
 			fetchAvatars: false,
 			personality: 'balanced',
-			sound: 'off'
+			sound: 'off',
+			notifyPullRequests: false,
+			notifyDesktop: true,
+			notifyMerged: true,
+			notifyComments: true,
+			notifyReviewRequests: true,
+			notifyChecks: true,
+			notifyEveryMinutes: 2
 		});
 		await settings.load();
 		const mounted = render(BehaviourSection, {});
@@ -355,7 +376,7 @@ describe('AccountsSection', () => {
 		mounted.destroy();
 	});
 
-	it('offers God mode only to the author's GitHub account', async () => {
+	it("offers God mode only to the author's GitHub account", async () => {
 		forgeAccounts.mockResolvedValueOnce([
 			{ kind: 'gitHub' as const, host: 'github.com', user: 'ada' }
 		]);

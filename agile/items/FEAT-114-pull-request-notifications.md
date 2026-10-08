@@ -2,7 +2,7 @@
 
 # FEAT-114 — Pull request notifications
 
-**Status:** In review — ships in 1.3.0 once the gates pass. The native sweep on macOS, Windows and Linux is still to run.
+**Status:** Done — merged 2026-10-08, ships in 1.3.0. The native sweep on macOS, Windows and Linux is still to run.
 **Branch:** `main`.
 **Screens:** Settings → Notifications, app shell.
 **Raised by:** the author, 2026-10-08.

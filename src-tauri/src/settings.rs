@@ -389,7 +389,10 @@ mod tests {
             assert_eq!(settings.notify_every_minutes, 2, "for {odd}");
             assert!(settings.show_git_commands, "for {odd}");
         }
-        assert_eq!(parse(r#"{"notifyEveryMinutes": 15}"#).notify_every_minutes, 15);
+        assert_eq!(
+            parse(r#"{"notifyEveryMinutes": 15}"#).notify_every_minutes,
+            15
+        );
     }
 
     #[test]

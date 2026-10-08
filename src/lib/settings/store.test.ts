@@ -52,7 +52,14 @@ const STORED: Settings = {
 	showGitCommands: false, pruneOnFetch: false,
 fetchAvatars: false,
 			personality: 'balanced',
-			sound: 'off'
+			sound: 'off',
+			notifyPullRequests: false,
+			notifyDesktop: true,
+			notifyMerged: true,
+			notifyComments: true,
+			notifyReviewRequests: true,
+			notifyChecks: true,
+			notifyEveryMinutes: 2
 };
 
 const LIST: Licenses = {
@@ -337,7 +344,14 @@ describe('checking for a newer Spagitty', () => {
 			pruneOnFetch: false,
 			fetchAvatars: false,
 			personality: 'balanced',
-			sound: 'off'
+			sound: 'off',
+			notifyPullRequests: false,
+			notifyDesktop: true,
+			notifyMerged: true,
+			notifyComments: true,
+			notifyReviewRequests: true,
+			notifyChecks: true,
+			notifyEveryMinutes: 2
 		});
 		await settings.load();
 		checkUpdate.mockResolvedValueOnce(RELEASED);

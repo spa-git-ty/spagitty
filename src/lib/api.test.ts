@@ -130,7 +130,14 @@ describe('command names and arguments', () => {
 			pruneOnFetch: false,
 			fetchAvatars: false,
 			personality: 'fullSpagitty' as const,
-			sound: 'subtle' as const
+			sound: 'subtle' as const,
+			notifyPullRequests: false,
+			notifyDesktop: true,
+			notifyMerged: true,
+			notifyComments: true,
+			notifyReviewRequests: true,
+			notifyChecks: true,
+			notifyEveryMinutes: 2
 		};
 		await api.setSettings(settings);
 		expect(invoked).toHaveBeenCalledWith('set_settings', { settings });
