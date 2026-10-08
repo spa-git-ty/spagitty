@@ -36,6 +36,32 @@ export function sideOf(line: DiffLine): { side: 'LEFT' | 'RIGHT'; line: number }
 	return line.origin === 'removed' ? { side: 'LEFT', line: line.old ?? 0 } : { side: 'RIGHT', line: line.new ?? 0 };
 }
 
+/**
+ * A draft written by line number, placed in its file's whole diff: what a host
+ * that anchors by position (GitLab) needs to place a range. Null when its line
+ * is not in `lines`, so it goes as it was.
+ */
+export function placeDraft(
+	draft: PendingComment,
+	lines: DiffLine[],
+	oldPath: string | null
+): PendingComment | null {
+	const find = (side: string | null, line: number | null) =>
+		lines.findIndex((each) => {
+			const at = sideOf(each);
+			return at.side === side && at.line === line;
+		});
+	const index = find(draft.side, draft.line);
+	if (index < 0) return null;
+	const start = draft.startLine !== null ? find(draft.startSide, draft.startLine) : -1;
+	return {
+		...draft,
+		place: placeAt(lines, index),
+		startPlace: start >= 0 ? placeAt(lines, start) : null,
+		oldPath: draft.oldPath ?? oldPath
+	};
+}
+
 /** A pending comment on lines `from` to `to` of a whole file. */
 export function pendingOn(
 	path: string,

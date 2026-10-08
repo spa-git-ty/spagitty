@@ -136,6 +136,17 @@ describe('Add an API agent', () => {
 		await vi.waitFor(() => expect(api.saveRemote).toHaveBeenCalledWith(expect.objectContaining({ id: 'api-1', key: null })));
 	});
 
+	it('editing an agent with no token limits adds none', async () => {
+		const view = render(ApiAgentSheet, {
+			editing: aRemote({ tokensPerRun: null, tokensPerDay: null }),
+			onclose: vi.fn()
+		});
+		click(view.all('button').find((b) => text(b) === 'Save')!);
+		await vi.waitFor(() =>
+			expect(api.saveRemote).toHaveBeenCalledWith(expect.objectContaining({ tokensPerRun: null, tokensPerDay: null }))
+		);
+	});
+
 	it('a failed test says the provider’s own words', async () => {
 		vi.mocked(api.testRemote).mockResolvedValueOnce({ ok: false, said: 'Anthropic: invalid x-api-key', ms: 0 });
 		const view = render(ApiAgentSheet, { onclose: vi.fn() });

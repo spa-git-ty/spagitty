@@ -31,7 +31,7 @@ import type {
 	PullRequestComment,
 	ReviewVerdict
 } from '../types';
-import { pendingOn, placeAt, sideOf, toDraft } from './drafts';
+import { pendingOn, placeDraft, toDraft } from './drafts';
 import { marked, reviewBody, sendable } from './agent-drafts';
 import { agents } from '../agents/store.svelte';
 import type { PendingComment } from './record';
@@ -680,26 +680,8 @@ export const room = {
 		for (const path of new Set(unplaced.map((d) => d.path))) await this.ensure(path);
 		const placed = new Map<string, PendingComment>();
 		for (const draft of unplaced) {
-			const lines = contents[draft.path]?.lines ?? [];
-			const index = lines.findIndex((line) => {
-				const at = sideOf(line);
-				return at.side === draft.side && at.line === draft.line;
-			});
-			if (index < 0) continue;
-			const start =
-				draft.startLine !== null
-					? lines.findIndex((line) => {
-							const at = sideOf(line);
-							return at.side === draft.startSide && at.line === draft.startLine;
-						})
-					: -1;
-			const file = fileAt(draft.path);
-			placed.set(draft.id, {
-				...draft,
-				place: placeAt(lines, index),
-				startPlace: start >= 0 ? placeAt(lines, start) : null,
-				oldPath: draft.oldPath ?? file?.oldPath ?? null
-			});
+			const done = placeDraft(draft, contents[draft.path]?.lines ?? [], fileAt(draft.path)?.oldPath ?? null);
+			if (done) placed.set(draft.id, done);
 		}
 		if (!placed.size) return;
 		await review.saveRecord(current.key, (record) => {

@@ -113,6 +113,42 @@ describe('the last act at Unattended', () => {
 		expect(api.submitReview).toHaveBeenCalledTimes(1);
 	});
 
+	it('places a range in the diff before sending, as Finish review does', async () => {
+		vi.mocked(api.submitReview).mockResolvedValue(undefined);
+		vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'h1', base: 'b1', mergeBase: 'm1' });
+		vi.mocked(api.reviewFiles).mockResolvedValue([]);
+		vi.mocked(api.reviewFile).mockResolvedValue({
+			lines: [
+				{ origin: 'context', old: 1, new: 1, text: 'a' },
+				{ origin: 'added', old: null, new: 2, text: 'b' },
+				{ origin: 'added', old: null, new: 3, text: 'c' }
+			]
+		} as never);
+		const ranged = draftOf(aReview(), comment());
+		await review.saveRecord(KEY, (record) => {
+			record.drafts = [
+				{ ...ranged, line: 3, startLine: 2, startSide: 'RIGHT', side: 'RIGHT', agent: { ...ranged.agent!, state: 'applied' } }
+			];
+		});
+		work.follow();
+		agents.absorb(
+			aReview({
+				repo: '/work/spagitty',
+				state: 'working',
+				proposals: [aFinding({ state: 'applied' })],
+				lastAct: { kind: 'send', verdict: 'comment', body: '' }
+			})
+		);
+		await vi.waitFor(() => expect(api.submitReview).toHaveBeenCalled());
+		const sent = vi.mocked(api.submitReview).mock.calls[0][3]!;
+		expect(sent[0]).toMatchObject({
+			line: 3,
+			startLine: 2,
+			place: { kind: 'added', new: 3 },
+			startPlace: { kind: 'added', new: 2 }
+		});
+	});
+
 	it('refuses, with the reason, when the repository is not the one open', async () => {
 		work.follow();
 		agents.absorb(aReview({ repo: '/somewhere/else', lastAct: { kind: 'send', verdict: 'comment', body: '' } }));
