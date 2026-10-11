@@ -100,7 +100,7 @@ describe('landing at Unattended', () => {
 			expect(agentsApi.control).toHaveBeenCalledWith('merge-1', {
 				kind: 'acted',
 				ok: false,
-				message: 'A conflict was left unresolved, so nothing was landed.'
+				message: 'A conflict was left unresolved, so nothing was merged.'
 			})
 		);
 		expect(api.mergerLand).not.toHaveBeenCalled();

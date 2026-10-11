@@ -148,7 +148,7 @@
 					? `${agentName(reviewer.agent, farmStore.agents)} reads the diff`
 					: 'Another agent reads the diff';
 			default:
-				if (task.status === 'done') return `Landed ${clockTime(task.updatedMs)}`;
+				if (task.status === 'done') return `Merged ${clockTime(task.updatedMs)}`;
 				return farm?.autonomy === 'auto' || farm?.autonomy === 'yolo'
 					? 'It merges itself'
 					: 'You approve the merge';
@@ -210,9 +210,9 @@
 			<Btn
 				primary
 				disabled={busy}
-				onclick={() => act('Could not land the task', () => api.mergeTask(task.id))}
+				onclick={() => act('Could not merge the task', () => api.mergeTask(task.id))}
 			>
-				Land it into {target}
+				Merge it into {target}
 			</Btn>
 		{:else if stuck}
 			<Btn
@@ -276,7 +276,7 @@
 
 		{#if ready}
 			<p class="card ok-card callout">
-				Landing merges {task.branch} into {target}{unlocks.length
+				This merges {task.branch} into {target}{unlocks.length
 					? ` and frees ${listIds(unlocks)} to start`
 					: ''}.
 			</p>
@@ -479,7 +479,7 @@
 					{run
 						? (run.phase === 'review' ? 'Reviewing' : 'Working') + ` · ${runLine(run, now)}`
 						: task.status === 'done'
-							? 'Landed it'
+							? 'Merged it'
 							: task.implementedBy
 								? 'Wrote it'
 								: C.free}
@@ -536,7 +536,7 @@
 					{#each task.dependsOn as id (id)}
 						<Chip onclick={() => goto(`/farm?task=${encodeURIComponent(id)}`)}>
 							{id} · {farmStore.byId.get(id)?.status === 'done'
-								? 'landed'
+								? 'merged'
 								: (farmStore.byId.get(id)?.status ?? 'missing')}
 						</Chip>
 					{/each}

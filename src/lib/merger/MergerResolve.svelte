@@ -29,9 +29,9 @@
 	);
 
 	const roles = $derived({
-		a: who?.isNew ? 'starting point' : who?.onto === 'a' ? 'lands here' : 'comes in',
-		b: who?.isNew ? 'comes in' : who?.onto === 'b' ? 'lands here' : 'comes in',
-		result: `lands in ${who?.targetName ?? ''}`
+		a: who?.isNew ? 'starting point' : who?.onto === 'a' ? 'merged into' : 'comes in',
+		b: who?.isNew ? 'comes in' : who?.onto === 'b' ? 'merged into' : 'comes in',
+		result: `goes to ${who?.targetName ?? ''}`
 	});
 
 	const others = $derived(

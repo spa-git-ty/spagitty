@@ -315,13 +315,13 @@ export function duration(ms: number | null | undefined): string {
 
 /** Farm's journey vocabulary and presentation rules (FEAT-108). */
 export const PHASES = ['Crew', 'Goal', 'Plan', 'Build', 'Wrap up'] as const;
-export const STEPS = ['Queued', 'Worktree', 'Working', 'Checks', 'Review', 'Landed'] as const;
+export const STEPS = ['Queued', 'Worktree', 'Working', 'Checks', 'Review', 'Merged'] as const;
 export const PANES = ['Board', 'Crew', 'Activity'] as const;
 export const TASK_TABS = ['Output', 'Changes', 'Checks', 'Review', 'Hand-off'] as const;
 export const FARM_COPY = {
 	setupTitle: 'Put a crew of agents on one goal',
 	paused: 'Paused. Nothing new starts; the agents already working are left to finish.',
-	ready: 'Ready to land. It needs your yes.',
+	ready: 'Ready to merge. It needs your yes.',
 	crew: 'Your crew',
 	goal: 'The goal',
 	rules: 'Rules',
@@ -329,7 +329,7 @@ export const FARM_COPY = {
 	upNext: 'Up next',
 	working: 'Working',
 	checking: 'Checking',
-	landed: 'Landed',
+	landed: 'Merged',
 	firstFree: 'First free agent',
 	planReady: 'The plan is ready',
 	nothingRuns: 'Nothing runs until you accept the plan.',
@@ -348,7 +348,7 @@ export const FARM_COPY = {
 	free: 'Free',
 	lately: 'Lately',
 	allActivity: 'All activity',
-	landIt: 'Land it',
+	landIt: 'Merge it',
 	seeChanges: 'See the changes',
 	openTask: 'Open the task',
 	pause: 'Pause',
@@ -362,7 +362,7 @@ export const FARM_COPY = {
 	onCrew: 'On the crew',
 	cliDetail: 'Any CLI that takes a prompt as an argument or on stdin and exits when it is done.',
 	arguments: 'Arguments',
-	landedStat: 'landed',
+	landedStat: 'merged',
 	sentBack: 'sent back',
 	failedChecks: 'failed checks',
 	typical: 'a task, typically',
@@ -370,7 +370,7 @@ export const FARM_COPY = {
 	newestFirst: 'Newest first',
 	all: 'All',
 	failures: 'Failures',
-	whatLanded: 'What landed',
+	whatLanded: 'What was merged',
 	raised: 'The agents raised',
 	whoDidWhat: 'Who did what',
 	tidyUp: 'Tidy up',
@@ -500,8 +500,8 @@ export function strengths(agent: AgentDefinition): string {
 export type Segment = 'landed' | 'ready' | 'stuck' | 'working' | 'checking' | 'waiting';
 
 export const SEGMENTS: { id: Segment; label: string; colour: string }[] = [
-	{ id: 'landed', label: 'landed', colour: 'var(--ok)' },
-	{ id: 'ready', label: 'ready to land', colour: 'color-mix(in srgb, var(--ok) 45%, transparent)' },
+	{ id: 'landed', label: 'merged', colour: 'var(--ok)' },
+	{ id: 'ready', label: 'ready to merge', colour: 'color-mix(in srgb, var(--ok) 45%, transparent)' },
 	{ id: 'stuck', label: 'stuck', colour: 'var(--danger)' },
 	{ id: 'working', label: 'working', colour: 'var(--accent)' },
 	{ id: 'checking', label: 'checking', colour: 'var(--lane-5)' },
@@ -615,7 +615,7 @@ export function worthALook(tasks: Task[]): string[] {
 			const shared = a.allowedPaths.find((p) => b.allowedPaths.some((q) => pathsMeet(p, q)));
 			if (shared) {
 				lines.push(
-					`${a.id} and ${b.id} both touch ${shared}; whichever lands second is rebased on the first.`
+					`${a.id} and ${b.id} both touch ${shared}; whichever is merged second is rebased on the first.`
 				);
 			}
 		}
@@ -664,7 +664,7 @@ export function journeyHeading(
 	if (task.status === 'failed' || task.status === 'blocked')
 		return 'Stuck. The farm stopped trying.';
 	if (task.status === 'verification') return 'Your checks are running';
-	if (task.status === 'done') return 'It has landed';
+	if (task.status === 'done') return 'It is merged';
 	if (task.status === 'cancelled') return 'Given up';
 	return 'Waiting for its turn';
 }
@@ -697,7 +697,7 @@ export function freeLine(agent: string, tasks: Task[], long = false): string | n
 	if (!next) return null;
 	const pending = next.dependsOn.filter((id) => tasks.find((t) => t.id === id)?.status !== 'done');
 	if (!pending.length) return `takes ${next.id} next`;
-	return `takes ${next.id} when ${listIds(pending)} ${pending.length === 1 ? 'lands' : 'land'}`;
+	return `takes ${next.id} when ${listIds(pending)} ${pending.length === 1 ? 'is' : 'are'} merged`;
 }
 
 /** What a planner's line is doing, for the label in front of it on Planning. */
@@ -838,7 +838,7 @@ export function nowSentence(tasks: Task[], needs: Task[], paused: boolean): stri
 	const line = bits.length
 		? bits.join(', ').replace(/, ([^,]*)$/, ', and $1')
 		: tasks.every((t) => t.status === 'done') && tasks.length
-			? 'Everything has landed'
+			? 'Everything is merged'
 			: 'The next task waits for a free agent or an earlier task';
 	return line[0].toUpperCase() + line.slice(1) + '.';
 }
@@ -924,7 +924,7 @@ export function eventAgent(event: FarmEvent, runs: AgentRun[]): string | null {
 	if ('run' in event) return runs.find((r) => r.id === event.run)?.agent ?? null;
 	return null;
 }
-export type ActivityFilter = 'All' | 'Needs you' | 'Landed' | 'Failures';
+export type ActivityFilter = 'All' | 'Needs you' | 'Merged' | 'Failures';
 export function filterEvents(
 	events: RecordedEvent[],
 	filter: ActivityFilter,
@@ -936,7 +936,7 @@ export function filterEvents(
 				e.kind !== 'agentOutput' &&
 				(filter === 'All' ||
 					(filter === 'Needs you' && needs.some((t) => t.id === eventTask(e))) ||
-					(filter === 'Landed' && e.kind === 'mergeCompleted' && e.ok) ||
+					(filter === 'Merged' && e.kind === 'mergeCompleted' && e.ok) ||
 					(filter === 'Failures' && eventColour(e) === 'var(--danger)'))
 		)
 		.slice()

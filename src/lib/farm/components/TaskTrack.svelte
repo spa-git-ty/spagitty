@@ -35,7 +35,7 @@
 
 	const title = $derived(
 		children.length
-			? `${children.filter((c) => c.status === 'done').length} of ${children.length} landed`
+			? `${children.filter((c) => c.status === 'done').length} of ${children.length} merged`
 			: STEPS.map((step, i) => `${step}: ${WORDS[bars[i]]}`).join(' · ')
 	);
 </script>

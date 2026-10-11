@@ -116,10 +116,10 @@
 			<Chip
 				active={lands && landsMeans}
 				disabled={!landsMeans}
-				title={landsMeans ? 'The agent resolves, runs the checks and lands' : 'Needs Ask before sending or merging, or Full access'}
+				title={landsMeans ? 'The agent resolves, runs the checks and merges' : 'Needs Ask before sending or merging, or Full access'}
 				onclick={() => (lands = true)}
 			>
-				Resolve, check and land
+				Resolve, check and merge
 			</Chip>
 		</div>
 	{/if}

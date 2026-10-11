@@ -33,7 +33,7 @@
 
 	let { now, onopen }: Props = $props();
 
-	const FILTERS: ActivityFilter[] = ['All', 'Needs you', 'Landed', 'Failures'];
+	const FILTERS: ActivityFilter[] = ['All', 'Needs you', 'Merged', 'Failures'];
 	const TICKS = [0, 0.25, 0.5, 0.75, 1];
 
 	let filter = $state<ActivityFilter>('All');
@@ -84,7 +84,7 @@
 				<span><i class="swatch writing"></i>writing</span>
 				<span><i class="swatch reviewing"></i>reviewing</span>
 				<span><i class="swatch failed"></i>checks failed</span>
-				<span><i class="dot landed"></i>landed</span>
+				<span><i class="dot landed"></i>merged</span>
 			</div>
 		</div>
 

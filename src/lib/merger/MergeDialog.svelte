@@ -75,7 +75,7 @@
 		class="dialog ornament"
 		role="dialog"
 		aria-modal="true"
-		aria-label={done ? 'Merged' : 'Land the merge'}
+		aria-label={done ? 'Merged' : 'Make the merge'}
 		tabindex="-1"
 		onkeydown={keydown}
 	>
@@ -90,7 +90,7 @@
 				<Btn onclick={() => merger.again()}>Merge another</Btn>
 			</div>
 		{:else if who}
-			<h2 class="title">Ready to land on <span class="mono tone-{tone}">{who.targetName}</span></h2>
+			<h2 class="title">Ready to merge into <span class="mono tone-{tone}">{who.targetName}</span></h2>
 			{#if rows.length > 0}
 				<ul class="rows">
 					{#each rows as row (row.where)}

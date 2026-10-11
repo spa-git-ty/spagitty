@@ -26,7 +26,7 @@ same way everywhere or it does not have a description at all.
 Rules that the wording has to keep:
 
 - **"Agents" are collaborators today, and a farm tomorrow.** Spagitty today is
-  the gateway: it reads, reviews and lands work agents already commit. The
+  the gateway: it reads, reviews and merges work agents already commit. The
   agent farm — running and shepherding them from inside Spagitty — is still
   being planned. Do not write copy that claims the farm already ships; do not
   write copy that pretends the gateway is all there will ever be.

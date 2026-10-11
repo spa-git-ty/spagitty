@@ -1561,7 +1561,7 @@ impl Engine {
                     ..Default::default()
                 },
                 LastAct::Land,
-                ("Landing".into(), format!("Landed in {into}")),
+                ("Merging".into(), format!("Merged into {into}")),
                 (
                     "Complete merge".into(),
                     "Ready for you to complete the merge".into(),

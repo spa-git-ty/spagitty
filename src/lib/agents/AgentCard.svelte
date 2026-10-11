@@ -228,7 +228,7 @@
 									<Btn onclick={() => redo(step)}>Redo with a note</Btn>
 								</div>
 							{:else if step.gate === 'send' || step.gate === 'land'}
-								<span>{step.gate === 'send' ? 'Ready for you to send.' : 'Ready for you to land.'}</span>
+								<span>{step.gate === 'send' ? 'Ready for you to send.' : 'Ready for you to merge.'}</span>
 								<div class="acts">
 									<Btn primary quiet onclick={() => onlast?.()}>{step.gate === 'send' ? 'Finish review' : 'Complete merge'}</Btn>
 								</div>

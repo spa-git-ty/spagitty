@@ -45,7 +45,7 @@ it('starts from the checked-out branch and the newest other one, and says it is 
 
 	expect(api.mergerForecast).toHaveBeenCalledWith('main', 'feat/tab-drag');
 	expect(view.text()).toContain('Dry run · nothing written yet');
-	expect(view.text()).toContain('Lands here');
+	expect(view.text()).toContain('Merged into');
 	expect(view.text()).toContain('Comes in · stays as is');
 	expect(result()).toContain(
 		'main gets 5 commits from feat/tab-drag, tied together by one merge commit.'
@@ -159,7 +159,7 @@ describe('landing a merge with no conflicts (FEAT-101)', () => {
 			expect(found).toBeDefined();
 			return found;
 		});
-		expect(text(dialog)).toContain('Ready to land on main');
+		expect(text(dialog)).toContain('Ready to merge into main');
 		const message = view.all('#merger-message')[0] as HTMLTextAreaElement;
 		expect(message.value).toBe("Merge branch 'feat/tab-drag' into main");
 		expect(api.mergerLand).not.toHaveBeenCalled();

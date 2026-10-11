@@ -935,7 +935,7 @@ fn an_unattended_merge_lands_only_with_passing_checks_and_a_branch_it_may_land_i
         ok: true,
         message: String::new(),
     });
-    assert_eq!(run.end().sentence, "Landed in main");
+    assert_eq!(run.end().sentence, "Merged into main");
 
     // No checks configured: the landing is the person's.
     let run = merge(

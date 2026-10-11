@@ -257,7 +257,7 @@ export function cardRole(key: SideKey, who: Roles): { role: Role; label: string 
 			: { role: 'comes-in-new', label: 'Comes in' };
 	}
 	return key === who.onto
-		? { role: 'lands', label: 'Lands here' }
+		? { role: 'lands', label: 'Merged into' }
 		: { role: 'comes-in', label: 'Comes in · stays as is' };
 }
 

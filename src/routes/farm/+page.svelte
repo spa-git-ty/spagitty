@@ -82,7 +82,7 @@
 				? `${farmStore.drafts.length} proposed`
 				: `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
 		const done = farm.status === 'completed';
-		const build = done ? `${tasks.length} landed` : phase === 3 ? `${left} to go` : '';
+		const build = done ? `${tasks.length} merged` : phase === 3 ? `${left} to go` : '';
 		return [crew, farm.goal.title, plan, build, done ? 'tidy up' : ''];
 	});
 

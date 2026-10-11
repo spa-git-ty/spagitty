@@ -82,7 +82,7 @@ export const BADGES: Badge[] = [
 		id: 'cherry-picker',
 		emoji: '🍒',
 		name: 'Cherry Picker',
-		line: 'Taken from there. Landed here. Nothing spilled.',
+		line: 'Taken from there. Placed here. Nothing spilled.',
 		category: 'git',
 		rarity: 'common'
 	},

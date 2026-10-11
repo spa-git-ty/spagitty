@@ -2,7 +2,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import LandDialog from '$lib/merger/LandDialog.svelte';
+	import MergeDialog from '$lib/merger/MergeDialog.svelte';
 	import MergerPlan from '$lib/merger/MergerPlan.svelte';
 	import MergerResolve from '$lib/merger/MergerResolve.svelte';
 	import { resolving } from '$lib/merger/resolve.svelte';
@@ -54,7 +54,7 @@
 			<MergerPlan onresolve={resolve} onmerge={mergeNow} busy={merger.landing || resolving.loading} />
 		{/if}
 		{#if merger.phase === 'commit' || merger.phase === 'done'}
-			<LandDialog
+			<MergeDialog
 				rows={fromResolve && merger.phase === 'commit' ? resolving.summary(names) : []}
 				oncommit={() => void (fromResolve && merger.strategy !== 'rebase' ? resolving.commit() : merger.land())}
 				ongraph={() => void goto('/')}

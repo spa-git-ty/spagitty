@@ -128,7 +128,7 @@ describe('the forecast', () => {
 
 describe('the stage', () => {
 	it('outlines where it lands, and says the other stays as it is', () => {
-		expect(cardRole('a', intoMain)).toEqual({ role: 'lands', label: 'Lands here' });
+		expect(cardRole('a', intoMain)).toEqual({ role: 'lands', label: 'Merged into' });
 		expect(cardRole('b', intoMain)).toEqual({ role: 'comes-in', label: 'Comes in · stays as is' });
 		expect(cardRole('a', intoNew).label).toBe('Starting point');
 		expect(cardRole('b', intoNew).label).toBe('Comes in');

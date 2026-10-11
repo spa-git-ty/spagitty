@@ -137,7 +137,7 @@ describe('Farm journey routes and actions', () => {
 			review: { decision: 'approve', summary: 'Good', issues: [] }
 		};
 		await show([sampleTask('T1', { status: 'review' })]);
-		click(button('Land it'));
+		click(button('Merge it'));
 		await vi.waitFor(() => expect(api.mergeTask).toHaveBeenCalledWith('T1'));
 	});
 	it('does not present unverified work as ready to land', async () => {
@@ -430,7 +430,7 @@ describe('Farm journey routes and actions', () => {
 			'',
 			(s) => (s.farm!.status = 'completed')
 		);
-		expect(view.text()).toContain('has landed');
+		expect(view.text()).toContain('is merged');
 		expect(view.text()).toContain('abcdef1');
 		expect(view.text()).toContain('Needs follow-up');
 		click(button('Start a new goal'));
@@ -443,8 +443,8 @@ describe('Farm journey routes and actions', () => {
 		};
 		await show([sampleTask('T1', { status: 'review' })]);
 		vi.mocked(api.mergeTask).mockRejectedValueOnce('Switch back to main');
-		click(button('Land it'));
+		click(button('Merge it'));
 		await vi.waitFor(() => expect(notice.failed).toHaveBeenCalled());
-		expect((button('Land it') as HTMLButtonElement).disabled).toBe(false);
+		expect((button('Merge it') as HTMLButtonElement).disabled).toBe(false);
 	});
 });

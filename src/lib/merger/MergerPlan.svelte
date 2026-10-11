@@ -100,7 +100,7 @@
 		<span class="tile" aria-hidden="true"><Icon name="merge" size="1.25em" weight={1.9} /></span>
 		<div class="titles">
 			<h1 class="title">Merger</h1>
-			<span class="note">Pick two branches and where the result lands. You see the outcome, and every conflict, before anything is written.</span>
+			<span class="note">Pick two branches and where the result goes. You see the outcome, and every conflict, before anything is written.</span>
 		</div>
 		<span class="dry"><span class="pip" aria-hidden="true"></span>Dry run · nothing written yet</span>
 	</header>
@@ -245,8 +245,8 @@
 	</div>
 
 	<div class="lands">
-		<span class="note">The result lands</span>
-		<span class="segments" role="group" aria-label="Where the result lands">
+		<span class="note">The result goes to</span>
+		<span class="segments" role="group" aria-label="Where the result goes">
 			{#each DIRECTIONS as direction (direction.into)}
 				{@const reason = directionReason(direction.into)}
 				<button
@@ -267,8 +267,8 @@
 
 	{#if forecast && who}
 		<div class="lower">
-			<section class="card how" aria-label="How it lands">
-				<span class="label">How it lands</span>
+			<section class="card how" aria-label="How it is merged">
+				<span class="label">How it is merged</span>
 				{#each choices as choice (choice.id)}
 					<button
 						class="strategy"

@@ -317,7 +317,7 @@ export const changes = {
 			if (names.length > 0) {
 				const answer = await dialog.choose({
 					title: names.length === 1 ? `Run ${names[0]}?` : `Run ${names.length} hooks?`,
-					body: `${names.join(', ')} will run before this commit lands, and you can watch them as they do.`,
+					body: `${names.join(', ')} will run before this commit is made, and you can watch them as they do.`,
 					confirmLabel: 'Run hooks',
 					alternativeLabel: 'Skip hooks'
 				});
@@ -337,7 +337,7 @@ export const changes = {
 				throw e;
 			}
 		});
-		if (watched) hooks.finish(committed ? null : (failure ?? 'The commit did not land.'));
+		if (watched) hooks.finish(committed ? null : (failure ?? 'The commit was not made.'));
 
 		if (committed) {
 			subject = '';
