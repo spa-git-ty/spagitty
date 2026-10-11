@@ -63,25 +63,6 @@
 		<button class="tool" aria-pressed={room.layout === 'all'} onclick={() => room.setLayout('all')}>All</button>
 	</span>
 	<span class="vr"></span>
-	<button
-		class="tool icon toggle"
-		aria-pressed={room.ruler}
-		aria-label="Focus ruler"
-		title="Focus ruler"
-		onclick={() => room.toggleRuler()}
-	>
-		<Icon name="ruler" size="1.1em" weight={1.9} />
-	</button>
-	<button
-		class="tool icon toggle aa"
-		aria-pressed={room.readingSet}
-		aria-label="Reading font"
-		title="Reading font"
-		onclick={() => room.toggleReading()}
-	>
-		Aa
-	</button>
-	<span class="vr"></span>
 	{#if done}
 		<button class="tool finish" disabled={room.phase !== 'ready'} onclick={onfinish}>Finish review</button>
 	{:else}
@@ -181,19 +162,6 @@
 		color: var(--ink);
 		font-weight: 600;
 		box-shadow: var(--shadow-1);
-	}
-
-	.toggle {
-		color: var(--muted);
-	}
-
-	.toggle[aria-pressed='true'] {
-		background: color-mix(in srgb, var(--accent) 18%, transparent);
-		color: var(--accent);
-	}
-
-	.aa {
-		font-weight: 700;
 	}
 
 	/* A ring while the file is still to read; the ring ticked, in green, once

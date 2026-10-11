@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { tick } from 'svelte';
 import { click, fire, press, render, type Mounted } from '../../testing/mount';
 import { openRepository, request } from '../../testing/git-fixtures';
 import { control } from '../../testing/repo-store.svelte';
@@ -21,6 +22,7 @@ import { agents } from '$lib/agents/store.svelte';
 import * as agentWork from '$lib/review/agent.svelte';
 import { aFinding, aReview, aSnapshot, aStep } from '../../testing/agent-fixtures';
 import { requests } from '$lib/requests/store.svelte';
+import { reading } from '$lib/reading.svelte';
 import { review } from '$lib/review/store.svelte';
 import type { DiffLine, FileChange, FullFile, PullRequestComment } from '$lib/types';
 import Page from './+page.svelte';
@@ -31,7 +33,7 @@ const button = (name: string) =>
 const pill = () => view.get('[aria-label="Review controls"]');
 const files = () => view.get('aside[aria-label="Touched files"]');
 const conversation = () => view.get('aside[aria-label="Conversation"]');
-const focused = () => view.find('.line.focused')?.textContent?.replace(/\s+/g, ' ').trim();
+const focused = () => view.find('.line.ruled')?.textContent?.replace(/\s+/g, ' ').trim();
 
 const PR = request({
 	id: 'PR_214',
@@ -116,6 +118,7 @@ beforeEach(() => {
 	control.reset();
 	openRepository();
 	localStorage.clear();
+	reading.reset();
 	vi.mocked(api.inTauri).mockReturnValue(true);
 	vi.mocked(api.forgeRepo).mockResolvedValue({
 		kind: 'gitHub',
@@ -285,10 +288,11 @@ it('draws threads under their lines and lists them, and goes to one on a click',
 	expect(view.all('.part .thread .body').map((b) => b.textContent?.trim())).toContain(
 		'Is anything else still reading memo?'
 	);
-	expect(focused()).toContain('line 2');
+	expect(view.find('.line.focused')?.textContent).toContain('line 2');
 });
 
 it('starts the ruler on the first change and moves it with j and k', async () => {
+	reading.set({ ruler: 'line' });
 	await openRoom();
 	await vi.waitFor(() => expect(focused()).toContain('MEMORY.lock()'));
 	press(window, 'j');
@@ -297,17 +301,27 @@ it('starts the ruler on the first change and moves it with j and k', async () =>
 	press(window, 'k');
 	expect(focused()).toContain('line 14');
 
-	click(view.get('button[aria-label="Focus ruler"]'));
+	reading.set({ ruler: 'off' });
+	await tick();
 	expect(focused()).toBeUndefined();
 });
 
-it('sets code as it was before the reading set on Aa', async () => {
+it('opens with no ruler and plain code, and has neither button on the bar (TASK-059)', async () => {
+	await openRoom();
+	expect(focused()).toBeUndefined();
+	expect(view.get('.screen').getAttribute('style') ?? '').toContain('--code-lh: 1.45');
+	expect(view.find('button[aria-label="Focus ruler"]')).toBeNull();
+	expect(view.find('button[aria-label="Reading font"]')).toBeNull();
+});
+
+it('sets code in the reading set when Settings › Reading turns it on for the room', async () => {
+	reading.set({ reviewRoom: true });
 	await openRoom();
 	const screen = () => view.get('.screen').getAttribute('style') ?? '';
 	expect(screen()).not.toContain('--code-lh');
-	click(button('Aa'));
+	reading.set({ reviewRoom: false });
+	await tick();
 	expect(screen()).toContain('--code-lh: 1.45');
-	expect(button('Aa').getAttribute('aria-pressed')).toBe('false');
 });
 
 it('reads the host’s patch when the pull request cannot be fetched', async () => {

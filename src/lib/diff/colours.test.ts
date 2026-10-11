@@ -18,7 +18,7 @@ function rule(source: string, selector: string): string {
 
 describe('the colours of a diff', () => {
 	it('lays the ruler and the comment range over the line, never in place of it', () => {
-		for (const selector of ['.line.focused', '.line.covered']) {
+		for (const selector of ['.line.ruled', '.line.covered']) {
 			const body = rule(room, selector);
 			expect(body, selector).not.toMatch(/background(-color)?:/);
 			expect(body, selector).toContain('background-image');

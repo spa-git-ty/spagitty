@@ -48,6 +48,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Review marks a file *conflict fix* only for lines that were written to resolve a conflict with the target branch. An ordinary commit, a change made in a merge away from any conflict, and a merge of some other branch are no longer shown as conflict fixes.
 - Added lines are green and removed lines red, whatever is on top. The focus ruler and the lines being commented on are laid over the line instead of replacing its colour, markup tags and type names are no longer the red of a removal, the comment button is neutral, and the green and red tints are stronger.
 
+### Changed
+
+- The review room opens in plain code with no focus ruler, and the *Aa* and ruler buttons are gone from its bar. Settings › Reading turns the ruler on, and a new *Use the reading set* choice there turns the reading font on for the review room.
+
 ## [2.0.1] - 2026-10-11
 
 ### Fixed

@@ -315,7 +315,7 @@ of its own.
 | [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Open |
 | [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
 | [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Open |
-| [TASK-059](items/TASK-059-reading-font-and-ruler-off-by-default.md) | The reading font and the focus ruler are off by default, and off the review bar | 1R, 1K | Backlog |
+| [TASK-059](items/TASK-059-reading-font-and-ruler-off-by-default.md) | The reading font and the focus ruler are off by default, and off the review bar | 1R, 1K | Done |
 | [TASK-060](items/TASK-060-agent-permissions-with-standard-names.md) | Agent permissions with standard names | 1K, 1R, 1S | Backlog |
 | [TASK-061](items/TASK-061-plain-words-for-merging-and-approval.md) | Plain words for merging and stopping for approval | all | Backlog |
 | [TASK-062](items/TASK-062-finish-the-open-pull-requests.md) | Finish the three open pull requests | — | Backlog |

@@ -113,13 +113,16 @@ export interface Reading {
 	ruler: RulerMode;
 	colours: DiffColours;
 	words: boolean;
+	/** The review room sets code in the reading set above. Off: plain code (TASK-059). */
+	reviewRoom: boolean;
 }
 
 /**
  * The design's reading set: the face made for low vision, a size and spacing
- * that give each line room, the ruler on one line, and calm colours with the
- * changed words marked. The interface keeps the desktop's face until it is
- * chosen, because that changes every screen rather than the reading ones.
+ * that give each line room, and calm colours with the changed words marked.
+ * The interface keeps the desktop's face until it is chosen, because that
+ * changes every screen rather than the reading ones. The focus ruler and the
+ * reading set in the review room are off until they are asked for (TASK-059).
  */
 export const DEFAULTS: Reading = {
 	codeFont: 'atkinson-mono',
@@ -127,15 +130,16 @@ export const DEFAULTS: Reading = {
 	size: 15,
 	lineHeight: 1.85,
 	letterSpacing: 0.02,
-	ruler: 'line',
+	ruler: 'off',
 	colours: 'calm',
-	words: true
+	words: true,
+	reviewRoom: false
 };
 
 /**
  * Code as it was set before any of this: the desktop's monospace, at the
- * size the type scale gives it, tight. The review room's `Aa` switches
- * between this and the reading set.
+ * size the type scale gives it, tight. The review room uses this unless
+ * Settings › Reading turns the reading set on for it.
  */
 export const PLAIN = {
 	codeFont: 'system' as CodeFontId,
@@ -175,7 +179,8 @@ export function normalise(value: unknown): Reading {
 		letterSpacing: number(raw.letterSpacing, DEFAULTS.letterSpacing, LS_MIN, LS_MAX),
 		ruler: oneOf(raw.ruler, ['off', 'line', 'chunk'] as const, DEFAULTS.ruler),
 		colours: oneOf(raw.colours, ['calm', 'classic'] as const, DEFAULTS.colours),
-		words: typeof raw.words === 'boolean' ? raw.words : DEFAULTS.words
+		words: typeof raw.words === 'boolean' ? raw.words : DEFAULTS.words,
+		reviewRoom: typeof raw.reviewRoom === 'boolean' ? raw.reviewRoom : DEFAULTS.reviewRoom
 	};
 }
 

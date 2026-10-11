@@ -144,6 +144,16 @@
 			</Chip>
 		</div>
 		<span class="note hint">{colourNote}</span>
+
+		<div class="row">
+			<span class="note label">Review room</span>
+			<Chip active={now.reviewRoom} onclick={() => reading.set({ reviewRoom: !now.reviewRoom })}>
+				Use the reading set
+			</Chip>
+		</div>
+		<span class="note hint">
+			Off, the review room shows code in the plain code font. On, it uses the face, size and spacing above.
+		</span>
 	</div>
 
 	<aside class="preview" aria-label="Preview">

@@ -309,7 +309,8 @@
 						class="line {row.line.origin}"
 						class:fixed={row.fixed}
 						class:covered={covered !== null && covered.path === row.path && row.index >= covered.from && row.index <= covered.to}
-						class:focused={room.ruler && focusAt === index}
+						class:focused={focusAt === index}
+						class:ruled={room.ruler && focusAt === index}
 						class:dim={room.ruler && room.rulerMode === 'chunk' && focusChunk !== null && row.chunk !== focusChunk}
 					>
 						<span class="marker"></span>
@@ -656,7 +657,7 @@
 	}
 
 	/* The ruler: a warm band under the line being read. */
-	.line.focused {
+	.line.ruled {
 		background-image: linear-gradient(var(--ruler), var(--ruler));
 	}
 
