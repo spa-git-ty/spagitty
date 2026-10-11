@@ -45,6 +45,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Command-line agents that Windows starts through a `.cmd` shim (npm installs of Codex, Oh My Pi and others) get their whole instructions. Windows cannot pass a line break as an argument, so Spagitty now sends the instructions on standard input to those agents. Settings *Test* uses a two-line instruction, so it checks the same path.
 - Extensions run on Spagitty 2 again. Every extension, the bundled CodeRabbit one included, was shown as needing Spagitty below 2.0.0. The bundled, example and template manifests no longer name an upper limit, and a test fails if a manifest we ship does not admit the version we ship.
 - Review no longer takes *you* from the first account you connected when the repository is on another host, and a refused token says which account was refused. A refusal on the first read is asked once more before Review tells you to fix your accounts.
+- Review marks a file *conflict fix* only for lines that were written to resolve a conflict with the target branch. An ordinary commit, a change made in a merge away from any conflict, and a merge of some other branch are no longer shown as conflict fixes.
 
 ## [2.0.1] - 2026-10-11
 

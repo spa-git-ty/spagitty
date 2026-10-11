@@ -2,7 +2,7 @@
 
 # BUG-068 — Ordinary commits are marked as conflict fixes
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Open — on `bugfix/BUG-068-ordinary-commits-marked-as-conflict-fixes`; two of the three suspects are confirmed and fixed, the pull request the author saw it on has not been checked.
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -33,3 +33,14 @@ Not reproduced yet. The detection is `crates/spagitty-core/src/remerge.rs`, `con
 - **Reproduce first:** ask the author which pull request and file showed it, and run `git show --remerge-diff <merge>` on it to see which suspect it is.
 - **Where:** `crates/spagitty-core/src/remerge.rs` (`regions`, `merges`, `conflicts`), `src/lib/review/rows.ts` (how fixed lines become cards), `src/lib/review/RoomFiles.svelte`.
 - **Branch:** `bugfix/BUG-068-ordinary-commits-marked-as-conflict-fixes`, with plan, testing documents and a changelog entry when the work starts.
+
+## What was done, and what was not
+
+Two of the suspected causes were real, each shown by a fixture test that fails without the fix:
+
+- **Regions with no conflict (suspect 1).** `regions()` reported lines a merge changed away from any conflict as a place "with no sides", and `conflicts()` turned them into fixes. A region now carries `conflicted`, true only for lines written inside or straight after a pair of conflict markers, and only those become fixes.
+- **Merges of any branch (suspect 2).** `conflicts()` took the second parent as the target's when neither parent was in the target. A merge now counts only when exactly one parent is reachable from the target; the pull request's own branch pulled back, or another feature branch merged in, is skipped and not listed among the merges re-done.
+
+A clean merge of the target followed by an ordinary commit marks nothing (a control that passed before and after).
+
+Suspect 3 (line endings under `core.autocrlf`) is not proven either way: a line-ending difference outside a conflict is now dropped with the first fix, but one inside a conflicted region would still be shown. The author's own pull request (`git show --remerge-diff <merge>`) is the way to settle it.
