@@ -268,6 +268,7 @@
 							follow={following}
 							onfollow={(on) => (following = on)}
 							ongo={goTo}
+							onfile={(path) => room.select(path)}
 							onaccept={(proposals) => agentWork.acceptAll(assignment, proposals)}
 							onlast={() => (finishing = true)}
 							onhide={() => setConversationHidden(true)}

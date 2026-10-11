@@ -55,6 +55,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - The words *land* and *landed* are gone from what you read. Merging says *merge*, *merged* and *goes to*, in Merger, Farm, the agent popover and the conflict resolver, and the commit dialog says *Ready to merge into*.
 - Pull requests shows pull requests and Review reviews them. The *Review* and *Reply in Review* buttons, draft comments, the *Publish Review* dialog, the verdict choices and the Reviewer/Developer view switch are gone from Pull requests; everything they did is in Review.
 - Every merge is made in Merger. Pull requests, the Graph and Farm open Merger instead of merging themselves. Merger merges a pull request through its host with a merge commit, a squash or a rebase, and a pull request that conflicts is resolved there, pushed and then merged. A Farm task merged in Merger finishes in the Farm.
+- An agent's work is shown properly. The card shows the step list and the current sentence, and *Details* opens what Spagitty sent for a step and what came back, each part labelled: replies as formatted text, commands and tool input as code, files it read as links into the diff, results and errors apart. None of it shows until you ask.
 
 ## [2.0.1] - 2026-10-11
 

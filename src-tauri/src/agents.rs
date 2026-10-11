@@ -1628,6 +1628,8 @@ mod tests {
             ended_at: None,
             gate: None,
             events: Vec::new(),
+            record: Vec::new(),
+            prompt: None,
             sent: Vec::new(),
             refused: Vec::new(),
             note: None,

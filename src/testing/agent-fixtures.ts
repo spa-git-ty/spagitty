@@ -115,6 +115,8 @@ export function aStep(overrides: Partial<Step> = {}): Step {
 		endedAt: 112,
 		gate: null,
 		events: [],
+		record: [],
+		prompt: null,
 		sent: [],
 		refused: [],
 		note: null,

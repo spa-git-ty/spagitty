@@ -28,7 +28,7 @@ use super::level::{self, AtGate, Circumstances, Gate, Level};
 use super::protocol::{Answer, Finding, Plan, PlanItem, Summary, Verdict};
 use super::record::{
     now, Assignment, CheckRun, LastAct, LevelChange, Proposal, ProposalBody, ProposalState, State,
-    Step, StepKind, StepState, Store, Target, Tokens, Who, STEP_EVENTS,
+    Step, StepKind, StepState, Store, Target, Tokens, Who,
 };
 use super::rules::RepoRules;
 use super::{guard, prompt};
@@ -292,7 +292,7 @@ impl Handle {
             // Shown at once, as the person's, wherever the timeline is.
             let line = format!("You · {}", text.trim());
             if let Some(step) = inner.assignment.steps.last_mut() {
-                step.events.push(line);
+                step.say(line);
             }
             self.shared.save_and_send(&mut inner);
         }
@@ -769,6 +769,8 @@ impl Engine {
                 ended_at: None,
                 gate: None,
                 events: Vec::new(),
+                record: Vec::new(),
+                prompt: None,
                 sent: Vec::new(),
                 refused: Vec::new(),
                 note: None,
@@ -802,6 +804,12 @@ impl Engine {
     fn ask(&mut self, step: usize, kind: StepKind, prompt: String) -> Flow<Reply> {
         let mut full = prompt;
         full.push_str(&prompt::notes("", &std::mem::take(&mut self.told)));
+        // What is sent is kept with the step, so the person can read it (FEAT-118).
+        self.update(|a| {
+            if let Some(entry) = a.steps.get_mut(step) {
+                entry.sent_prompt(&full);
+            }
+        });
         let ask = Ask {
             kind,
             prompt: full,
@@ -815,9 +823,7 @@ impl Engine {
             let id = inner.assignment.id.clone();
             shared.store.transcript(&inner.assignment, line);
             if let Some(entry) = inner.assignment.steps.get_mut(step) {
-                if entry.events.len() < STEP_EVENTS {
-                    entry.events.push(line.to_string());
-                }
+                entry.hear(line);
             }
             inner.dirty = true;
             shared.sink.line(&id, line);
@@ -845,8 +851,8 @@ impl Engine {
                     entry.sent = reply.sent.clone();
                 }
                 for path in &refused {
-                    entry.events.push(format!(
-                        "changed {path}, which it was not asked to; not kept"
+                    entry.say(format!(
+                        "· changed {path}, which it was not asked to; not kept"
                     ));
                 }
                 entry.refused = refused.clone();
@@ -1054,7 +1060,7 @@ impl Engine {
                 proposal.why = Some(why.clone());
             }
             if let Some(entry) = a.steps.get_mut(step) {
-                entry.events.push(why);
+                entry.say(why);
             }
             // Asking why costs a step; it does not change where the run was.
             a.state = state;
@@ -1275,8 +1281,8 @@ impl Engine {
                 if !prompt::on_diff(&lines, finding.side, finding.line) {
                     self.update(|a| {
                         if let Some(entry) = a.steps.get_mut(step) {
-                            entry.events.push(format!(
-                                "a finding on line {} is not on a line of the diff; not kept",
+                            entry.say(format!(
+                                "· a finding on line {} is not on a line of the diff; not kept",
                                 finding.line
                             ));
                         }
@@ -1725,9 +1731,7 @@ impl Engine {
             let step = self.begin(StepKind::Checks, "Checks".into(), "Checks".into());
             self.update(|a| {
                 if let Some(entry) = a.steps.get_mut(step) {
-                    entry
-                        .events
-                        .push("No checks are configured for this repository.".into());
+                    entry.say("· no checks are configured for this repository");
                 }
             });
             self.finish(step, Some("Checks · none configured".into()));
@@ -1749,9 +1753,7 @@ impl Engine {
                     inner.assignment.sentence = format!("Running checks · {command}");
                 }
                 if let Some(entry) = inner.assignment.steps.get_mut(step) {
-                    if entry.events.len() < STEP_EVENTS {
-                        entry.events.push(line.to_string());
-                    }
+                    entry.hear_output(line);
                 }
                 inner.dirty = true;
                 shared.sink.line(&id, line);

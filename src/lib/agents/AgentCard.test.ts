@@ -122,9 +122,81 @@ describe('the controls', () => {
 		expect(onfollow).toHaveBeenCalledWith(true);
 	});
 
+	it('shows nothing of what was sent or said until Details is opened (FEAT-118)', () => {
+		const view = mount(
+			aReview({
+				steps: [
+					aStep({
+						prompt: 'Review avatars.rs and say what is wrong.',
+						record: [{ kind: 'reply', text: 'The cache path is wrong.' }]
+					})
+				]
+			})
+		);
+		expect(view.text()).not.toContain('Review avatars.rs and say what is wrong.');
+		expect(view.text()).not.toContain('The cache path is wrong.');
+		expect(view.find('.step-details')).toBeNull();
+	});
+
+	it('shows, for a step, what was sent and what came back, each labelled as what it is', () => {
+		const onfile = vi.fn();
+		const view = mount(
+			aReview({
+				steps: [
+					aStep({
+						index: 1,
+						label: 'avatars.rs · 2 findings',
+						prompt: 'Review avatars.rs and say what is wrong.',
+						record: [
+							{ kind: 'sent', text: 'You · look at the tests too' },
+							{ kind: 'reply', text: 'The cache path is **wrong**.' },
+							{ kind: 'reply', text: 'See the test.' },
+							{ kind: 'read', text: 'src/avatars.rs', path: 'src/avatars.rs' },
+							{ kind: 'command', text: 'cargo test' },
+							{ kind: 'error', text: 'failed: permission denied' }
+						]
+					})
+				]
+			}),
+			{ onfile }
+		);
+		click(button(view, 'Details'));
+
+		const details = view.get('.step-details');
+		expect(text(details)).toContain('avatars.rs · 2 findings');
+		expect(text(details)).toContain('What Spagitty asked');
+		expect(text(details.querySelector('.sent pre'))).toBe('Review avatars.rs and say what is wrong.');
+		// Adjacent reply lines are one reply, drawn as Markdown.
+		expect(details.querySelectorAll('.block.reply')).toHaveLength(1);
+		expect(details.querySelector('.block.reply strong')?.textContent).toBe('wrong');
+		expect(text(details.querySelector('.block.command pre'))).toBe('$ cargo test');
+		expect(text(details.querySelector('.block.error'))).toContain('permission denied');
+		const labels = [...details.querySelectorAll('.block > .kind')].map((el) => text(el));
+		expect(labels).toEqual(expect.arrayContaining(['You', 'Agent', 'Read', 'Command', 'Error']));
+		// A file it read is a link into the diff.
+		click(details.querySelector<HTMLElement>('.block.read button')!);
+		expect(onfile).toHaveBeenCalledWith('src/avatars.rs');
+	});
+
+	it('opens on the step that was clicked, not the current one', () => {
+		const view = mount(
+			aReview({
+				steps: [
+					aStep({ index: 0, label: 'Read the pull request', prompt: 'first' }),
+					aStep({ index: 1, label: 'avatars.rs', state: 'running', endedAt: null, prompt: 'second' })
+				]
+			})
+		);
+		click(button(view, 'Details'));
+		expect(text(view.get('.step-details .label'))).toBe('avatars.rs');
+		click(view.all('button.line').find((b) => text(b).includes('Read the pull request'))!);
+		expect(text(view.get('.step-details .label'))).toBe('Read the pull request');
+	});
+
 	it('shows the raw output, and the command that started the run', async () => {
 		const view = mount(aReview({ steps: [aStep({ command: 'claude -p --permission-mode plan …' })] }));
-		click(view.get('.raw-toggle'));
+		click(button(view, 'Details'));
+		click(view.all('.raw-toggle').find((b) => text(b) === 'Raw output')!);
 		await vi.waitFor(() => expect(view.text()).toContain('the whole transcript'));
 		expect(view.text()).toContain('claude -p --permission-mode plan …');
 	});

@@ -36,6 +36,7 @@
 //! envelopes but carries a kind this does not render is dropped instead —
 //! passing it through would put raw JSON in a log meant to be read.
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Turns one raw output line into the lines a person should see.
@@ -58,6 +59,116 @@ impl Narrator for Verbatim {
     fn narrate(&mut self, raw: &str) -> Vec<String> {
         vec![raw.to_string()]
     }
+}
+
+/// What one line of an agent's run is (FEAT-118).
+///
+/// Set here, where the stream is read, and kept with the line, so the screen
+/// draws each kind as itself instead of guessing from the words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EventKind {
+    /// What Spagitty, or the person, said to the agent.
+    Sent,
+    /// A command it ran.
+    Command,
+    /// A tool it called that is neither a read nor a command.
+    Tool,
+    /// A file it read.
+    Read,
+    /// The agent's own words.
+    Reply,
+    /// How a tool or the run came out, when it went well.
+    Result,
+    /// Something that failed, or was refused.
+    Error,
+}
+
+/// One line of a step's record: what kind it is, what it says, and the file it
+/// is about when it is about one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StepEvent {
+    pub kind: EventKind,
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+/// The kind of a line, as the narrators and the engine write them.
+///
+/// A line that begins with `·` is one of ours and says what happened in a word
+/// or two: `Read a.rs`, `Bash cargo test`, `read the diff of b.rs`, `failed: …`.
+/// A line that does not is the agent's: its reply, unless it is the shape a
+/// command-line agent prints for a command it ran or the way that came out.
+pub fn classify(line: &str) -> StepEvent {
+    let event = |kind, text: &str, path: Option<&str>| StepEvent {
+        kind,
+        text: text.to_string(),
+        path: path.map(str::to_string),
+    };
+
+    if let Some(said) = line.strip_prefix("You · ") {
+        return event(EventKind::Sent, said, None);
+    }
+    if let Some(command) = line.strip_prefix("$ ") {
+        return event(EventKind::Command, command, None);
+    }
+    let Some(rest) = line.strip_prefix(MARK) else {
+        return classify_agent(line);
+    };
+    let rest = rest.trim();
+    let (head, tail) = rest.split_once(' ').unwrap_or((rest, ""));
+    let tail = tail.trim();
+    let lowered = head.to_ascii_lowercase();
+    let lowered = lowered.trim_end_matches(':');
+
+    match lowered {
+        "read" => {
+            let path = tail.strip_prefix("the diff of ").unwrap_or(tail);
+            event(EventKind::Read, tail, (!path.is_empty()).then_some(path))
+        }
+        "bash" | "bashoutput" | "ran" => event(EventKind::Command, tail, None),
+        "write" | "edit" | "notebookedit" | "wrote" | "edited" => {
+            event(EventKind::Tool, rest, (!tail.is_empty()).then_some(tail))
+        }
+        "failed" => event(EventKind::Error, rest, None),
+        "finished" => event(EventKind::Result, rest, None),
+        _ if rest.ends_with(" started") => event(EventKind::Result, rest, None),
+        _ if rest.contains("refused")
+            || rest.contains("not offered")
+            || rest.contains("not kept") =>
+        {
+            event(EventKind::Error, rest, None)
+        }
+        _ if rest.starts_with("no ") => event(EventKind::Result, rest, None),
+        _ => event(EventKind::Tool, rest, None),
+    }
+}
+
+/// What a command-line agent prints on its own: Codex narrates a command it ran
+/// and how it ended, and everything else it says is a reply.
+fn classify_agent(line: &str) -> StepEvent {
+    let kind = |kind| StepEvent {
+        kind,
+        text: line.to_string(),
+        path: None,
+    };
+    let trimmed = line.trim_start();
+    if trimmed.starts_with("bash -lc ")
+        || trimmed.starts_with("sh -c ")
+        || trimmed.starts_with("powershell")
+        || trimmed.starts_with("cmd /c ")
+    {
+        return kind(EventKind::Command);
+    }
+    if trimmed.starts_with("succeeded in ") {
+        return kind(EventKind::Result);
+    }
+    if trimmed.starts_with("failed in ") || trimmed.starts_with("exited ") {
+        return kind(EventKind::Error);
+    }
+    kind(EventKind::Reply)
 }
 
 /// A marker on the lines this module wrote rather than the agent.
@@ -152,7 +263,10 @@ impl ClaudeStream {
                     .get("content")
                     .and_then(Value::as_str)
                     .unwrap_or("a tool failed");
-                format!("{MARK} {}", clip(detail.lines().next().unwrap_or(detail)))
+                format!(
+                    "{MARK} failed: {}",
+                    clip(detail.lines().next().unwrap_or(detail))
+                )
             })
             .collect()
     }
@@ -390,7 +504,7 @@ mod tests {
                 {"type":"tool_result","is_error":true,"content":"No such file\nsecond line"},
                 {"type":"tool_result","content":"1\thello"}
             ]}}"#]);
-        assert_eq!(lines, ["· No such file"]);
+        assert_eq!(lines, ["· failed: No such file"]);
     }
 
     #[test]
@@ -414,5 +528,81 @@ mod tests {
     #[test]
     fn the_verbatim_narrator_changes_nothing() {
         assert_eq!(Verbatim.narrate("  spaced  "), ["  spaced  "]);
+    }
+
+    fn kinds(lines: &[String]) -> Vec<(EventKind, String)> {
+        lines
+            .iter()
+            .map(|line| {
+                let event = classify(line);
+                (event.kind, event.path.unwrap_or_default())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_claude_run_is_typed_where_it_is_read() {
+        let lines = narrate(&[
+            r#"{"type":"system","subtype":"init","model":"claude-opus-5"}"#,
+            r#"{"type":"assistant","message":{"content":[{"type":"text","text":"Looking at the avatars."},{"type":"tool_use","name":"Read","input":{"file_path":"src/avatars.rs"}},{"type":"tool_use","name":"Bash","input":{"command":"cargo test"}},{"type":"tool_use","name":"Edit","input":{"file_path":"src/avatars.rs"}},{"type":"tool_use","name":"Grep","input":{"pattern":"xdg"}}]}}"#,
+            r#"{"type":"user","message":{"content":[{"type":"tool_result","is_error":true,"content":"permission denied"}]}}"#,
+            r#"{"type":"result","is_error":false,"duration_ms":4200}"#,
+        ]);
+        assert_eq!(
+            kinds(&lines),
+            [
+                (EventKind::Result, String::new()),
+                (EventKind::Reply, String::new()),
+                (EventKind::Read, "src/avatars.rs".into()),
+                (EventKind::Command, String::new()),
+                (EventKind::Tool, "src/avatars.rs".into()),
+                (EventKind::Tool, String::new()),
+                (EventKind::Error, String::new()),
+                (EventKind::Result, String::new()),
+            ]
+        );
+        assert_eq!(classify(&lines[3]).text, "cargo test");
+    }
+
+    #[test]
+    fn a_codex_run_is_typed_by_the_shape_it_prints() {
+        let printed = [
+            "codex",
+            "I will read the file first.",
+            "bash -lc 'git diff --stat' in /work/review",
+            "succeeded in 51ms:",
+            "bash -lc 'cargo test' in /work/review",
+            "failed in 3200ms:",
+        ];
+        let events: Vec<EventKind> = printed.iter().map(|line| classify(line).kind).collect();
+        assert_eq!(
+            events,
+            [
+                EventKind::Reply,
+                EventKind::Reply,
+                EventKind::Command,
+                EventKind::Result,
+                EventKind::Command,
+                EventKind::Error,
+            ]
+        );
+    }
+
+    #[test]
+    fn what_spagitty_wrote_to_the_agent_and_what_a_check_ran_are_typed() {
+        assert_eq!(
+            classify("You · look at the tests too").kind,
+            EventKind::Sent
+        );
+        assert_eq!(classify("$ cargo test").kind, EventKind::Command);
+        assert_eq!(classify("$ cargo test").text, "cargo test");
+        assert_eq!(
+            classify("· a finding on line 9 is not on a line of the diff; not kept").kind,
+            EventKind::Error
+        );
+        assert_eq!(
+            classify("· no checks are configured for this repository").kind,
+            EventKind::Result
+        );
     }
 }

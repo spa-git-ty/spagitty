@@ -592,4 +592,21 @@ mod tests {
         );
         assert!(gathered.finished);
     }
+
+    #[test]
+    fn what_a_remote_agent_asks_for_is_typed_as_what_it_is() {
+        use crate::execution::narrate::{classify, EventKind};
+        let kind = |name: &str, input: Value| classify(&narrate(name, &input)).kind;
+        assert_eq!(kind("read_file", json!({"path": "a.rs"})), EventKind::Read);
+        assert_eq!(
+            classify(&narrate("read_diff", &json!({"path": "a.rs"})))
+                .path
+                .as_deref(),
+            Some("a.rs")
+        );
+        assert_eq!(kind("search", json!({"pattern": "xdg"})), EventKind::Tool);
+        assert_eq!(kind("propose_comment", json!({})), EventKind::Tool);
+        assert_eq!(kind("finish_step", json!({})), EventKind::Result);
+        assert_eq!(kind("rm_rf", json!({})), EventKind::Error);
+    }
 }
