@@ -35,6 +35,8 @@ Cache timeout follow-up on 2026-10-11:
 - Existing record/version/release-note/macOS/update tests: 978 cases pass.
 - `git diff --check`: passes. This follow-up changes no application code or
   dependencies; the successful Windows build above remains applicable.
-- Cancelled the stalled PR run `38125434703`; requested force-cancellation when
-  ordinary cancellation did not stop the cache step. The next push restarts
-  CI with the updated workflow.
+- Submitted cancellation for the stalled PR run `38125434703`, then requested
+  force-cancellation when the cache step did not stop. GitHub accepted both
+  requests but still marked the run active after five minutes; the replacement
+  run is queued with the updated workflow. Live CI verification remains pending
+  while GitHub holds the old run.
