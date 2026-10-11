@@ -701,7 +701,7 @@ it('with an agent set up, offers one way in: beside Start review, and beside Che
 	click(button('Assign an agent…'));
 	const popover = view.get('[role="dialog"][aria-label="Assign an agent"]');
 	expect(popover.textContent).toContain('Claude Code');
-	expect(popover.textContent).toContain('Stops after the plan and each file.');
+	expect(popover.textContent).toContain('Stops for you after the plan and after each file.');
 	expect(popover.textContent).toContain('your branch is not touched');
 });
 

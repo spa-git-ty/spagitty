@@ -95,13 +95,13 @@
 		{/each}
 	</div>
 
-	<div class="levels" role="radiogroup" aria-label="Level">
+	<div class="levels" role="radiogroup" aria-label="Permission">
 		{#each LEVELS as option (option.id)}
 			{@const over = above(option.id, highest)}
 			<Chip
 				active={level === option.id}
 				disabled={over}
-				title={over ? `Capped at ${LEVELS.find((l) => l.id === highest)?.label} here` : option.label}
+				title={over ? `The most allowed here is ${LEVELS.find((l) => l.id === highest)?.label}` : option.label}
 				onclick={() => (level = option.id)}
 			>
 				{option.short}
@@ -116,7 +116,7 @@
 			<Chip
 				active={lands && landsMeans}
 				disabled={!landsMeans}
-				title={landsMeans ? 'The agent resolves, runs the checks and lands' : 'Needs Sign off or Unattended'}
+				title={landsMeans ? 'The agent resolves, runs the checks and lands' : 'Needs Ask before sending or merging, or Full access'}
 				onclick={() => (lands = true)}
 			>
 				Resolve, check and land

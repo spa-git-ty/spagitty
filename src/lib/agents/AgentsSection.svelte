@@ -106,7 +106,7 @@
 
 	async function addBranch() {
 		const pattern = await dialog.prompt({
-			title: 'Never land unattended',
+			title: 'Branches without full access',
 			body: 'A branch, or a pattern such as release/*.',
 			label: 'Branch',
 			confirmLabel: 'Add',
@@ -323,8 +323,8 @@
 				<aside class="card rules" aria-label="This repository">
 					<Chip>{repo.info.name}</Chip>
 
-					<span class="note">Highest level</span>
-					<div class="levels" role="radiogroup" aria-label="Highest level">
+					<span class="note">Maximum permission</span>
+					<div class="levels" role="radiogroup" aria-label="Maximum permission">
 						{#each LEVELS as level (level.id)}
 							<Chip active={rules.highest === level.id} title={level.label} onclick={() => setRules({ highest: level.id })}>
 								{level.short}
@@ -351,7 +351,7 @@
 						{/each}
 					{/if}
 
-					<span class="note">Never land unattended</span>
+					<span class="note">Branches without full access</span>
 					<div class="levels">
 						{#each rules.neverUnattended as pattern (pattern)}
 							<Chip

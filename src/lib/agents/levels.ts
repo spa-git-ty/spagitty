@@ -3,8 +3,11 @@
 /**
  * Words for agents' work (2.0): the levels, the meter, the marks in a file.
  *
- * Pure, so each phrase has a test. The words are the spec's: a level is named
- * for what the person does, and the sentence says where the agent stops.
+ * Pure, so each phrase has a test. A permission is named for what the agent
+ * may do, in the words other agent tools use (TASK-060): read-only, ask, full
+ * access. The stored values (`suggest`, `stepByStep`, `signOff`,
+ * `unattended`) are older than the names and stay, so saved settings keep
+ * working; only what is shown changes.
  */
 
 import type {
@@ -30,31 +33,31 @@ export interface LevelWords {
 export const LEVELS: LevelWords[] = [
 	{
 		id: 'suggest',
-		label: 'Suggest',
-		short: 'Suggest',
-		review: 'Runs to the end. Nothing is applied until you accept it.',
+		label: 'Read-only',
+		short: 'Read-only',
+		review: 'Reads and proposes. Nothing is applied until you accept it.',
 		merge: 'Proposes every conflict and runs the checks. Nothing is applied until you accept it.'
 	},
 	{
 		id: 'stepByStep',
-		label: 'Step by step',
-		short: 'Step',
-		review: 'Stops after the plan and each file.',
-		merge: 'Stops at each conflict and at the checks.'
+		label: 'Ask every step',
+		short: 'Ask every step',
+		review: 'Stops for you after the plan and after each file.',
+		merge: 'Stops for you at each conflict and at the checks.'
 	},
 	{
 		id: 'signOff',
-		label: 'Sign off',
-		short: 'Sign off',
-		review: 'Drafts as it goes and stops before the review is sent.',
-		merge: 'Resolves as it goes and stops before the merge lands.'
+		label: 'Ask before sending or merging',
+		short: 'Ask at the end',
+		review: 'Works through everything and stops before the review is sent.',
+		merge: 'Resolves everything and stops before the merge is made.'
 	},
 	{
 		id: 'unattended',
-		label: 'Unattended',
-		short: 'Unattended',
-		review: 'Sends the review itself, as Comment unless this repository allows verdicts.',
-		merge: 'Lands the merge itself, only when every conflict is sure and the checks pass.'
+		label: 'Full access',
+		short: 'Full access',
+		review: 'Sends the review itself, as a comment unless this repository allows verdicts.',
+		merge: 'Makes the merge itself, only when every conflict is sure and the checks pass.'
 	}
 ];
 

@@ -40,7 +40,7 @@ describe('what the card says', () => {
 	it('names the agent, its level, the one sentence and the meter', () => {
 		const view = mount(aReview());
 		expect(view.text()).toContain('Claude Code');
-		expect(view.text()).toContain('Step');
+		expect(view.text()).toContain('Ask every step');
 		expect(view.get('.sentence').className).toContain('waiting');
 		expect(view.text()).toContain('Waiting for you: 2 findings on avatars.rs');
 		expect(view.text()).toMatch(/0 \/ 4 · \d+:\d\d/);
@@ -104,14 +104,14 @@ describe('the controls', () => {
 
 	it('offers the levels in a menu, the ones above the repository’s highest disabled with why', () => {
 		const view = mount(aReview({ state: 'working' }));
-		click(view.all('button').find((b) => text(b).startsWith('Step'))!);
+		click(view.all('button').find((b) => text(b).startsWith('Ask every step'))!);
 		const menu = document.querySelector('[role="menu"]')!;
 		const items = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-		expect(items.map(text).join(' | ')).toContain('Unattended');
-		const unattended = items.find((i) => text(i).includes('Unattended')) as HTMLButtonElement;
+		expect(items.map(text).join(' | ')).toContain('Full access');
+		const unattended = items.find((i) => text(i).includes('Full access')) as HTMLButtonElement;
 		expect(unattended.disabled).toBe(true);
-		expect(text(unattended)).toContain('Capped at Sign off here');
-		click(items.find((i) => text(i).includes('Sign off'))!);
+		expect(text(unattended)).toContain('The most allowed here is Ask before sending or merging');
+		click(items.find((i) => text(i).includes('Ask before sending or merging'))!);
 		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'level', level: 'signOff' });
 	});
 
@@ -173,7 +173,7 @@ describe('the gates', () => {
 		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'continue' });
 	});
 
-	it('the last act at Sign off is the person’s, filled in', () => {
+	it('the last act at Ask before sending or merging is the person’s, filled in', () => {
 		const onlast = vi.fn();
 		const view = mount(
 			aReview({ steps: [aStep({ kind: { kind: 'last' }, label: 'Finish review', state: 'waiting', gate: 'send', endedAt: null })], proposals: [] }),

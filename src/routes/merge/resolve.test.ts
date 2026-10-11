@@ -236,7 +236,7 @@ it('with an agent set up, offers one way in beside Resolve 4 conflicts', async (
 	await vi.waitFor(() => expect(button('Resolve 4 conflicts')).toBeDefined());
 	click(button('Assign an agent…'));
 	const popover = view.get('[role="dialog"][aria-label="Assign an agent"]');
-	expect(popover.textContent).toContain('Stops at each conflict and at the checks.');
+	expect(popover.textContent).toContain('Stops for you at each conflict and at the checks.');
 	expect(popover.textContent).toContain('Resolve, check and land');
 });
 
@@ -296,7 +296,7 @@ it('the commit says who chose each conflict, and credits the agent', async () =>
 
 	click(button('Complete merge'));
 	await vi.waitFor(() => expect(view.text()).toContain('Ready to land on main'));
-	expect(view.text()).toContain('Codex, applied at Sign off');
+	expect(view.text()).toContain('Codex, applied before you merged');
 	expect(view.text()).toContain('Codex, accepted by you');
 	click(button('Create merge commit'));
 	await vi.waitFor(() => expect(api.mergerLand).toHaveBeenCalled());

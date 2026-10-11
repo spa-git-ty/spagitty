@@ -89,7 +89,7 @@
 			label: level.label,
 			note: a.level === level.id ? 'now' : undefined,
 			disabled: above(level.id, highest),
-			reason: above(level.id, highest) ? `Capped at ${levelWords(highest).label} here` : undefined,
+			reason: above(level.id, highest) ? `The most allowed here is ${levelWords(highest).label}` : undefined,
 			run: () => send({ kind: 'level', level: level.id })
 		}))
 	);

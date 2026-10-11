@@ -31,14 +31,33 @@ import { aFinding, aMerge, aReview, aStep } from '../../testing/agent-fixtures';
 
 describe('the four levels', () => {
 	it('are named for what the person does, in order', () => {
-		expect(LEVELS.map((l) => l.label)).toEqual(['Suggest', 'Step by step', 'Sign off', 'Unattended']);
-		expect(levelWords('stepByStep').short).toBe('Step');
+		expect(LEVELS.map((l) => l.label)).toEqual([
+			'Read-only',
+			'Ask every step',
+			'Ask before sending or merging',
+			'Full access'
+		]);
+		expect(LEVELS.map((l) => l.short)).toEqual(['Read-only', 'Ask every step', 'Ask at the end', 'Full access']);
+		expect(levelWords('stepByStep').short).toBe('Ask every step');
+	});
+
+	it('keep the values saved settings already hold', () => {
+		expect(LEVELS.map((l) => l.id)).toEqual(['suggest', 'stepByStep', 'signOff', 'unattended']);
+	});
+
+	it('describe what the agent may do, in each job', () => {
+		expect(sentenceFor('suggest', 'review')).toBe('Reads and proposes. Nothing is applied until you accept it.');
+		expect(sentenceFor('signOff', 'review')).toBe('Works through everything and stops before the review is sent.');
+		expect(sentenceFor('signOff', 'merge')).toBe('Resolves everything and stops before the merge is made.');
+		expect(sentenceFor('unattended', 'merge')).toBe(
+			'Makes the merge itself, only when every conflict is sure and the checks pass.'
+		);
 	});
 
 	it('say where the agent stops, per job', () => {
-		expect(sentenceFor('stepByStep', 'review')).toBe('Stops after the plan and each file.');
-		expect(sentenceFor('stepByStep', 'merge')).toBe('Stops at each conflict and at the checks.');
-		expect(sentenceFor('unattended', 'review')).toContain('as Comment unless');
+		expect(sentenceFor('stepByStep', 'review')).toBe('Stops for you after the plan and after each file.');
+		expect(sentenceFor('stepByStep', 'merge')).toBe('Stops for you at each conflict and at the checks.');
+		expect(sentenceFor('unattended', 'review')).toContain('as a comment unless');
 	});
 
 	it('are capped by the repository', () => {

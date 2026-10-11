@@ -154,8 +154,8 @@ describe('the section', () => {
 		const view = render(AgentsSection, {});
 		const card = view.get('aside[aria-label="This repository"]');
 		expect(card.textContent).toContain('spagitty');
-		const unattended = [...card.querySelectorAll<HTMLElement>('[aria-label="Highest level"] button')].find(
-			(b) => b.textContent?.trim() === 'Unattended'
+		const unattended = [...card.querySelectorAll<HTMLElement>('[aria-label="Maximum permission"] button')].find(
+			(b) => b.textContent?.trim() === 'Full access'
 		)!;
 		click(unattended);
 		await vi.waitFor(() =>

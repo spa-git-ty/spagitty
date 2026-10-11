@@ -2,7 +2,7 @@
 
 # TASK-060 — Agent permissions with standard names
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Done — on `task/TASK-060-agent-permissions-with-standard-names`; unmerged. The author confirmed the names on 2026-10-11.
 **Screens:** 1K, 1R, 1S.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -14,7 +14,7 @@ They are defined in `src/lib/agents/levels.ts` (`LEVELS`) and typed in `src/lib/
 
 ## Proposed names
 
-Awaiting the author's confirmation:
+Confirmed by the author on 2026-10-11:
 
 | Today | Proposed | What the agent may do |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Awaiting the author's confirmation:
 
 ## Acceptance criteria
 
-- The author has confirmed the names.
+- The author has confirmed the names (done, 2026-10-11).
 - No screen shows the old names.
 - `levels.test.ts` covers each name and description.
 
@@ -40,6 +40,9 @@ Awaiting the author's confirmation:
 
 **Who:** unassigned. Any agent working on this repository can start cold.
 
-- **Do not start** until the author has confirmed the table above.
 - **Where:** `src/lib/agents/levels.ts`, `AssignPopover.svelte`, `AgentCard.svelte`, `AgentsSection.svelte`, and every component that calls `levelWords` or `sentenceFor`.
 - **Branch:** `task/TASK-060-agent-permissions-with-standard-names`, with plan, testing documents and a changelog entry when the work starts.
+
+## What was done
+
+The names in the table above are the ones shown: **Read-only**, **Ask every step**, **Ask before sending or merging** and **Full access**, with *Maximum permission* for the repository's limit and *Branches without full access* for the branches an agent may never act on alone. On a chip row the third reads *Ask at the end*. A level above the maximum says *The most allowed here is …* in place of *Capped at … here*. The Merger's record of who chose a resolution reads *Codex, full access* or *Codex, applied before you merged*. The one-line sentences under each name are rewritten to say what the agent may do (`levels.ts`). The stored values (`suggest`, `stepByStep`, `signOff`, `unattended`), `RepoRules.highest` and `neverUnattended` are unchanged, so saved settings keep working, and the Rust `Level::label` carries the same names. The per-agent access choices added by pull request #59 already use *Full access* (Codex) and *Auto-approve tools* (agy). Farm's own autonomy scale (*Manual … Unattended*) is a different setting and is not changed.
