@@ -788,7 +788,7 @@ pub fn agents_test_local<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Te
     let adapter = adapter_for(view.provider);
     let request = AgentRunRequest {
         workdir: dir.clone(),
-        prompt: "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file.".into(),
+        prompt: "Repository access test only.\nUse your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file.".into(),
         unattended: false,
     };
     let command = read_only(view.provider, adapter.command(&view.definition, &request));

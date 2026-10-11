@@ -10,7 +10,7 @@
 
 use std::path::PathBuf;
 
-use crate::agent::adapter::{AgentAdapter, AgentCommand, AgentRunRequest};
+use crate::agent::adapter::{prompt_needs_stdin, AgentAdapter, AgentCommand, AgentRunRequest};
 use crate::model::{
     AgentCapability, AgentDefinition, AgentId, AgentInputMode, AgentProvider, AgentRole,
     AgentTraits,
@@ -73,12 +73,18 @@ impl AgentAdapter for CodexAdapter {
         }
 
         args.extend(definition.extra_args.iter().cloned());
-        args.push(request.prompt.clone());
+        // `-` tells `codex exec` to read its instructions from stdin.
+        let on_stdin = prompt_needs_stdin(&definition.executable, &request.prompt);
+        args.push(if on_stdin {
+            "-".into()
+        } else {
+            request.prompt.clone()
+        });
 
         AgentCommand {
             program: definition.executable.clone(),
             args,
-            stdin: None,
+            stdin: on_stdin.then(|| request.prompt.clone()),
         }
     }
 }
@@ -149,5 +155,21 @@ mod tests {
     fn the_default_role_is_the_one_the_routing_table_names() {
         assert_eq!(definition().role, AgentRole::Backend);
         assert_eq!(definition().provider.slug(), "codex");
+    }
+
+    #[test]
+    fn a_windows_shim_gets_a_many_line_prompt_on_stdin() {
+        let mut def = definition();
+        def.executable = "C:/npm/codex.cmd".into();
+        let mut req = request(false);
+        req.prompt = "one\ntwo".into();
+        let out = CodexAdapter.command(&def, &req);
+        if cfg!(windows) {
+            assert_eq!(out.args.last().map(String::as_str), Some("-"));
+            assert_eq!(out.stdin.as_deref(), Some("one\ntwo"));
+        } else {
+            assert_eq!(out.args.last().map(String::as_str), Some("one\ntwo"));
+            assert_eq!(out.stdin, None);
+        }
     }
 }

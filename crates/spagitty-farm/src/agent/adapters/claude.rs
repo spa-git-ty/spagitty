@@ -24,7 +24,7 @@
 
 use std::path::PathBuf;
 
-use crate::agent::adapter::{AgentAdapter, AgentCommand, AgentRunRequest};
+use crate::agent::adapter::{prompt_needs_stdin, AgentAdapter, AgentCommand, AgentRunRequest};
 use crate::execution::narrate::{ClaudeStream, Narrator};
 use crate::model::{
     AgentCapability, AgentDefinition, AgentId, AgentInputMode, AgentProvider, AgentRole,
@@ -98,12 +98,16 @@ impl AgentAdapter for ClaudeAdapter {
         }
 
         args.extend(definition.extra_args.iter().cloned());
-        args.push(request.prompt.clone());
+        // With no prompt argument, print mode takes stdin as the instruction.
+        let on_stdin = prompt_needs_stdin(&definition.executable, &request.prompt);
+        if !on_stdin {
+            args.push(request.prompt.clone());
+        }
 
         AgentCommand {
             program: definition.executable.clone(),
             args,
-            stdin: None,
+            stdin: on_stdin.then(|| request.prompt.clone()),
         }
     }
 }
@@ -186,5 +190,19 @@ mod tests {
                 .program,
             Path::new("/usr/bin/claude")
         );
+    }
+
+    #[test]
+    fn a_windows_shim_gets_a_many_line_prompt_on_stdin() {
+        let mut def = ClaudeAdapter.default_definition("C:/npm/claude.cmd".into());
+        def.extra_args.clear();
+        let req = AgentRunRequest {
+            workdir: "/tmp".into(),
+            prompt: "one\ntwo".into(),
+            unattended: false,
+        };
+        let out = ClaudeAdapter.command(&def, &req);
+        assert_eq!(out.args.iter().any(|a| a == "one\ntwo"), !cfg!(windows));
+        assert_eq!(out.stdin.is_some(), cfg!(windows));
     }
 }

@@ -2,7 +2,7 @@
 
 # BUG-070 — Local agents do not get their instructions, and some cannot start in Review or Merger
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Open — on `bugfix/BUG-065-agent-cli-access` (pull request #59, rebased, with the instructions fix on top); the real-agent sweep is not run.
 **Screens:** 1R, 1S, 1K.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -40,3 +40,9 @@ Pull request #59 (Codex access, OMP and agy launch) addresses Codex, OMP and agy
 - **Order:** finish pull request #59 first (TASK-062), then test every agent against these criteria and fix what is left.
 - **Where:** `crates/spagitty-farm/src/assign/local.rs`, `crates/spagitty-farm/src/agent/adapters/`, `crates/spagitty-farm/src/execution/process.rs`, `crates/spagitty-process/src/lib.rs`, `src-tauri/src/agents.rs` (`agents_test_local`).
 - **Branch:** `bugfix/BUG-070-local-agents-do-not-get-their-instructions`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+Pull request #59 (BUG-065) gives Codex its working directory and Git check option, adds agy, detects `omp`, and makes Settings *Test* prove a file was read. On top of it, the suspected cause was confirmed in principle: Windows cannot pass a line break through a `.cmd` shim (Rust refuses to start it), and a farm prompt is many lines. `prompt_needs_stdin` (`agent/adapter.rs`) now sends the prompt on standard input whenever the agent is a `.cmd` or `.bat` file: Codex with `exec -`, Claude Code and Cursor with no prompt argument, Oh My Pi in its stdin mode. Settings *Test* now sends a two-line prompt so it exercises the same path. A `PATH` that cannot be built is left alone instead of being set empty.
+
+The sweep still has to be run for each agent on each platform; it is the acceptance criterion.

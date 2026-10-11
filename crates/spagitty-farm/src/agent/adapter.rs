@@ -39,6 +39,26 @@ pub struct AgentRunRequest {
     pub unattended: bool,
 }
 
+/// Whether the prompt has to travel on standard input rather than as an
+/// argument.
+///
+/// On Windows a CLI installed with npm is a `.cmd` shim, and Windows cannot
+/// pass a line break through one: Rust refuses to start it, and `cmd.exe` would
+/// cut the argument at the first line if it did. A farm prompt is many lines,
+/// so for a shim the prompt goes in on stdin and the adapter drops the
+/// argument. Elsewhere, and for a real executable, nothing changes.
+pub fn prompt_needs_stdin(executable: &Path, prompt: &str) -> bool {
+    is_batch_shim(executable) && prompt.contains(['\n', '\r'])
+}
+
+fn is_batch_shim(executable: &Path) -> bool {
+    cfg!(windows)
+        && executable
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("cmd") || ext.eq_ignore_ascii_case("bat"))
+}
+
 /// The command line an adapter wants run, and how the prompt reaches it.
 ///
 /// A plain description rather than a spawned process: the adapter decides
@@ -153,6 +173,25 @@ pub fn workdir_for(worktree: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    use super::prompt_needs_stdin;
+    use std::path::Path;
+
+    #[test]
+    fn only_a_windows_shim_needs_a_long_prompt_on_stdin() {
+        let many = "line one\nline two";
+        assert!(!prompt_needs_stdin(Path::new("codex.exe"), many));
+        assert!(!prompt_needs_stdin(Path::new("/usr/bin/codex"), many));
+        assert!(!prompt_needs_stdin(Path::new("codex.cmd"), "one line"));
+        assert_eq!(
+            prompt_needs_stdin(Path::new("C:/npm/codex.CMD"), many),
+            cfg!(windows)
+        );
+        assert_eq!(
+            prompt_needs_stdin(Path::new("omp.bat"), many),
+            cfg!(windows)
+        );
+    }
+
     use super::*;
 
     #[test]

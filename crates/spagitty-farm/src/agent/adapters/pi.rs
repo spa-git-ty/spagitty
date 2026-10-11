@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use crate::agent::adapter::{AgentAdapter, AgentCommand, AgentRunRequest};
+use crate::agent::adapter::{prompt_needs_stdin, AgentAdapter, AgentCommand, AgentRunRequest};
 use crate::model::{
     AgentCapability, AgentDefinition, AgentId, AgentInputMode, AgentProvider, AgentRole,
     AgentTraits,
@@ -56,7 +56,8 @@ impl AgentAdapter for PiAdapter {
         // The definition decides, not this function: a user who has switched
         // the input mode gets what they asked for rather than what this
         // provider shipped with.
-        let on_stdin = definition.input_mode == AgentInputMode::Stdin;
+        let on_stdin = definition.input_mode == AgentInputMode::Stdin
+            || prompt_needs_stdin(&definition.executable, &request.prompt);
         let mut args = vec!["--print".into()];
         if request.unattended {
             args.push("--auto-approve".into());
@@ -110,5 +111,20 @@ mod tests {
     fn omp_is_preferred_to_legacy_names() {
         assert_eq!(PiAdapter.executables(), &["omp", "pi", "ohmypi"]);
         assert!(definition().capabilities.contains(&AgentCapability::Review));
+    }
+
+    #[test]
+    fn a_windows_shim_gets_a_many_line_prompt_on_stdin() {
+        let def = PiAdapter.default_definition("C:/npm/omp.cmd".into());
+        let req = AgentRunRequest {
+            workdir: "/tmp".into(),
+            prompt: "one\ntwo".into(),
+            unattended: false,
+        };
+        let out = PiAdapter.command(&def, &req);
+        assert_eq!(
+            out.stdin.is_some(),
+            cfg!(windows) || def.input_mode == AgentInputMode::Stdin
+        );
     }
 }

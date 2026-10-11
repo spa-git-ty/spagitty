@@ -224,13 +224,11 @@ pub fn start(
     narrator: Box<dyn Narrator>,
 ) -> Result<Session> {
     let mut process = Command::new(&command.program);
+    process.args(&command.args).current_dir(workdir);
+    if let Some(path) = crate::agent::detector::search_path() {
+        process.env("PATH", path);
+    }
     process
-        .args(&command.args)
-        .current_dir(workdir)
-        .env(
-            "PATH",
-            crate::agent::detector::search_path().unwrap_or_default(),
-        )
         .env("SPAGITTY_FARM", "1")
         .env("GIT_TERMINAL_PROMPT", "0")
         .stdout(Stdio::piped())

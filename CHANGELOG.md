@@ -42,6 +42,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - A file the agent finishes reviewing is marked viewed against the version it
   read. Failed, unfinished and stale steps do not tick files; manually unticking
   a completed file is preserved when its assignment is synced again.
+- Command-line agents that Windows starts through a `.cmd` shim (npm installs of Codex, Oh My Pi and others) get their whole instructions. Windows cannot pass a line break as an argument, so Spagitty now sends the instructions on standard input to those agents. Settings *Test* uses a two-line instruction, so it checks the same path.
 
 ## [2.0.1] - 2026-10-11
 
