@@ -2,7 +2,7 @@
 
 # BUG-071 — A Gemini agent from Google AI Studio gets "Bad request"
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Open — on `fix/gemini-thought-signatures` (pull request #60); not yet run against the real API.
 **Screens:** 1K, 1R, 1S.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -32,3 +32,7 @@ If the author's 400 says something else, check these too:
 - **Order:** rebase and review pull request #60 (TASK-062), add the records, then run the criteria above against the real API.
 - **Where:** `crates/spagitty-core/src/models.rs`, `crates/spagitty-farm/src/assign/remote.rs`.
 - **Branch:** pull request #60's branch `fix/gemini-thought-signatures`, renamed or recorded as this item's.
+
+## Fix
+
+Pull request #60's signature and `default_api:` handling, corrected so a signature goes back only on the part Google signed and never inside `functionCall`. Also: a tool with no properties is declared without `parameters`; an empty assistant turn is not sent; a reply with no parts is read as an empty turn; an error wrapped in a list gives Google's sentence; *Test* gives a Google model 1,024 output tokens. The first two acceptance criteria wait on a run with an AI Studio key (see the sweep). The third has its unit tests.

@@ -248,7 +248,7 @@ rather than an audit.
 | [BUG-068](items/BUG-068-ordinary-commits-marked-as-conflict-fixes.md) | Ordinary commits are marked as conflict fixes | 1R | Backlog |
 | [BUG-069](items/BUG-069-added-lines-look-red.md) | Added lines sometimes look red | 1R, 1B | Backlog |
 | [BUG-070](items/BUG-070-local-agents-do-not-get-their-instructions.md) | Local agents do not get their instructions, and some cannot start in Review or Merger | 1R, 1S, 1K | Backlog |
-| [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Backlog |
+| [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Open |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
