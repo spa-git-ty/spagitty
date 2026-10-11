@@ -255,6 +255,20 @@ struct Inner {
     last_heard: Instant,
     last_sent: Instant,
     dirty: bool,
+    /// What the sentence said before the run went quiet, to put back when it speaks.
+    before_quiet: Option<String>,
+}
+
+impl Inner {
+    /// The agent said something: it is no longer quiet (FEAT-119).
+    fn heard(&mut self) {
+        self.last_heard = Instant::now();
+        if self.assignment.quiet_since.take().is_some() {
+            if let Some(said) = self.before_quiet.take() {
+                self.assignment.sentence = said;
+            }
+        }
+    }
 }
 
 struct Shared {
@@ -376,6 +390,7 @@ pub fn prepare(setup: Setup) -> (Handle, Engine) {
             last_heard: Instant::now(),
             last_sent: Instant::now(),
             dirty: false,
+            before_quiet: None,
         }),
         wake: Condvar::new(),
         cancel: Arc::new(AtomicBool::new(false)),
@@ -422,6 +437,9 @@ fn watch_quiet(handle: Handle) {
             let minutes = quiet.as_secs() / 60;
             if minutes != said {
                 said = minutes;
+                if inner.assignment.quiet_since.is_none() {
+                    inner.before_quiet = Some(inner.assignment.sentence.clone());
+                }
                 inner.assignment.sentence = format!("No output for {minutes} minutes");
                 inner.assignment.quiet_since = Some(now().saturating_sub(quiet.as_secs()));
                 shared.save_and_send(&mut inner);
@@ -819,7 +837,7 @@ impl Engine {
         let shared = self.shared.clone();
         let mut hear = |line: &str| {
             let mut inner = shared.inner.lock().expect("assignment lock");
-            inner.last_heard = Instant::now();
+            inner.heard();
             let id = inner.assignment.id.clone();
             shared.store.transcript(&inner.assignment, line);
             if let Some(entry) = inner.assignment.steps.get_mut(step) {
@@ -1747,7 +1765,7 @@ impl Engine {
             let shared = self.shared.clone();
             let mut hear = |line: &str| {
                 let mut inner = shared.inner.lock().expect("assignment lock");
-                inner.last_heard = Instant::now();
+                inner.heard();
                 let id = inner.assignment.id.clone();
                 if let Some(command) = line.strip_prefix("$ ") {
                     inner.assignment.sentence = format!("Running checks · {command}");
@@ -1984,5 +2002,50 @@ fn short_choice(choice: &Choice) -> &'static str {
         Choice::Ab | Choice::Ba => "Both",
         Choice::Pick { .. } => "Pick",
         Choice::Edit { .. } => "Edit",
+    }
+}
+
+#[cfg(test)]
+mod quiet_tests {
+    use super::*;
+
+    fn inner() -> Inner {
+        let assignment: Assignment = serde_json::from_value(serde_json::json!({
+            "id": "review-1", "repo": "/w", "job": "review",
+            "agent": {"id": "claude", "name": "Claude Code", "reach": "local", "provider": "claudeCode"},
+            "level": "stepByStep", "state": "working", "sentence": "Reading avatars.rs", "startedAt": 1,
+            "target": {"kind": "review", "host": "h", "owner": "o", "name": "n", "number": 1, "title": "t", "base": "a", "head": "b"}
+        }))
+        .unwrap();
+        Inner {
+            assignment,
+            controls: VecDeque::new(),
+            last_heard: Instant::now(),
+            last_sent: Instant::now(),
+            dirty: false,
+            before_quiet: None,
+        }
+    }
+
+    #[test]
+    fn an_agent_that_speaks_again_is_no_longer_quiet_and_its_sentence_comes_back() {
+        let mut inner = inner();
+        inner.before_quiet = Some(inner.assignment.sentence.clone());
+        inner.assignment.sentence = "No output for 3 minutes".into();
+        inner.assignment.quiet_since = Some(100);
+
+        inner.heard();
+
+        assert_eq!(inner.assignment.quiet_since, None);
+        assert_eq!(inner.assignment.sentence, "Reading avatars.rs");
+        assert!(inner.before_quiet.is_none());
+    }
+
+    #[test]
+    fn hearing_an_agent_that_was_not_quiet_changes_nothing_else() {
+        let mut inner = inner();
+        inner.heard();
+        assert_eq!(inner.assignment.sentence, "Reading avatars.rs");
+        assert_eq!(inner.assignment.quiet_since, None);
     }
 }

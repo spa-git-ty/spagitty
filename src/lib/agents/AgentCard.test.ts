@@ -202,6 +202,78 @@ describe('the controls', () => {
 	});
 });
 
+describe('how far through it is (FEAT-119)', () => {
+	const NOW = Math.floor(Date.now() / 1000);
+	const at = (state: Assignment['state'], extra: Partial<Assignment> = {}) =>
+		aReview({ state, startedAt: NOW - 90, endedAt: null, ...extra });
+
+	it('says which step it is on and for how long, while it works', () => {
+		const view = mount(
+			at('working', {
+				planned: 0,
+				sentence: 'Reading the pull request',
+				steps: [aStep({ index: 0, label: 'Read the pull request · 4 files', state: 'running', startedAt: NOW - 42, endedAt: null })]
+			})
+		);
+		expect(text(view.get('[data-testid="doing"]'))).toMatch(/^Read the pull request · 4 files · \d+:\d\d$/);
+		view.destroy();
+	});
+
+	it('counts the steps when there are no files or conflicts to count yet', () => {
+		const view = mount(
+			at('working', {
+				planned: 0,
+				steps: [aStep({ index: 0, state: 'done' }), aStep({ index: 1, state: 'running', endedAt: null })]
+			})
+		);
+		// Nothing says how many there will be, so it says how many are done.
+		expect(view.get('.meter .mono').textContent).not.toMatch(/ \/ /);
+		view.destroy();
+	});
+
+	it('counts the files once the plan has said how many', () => {
+		const view = mount(at('working', { planned: 7 }));
+		expect(text(view.get('.meter'))).toMatch(/\/ 4 · /);
+		view.destroy();
+	});
+
+	it('has no pulsing dot', () => {
+		const view = mount(at('working'));
+		expect(view.find('.sentence .state')).toBeNull();
+		view.destroy();
+	});
+
+	it('says plainly that an agent has gone quiet, and offers to stop it', () => {
+		const view = mount(at('working', { quietSince: Math.floor(Date.now() / 1000) - 5 * 60 }));
+		expect(view.get('.sentence').className).toContain('quiet');
+		expect(view.get('.quiet[role="status"]').textContent).toMatch(/Nothing from Claude Code for 5 min/);
+		expect(view.find('[data-testid="doing"]')).toBeNull();
+		click(view.all('.quiet[role="status"] button').find((b) => text(b) === 'Stop')!);
+		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'stop' });
+		view.destroy();
+	});
+
+	it('does not call a short silence quiet', () => {
+		const view = mount(at('working', { quietSince: Math.floor(Date.now() / 1000) - 30 }));
+		expect(view.find('.quiet[role="status"]')).toBeNull();
+		view.destroy();
+	});
+
+	it.each<[Assignment['state'], string]>([
+		['starting', 'working'],
+		['working', 'working'],
+		['waiting', 'waiting'],
+		['paused', 'paused'],
+		['stopped', 'stopped'],
+		['failed', 'failed'],
+		['done', 'done']
+	])('draws a run that is %s as %s', (state, tone) => {
+		const view = mount(aReview({ state }));
+		expect(view.get('.sentence').className).toContain(tone);
+		view.destroy();
+	});
+});
+
 describe('the gates', () => {
 	it('a file’s findings: go to them, accept both, go on, or redo with a note', async () => {
 		const ongo = vi.fn();

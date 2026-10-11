@@ -113,12 +113,70 @@ export function unitsDone(a: Assignment): number {
 	return a.steps.filter((s) => isUnit(s) && s.state === 'done').length;
 }
 
-/** `1 / 4 · 1:20`: units done of planned, and time elapsed. */
+/** Longer than this with nothing said, and the agent is quiet, not working. */
+export const QUIET_AFTER = 180;
+
+/** The step the agent is on: the one running or waiting, else the last. */
+export function currentStep(a: Assignment): Step | null {
+	const steps = a.steps.filter((s) => s.kind.kind !== 'why');
+	return [...steps].reverse().find((s) => s.state === 'running' || s.state === 'waiting') ?? steps.at(-1) ?? null;
+}
+
+export interface Progress {
+	done: number;
+	/** Null until the plan says how many there will be. */
+	total: number | null;
+	unit: 'files' | 'conflicts' | 'steps';
+}
+
+/**
+ * How far through the run it is: the files or conflicts when the plan has
+ * said how many, and the steps when it has not (FEAT-119). Every run has the
+ * steps; only some have units, and only after the plan.
+ */
+export function progressOf(a: Assignment): Progress | null {
+	const units = planned(a);
+	if (units > 0) return { done: unitsDone(a), total: units, unit: a.job === 'review' ? 'files' : 'conflicts' };
+	const steps = a.steps.filter((s) => s.kind.kind !== 'why');
+	if (steps.length === 0) return null;
+	return {
+		done: steps.filter((s) => s.state === 'done').length,
+		total: a.planned > 0 ? Math.max(a.planned, steps.length) : null,
+		unit: 'steps'
+	};
+}
+
+/** Seconds the agent has said nothing for, once that is long enough to say so; else null. */
+export function quietFor(a: Assignment, now: number): number | null {
+	if (!isLive(a) || a.state !== 'working' || a.quietSince === null) return null;
+	const quiet = Math.max(0, now - a.quietSince);
+	return quiet >= QUIET_AFTER ? quiet : null;
+}
+
+/** `3 min`, or `1 h 5 min`. */
+export function quietWords(seconds: number): string {
+	const minutes = Math.max(1, Math.floor(seconds / 60));
+	if (minutes < 60) return `${minutes} min`;
+	return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+}
+
+/** What the agent is doing now, in words: the step, and how long it has taken. */
+export function nowLine(a: Assignment, now: number): string | null {
+	if (!isLive(a)) return null;
+	const step = currentStep(a);
+	if (!step) return null;
+	return `${step.label} · ${stepTime(step, now)}`;
+}
+
+/** `1 / 4 · 1:20` for files or conflicts, `2 / 5 steps · 1:20` before there are any. */
 export function meter(a: Assignment, now: number): string {
-	const total = planned(a);
 	const end = a.endedAt ?? now;
 	const time = clock(Math.max(0, end - a.startedAt));
-	return total > 0 ? `${unitsDone(a)} / ${total} · ${time}` : time;
+	const progress = progressOf(a);
+	if (!progress || progress.total === null) return time;
+	return progress.unit === 'steps'
+		? `${progress.done} / ${progress.total} steps · ${time}`
+		: `${progress.done} / ${progress.total} · ${time}`;
 }
 
 /** `0:12`, `1:20`, `1:02:05`. */
@@ -132,8 +190,9 @@ export function clock(seconds: number): string {
 
 /** The share of the meter's bar, 0 to 1. */
 export function share(a: Assignment): number {
-	const total = planned(a);
-	return total > 0 ? Math.min(1, unitsDone(a) / total) : 0;
+	const progress = progressOf(a);
+	if (!progress || !progress.total) return 0;
+	return Math.min(1, progress.done / progress.total);
 }
 
 /** The step's duration, for its row. */
@@ -225,7 +284,7 @@ export function perRun(tokens: number | null): string {
 
 /** The small line under an inbox card or a Result card: `Codex · 3 of 11
  * files`, `Claude Code · waiting for you`. */
-export function cardLine(a: Assignment): string {
+export function cardLine(a: Assignment, now: number = Math.floor(Date.now() / 1000)): string {
 	const unit = a.job === 'review' ? 'files' : 'conflicts';
 	let what: string;
 	if (a.state === 'waiting') what = 'waiting for you';
@@ -233,7 +292,9 @@ export function cardLine(a: Assignment): string {
 	else if (a.state === 'failed') what = 'failed';
 	else if (a.state === 'stopped') what = 'stopped';
 	else if (a.state === 'paused') what = 'paused';
+	else if (quietFor(a, now) !== null) what = `quiet for ${quietWords(quietFor(a, now)!)}`;
 	else if (planned(a) > 0) what = `${unitsDone(a)} of ${planned(a)} ${unit}`;
+	else if (a.state === 'working' && currentStep(a)) what = currentStep(a)!.label;
 	else what = 'starting';
 	return `${a.agent.name} · ${what}`;
 }

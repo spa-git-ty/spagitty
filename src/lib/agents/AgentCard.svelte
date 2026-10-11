@@ -11,7 +11,21 @@
 	import type { MenuItem } from '$lib/ui/menu';
 	import * as api from './api';
 	import { agents } from './store.svelte';
-	import { LEVELS, above, atGate, choiceWords, grouped, isLive, levelWords, meter, share, stepTime } from './levels';
+	import {
+		LEVELS,
+		above,
+		atGate,
+		choiceWords,
+		grouped,
+		isLive,
+		levelWords,
+		meter,
+		nowLine,
+		quietFor,
+		quietWords,
+		share,
+		stepTime
+	} from './levels';
 	import type { Assignment, Proposal, Step } from './types';
 
 	/**
@@ -73,8 +87,23 @@
 	const budget = $derived(
 		remote ? (agents.snapshot?.remote.find((r) => r.id === a.agent.id)?.tokensPerRun ?? null) : null
 	);
+	/** How long it has said nothing, once that is long enough to say so (FEAT-119). */
+	const quiet = $derived(quietFor(a, now));
+	const doing = $derived(nowLine(a, now));
 	const tone = $derived(
-		a.state === 'waiting' ? 'waiting' : a.state === 'failed' ? 'failed' : a.state === 'done' ? 'done' : live ? 'working' : 'stopped'
+		a.state === 'waiting'
+			? 'waiting'
+			: a.state === 'failed'
+				? 'failed'
+				: a.state === 'done'
+					? 'done'
+					: a.state === 'paused'
+						? 'paused'
+						: quiet !== null
+							? 'quiet'
+							: live
+								? 'working'
+								: 'stopped'
 	);
 	const steps = $derived(a.steps.filter((s) => s.kind.kind !== 'why'));
 	const lines = $derived(agents.lines(a.id));
@@ -177,8 +206,17 @@
 	</div>
 
 	<p class="sentence {tone}" aria-live="polite">
-		<span class="state"></span>{a.pausing && live ? 'Pausing after this step' : a.sentence}
+		{a.pausing && live ? 'Pausing after this step' : a.sentence}
 	</p>
+	{#if live && doing && a.state === 'working' && quiet === null}
+		<p class="doing note mono" data-testid="doing">{doing}</p>
+	{/if}
+	{#if quiet !== null}
+		<div class="quiet" role="status">
+			<span>Nothing from {a.agent.name} for {quietWords(quiet)}.</span>
+			<Btn title="Stop now. Everything proposed stays." onclick={() => send({ kind: 'stop' })}>Stop</Btn>
+		</div>
+	{/if}
 	<div class="meter">
 		<span class="bar"><span class="fill" style:width="{share(a) * 100}%"></span></span>
 		<span class="note mono">{meter(a, now)}</span>
@@ -380,49 +418,38 @@
 		gap: 8px;
 	}
 
-	.state {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex: none;
-		background: var(--muted);
-	}
-
 	.sentence.waiting {
 		color: var(--accent);
 	}
 
-	.sentence.waiting .state {
-		background: var(--accent);
+	.sentence.quiet {
+		color: var(--warn);
 	}
 
-	.sentence.working .state {
-		background: var(--agent);
-		animation: breathe 1.6s var(--ease) infinite;
+	.sentence.paused {
+		color: var(--muted);
 	}
 
-	.sentence.done .state {
-		background: var(--ok);
+	.doing {
+		margin: -4px 0 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.quiet {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 6px 10px;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--warn) 14%, transparent);
 	}
 
 	.sentence.failed {
 		color: var(--danger);
-	}
-
-	.sentence.failed .state {
-		background: var(--danger);
-	}
-
-	@keyframes breathe {
-		50% {
-			opacity: 0.35;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.sentence.working .state {
-			animation: none;
-		}
 	}
 
 	.meter {

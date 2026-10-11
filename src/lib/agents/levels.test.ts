@@ -8,6 +8,7 @@ import {
 	atGate,
 	capped,
 	choiceWords,
+	currentStep,
 	clock,
 	consentSlug,
 	findingLabel,
@@ -18,9 +19,13 @@ import {
 	leaves,
 	levelWords,
 	meter,
+	nowLine,
 	openFindings,
 	perRun,
 	planned,
+	progressOf,
+	quietFor,
+	quietWords,
 	readingNow,
 	sentenceFor,
 	share,
@@ -28,6 +33,7 @@ import {
 	unitsDone
 } from './levels';
 import { aFinding, aMerge, aReview, aStep } from '../../testing/agent-fixtures';
+import type { Assignment } from './types';
 
 describe('the four levels', () => {
 	it('are named for what the person does, in order', () => {
@@ -172,5 +178,73 @@ describe('the card line', () => {
 		expect(cardLine(aReview({ state: 'stopped' }))).toBe('Claude Code · stopped');
 		expect(cardLine(aReview({ state: 'failed' }))).toBe('Claude Code · failed');
 		expect(cardLine(aReview({ state: 'paused' }))).toBe('Claude Code · paused');
+	});
+});
+
+describe('how far through a run is (FEAT-119)', () => {
+	const NOW = 10_000;
+
+	it('counts the steps before the plan has said how many files', () => {
+		const a = aReview({
+			state: 'working',
+			planned: 0,
+			steps: [aStep({ index: 0, state: 'done' }), aStep({ index: 1, state: 'running', endedAt: null })]
+		});
+		expect(progressOf(a)).toEqual({ done: 1, total: null, unit: 'steps' });
+		expect(share(a)).toBe(0);
+		// Nothing says how many there will be, so only the time is claimed.
+		expect(meter(a, NOW)).toMatch(/^\d+:\d\d$|^\d+:\d\d:\d\d$/);
+	});
+
+	it('counts the steps against the plan once it names them, when there are no units', () => {
+		const a = aReview({ state: 'working', planned: 3, steps: [aStep({ state: 'done' })] });
+		expect(progressOf(a)).toEqual({ done: 1, total: 3, unit: 'steps' });
+		expect(meter(a, a.startedAt + 62)).toBe('1 / 3 steps · 1:02');
+		expect(share(a)).toBeCloseTo(1 / 3);
+	});
+
+	it('counts the files or conflicts once they are known', () => {
+		const a = aReview({
+			state: 'working',
+			planned: 7,
+			steps: [aStep({ kind: { kind: 'file', path: 'a.rs' }, state: 'done' })]
+		});
+		expect(progressOf(a)).toEqual({ done: 1, total: 4, unit: 'files' });
+		expect(progressOf(aMerge({ state: 'working', planned: 4, steps: [] }))).toMatchObject({ unit: 'conflicts' });
+	});
+
+	it('has no progress before there is a first step', () => {
+		expect(progressOf(aReview({ planned: 0, steps: [] }))).toBeNull();
+	});
+
+	it('names the step it is on and how long it has been on it', () => {
+		const a = aReview({
+			state: 'working',
+			steps: [
+				aStep({ index: 0, label: 'Read the pull request', state: 'done', startedAt: 100, endedAt: 112 }),
+				aStep({ index: 1, label: 'avatars.rs', state: 'running', startedAt: 120, endedAt: null })
+			]
+		});
+		expect(currentStep(a)?.label).toBe('avatars.rs');
+		expect(nowLine(a, 165)).toBe('avatars.rs · 0:45');
+		expect(nowLine(aReview({ state: 'done' }), 165)).toBeNull();
+	});
+
+	it('is quiet only when it is working, has said nothing, and for long enough', () => {
+		const quiet = (state: Assignment['state'], since: number | null) => quietFor(aReview({ state, quietSince: since }), 1_000);
+		expect(quiet('working', 1_000 - 240)).toBe(240);
+		expect(quiet('working', 1_000 - 60)).toBeNull();
+		expect(quiet('working', null)).toBeNull();
+		expect(quiet('waiting', 1_000 - 240)).toBeNull();
+		expect(quiet('done', 1_000 - 240)).toBeNull();
+		expect(quietWords(240)).toBe('4 min');
+		expect(quietWords(3_900)).toBe('1 h 5 min');
+	});
+
+	it('shows a quiet run on the card line, and the step it is on before there are units', () => {
+		expect(cardLine(aReview({ state: 'working', quietSince: 1_000 - 300 }), 1_000)).toBe('Claude Code · quiet for 5 min');
+		expect(
+			cardLine(aReview({ state: 'working', planned: 0, steps: [aStep({ label: 'Read the pull request', state: 'running', endedAt: null })] }), 1_000)
+		).toBe('Claude Code · Read the pull request');
 	});
 });

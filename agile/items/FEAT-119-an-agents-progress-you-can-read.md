@@ -2,7 +2,7 @@
 
 # FEAT-119 — An agent's progress you can read
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Done — on `feature/FEAT-119-an-agents-progress-you-can-read`; unmerged. Not yet looked at in the running app.
 **Screens:** 1R, 1S.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -30,3 +30,10 @@ While an agent works, its progress is mostly a pulsing dot beside its sentence (
 - **Where:** `src/lib/agents/AgentCard.svelte`, `src/lib/agents/levels.ts` (`meter`, `share`, `planned`, `cardLine`), `src/lib/review/InboxCard.svelte` and the Merger result card, which show the same line.
 - Do it together with FEAT-118.
 - **Branch:** `feature/FEAT-119-an-agents-progress-you-can-read`, with plan, testing documents and a changelog entry when the work starts.
+
+## What was done
+
+- **Now, in words.** While an agent works the card says the step it is on and how long that step has taken (*avatars.rs · 2 findings · 0:42*), under the sentence.
+- **Progress is the step list.** The bar counts files or conflicts once the plan has said how many (*1 / 4 · 1:20*), and steps before that (*1 / 3 steps · 1:02*), or only the time while nothing says how many there will be. `levels.ts` has `progressOf`, `currentStep` and `nowLine`; `meter` and `share` use them.
+- **Quiet is not working.** After three minutes of silence the card says *Nothing from <agent> for N min* with a *Stop* button, and the sentence takes the warning colour. When the agent speaks again, the engine puts back the sentence it replaced and clears `quiet_since` (`Inner::heard`, which it did not do before). The inbox and Merger cards say *quiet for N min* too (`cardLine`).
+- **The pulsing dot is gone.** The sentence is words; a paused run has its own tone.
