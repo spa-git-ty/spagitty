@@ -10,6 +10,7 @@ import type {
 	PullRequestCommit
 } from '$lib/types';
 
+vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
 vi.mock('$lib/api', () => ({
 	inTauri: vi.fn(() => true),
 	forgeRepo: vi.fn(),
@@ -33,6 +34,8 @@ import PRMarkdown from './PRMarkdown.svelte';
 import PRWorkspace from './PRWorkspace.svelte';
 import { requests } from './store.svelte';
 import { notice } from '$lib/ui/notice.svelte';
+import { goto } from '$app/navigation';
+import { merger } from '$lib/merger/store.svelte';
 
 const forgeRepo = vi.mocked(api.forgeRepo);
 const pullRequests = vi.mocked(api.pullRequests);
@@ -196,16 +199,6 @@ describe('PR workspace store flow', () => {
 		expect(requests.currentFiles[0].path).toBe('src/main.rs');
 	});
 
-	it('merges a pull request via store (FEAT-071)', async () => {
-		requests.present([request()]);
-		mergePullRequest.mockResolvedValueOnce(undefined);
-		pullRequests.mockResolvedValue([]);
-
-		const ok = await requests.merge('squash', 'My title', 'My message');
-		expect(ok).toBe(true);
-		expect(mergePullRequest).toHaveBeenCalledWith(412, 'squash', 'My title', 'My message');
-	});
-
 	it('closes a pull request via store (FEAT-071)', async () => {
 		requests.present([request()]);
 		closePullRequest.mockResolvedValueOnce(undefined);
@@ -216,16 +209,17 @@ describe('PR workspace store flow', () => {
 		expect(closePullRequest).toHaveBeenCalledWith(412);
 	});
 
-	it('goes back to the list when the open one is merged, not to another (BUG-062)', async () => {
+	it('goes back to the list when the open one is merged in Merger, not to another (BUG-062, FEAT-117)', async () => {
 		pullRequests.mockResolvedValue([request(), request({ id: 'PR_2', number: 2 })]);
 		await requests.load();
 		requests.openWorkspace('PR_1');
 		mergePullRequest.mockResolvedValueOnce(undefined);
 		pullRequests.mockResolvedValue([request({ id: 'PR_2', number: 2 })]);
 
-		expect(await requests.merge('merge')).toBe(true);
+		merger.presentPullRequest(request());
+		expect(await merger.mergePullRequest()).toBe(true);
+		await vi.waitFor(() => expect(requests.viewMode).toBe('list'));
 
-		expect(requests.viewMode).toBe('list');
 		expect(requests.openId).toBe('PR_2');
 	});
 
@@ -258,24 +252,6 @@ describe('PR workspace store flow', () => {
 		expect(pullRequestCommits).toHaveBeenCalledWith(2);
 		expect(requests.files).toHaveLength(1);
 		expect(requests.commits).toHaveLength(1);
-	});
-
-	it('says the merged one was merged (BUG-062)', async () => {
-		pullRequests.mockResolvedValue([request(), request({ id: 'PR_2', number: 2 })]);
-		await requests.load();
-		requests.openWorkspace('PR_1');
-		mergePullRequest.mockResolvedValueOnce(undefined);
-		pullRequests.mockResolvedValue([request({ id: 'PR_2', number: 2 })]);
-
-		const view = render(PRWorkspace, {});
-		click(view.all('button').find((b) => b.textContent?.trim() === 'Merge')!);
-		await settle();
-		click(view.all('button').find((b) => b.textContent?.trim() === 'Confirm Merge')!);
-		await settle();
-		await settle();
-
-		expect(notice.current?.title).toBe('#412 merged');
-		expect(requests.viewMode).toBe('list');
 	});
 
 	it('toggles draft status via store (FEAT-071)', async () => {
@@ -320,14 +296,6 @@ describe('PR workspace store flow', () => {
 		expect(draftBtn).toBeDefined();
 	});
 
-	it('reports merge error without crashing (FEAT-071)', async () => {
-		requests.present([request()]);
-		mergePullRequest.mockRejectedValueOnce(new Error('not mergeable'));
-
-		const ok = await requests.merge('merge');
-		expect(ok).toBe(false);
-		expect(requests.mergeError).toContain('not mergeable');
-	});
 });
 
 describe('PRWorkspace component UI', () => {
@@ -369,7 +337,27 @@ describe('PRWorkspace component UI', () => {
 		view.destroy();
 	});
 
-it('offers nothing to review with: no Review button, no verdicts, no role switch (FEAT-116)', () => {
+it('merges only by opening Merger on the pull request (FEAT-117)', () => {
+		vi.mocked(api.inTauri).mockReturnValue(false);
+		requests.present([request()]);
+		requests.select('PR_1');
+		requests.presentFiles([file('src/main.rs')], 412);
+
+		const view = render(PRWorkspace, {});
+		const labels = view.all('button').map((b) => b.textContent?.trim() ?? '');
+
+		expect(labels).toContain('Open in Merger');
+		expect(labels).not.toContain('Merge');
+		expect(labels).not.toContain('Confirm Merge');
+		expect(view.text()).not.toContain('Merge Pull Request');
+
+		click(view.all('button').find((b) => b.textContent?.trim() === 'Open in Merger')!);
+		expect(merger.origin).toMatchObject({ kind: 'pullRequest', pr: { number: 412 } });
+		expect(goto).toHaveBeenCalledWith('/merge');
+		view.destroy();
+	});
+
+	it('offers nothing to review with: no Review button, no verdicts, no role switch (FEAT-116)', () => {
 		vi.mocked(api.inTauri).mockReturnValue(false);
 		requests.present([request({ authorName: 'grace' })]);
 		requests.select('PR_1');

@@ -12,6 +12,7 @@
 	import { extensions } from '$lib/extensions/store.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import { farmStore } from '../store.svelte';
+	import { openInMerger } from '../merge';
 	import { openInGraph } from '../graph';
 	import * as api from '../api';
 	import {
@@ -210,9 +211,9 @@
 			<Btn
 				primary
 				disabled={busy}
-				onclick={() => act('Could not merge the task', () => api.mergeTask(task.id))}
+				onclick={() => openInMerger(task)}
 			>
-				Merge it into {target}
+				Merge it into {target} in Merger
 			</Btn>
 		{:else if stuck}
 			<Btn

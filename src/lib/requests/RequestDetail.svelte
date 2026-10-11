@@ -5,6 +5,8 @@
 	import { relativeTime } from '$lib/format';
 	import DiffPane from '$lib/diff/DiffPane.svelte';
 	import { CHECK_LABELS, REVIEW_LABELS, requests } from '$lib/requests/store.svelte';
+	import { goto } from '$app/navigation';
+	import { merger } from '$lib/merger/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -32,6 +34,13 @@
 		if (open === null) return;
 		untrack(() => requests.loadFiles());
 	});
+
+	/** Every merge is made in Merger (FEAT-117). */
+	function openInMerger() {
+		if (!request) return;
+		merger.presentPullRequest(request);
+		void goto('/merge');
+	}
 
 	/** What each file's status is called, in the words the Diff screen uses. */
 	const STATUS_LABELS: Record<FileDiff['status'], string> = {
@@ -138,6 +147,9 @@
 			{/if}
 		</section>
 
+		<footer class="actions">
+			<Btn onclick={openInMerger} title="Merge this pull request in Merger">Open in Merger</Btn>
+		</footer>
 	{/if}
 </section>
 
@@ -260,4 +272,11 @@
 		border-top: 1px solid var(--soft);
 	}
 
+
+	.actions {
+		display: flex;
+		gap: 6px;
+		flex: none;
+		padding-top: 4px;
+	}
 </style>

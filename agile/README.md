@@ -169,7 +169,7 @@ rather than an audit.
 | [FEAT-114](items/FEAT-114-pull-request-notifications.md) | Pull request notifications | Settings, chrome | Done |
 | [FEAT-115](items/FEAT-115-agents-in-review-and-merge.md) | Agents in Review and Merger | 1K, 1R, 1S, chrome | Done |
 | [FEAT-116](items/FEAT-116-pull-requests-does-not-review.md) | Pull requests lists and reads; Review reviews | 1H, 1R | Done |
-| [FEAT-117](items/FEAT-117-every-merge-happens-in-merger.md) | Every merge happens in Merger | 1S, 1H, 1A, 1Q | Backlog |
+| [FEAT-117](items/FEAT-117-every-merge-happens-in-merger.md) | Every merge happens in Merger | 1S, 1H, 1A, 1Q | Done |
 | [FEAT-118](items/FEAT-118-an-agents-work-shown-properly.md) | What an agent was sent and what it said, shown properly | 1R, 1S | Backlog |
 | [FEAT-119](items/FEAT-119-an-agents-progress-you-can-read.md) | An agent's progress you can read | 1R, 1S | Backlog |
 | [FEAT-120](items/FEAT-120-the-review-file-list-hides-and-has-two-sizes.md) | The review room's file list can be hidden, and is compact or detailed | 1R | Backlog |

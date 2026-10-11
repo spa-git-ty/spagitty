@@ -3,6 +3,7 @@
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import MergeDialog from '$lib/merger/MergeDialog.svelte';
+	import MergerOrigin from '$lib/merger/MergerOrigin.svelte';
 	import MergerPlan from '$lib/merger/MergerPlan.svelte';
 	import MergerResolve from '$lib/merger/MergerResolve.svelte';
 	import { resolving } from '$lib/merger/resolve.svelte';
@@ -27,10 +28,14 @@
 		if (!info) return;
 		untrack(() => {
 			if (merger.phase !== 'plan') return;
+			// A pull request is merged through its host until its conflicts have to
+			// be resolved here; there is no pair to plan before that.
+			if (onlyThePullRequest) return;
 			void merger.prime(info.path, info.head.branch ?? null);
 		});
 	});
 
+	const onlyThePullRequest = $derived(merger.origin?.kind === 'pullRequest' && merger.origin.local === null);
 	const names = $derived({ a: merger.forecast?.a.name ?? 'A', b: merger.forecast?.b.name ?? 'B' });
 	const fromResolve = $derived(merger.returnTo === 'resolve');
 
@@ -48,7 +53,10 @@
 
 <div class="screen">
 	{#if repo.info}
-		{#if merger.phase === 'resolve' || (merger.phase !== 'plan' && fromResolve)}
+		<MergerOrigin />
+		{#if onlyThePullRequest}
+			<!-- Its own panel above is the whole screen until there is something to resolve. -->
+		{:else if merger.phase === 'resolve' || (merger.phase !== 'plan' && fromResolve)}
 			<MergerResolve />
 		{:else}
 			<MergerPlan onresolve={resolve} onmerge={mergeNow} busy={merger.landing || resolving.loading} />

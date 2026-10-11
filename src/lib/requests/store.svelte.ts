@@ -17,7 +17,6 @@ import * as api from '../api';
 import type {
 	FileDiff,
 	ForgeRepo,
-	MergeMethod,
 	PullRequest,
 	PullRequestComment,
 	PullRequestCommit
@@ -66,9 +65,7 @@ let commentsError = $state<string | null>(null);
 /** Guards a slow file read landing after the reader has moved on. */
 let fileSeq = 0;
 
-/** In flight state for merge/close/draft (FEAT-071). */
-let merging = $state(false);
-let mergeError = $state<string | null>(null);
+/** In flight state for close/draft (FEAT-071). Merging is Merger's (FEAT-117). */
 let closing = $state(false);
 let closeError = $state<string | null>(null);
 let togglingDraft = $state(false);
@@ -234,12 +231,6 @@ export const requests = {
 	/** The open file's diff, or null when none is selected. */
 	get openFile(): FileDiff | null {
 		return this.currentFiles.find((file) => file.path === openPath) ?? null;
-	},
-	get merging(): boolean {
-		return merging;
-	},
-	get mergeError(): string | null {
-		return mergeError;
 	},
 	get closing(): boolean {
 		return closing;
@@ -431,30 +422,6 @@ export const requests = {
 		selectedCommitSha = null;
 		commitFilesCache = {};
 		openPath = null;
-	},
-
-	/** Merge the open pull request (FEAT-071). */
-	async merge(
-		method: MergeMethod,
-		commitTitle?: string,
-		commitMessage?: string
-	): Promise<boolean> {
-		if (!api.inTauri()) return false;
-		const request = this.open;
-		if (request === null) return false;
-
-		merging = true;
-		mergeError = null;
-		try {
-			await api.mergePullRequest(request.number, method, commitTitle, commitMessage);
-			await this.load();
-			return true;
-		} catch (e) {
-			mergeError = String(e);
-			return false;
-		} finally {
-			merging = false;
-		}
 	},
 
 	/** Close / reject the open pull request without merging (FEAT-071). */

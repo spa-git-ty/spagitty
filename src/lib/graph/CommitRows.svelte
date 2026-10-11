@@ -505,20 +505,18 @@
 			{ separator: true }
 		];
 
-		// Integrating a branch into itself is not a thing, and neither is
-		// integrating anything when nothing is checked out.
-		for (const entry of act.INTEGRATIONS) {
-			items.push({
-				id: entry.how,
-				label: `${entry.label} into ${current?.name ?? '…'}`,
-				disabled: isCurrent || !current,
-				reason: isCurrent ? 'that is the current branch' : !current ? 'nothing checked out' : undefined,
-				danger: entry.how === 'rebase',
-				run: () => current && act.integrate(chip.name, current.name, entry.how)
-			});
-		}
+// Every merge is made in Merger (FEAT-117): this opens it on the pair,
+		// with the checked-out branch receiving this one. Merging a branch into
+		// itself is not a thing, and neither is merging when nothing is checked out.
+		items.push({
+			id: 'merge',
+			label: `Merge into ${current?.name ?? '…'} in Merger`,
+			disabled: isCurrent || !current,
+			reason: isCurrent ? 'that is the current branch' : !current ? 'nothing checked out' : undefined,
+			run: () => current && openInMerger(current.name, chip.name)
+		});
 
-		items.push(
+				items.push(
 			{ separator: true },
 			{
 				id: 'pin',
@@ -566,7 +564,12 @@
 		dropTarget = null;
 		if (!source || source.name === target.name) return;
 
-		merger.present({ a: target.name, b: source.name, into: 'a' });
+		openInMerger(target.name, source.name);
+	}
+
+	/** Merger, with `source` coming into `target`, before anything is written. */
+	function openInMerger(target: string, source: string) {
+		merger.present({ a: target, b: source, into: 'a' });
 		void goto('/merge');
 	}
 

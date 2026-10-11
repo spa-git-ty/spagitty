@@ -348,7 +348,7 @@ export const FARM_COPY = {
 	free: 'Free',
 	lately: 'Lately',
 	allActivity: 'All activity',
-	landIt: 'Merge it',
+	landIt: 'Merge it in Merger',
 	seeChanges: 'See the changes',
 	openTask: 'Open the task',
 	pause: 'Pause',

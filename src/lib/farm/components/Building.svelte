@@ -30,6 +30,7 @@
 		waitingOn
 	} from '../describe';
 	import { farmStore } from '../store.svelte';
+	import { openInMerger } from '../merge';
 	import * as api from '../api';
 	import type { Autonomy, Task, TaskStatus } from '../types';
 
@@ -254,7 +255,7 @@
 										<Btn
 											primary
 											disabled={busy}
-											onclick={() => act('Could not merge the task', () => api.mergeTask(task.id))}
+											onclick={() => openInMerger(task)}
 										>
 											{C.landIt}
 										</Btn>

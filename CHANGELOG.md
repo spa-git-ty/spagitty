@@ -54,6 +54,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Agent permissions have names that say what the agent may do: *Read-only*, *Ask every step*, *Ask before sending or merging* and *Full access*. A repository's limit is its *Maximum permission*. Your saved choices are unchanged.
 - The words *land* and *landed* are gone from what you read. Merging says *merge*, *merged* and *goes to*, in Merger, Farm, the agent popover and the conflict resolver, and the commit dialog says *Ready to merge into*.
 - Pull requests shows pull requests and Review reviews them. The *Review* and *Reply in Review* buttons, draft comments, the *Publish Review* dialog, the verdict choices and the Reviewer/Developer view switch are gone from Pull requests; everything they did is in Review.
+- Every merge is made in Merger. Pull requests, the Graph and Farm open Merger instead of merging themselves. Merger merges a pull request through its host with a merge commit, a squash or a rebase, and a pull request that conflicts is resolved there, pushed and then merged. A Farm task merged in Merger finishes in the Farm.
 
 ## [2.0.1] - 2026-10-11
 

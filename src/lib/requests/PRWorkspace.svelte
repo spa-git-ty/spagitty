@@ -9,7 +9,8 @@
 		REVIEW_LABELS,
 		requests
 	} from '$lib/requests/store.svelte';
-	import type { MergeMethod } from '$lib/types';
+	import { goto } from '$app/navigation';
+	import { merger } from '$lib/merger/store.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -50,27 +51,18 @@
 		requests.selectPath(path);
 	}
 
-	/** Merge modal state (FEAT-071). */
-	let mergeModalOpen = $state(false);
-	let mergeMethod = $state<MergeMethod>('merge');
-	let mergeTitle = $state('');
-	let mergeMessage = $state('');
-
-	/** Close confirmation state (FEAT-071). */
-	let closeConfirmOpen = $state(false);
-
-	async function handleMerge() {
-		const title = mergeTitle.trim() || undefined;
-		const message = mergeMessage.trim() || undefined;
-		const merged = requests.open;
-		const ok = await requests.merge(mergeMethod, title, message);
-		if (ok) {
-			if (merged) notice.ok(`#${merged.number} merged`, merged.title);
-			mergeModalOpen = false;
-			mergeTitle = '';
-			mergeMessage = '';
-		}
+/**
+	 * Every merge is made in Merger (FEAT-117): this opens it on the pull
+	 * request, which it merges through the host with the host's methods.
+	 */
+	function openInMerger() {
+		if (!request) return;
+		merger.presentPullRequest(request);
+		void goto('/merge');
 	}
+
+		/** Close confirmation state (FEAT-071). */
+	let closeConfirmOpen = $state(false);
 
 	async function handleClose() {
 		const closed = requests.open;
@@ -150,15 +142,9 @@
 					</Btn>
 				{/if}
 
-			<Btn
-				onclick={() => (mergeModalOpen = true)}
-				disabled={requests.merging}
-				title="Merge this pull request"
-			>
-				Merge
-			</Btn>
+<Btn onclick={openInMerger} title="Merge this pull request in Merger">Open in Merger</Btn>
 
-				<Btn
+								<Btn
 					onclick={() => (closeConfirmOpen = true)}
 					disabled={requests.closing}
 					title="Close this pull request without merging"
@@ -375,110 +361,6 @@
 				</span>
 			</div>
 		</footer>
-
-	<!-- Merge Modal (FEAT-071) -->
-	{#if mergeModalOpen}
-		<div
-			class="modal-backdrop"
-			onclick={() => (mergeModalOpen = false)}
-			onkeydown={(e) => {
-				if (e.key === 'Escape') mergeModalOpen = false;
-			}}
-			role="presentation"
-		>
-			<div
-				class="review-modal"
-				onclick={(e) => e.stopPropagation()}
-				onkeydown={(e) => e.stopPropagation()}
-				role="dialog"
-				aria-modal="true"
-				tabindex="-1"
-			>
-				<h2 class="modal-title">Merge Pull Request #{request.number}</h2>
-
-				<div class="verdict-options">
-					<label class="verdict-option" class:selected={mergeMethod === 'merge'}>
-						<input
-							type="radio"
-							name="merge-method"
-							value="merge"
-							checked={mergeMethod === 'merge'}
-							onchange={() => (mergeMethod = 'merge')}
-						/>
-						<div class="verdict-info">
-							<strong>Create a merge commit</strong>
-							<span class="note">All commits will be added with a merge commit.</span>
-						</div>
-					</label>
-
-					<label class="verdict-option" class:selected={mergeMethod === 'squash'}>
-						<input
-							type="radio"
-							name="merge-method"
-							value="squash"
-							checked={mergeMethod === 'squash'}
-							onchange={() => (mergeMethod = 'squash')}
-						/>
-						<div class="verdict-info">
-							<strong>Squash and merge</strong>
-							<span class="note">Commits will be squashed into one commit.</span>
-						</div>
-					</label>
-
-					<label class="verdict-option" class:selected={mergeMethod === 'rebase'}>
-						<input
-							type="radio"
-							name="merge-method"
-							value="rebase"
-							checked={mergeMethod === 'rebase'}
-							onchange={() => (mergeMethod = 'rebase')}
-						/>
-						<div class="verdict-info">
-							<strong>Rebase and merge</strong>
-							<span class="note">Commits will be rebased onto the base branch.</span>
-						</div>
-					</label>
-				</div>
-
-				{#if mergeMethod !== 'rebase'}
-					<div class="modal-field">
-						<label for="merge-title" class="field-label">Commit title (optional):</label>
-						<input
-							id="merge-title"
-							class="summary-input"
-							type="text"
-							placeholder="Merge pull request #{request.number}"
-							bind:value={mergeTitle}
-						/>
-					</div>
-
-					<div class="modal-field">
-						<label for="merge-message" class="field-label">Commit message (optional):</label>
-						<textarea
-							id="merge-message"
-							class="summary-textarea"
-							rows="3"
-							placeholder="Add extra details…"
-							bind:value={mergeMessage}
-						></textarea>
-					</div>
-				{/if}
-
-				{#if requests.mergeError}
-					<div class="modal-error note error">
-						{requests.mergeError}
-					</div>
-				{/if}
-
-				<div class="modal-actions">
-					<Btn onclick={() => (mergeModalOpen = false)}>Cancel</Btn>
-					<Btn primary disabled={requests.merging} onclick={handleMerge}>
-						{requests.merging ? 'Merging…' : 'Confirm Merge'}
-					</Btn>
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Close Confirmation Modal (FEAT-071) -->
 	{#if closeConfirmOpen}

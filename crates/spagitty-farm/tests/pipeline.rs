@@ -415,6 +415,50 @@ fn a_merge_puts_the_work_in_the_users_branch_and_removes_the_worktree() {
     assert!(!worktree.exists(), "the worktree was not cleaned up");
 }
 
+/// The task's own branch, as the farm recorded it.
+fn branch_of(harness: &Harness, task: &TaskId) -> String {
+    harness
+        .service
+        .farm()
+        .unwrap()
+        .task(task)
+        .unwrap()
+        .branch
+        .clone()
+        .unwrap()
+}
+
+#[test]
+fn a_task_merged_in_merger_is_finished_once_its_work_is_in_the_branch() {
+    let harness = Harness::new();
+    arrange(&harness);
+    harness.service.create("Ship it", "").unwrap();
+    let agent = harness.worker("worker-merger");
+    let task = harness.task("Do it");
+    harness.run(&task, &agent);
+    let worktree = harness.worktree(&task);
+    let branch = branch_of(&harness, &task);
+
+    // Not yet merged: the farm is told too early and says so.
+    let early = harness.service.mark_merged(&task);
+    assert!(
+        early.is_err(),
+        "a task was finished before its work was merged"
+    );
+    assert_ne!(harness.status(&task), TaskStatus::Done);
+
+    // Merger makes the merge; here, git does what it does.
+    harness
+        .repo
+        .git(&["merge", "--no-edit", "--no-ff", &branch]);
+    harness.service.mark_merged(&task).unwrap();
+
+    assert_eq!(harness.status(&task), TaskStatus::Done);
+    assert!(!worktree.exists(), "the worktree was not cleaned up");
+    // Telling it again changes nothing.
+    harness.service.mark_merged(&task).unwrap();
+}
+
 #[test]
 fn a_merge_is_never_a_fast_forward_so_the_agents_branch_stays_visible() {
     let harness = Harness::new();

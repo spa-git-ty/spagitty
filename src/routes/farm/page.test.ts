@@ -19,6 +19,7 @@ import { page } from '$app/state';
 import { goto } from '$app/navigation';
 import { dialog } from '$lib/ui/dialog.svelte';
 import { notice } from '$lib/ui/notice.svelte';
+import { merger } from '$lib/merger/store.svelte';
 import { farmStore } from '$lib/farm/store.svelte';
 import Page from './+page.svelte';
 let view: Mounted;
@@ -131,14 +132,17 @@ describe('Farm journey routes and actions', () => {
 		);
 		expect(view.all('.agent-badge.running')).toHaveLength(0);
 	});
-	it('lands only checked and approved work from Needs you', async () => {
+	it('opens Merger on checked and approved work from Needs you (FEAT-117)', async () => {
 		evidence.T1 = {
 			verification: { passed: true, unverified: false, results: [] },
 			review: { decision: 'approve', summary: 'Good', issues: [] }
 		};
-		await show([sampleTask('T1', { status: 'review' })]);
-		click(button('Merge it'));
-		await vi.waitFor(() => expect(api.mergeTask).toHaveBeenCalledWith('T1'));
+		await show([sampleTask('T1', { status: 'review', branch: 'farm/T1-work', mergeTarget: 'main' })]);
+		click(button('Merge it in Merger'));
+		expect(goto).toHaveBeenCalledWith('/merge');
+		expect(merger.origin).toMatchObject({ kind: 'farmTask', id: 'T1', branch: 'farm/T1-work', target: 'main' });
+		// The Farm makes no merge of its own from this screen.
+		expect(api).not.toHaveProperty('mergeTask');
 	});
 	it('does not present unverified work as ready to land', async () => {
 		evidence.T1 = {
@@ -436,15 +440,14 @@ describe('Farm journey routes and actions', () => {
 		click(button('Start a new goal'));
 		expect(view.text()).toContain('Put a crew of agents on one goal');
 	});
-	it('reports a refused merge and restores controls', async () => {
+	it('says so when a task has no branch to open in Merger', async () => {
 		evidence.T1 = {
 			verification: { passed: true, unverified: false, results: [] },
 			review: { decision: 'approve', summary: 'Good', issues: [] }
 		};
-		await show([sampleTask('T1', { status: 'review' })]);
-		vi.mocked(api.mergeTask).mockRejectedValueOnce('Switch back to main');
-		click(button('Merge it'));
-		await vi.waitFor(() => expect(notice.failed).toHaveBeenCalled());
-		expect((button('Merge it') as HTMLButtonElement).disabled).toBe(false);
+		await show([sampleTask('T1', { status: 'review', branch: null, mergeTarget: null })]);
+		click(button('Merge it in Merger'));
+		expect(notice.failed).toHaveBeenCalled();
+		expect(goto).not.toHaveBeenCalledWith('/merge');
 	});
 });
