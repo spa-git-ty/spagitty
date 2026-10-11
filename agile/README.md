@@ -168,6 +168,11 @@ rather than an audit.
 | [FEAT-113](items/FEAT-113-farm-wrap-up.md) | Farm wrap up and evidence | 1Q | Done |
 | [FEAT-114](items/FEAT-114-pull-request-notifications.md) | Pull request notifications | Settings, chrome | Done |
 | [FEAT-115](items/FEAT-115-agents-in-review-and-merge.md) | Agents in Review and Merger | 1K, 1R, 1S, chrome | Done |
+| [FEAT-116](items/FEAT-116-pull-requests-does-not-review.md) | Pull requests lists and reads; Review reviews | 1H, 1R | Backlog |
+| [FEAT-117](items/FEAT-117-every-merge-happens-in-merger.md) | Every merge happens in Merger | 1S, 1H, 1A, 1Q | Backlog |
+| [FEAT-118](items/FEAT-118-an-agents-work-shown-properly.md) | What an agent was sent and what it said, shown properly | 1R, 1S | Backlog |
+| [FEAT-119](items/FEAT-119-an-agents-progress-you-can-read.md) | An agent's progress you can read | 1R, 1S | Backlog |
+| [FEAT-120](items/FEAT-120-the-review-file-list-hides-and-has-two-sizes.md) | The review room's file list can be hidden, and is compact or detailed | 1R | Backlog |
 
 ## Bugs
 
@@ -238,6 +243,12 @@ rather than an audit.
 | [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Fixed |
 | [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Backlog |
 | [BUG-064](items/BUG-064-review-says-nobody-asked-you-after-you-answered.md) | Review says "nobody asked you yet" about pull requests you have already reviewed | 1R | Fixed |
+| [BUG-066](items/BUG-066-extensions-refuse-spagitty-2.md) | Extensions refuse to run on Spagitty 2 | 1K | Backlog |
+| [BUG-067](items/BUG-067-review-says-the-token-is-invalid.md) | Review says the token is invalid until Pull requests has been opened | 1R | Backlog |
+| [BUG-068](items/BUG-068-ordinary-commits-marked-as-conflict-fixes.md) | Ordinary commits are marked as conflict fixes | 1R | Backlog |
+| [BUG-069](items/BUG-069-added-lines-look-red.md) | Added lines sometimes look red | 1R, 1B | Backlog |
+| [BUG-070](items/BUG-070-local-agents-do-not-get-their-instructions.md) | Local agents do not get their instructions, and some cannot start in Review or Merger | 1R, 1S, 1K | Backlog |
+| [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Backlog |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -303,6 +314,11 @@ of its own.
 | [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Open |
 | [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
 | [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Open |
+| [TASK-059](items/TASK-059-reading-font-and-ruler-off-by-default.md) | The reading font and the focus ruler are off by default, and off the review bar | 1R, 1K | Backlog |
+| [TASK-060](items/TASK-060-agent-permissions-with-standard-names.md) | Agent permissions with standard names | 1K, 1R, 1S | Backlog |
+| [TASK-061](items/TASK-061-plain-words-for-merging-and-approval.md) | Plain words for merging and stopping for approval | all | Backlog |
+| [TASK-062](items/TASK-062-finish-the-open-pull-requests.md) | Finish the three open pull requests | — | Backlog |
+| [TASK-063](items/TASK-063-audit-the-merged-pull-requests.md) | Audit the pull requests merged since 2.0.0 | — | Backlog |
 
 ## Skipped identifiers
 
