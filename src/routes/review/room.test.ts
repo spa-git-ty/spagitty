@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tick } from 'svelte';
 import { click, fire, press, render, type Mounted } from '../../testing/mount';
 import { openRepository, request } from '../../testing/git-fixtures';
@@ -24,6 +24,7 @@ import { aFinding, aReview, aSnapshot, aStep } from '../../testing/agent-fixture
 import { requests } from '$lib/requests/store.svelte';
 import { reading } from '$lib/reading.svelte';
 import { review } from '$lib/review/store.svelte';
+import { filesView } from '$lib/review/files-view.svelte';
 import type { DiffLine, FileChange, FullFile, PullRequestComment } from '$lib/types';
 import Page from './+page.svelte';
 
@@ -119,6 +120,7 @@ beforeEach(() => {
 	openRepository();
 	localStorage.clear();
 	reading.reset();
+	filesView.reset();
 	vi.mocked(api.inTauri).mockReturnValue(true);
 	vi.mocked(api.forgeRepo).mockResolvedValue({
 		kind: 'gitHub',
@@ -236,6 +238,81 @@ it('ticks a file and goes on to the next one not viewed', async () => {
 
 	fire(files().querySelector('input[aria-label="Viewed types.ts"]')!, 'change');
 	await vi.waitFor(() => expect(view.text()).toContain('2 of 2 viewed'));
+});
+
+describe('the file list (FEAT-120)', () => {
+	const tab = () => view.find('button.files-tab');
+
+	it('is put away with its button or the f key, and brought back from an edge tab', async () => {
+		await openRoom();
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+		expect(tab()).toBeNull();
+
+		click(view.get('button[aria-label="Put the files away"]'));
+		expect(view.find('aside[aria-label="Touched files"]')).toBeNull();
+		// The diff is still there, with the room to itself.
+		expect(view.find('section[aria-label="Changes"]')).not.toBeNull();
+		expect(tab()?.textContent).toContain('Files');
+		expect(tab()?.textContent).toContain('2');
+
+		click(tab()!);
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+
+		press(window, 'f');
+		expect(view.find('aside[aria-label="Touched files"]')).toBeNull();
+		press(window, 'f');
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+	});
+
+	it('does not take an f typed into a box', async () => {
+		await openRoom();
+		const box = document.createElement('textarea');
+		document.body.appendChild(box);
+		press(box, 'f');
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+		box.remove();
+	});
+
+	it('is Detailed, as it was, or Compact: a line per file, with the marks as dots', async () => {
+		await openRoom();
+		const rows = () => files().querySelectorAll('li');
+		expect(files().classList.contains('compact')).toBe(false);
+		expect(files().querySelectorAll('.facts').length).toBeGreaterThan(0);
+
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Compact')!);
+		expect(files().classList.contains('compact')).toBe(true);
+		expect(files().querySelectorAll('.facts')).toHaveLength(0);
+		// Both keep the tick, the counts and the selected file.
+		expect(files().querySelector('input[aria-label="Viewed avatars.rs"]')).not.toBeNull();
+		expect(files().querySelector('.counts')?.textContent).toMatch(/\+\d+/);
+		expect(files().querySelectorAll('li.on')).toHaveLength(1);
+		expect(rows()).toHaveLength(2);
+		// What detailed spelled out is small dots, each with its words in a title.
+		for (const dot of files().querySelectorAll('.marks .dot')) expect(dot.getAttribute('title')).toBeTruthy();
+
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Detailed')!);
+		expect(files().classList.contains('compact')).toBe(false);
+		expect(files().querySelectorAll('.facts').length).toBeGreaterThan(0);
+	});
+
+	it('keeps the legend for the pointer in Compact', async () => {
+		await openRoom();
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Compact')!);
+		expect(files().querySelector('.legend.hover .legend-label')?.textContent).toBe('Legend');
+		expect(files().querySelector('.legend-body')?.textContent).toContain('Author');
+	});
+
+	it('remembers both choices across a restart', async () => {
+		await openRoom();
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Compact')!);
+		click(view.get('button[aria-label="Put the files away"]'));
+		const kept = JSON.parse(localStorage.getItem('spagitty.review.files') ?? '{}');
+		expect(kept).toEqual({ hidden: true, size: 'compact' });
+
+		filesView.restart();
+		expect(filesView.hidden).toBe(true);
+		expect(filesView.size).toBe('compact');
+	});
 });
 
 it('says on the pill whether the file is viewed, and offers Finish once all are', async () => {

@@ -172,7 +172,7 @@ rather than an audit.
 | [FEAT-117](items/FEAT-117-every-merge-happens-in-merger.md) | Every merge happens in Merger | 1S, 1H, 1A, 1Q | Done |
 | [FEAT-118](items/FEAT-118-an-agents-work-shown-properly.md) | What an agent was sent and what it said, shown properly | 1R, 1S | Done |
 | [FEAT-119](items/FEAT-119-an-agents-progress-you-can-read.md) | An agent's progress you can read | 1R, 1S | Done |
-| [FEAT-120](items/FEAT-120-the-review-file-list-hides-and-has-two-sizes.md) | The review room's file list can be hidden, and is compact or detailed | 1R | Backlog |
+| [FEAT-120](items/FEAT-120-the-review-file-list-hides-and-has-two-sizes.md) | The review room's file list can be hidden, and is compact or detailed | 1R | Done |
 
 ## Bugs
 

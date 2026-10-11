@@ -57,6 +57,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Every merge is made in Merger. Pull requests, the Graph and Farm open Merger instead of merging themselves. Merger merges a pull request through its host with a merge commit, a squash or a rebase, and a pull request that conflicts is resolved there, pushed and then merged. A Farm task merged in Merger finishes in the Farm.
 - An agent's work is shown properly. The card shows the step list and the current sentence, and *Details* opens what Spagitty sent for a step and what came back, each part labelled: replies as formatted text, commands and tool input as code, files it read as links into the diff, results and errors apart. None of it shows until you ask.
 - An agent's progress can be read. The card says which step the agent is on and for how long, counts steps until the plan says how many files there are, and says plainly when the agent has been quiet for three minutes, with a *Stop* beside it. The pulsing dot is gone.
+- The review room's file list can be put away (the button, or the *f* key; an edge tab brings it back) and listed in two sizes: *Detailed* as before, or *Compact*, a line per file with the marks as dots. Both choices are remembered.
 
 ## [2.0.1] - 2026-10-11
 
