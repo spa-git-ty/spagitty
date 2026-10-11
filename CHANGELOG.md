@@ -43,6 +43,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   read. Failed, unfinished and stale steps do not tick files; manually unticking
   a completed file is preserved when its assignment is synced again.
 - Command-line agents that Windows starts through a `.cmd` shim (npm installs of Codex, Oh My Pi and others) get their whole instructions. Windows cannot pass a line break as an argument, so Spagitty now sends the instructions on standard input to those agents. Settings *Test* uses a two-line instruction, so it checks the same path.
+- Extensions run on Spagitty 2 again. Every extension, the bundled CodeRabbit one included, was shown as needing Spagitty below 2.0.0. The bundled, example and template manifests no longer name an upper limit, and a test fails if a manifest we ship does not admit the version we ship.
 
 ## [2.0.1] - 2026-10-11
 

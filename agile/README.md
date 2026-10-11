@@ -244,7 +244,7 @@ rather than an audit.
 | [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Backlog |
 | [BUG-064](items/BUG-064-review-says-nobody-asked-you-after-you-answered.md) | Review says "nobody asked you yet" about pull requests you have already reviewed | 1R | Fixed |
 | [BUG-065](items/BUG-065-agent-cli-access.md) | Command-line agents cannot start or finish reviews correctly | Settings, Review, Merger, Farm | Open |
-| [BUG-066](items/BUG-066-extensions-refuse-spagitty-2.md) | Extensions refuse to run on Spagitty 2 | 1K | Backlog |
+| [BUG-066](items/BUG-066-extensions-refuse-spagitty-2.md) | Extensions refuse to run on Spagitty 2 | 1K | Fixed |
 | [BUG-067](items/BUG-067-review-says-the-token-is-invalid.md) | Review says the token is invalid until Pull requests has been opened | 1R | Backlog |
 | [BUG-068](items/BUG-068-ordinary-commits-marked-as-conflict-fixes.md) | Ordinary commits are marked as conflict fixes | 1R | Backlog |
 | [BUG-069](items/BUG-069-added-lines-look-red.md) | Added lines sometimes look red | 1R, 1B | Backlog |

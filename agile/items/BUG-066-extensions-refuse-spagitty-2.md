@@ -2,7 +2,7 @@
 
 # BUG-066 — Extensions refuse to run on Spagitty 2
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Fixed — on `bugfix/BUG-066-extensions-refuse-spagitty-2`; unmerged.
 **Screens:** 1K.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -37,3 +37,7 @@ The check is `crates/spagitty-extensions/src/version.rs` (`check`, the sentence 
 - **Where:** the four manifests above, `crates/spagitty-extensions/src/version.rs`, `tools/extensions/bundle.ts` (it builds the `bundle/` copy, so regenerate rather than hand-edit it if it is derived).
 - A bundled extension is read from the application's resources and updated with Spagitty (`registry.rs`), so a release with the fixed manifest fixes installed copies too. Check that on an upgrade.
 - **Branch:** `bugfix/BUG-066-extensions-refuse-spagitty-2`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+The four manifests now give `engines.spagitty` a lower bound only (`>=0.8.1` for CodeRabbit, `>=0.9.0` for the example and the SDK template). **Decision:** what can break an extension is the extension API, which has its own range (`extensionApi: ^1.0.0`); an upper bound on the application only turns every major release into a false *incompatible*, so none is written and `docs/extensions/developing.md` says so. A bundled extension is read from the application's resources each time extensions are discovered (`registry.rs`), so an upgraded Spagitty brings its fixed manifest with it. `crates/spagitty-extensions/tests/bundled_manifests.rs` fails when a shipped manifest does not admit the version in `package.json`.
