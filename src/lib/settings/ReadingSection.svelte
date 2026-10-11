@@ -289,7 +289,7 @@
 	}
 
 	.line.ruled {
-		background: var(--ruler);
+		background-image: linear-gradient(var(--ruler), var(--ruler));
 	}
 
 	.line.faded {

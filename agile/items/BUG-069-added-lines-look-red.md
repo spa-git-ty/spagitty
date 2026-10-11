@@ -2,7 +2,7 @@
 
 # BUG-069 — Added lines sometimes look red
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Fixed — on `bugfix/BUG-069-added-lines-look-red`; unmerged. Not yet looked at in the running app in light and dark.
 **Screens:** 1R, 1B.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -32,3 +32,14 @@ Not reproduced yet. In `src/lib/review/RoomDiff.svelte`, three things can put re
 - **Reproduce first:** ask the author for the file and theme, and check each suspect above against it.
 - **Where:** `src/lib/review/RoomDiff.svelte` (the `.line` rules), `src/app.css` (`--diff-*`, `--ruler`, `.tok-*`), `src/lib/requests/PRDiffPane.svelte`, the Diff screen.
 - **Branch:** `bugfix/BUG-069-added-lines-look-red`, with plan, testing documents and a changelog entry when the work starts.
+
+## Fix
+
+All three suspects were real, and a fourth place used the same pattern:
+
+- **Ruler and comment range** (`RoomDiff.svelte`, and the Settings preview in `ReadingSection.svelte`) replaced the line's `background`. They are now `background-image` layers over the `background-color` of the added or removed line. The comment range uses a new neutral `--covered` (ink at 9%) instead of the accent, which is the tomato.
+- **Tag names and type names** used `--lane-1`, the red of a removal. They use new `--tok-tag` (blue) and `--tok-type` (teal), defined for light and dark. No syntax colour uses lane 1.
+- **The `+` comment button** is neutral ink instead of the accent.
+- **Strength:** the calm tints are 15% green and 11% red (from 8% and 6%), and their word highlights 30% and 22%, so an addition reads as green at a glance. The Diff screen and the Pull requests diff use the same `--diff-add-bg` and `--diff-del-bg`, so they follow.
+
+`src/lib/diff/colours.test.ts` reads the stylesheets and fails if any of this regresses.

@@ -140,14 +140,21 @@
 	 * that changed inside a line get their own, stronger tint; off, it is
 	 * transparent.
 	 */
-	--diff-add-bg: color-mix(in srgb, var(--ok) 8%, transparent);
-	--diff-del-bg: color-mix(in srgb, var(--danger) 6%, transparent);
-	--diff-add-hl: color-mix(in srgb, var(--ok) 24%, transparent);
-	--diff-del-hl: color-mix(in srgb, var(--danger) 18%, transparent);
+	--diff-add-bg: color-mix(in srgb, var(--ok) 15%, transparent);
+	--diff-del-bg: color-mix(in srgb, var(--danger) 11%, transparent);
+	--diff-add-hl: color-mix(in srgb, var(--ok) 30%, transparent);
+	--diff-del-hl: color-mix(in srgb, var(--danger) 22%, transparent);
 	--diff-del-ink: var(--muted);
 	--diff-marker: 3px;
 	/* The focus ruler's band under the line being read. */
 	--ruler: color-mix(in srgb, var(--warn) 22%, transparent);
+	/* The lines a comment being written covers: neutral, so it sits on a green
+	   or a red line without turning it another colour (BUG-069). */
+	--covered: color-mix(in srgb, var(--ink) 9%, transparent);
+	/* Syntax colours that are not one of the five lanes. Lane 1 is the red of
+	   a removal, so no syntax colour uses it. */
+	--tok-tag: #1f6f9f;
+	--tok-type: #1f7a8c;
 	/* Code written while fixing a merge conflict (FEAT-092): sky, the one
 	   lane colour nothing else in a diff means. */
 	--resolve: var(--lane-5);
@@ -295,6 +302,8 @@
 	--lane-3: #f0b54a;
 	--lane-4: #a58bd8;
 	--lane-5: #6aa7e0;
+	--tok-tag: #6aa7e0;
+	--tok-type: #5cc2d4;
 }
 
 /*
@@ -1270,7 +1279,7 @@ input[type='radio'] {
 }
 
 .tok-type {
-	color: var(--lane-1, #c23b22);
+	color: var(--tok-type, #1f7a8c);
 }
 
 .tok-operator {
@@ -1283,7 +1292,7 @@ input[type='radio'] {
 
 /* A markup tag's name. */
 .tok-tag {
-	color: var(--lane-1, #c23b22);
+	color: var(--tok-tag, #1f6f9f);
 }
 
 /* A markup attribute, or a key in a configuration file. */

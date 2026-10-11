@@ -644,22 +644,25 @@
 		letter-spacing: var(--code-ls);
 	}
 
+	/* An addition is green and a removal red, always (BUG-069). The ruler and
+	   the comment range are layers over that colour, never a replacement for
+	   it, which is why they are an image and not a background colour. */
 	.line.added {
-		background: var(--diff-add-bg);
+		background-color: var(--diff-add-bg);
 	}
 
 	.line.removed {
-		background: var(--diff-del-bg);
+		background-color: var(--diff-del-bg);
 	}
 
 	/* The ruler: a warm band under the line being read. */
 	.line.focused {
-		background: var(--ruler);
+		background-image: linear-gradient(var(--ruler), var(--ruler));
 	}
 
 	/* The lines the comment being written covers. */
 	.line.covered {
-		background: var(--accent-soft);
+		background-image: linear-gradient(var(--covered), var(--covered));
 	}
 
 	.line.dim {
@@ -735,8 +738,9 @@
 		border-radius: 50%;
 		display: grid;
 		place-items: center;
-		background: var(--accent-soft);
-		color: var(--accent);
+		/* Neutral: an accent-coloured button on a green line reads red. */
+		background: color-mix(in srgb, var(--ink) 10%, transparent);
+		color: var(--ink);
 		opacity: 0.3;
 		transition: opacity var(--t-fast) var(--ease);
 	}
