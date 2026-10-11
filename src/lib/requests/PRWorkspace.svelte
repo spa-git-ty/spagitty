@@ -120,6 +120,10 @@
 					{#if request.draft}
 						<Chip>draft</Chip>
 					{/if}
+
+					{#if request.mergeable === false}
+						<Chip active title="The host cannot merge it into {request.targetBranch} as it stands. Open it in Merger to resolve the conflicts.">conflicts</Chip>
+					{/if}
 				</div>
 			</div>
 

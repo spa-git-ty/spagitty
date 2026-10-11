@@ -2,7 +2,7 @@
 
 # TASK-062 — Finish the three open pull requests
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Done — the three are rebased, reviewed and fixed, and wait for the author to merge them (2026-10-11).
 **Screens:** —.
 **Raised by:** the author, 2026-10-11: three pull requests are open, none merged, and their validity and quality are not known.
 
@@ -26,3 +26,13 @@
 
 - Read the CodeRabbit comments already on #57 and #59 first.
 - Take #60 and #59 first: they hold the fixes for the two agent bugs.
+
+## What was done, 2026-10-11
+
+Nothing is merged and nothing is pushed. The three branches are stacked, because each changes files the one before it changes, so they merge in this order: pull request #62 (the records), then #60, then #59, and the work they carry; #57 is replaced by the rebuilt branch.
+
+| PR | Branch | What was found and done |
+| --- | --- | --- |
+| #60 | `fix/gemini-thought-signatures` | Rebased. Reviewed: the signature was echoed inside `functionCall` (a field Google does not have) and one signature was copied onto every call; both are corrected, and the other causes of a Gemini 400 are fixed (BUG-071). Records added. |
+| #59 | `bugfix/BUG-065-agent-cli-access` | Rebased. Reviewed: it is the first half of BUG-070; the second half (the prompt cannot cross a Windows `.cmd` shim as an argument) is added on top. One CodeRabbit concern stands: Settings *Test* accepts the unpredictable value anywhere in the output, not only in the final answer. Its access choices already use *Full access* (TASK-060). The real-agent sweep is not run. |
+| #57 | `bugfix/BUG-063-a-conflicting-pull-request-is-not-marked` | Rebuilt on the stack, since FEAT-117 took merging out of Pull requests: the Review and Pull requests marks are kept, the merge dialog changes are dropped, and the failing *code quality* check (a type error on the *Back with you* path) is fixed. **The pull request's description still carries an attribution line, which `AGENTS.md` forbids; it has to be removed on GitHub by whoever updates it.** |

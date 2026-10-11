@@ -337,6 +337,20 @@ describe('PRWorkspace component UI', () => {
 		view.destroy();
 	});
 
+it('marks a pull request the host cannot merge in its header, and only that (BUG-063)', () => {
+	vi.mocked(api.inTauri).mockReturnValue(false);
+	requests.present([request({ mergeable: false })]);
+	requests.select('PR_1');
+	const view = render(PRWorkspace, {});
+	expect(view.get('.head-meta').textContent).toContain('conflicts');
+	view.destroy();
+
+	requests.present([request({ mergeable: null })]);
+	const other = render(PRWorkspace, {});
+	expect(other.get('.head-meta').textContent).not.toContain('conflicts');
+	other.destroy();
+});
+
 it('merges only by opening Merger on the pull request (FEAT-117)', () => {
 		vi.mocked(api.inTauri).mockReturnValue(false);
 		requests.present([request()]);

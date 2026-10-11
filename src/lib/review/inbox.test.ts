@@ -167,6 +167,19 @@ describe('chipsOf and factsOf', () => {
 		);
 	});
 
+	it('marks a pull request the host cannot merge, and only that (BUG-063)', () => {
+		expect(chipsOf(request({ mergeable: false }), null, 'needs').base).toBe('conflicts with main');
+		expect(chipsOf(request({ mergeable: null }), null, 'needs').base).toBeNull();
+		expect(chipsOf(request({ mergeable: true }), null, 'back').base).toBeNull();
+		expect(factsOf(request({ mergeable: false }), null)[0]).toEqual({
+			tone: 'danger',
+			text: 'Conflicts with main: it cannot be merged as it stands'
+		});
+		expect(factsOf(request({ mergeable: null }), null)).not.toContainEqual(
+			expect.objectContaining({ tone: 'danger' })
+		);
+	});
+
 	it('lists what is worth knowing before you start, in order', () => {
 		const pr = request({ openThreads: 2, resolvedThreads: 1, checks: 'passing' });
 		const saved = record({

@@ -175,6 +175,16 @@ describe('RequestRow', () => {
 		view.destroy();
 	});
 
+	it('marks a pull request that conflicts with its base (BUG-063)', () => {
+		const view = render(RequestRow, { request: request({ mergeable: false }) });
+		expect(view.text()).toContain('conflicts');
+		view.destroy();
+
+		const unknown = render(RequestRow, { request: request({ mergeable: null }) });
+		expect(unknown.text()).not.toContain('conflicts');
+		unknown.destroy();
+	});
+
 	it('says nothing about checks when the host runs none', () => {
 		const view = render(RequestRow, { request: request({ checks: null }) });
 
