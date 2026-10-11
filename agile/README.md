@@ -232,14 +232,10 @@ rather than an audit.
 | [BUG-056](items/BUG-056-review-requests-and-profile-navigation.md) | Review and Pull requests align, and profiles open in Settings | chrome, 1R, 1H | Fixed |
 | [BUG-057](items/BUG-057-your-own-pull-requests-in-review.md) | Review lists your own pull requests | 1R | Fixed |
 | [BUG-058](items/BUG-058-conversation-reads-in-full.md) | A conversation thread can be read in full | 1R | Fixed |
-| [BUG-059](items/BUG-059-windows-watcher-never-sees-refs.md) | On Windows the watcher never sees a ref move, and refreshes forever | chrome, 1A, 1S | Backlog |
-| [BUG-060](items/BUG-060-merger-forecast-lost-on-first-open.md) | Merger sits on "Working out the merge…" when it is first opened | 1S | Fixed |
 | [BUG-059](items/BUG-059-windows-watcher-never-sees-refs.md) | On Windows the watcher never sees a ref move, and refreshes forever | chrome, 1A, 1S | Fixed |
-| [BUG-060](items/BUG-060-merger-forecast-lost-on-first-open.md) | Merger sits on "Working out the merge…" when it is first opened | 1S | Backlog |
-| [BUG-061](items/BUG-061-merger-shows-the-previous-pairs-forecast.md) | Merger shows the previous pair's forecast under a new branch name | 1S | Backlog |
-| [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Fixed |
+| [BUG-060](items/BUG-060-merger-forecast-lost-on-first-open.md) | Merger sits on "Working out the merge…" when it is first opened | 1S | Fixed |
 | [BUG-061](items/BUG-061-merger-shows-the-previous-pairs-forecast.md) | Merger shows the previous pair's forecast under a new branch name | 1S | Fixed |
-| [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Backlog |
+| [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Fixed |
 | [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Backlog |
 | [BUG-064](items/BUG-064-review-says-nobody-asked-you-after-you-answered.md) | Review says "nobody asked you yet" about pull requests you have already reviewed | 1R | Fixed |
 
@@ -306,6 +302,7 @@ of its own.
 | [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Open |
 | [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Open |
 | [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
+| [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Open |
 
 ## Skipped identifiers
 

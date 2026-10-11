@@ -14,13 +14,28 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-11
+
 ### Fixed
 
+- The patch release passes the working-record checks again: duplicate bug entries left by the merges are reconciled, and the release version is advanced so the builds and publication can run.
 - Review no longer files pull requests you have already reviewed under *nobody asked you yet*: they have their own *Reviewed by you* group, each card says what you said, and one the author has pushed to since says *changed since* (GitHub).
 - Merging or closing a pull request from its workspace returns to the list with a notice, instead of turning the workspace into another pull request with no files or commits.
 - Merger no longer shows the previous pair's plan under a newly chosen branch while the new one is worked out, and *Resolve* and *Merge now* wait for the plan of the pair they name.
 - Merger no longer sits on *Working out the merge…* when it is first opened or a branch is chosen. A refresh that moved neither branch threw away the forecast still on its way; on Windows that happened every time.
 - On Windows a commit, merge or branch move — made in Spagitty or outside it — shows on the graph again, and an idle repository stops refreshing itself every few hundred milliseconds. The watcher compared Windows' two spellings of the same folder and never matched them.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.0.0. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
 
 ## [2.0.0] - 2026-10-08
 
