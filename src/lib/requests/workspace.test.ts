@@ -26,12 +26,8 @@ vi.mock('$lib/api', () => ({
 	setPrDraft: vi.fn()
 }));
 
-vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
-vi.mock('$lib/review/store.svelte', () => ({ review: { open: vi.fn(() => Promise.resolve(true)), notHere: null } }));
 
 import * as api from '$lib/api';
-import { goto } from '$app/navigation';
-import { review } from '$lib/review/store.svelte';
 import PRDiffPane from './PRDiffPane.svelte';
 import PRMarkdown from './PRMarkdown.svelte';
 import PRWorkspace from './PRWorkspace.svelte';
@@ -200,84 +196,6 @@ describe('PR workspace store flow', () => {
 		expect(requests.currentFiles[0].path).toBe('src/main.rs');
 	});
 
-	it('adds and removes draft comments', () => {
-		requests.addDraftComment('src/main.rs', 2, 'RIGHT', 'Nice clean refactor');
-		expect(requests.draftComments).toHaveLength(1);
-		expect(requests.draftComments[0].body).toBe('Nice clean refactor');
-
-		requests.removeDraftComment('src/main.rs', 2, 'RIGHT');
-		expect(requests.draftComments).toHaveLength(0);
-	});
-
-	it('preserves draft comments on review failure', async () => {
-		requests.present([request()]);
-		requests.addDraftComment('src/main.rs', 2, 'RIGHT', 'Important feedback');
-
-		submitReview.mockRejectedValueOnce('network timeout');
-
-		const ok = await requests.review('comment', 'Summary note');
-		expect(ok).toBe(false);
-		expect(requests.reviewError).toContain('network timeout');
-		expect(requests.draftComments).toHaveLength(1);
-		expect(requests.draftComments[0].body).toBe('Important feedback');
-	});
-
-	it('submits review with draft comments included', async () => {
-		requests.present([request()]);
-		requests.addDraftComment('src/main.rs', 2, 'RIGHT', 'Inline review note');
-
-		submitReview.mockResolvedValueOnce();
-
-		const ok = await requests.review('comment', 'Summary note');
-		expect(ok).toBe(true);
-		expect(submitReview).toHaveBeenCalledWith(
-			412,
-			'comment',
-			'Summary note',
-			[{ path: 'src/main.rs', line: 2, side: 'RIGHT', body: 'Inline review note' }]
-		);
-		expect(requests.draftComments).toHaveLength(0);
-	});
-
-	it('resolves comment threads', () => {
-		requests.presentComments([comment(101)], 412);
-		expect(requests.comments[0].resolved).toBe(false);
-
-		requests.resolveComment(101);
-		expect(requests.comments[0].resolved).toBe(true);
-	});
-
-	it('replies to comment thread', async () => {
-		requests.present([request()]);
-		requests.presentComments([comment(101)], 412);
-
-		replyComment.mockResolvedValueOnce({
-			id: 102,
-			inReplyTo: 101,
-			path: 'src/main.rs',
-			line: 2,
-			side: 'RIGHT',
-			body: 'Done in recent commit',
-			author: 'ada',
-			createdAt: 1_787_650_300,
-			resolved: false
-		});
-
-		const ok = await requests.replyToComment(101, 'Done in recent commit');
-		expect(ok).toBe(true);
-		expect(replyComment).toHaveBeenCalledWith(412, 101, 'Done in recent commit');
-		expect(requests.comments).toHaveLength(2);
-	});
-
-	it('determines role from author vs connected user', async () => {
-		await requests.load();
-		requests.present([request({ authorName: 'ada' })]);
-		expect(requests.role).toBe('developer');
-
-		requests.present([request({ authorName: 'grace' })]);
-		expect(requests.role).toBe('reviewer');
-	});
-
 	it('merges a pull request via store (FEAT-071)', async () => {
 		requests.present([request()]);
 		mergePullRequest.mockResolvedValueOnce(undefined);
@@ -432,12 +350,6 @@ describe('PRWorkspace component UI', () => {
 		expect(view.text()).toContain('src/main.rs');
 		expect(view.text()).toContain('Refactor diff and workspace components');
 
-		// Toggle role preview
-		expect(view.text()).toContain('Reviewer View');
-		const roleBtn = view.get('.role-toggle-btn');
-		click(roleBtn);
-		expect(view.text()).toContain('Developer View');
-
 		// Click changelog tab to view PR markdown description
 		const changelogBtn = view.get('.changelog-btn');
 		click(changelogBtn);
@@ -457,36 +369,30 @@ describe('PRWorkspace component UI', () => {
 		view.destroy();
 	});
 
-	it('opens and closes review modal in reviewer mode', () => {
+it('offers nothing to review with: no Review button, no verdicts, no role switch (FEAT-116)', () => {
 		vi.mocked(api.inTauri).mockReturnValue(false);
 		requests.present([request({ authorName: 'grace' })]);
 		requests.select('PR_1');
 		requests.presentFiles([file('src/main.rs')], 412);
 
 		const view = render(PRWorkspace, {});
+		const labels = view.all('button').map((b) => b.textContent?.trim() ?? '');
 
-		const publishBtn = view.all('button').find((b) => b.textContent?.includes('Publish Review'));
-		expect(publishBtn).toBeDefined();
-		if (publishBtn) click(publishBtn);
-
-		expect(view.text()).toContain('Publish Pull Request Review');
-		expect(view.text()).toContain('Approve');
-		expect(view.text()).toContain('Request Changes');
-
-		const cancelBtn = view.all('button').find((b) => b.textContent?.includes('Cancel'));
-		expect(cancelBtn).toBeDefined();
-		if (cancelBtn) click(cancelBtn);
-
-		expect(view.text()).not.toContain('Publish Pull Request Review');
+		for (const gone of ['Review', 'Reply in Review', 'Approve', 'Request Changes', 'Submit Review']) {
+			expect(labels, gone).not.toContain(gone);
+		}
+		expect(labels.some((label) => label.includes('Publish Review'))).toBe(false);
+		expect(view.text()).not.toContain('Reviewer View');
+		expect(view.text()).not.toContain('Developer View');
+		expect(view.text()).not.toContain('pending review drafts');
 		view.destroy();
 	});
 });
 
 describe('PRDiffPane component UI', () => {
-	it('renders diff lines, comments, and draft composers', () => {
+it('renders diff lines and the comments already on them, and offers no way to add one (FEAT-116)', () => {
 		vi.mocked(api.inTauri).mockReturnValue(false);
 		requests.presentComments([comment(101)], 412);
-		requests.addDraftComment('src/main.rs', 2, 'RIGHT', 'Draft inline note');
 
 		const view = render(PRDiffPane, {
 			file: file('src/main.rs'),
@@ -499,15 +405,11 @@ describe('PRDiffPane component UI', () => {
 		expect(view.text()).toContain('fn main()');
 		expect(view.text()).toContain('new_one()');
 		expect(view.text()).toContain('Please rename new_one()');
-		expect(view.text()).toContain('Draft inline note');
-		expect(view.text()).toContain('Pending Review Draft');
-
-		// Open inline composer
-		const triggers = view.all('.comment-trigger');
-		expect(triggers.length).toBeGreaterThan(0);
-		click(triggers[0]);
-
-		expect(view.text()).toContain('Add inline review comment');
+		expect(view.all('.comment-trigger')).toHaveLength(0);
+		expect(view.all('textarea')).toHaveLength(0);
+		expect(view.all('input')).toHaveLength(0);
+		expect(view.text()).not.toContain('Reply');
+		expect(view.text()).not.toContain('Mark as resolved');
 
 		view.destroy();
 	});
@@ -533,26 +435,6 @@ describe('PRMarkdown component', () => {
 		expect(view.text()).toContain('Todo task');
 		expect(view.text()).toContain('Important quote');
 
-		view.destroy();
-	});
-});
-
-/** FEAT-105: the pull request screen hands a review to the review room. */
-describe('Review from the pull request screen', () => {
-	it('opens this pull request in the review room', async () => {
-		vi.mocked(api.inTauri).mockReturnValue(false);
-		requests.present([request()]);
-		requests.select('PR_1');
-		const view = render(PRWorkspace, {});
-
-		const button = view.all('button').find((b) => b.textContent?.trim() === 'Review');
-		expect(button).toBeDefined();
-		click(button as HTMLElement);
-		await Promise.resolve();
-		await Promise.resolve();
-
-		expect(review.open).toHaveBeenCalledWith(expect.objectContaining({ number: 412 }));
-		expect(goto).toHaveBeenCalledWith('/review');
 		view.destroy();
 	});
 });

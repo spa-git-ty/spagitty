@@ -2,7 +2,7 @@
 
 # FEAT-116 — Pull requests lists and reads; Review reviews
 
-**Status:** Backlog — reported 2026-10-11, not started.
+**Status:** Done — on `feature/FEAT-116-pull-requests-does-not-review`; unmerged. Merging still happens here until FEAT-117.
 **Screens:** 1H, 1R.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 
@@ -38,3 +38,7 @@ The author's rule: Review is where pull requests are reviewed. Pull requests onl
 - **Where:** `src/lib/requests/PRWorkspace.svelte`, `src/lib/requests/RequestDetail.svelte`, `src/lib/requests/store.svelte.ts`, `src/lib/requests/workspace.test.ts`.
 - FEAT-105's item should say it was reversed here.
 - **Branch:** `feature/FEAT-116-pull-requests-does-not-review`, with plan, testing documents and a changelog entry when the work starts.
+
+## What was done
+
+Pull requests lists and reads; Review reviews. Gone from the Pull requests screen: the *Review* and *Reply in Review* buttons, the draft inline comments and the *Publish Review* modal with its verdict choices, the *Reviewer View* / *Developer View* switch, the inline composer, reply box and *Mark as resolved* in the diff, and the verdict picker and review comment in the side panel (`RequestDetail`). What stays: the list, the description, the files, the commits and the existing comments (read, with their *Resolved* mark), a footer that counts unresolved and resolved comments, creating, editing the draft state and closing. Merge stays on the screen until FEAT-117 moves it. From the store, `review()`, `reviewing`, `reviewError`, the draft comments with their local storage, `replyToComment`, `resolveComment` and `role` are removed rather than left unused. Review already did all of it (FEAT-087 to FEAT-105), so nothing was added there. FEAT-105's *Review from the pull request screen* is reversed by this.

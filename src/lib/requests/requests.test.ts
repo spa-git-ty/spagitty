@@ -229,31 +229,6 @@ describe('RequestDetail', () => {
 		view.destroy();
 	});
 
-	it('offers Review, and still says plainly that merging is not built', () => {
-		// This assertion used to be "every action is disabled", which was true
-		// while Spagitty talked to no host about one pull request. FEAT-058
-		// built the review, so the rule it was protecting is the one that
-		// survives: a control that looks live and does nothing is worse than one
-		// that explains itself.
-		requests.present([request()]);
-		const view = render(RequestDetail, {});
-
-		const buttons = view.all('button') as HTMLButtonElement[];
-		const enabled = buttons.filter((button) => !button.disabled);
-		const disabled = buttons.filter((button) => button.disabled);
-
-		// Something is live now, and it is the review.
-		expect(enabled.length).toBeGreaterThan(0);
-		expect(view.text()).toContain('Review');
-
-		// Whatever is still dead says why, in words rather than an identifier
-		// only this project's own record can resolve.
-		for (const button of disabled) {
-			expect(button.title).not.toBe('');
-			expect(button.title).not.toMatch(/FEAT-\d/);
-		}
-		view.destroy();
-	});
 });
 
 describe('PRDiffPane', () => {
