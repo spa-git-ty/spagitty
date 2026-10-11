@@ -169,6 +169,12 @@ find out would be a user stranded on a version nobody can move them off.
 - Gates are blocking, not advisory. A red gate is fixed, not bypassed;
   `continue-on-error` is not used to get a merge through, and neither is a
   re-run until it passes.
+- Rust caching is an optional speed improvement. Across the gates, prerelease
+  and draft-release workflows, a download segment is limited to two minutes
+  and a cache step to five minutes. Only these cache steps use
+  `continue-on-error`: a failed restore is logged and Cargo compiles the
+  dependencies. License, quality, coverage, security and build checks still
+  fail their gates normally.
 - **An advisory that cannot be fixed is recorded, not silenced.** `deny.toml`'s
   `[advisories] ignore` list carries accepted risk **by advisory id**, each with
   its crate and its reason, so anything *not* listed still fails gate 4. That is

@@ -25,6 +25,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
 
 jobs:
   # Before the build, not after it, for the reason draft-release.yml works its
@@ -99,6 +100,8 @@ jobs:
         with:
           targets: ${{ matrix.target || '' }}
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
         with:
           shared-key: ${{ matrix.name }}
       - uses: ./.github/actions/linux-deps

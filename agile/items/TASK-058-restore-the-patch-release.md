@@ -1,0 +1,34 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+# TASK-058 — Restore the patch release after the bug-fix merges
+
+**Status:** Open — 2.0.1 is prepared in pull request #61 on
+`codex/fix-release-2.0.1`; merging and publication are pending.
+**Screen:** CI.
+**Raised by:** the failed main workflow after pull request #58.
+
+## Problem
+
+Run `37857852830`, at main commit `9c7964d`, failed four working-record
+assertions: BUG-059 through BUG-062 each had both a Backlog and a Fixed index
+row. Their item documents all say Fixed. Gate 0 also disabled building and
+publishing because the manifests still named the already-released 2.0.0.
+
+Pull request run `38125434703` then stalled restoring the code-quality Rust
+cache at 18.1%, before the checks started. Caching needs a bounded fallback so
+a download cannot hold up the release checks indefinitely.
+
+## Acceptance criteria
+
+- Each of BUG-059 through BUG-062 has exactly one index row, matching its item.
+- Application manifests, the MSI version and workspace lockfile agree on 2.0.1.
+- The five pending bug fixes and this release correction have a dated 2.0.1
+  changelog section, including the existing macOS signing and download policy.
+- Record, version and release tests pass, frontend coverage meets its existing
+  thresholds, and the Windows release binary builds.
+- Rust cache downloads have a two-minute segment limit and a five-minute step
+  limit in every build lane. Failed caching falls back to compiling dependencies;
+  required checks remain blocking.
+
+Publication and the Linux and macOS build results are verified by the existing
+main workflow after this correction is merged.

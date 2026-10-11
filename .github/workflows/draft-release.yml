@@ -80,6 +80,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
 
 jobs:
   # Before the build, not after it. The binary is stamped with the tag it is
@@ -178,6 +179,8 @@ jobs:
       # `tauri` (E0463 on the app crate). Do not reuse a key that already
       # poisoned a runner.
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
         with:
           prefix-key: draft-v1
           shared-key: ${{ matrix.name }}

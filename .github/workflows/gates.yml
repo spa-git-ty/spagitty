@@ -28,6 +28,8 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # Abandon a stalled cache segment so Cargo can compile dependencies instead.
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
   # The coverage floor, in one place so no gate can disagree with another.
   COVERAGE_FLOOR: 70
 
@@ -125,6 +127,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
 
       - name: Rust dependency licenses
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -155,6 +159,8 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
       - uses: ./.github/actions/linux-deps
 
       - run: cargo fmt --all --check
@@ -196,6 +202,8 @@ jobs:
         with:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: ./.github/actions/linux-deps
 
@@ -235,6 +243,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
       - uses: ./.github/actions/linux-deps
         if: matrix.os == 'ubuntu-latest'
       # The process tree moved to its own crate (FEAT-096), and the extension
@@ -260,6 +270,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
 
       - name: Rust advisories
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -339,6 +351,8 @@ jobs:
           # architecture it is published as.
           targets: ${{ matrix.target || '' }}
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
+        continue-on-error: true
         with:
           shared-key: ${{ matrix.name }}
       - uses: ./.github/actions/linux-deps
