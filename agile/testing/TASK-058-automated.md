@@ -18,5 +18,10 @@ Validated on Windows on 2026-10-11:
 - Cargo.lock changes only the versions of the five workspace packages from
   2.0.0 to 2.0.1. Dependency versions are unchanged.
 
-Windows release compilation is pending. Rust workspace tests and coverage,
-platform process tests and security checks also run on the pull request in CI.
+- `bun run tauri build --no-bundle`: passes, including the official extension
+  worker and production frontend build. The Windows release executable reports
+  ProductVersion and FileVersion 2.0.1. Installer packaging is left to Gate 5.
+- Final record/version/release-note/macOS policy check: 966 cases pass.
+
+Rust workspace tests and coverage, platform process tests and security checks
+also run on pull request #61 in CI.

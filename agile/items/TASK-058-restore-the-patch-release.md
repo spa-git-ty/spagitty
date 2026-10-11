@@ -2,7 +2,8 @@
 
 # TASK-058 — Restore the patch release after the bug-fix merges
 
-**Status:** Open — preparing 2.0.1 on `codex/fix-release-2.0.1`.
+**Status:** Open — 2.0.1 is prepared in pull request #61 on
+`codex/fix-release-2.0.1`; merging and publication are pending.
 **Screen:** CI.
 **Raised by:** the failed main workflow after pull request #58.
 
