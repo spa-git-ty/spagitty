@@ -200,7 +200,9 @@ impl Turn {
         self.parts
             .iter()
             .filter_map(|part| match part {
-                Part::Call { id, name, input, .. } => Some((id.clone(), name.clone(), input.clone())),
+                Part::Call {
+                    id, name, input, ..
+                } => Some((id.clone(), name.clone(), input.clone())),
                 _ => None,
             })
             .collect()
@@ -243,12 +245,18 @@ pub fn models(endpoint: &Endpoint) -> Result<Vec<String>> {
 /// One small request, and how long it took: what *Test* shows.
 pub fn test(endpoint: &Endpoint) -> Result<Duration> {
     let started = Instant::now();
+    // A thinking model spends its allowance before it speaks.
+    let allowance = if endpoint.provider == Provider::Google {
+        1024
+    } else {
+        16
+    };
     complete(
         endpoint,
         "Answer with one word.",
         &[Message::user("Say ok.")],
         &[],
-        16,
+        allowance,
     )?;
     Ok(started.elapsed())
 }
@@ -333,13 +341,18 @@ pub fn request(
         Provider::Google => {
             let mut body = json!({
                 "systemInstruction": {"parts": [{"text": system}]},
-                "contents": messages.iter().map(google_message).collect::<Vec<_>>(),
+                // A turn with nothing in it is a 400 here, so it is not sent.
+                "contents": messages
+                    .iter()
+                    .map(google_message)
+                    .filter(|m| m["parts"].as_array().is_some_and(|p| !p.is_empty()))
+                    .collect::<Vec<_>>(),
                 "generationConfig": {"maxOutputTokens": max_tokens},
             });
             if !tools.is_empty() {
                 body["tools"] = json!([{ "functionDeclarations": tools
                     .iter()
-                    .map(|t| json!({"name": t.name, "description": t.description, "parameters": t.schema}))
+                    .map(google_declaration)
                     .collect::<Vec<_>>() }]);
             }
             let model = endpoint.model.trim_start_matches("models/");
@@ -387,7 +400,9 @@ fn openai_messages(message: &Message) -> Vec<Value> {
         .parts
         .iter()
         .filter_map(|p| match p {
-            Part::Call { id, name, input, .. } => Some(json!({
+            Part::Call {
+                id, name, input, ..
+            } => Some(json!({
                 "id": id, "type": "function",
                 "function": {"name": name, "arguments": input.to_string()}
             })),
@@ -407,6 +422,30 @@ fn openai_messages(message: &Message) -> Vec<Value> {
         }
     }
     out
+}
+
+/// A tool as Google declares it. Google refuses an object with no properties
+/// and an empty `required` list, so a tool that takes nothing declares no
+/// parameters at all.
+fn google_declaration(tool: &Tool) -> Value {
+    let mut declaration = json!({"name": tool.name, "description": tool.description});
+    let has_properties = tool
+        .schema
+        .get("properties")
+        .and_then(Value::as_object)
+        .is_some_and(|p| !p.is_empty());
+    if has_properties {
+        let mut schema = tool.schema.clone();
+        if schema
+            .get("required")
+            .and_then(Value::as_array)
+            .is_some_and(Vec::is_empty)
+        {
+            schema.as_object_mut().map(|o| o.remove("required"));
+        }
+        declaration["parameters"] = schema;
+    }
+    declaration
 }
 
 fn google_message(message: &Message) -> Value {
@@ -432,9 +471,8 @@ fn google_message(message: &Message) -> Value {
                 if !id.is_empty() && !id.starts_with("call-") {
                     call["id"] = json!(id);
                 }
-                if let Some(sig) = signature {
-                    call["thoughtSignature"] = json!(sig);
-                }
+                // Google reads the signature as a sibling of `functionCall`
+                // on the part, not as a field inside it.
                 let mut obj = json!({"functionCall": call});
                 if let Some(sig) = signature {
                     obj["thoughtSignature"] = json!(sig);
@@ -442,10 +480,7 @@ fn google_message(message: &Message) -> Value {
                 obj
             }
             Part::Result {
-                id,
-                name,
-                content,
-                ..
+                id, name, content, ..
             } => {
                 let mut fr = json!({"name": name, "response": {"content": content}});
                 if !id.is_empty() && !id.starts_with("call-") {
@@ -492,12 +527,25 @@ fn parsed(endpoint: &Endpoint, answered: &http::Answered) -> Result<Value> {
 
 /// The sentence a provider puts in its error body, whichever shape it uses.
 pub fn error_sentence(value: &Value) -> Option<String> {
+    // Google sometimes wraps its error in a one-item list.
+    let value = value
+        .as_array()
+        .and_then(|list| list.first())
+        .unwrap_or(value);
     let error = value.get("error")?;
     let message = error
         .get("message")
         .and_then(Value::as_str)
         .or_else(|| error.as_str())?;
     Some(message.trim().to_string())
+}
+
+/// The signature Google put on a part, under either spelling.
+fn signature_of(part: &Value) -> Option<String> {
+    part.get("thoughtSignature")
+        .or_else(|| part.get("thought_signature"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
 }
 
 /// Read one answer in a provider's shape.
@@ -589,29 +637,17 @@ pub fn read_turn(provider: Provider, value: &Value) -> Option<Turn> {
             let content_parts = candidate
                 .get("content")
                 .and_then(|c| c.get("parts"))
-                .and_then(Value::as_array)?;
-
-            // Fallback thought signature from anywhere in the candidate's turn.
-            let turn_sig = content_parts.iter().find_map(|p| {
-                p.get("thoughtSignature")
-                    .or_else(|| p.get("thought_signature"))
-                    .or_else(|| p.get("functionCall").and_then(|c| c.get("thoughtSignature")))
-                    .or_else(|| p.get("functionCall").and_then(|c| c.get("thought_signature")))
-                    .and_then(Value::as_str)
-                    .map(str::to_string)
-            });
+                .and_then(Value::as_array)
+                .map(Vec::as_slice)
+                // A reply cut off while thinking has no parts at all.
+                .unwrap_or_default();
 
             let mut parts = Vec::new();
             for (index, part) in content_parts.iter().enumerate() {
                 if let Some(call) = part.get("functionCall") {
-                    let sig = part
-                        .get("thoughtSignature")
-                        .or_else(|| part.get("thought_signature"))
-                        .or_else(|| call.get("thoughtSignature"))
-                        .or_else(|| call.get("thought_signature"))
-                        .and_then(Value::as_str)
-                        .map(str::to_string)
-                        .or_else(|| turn_sig.clone());
+                    // Only the part that carried a signature gets one back:
+                    // with parallel calls Google signs the first alone.
+                    let sig = signature_of(part);
                     let id = call
                         .get("id")
                         .and_then(Value::as_str)
@@ -625,12 +661,7 @@ pub fn read_turn(provider: Provider, value: &Value) -> Option<Turn> {
                     });
                 } else if part.get("thought").and_then(Value::as_bool) == Some(true) {
                     if let Some(text) = part.get("text").and_then(Value::as_str) {
-                        let sig = part
-                            .get("thoughtSignature")
-                            .or_else(|| part.get("thought_signature"))
-                            .and_then(Value::as_str)
-                            .map(str::to_string)
-                            .or_else(|| turn_sig.clone());
+                        let sig = signature_of(part);
                         parts.push(Part::Thought {
                             text: text.to_string(),
                             signature: sig,
@@ -829,15 +860,15 @@ mod tests {
                     "parts": [
                         {
                             "text": "Planning steps...",
-                            "thought": true,
-                            "thoughtSignature": "thought-sig-123"
+                            "thought": true
                         },
                         {
                             "functionCall": {
                                 "id": "f-1",
                                 "name": "default_api:list_changed_files",
                                 "args": {}
-                            }
+                            },
+                            "thoughtSignature": "thought-sig-123"
                         }
                     ]
                 },
@@ -869,11 +900,17 @@ mod tests {
             },
         ];
 
-        let (_, _, body) = request(&endpoint(Provider::Google), "sys", &messages, &tools(), 1000);
+        let (_, _, body) = request(
+            &endpoint(Provider::Google),
+            "sys",
+            &messages,
+            &tools(),
+            1000,
+        );
         let assistant_turn = &body["contents"][1];
         assert_eq!(assistant_turn["role"], "model");
         assert_eq!(assistant_turn["parts"][0]["thought"], true);
-        assert_eq!(assistant_turn["parts"][0]["thoughtSignature"], "thought-sig-123");
+        assert!(assistant_turn["parts"][0].get("thoughtSignature").is_none());
         // The functionCall part has the thoughtSignature echoed back.
         assert_eq!(
             assistant_turn["parts"][1]["functionCall"]["name"],
@@ -883,10 +920,10 @@ mod tests {
             assistant_turn["parts"][1]["thoughtSignature"],
             "thought-sig-123"
         );
-        assert_eq!(
-            assistant_turn["parts"][1]["functionCall"]["thoughtSignature"],
-            "thought-sig-123"
-        );
+        // Not inside the call: Google rejects a field it does not know.
+        assert!(assistant_turn["parts"][1]["functionCall"]
+            .get("thoughtSignature")
+            .is_none());
         // FunctionResponse includes the call id and matching name.
         let user_turn = &body["contents"][2];
         assert_eq!(user_turn["role"], "user");
@@ -895,6 +932,98 @@ mod tests {
             "default_api:list_changed_files"
         );
         assert_eq!(user_turn["parts"][0]["functionResponse"]["id"], "f-1");
+    }
+
+    #[test]
+    fn google_declares_a_tool_without_properties_with_no_parameters() {
+        let none = Tool {
+            name: "list_changed_files",
+            description: "List.",
+            schema: json!({"type": "object", "properties": {}, "required": []}),
+        };
+        let some = Tool {
+            name: "read_file",
+            description: "Read.",
+            schema: json!({"type": "object", "properties": {"path": {"type": "string"}}, "required": []}),
+        };
+        let (_, _, body) = request(
+            &endpoint(Provider::Google),
+            "sys",
+            &[Message::user("Hi.")],
+            &[none, some],
+            1000,
+        );
+        let declared = &body["tools"][0]["functionDeclarations"];
+        assert!(declared[0].get("parameters").is_none());
+        assert!(declared[1]["parameters"].get("required").is_none());
+        assert_eq!(
+            declared[1]["parameters"]["properties"]["path"]["type"],
+            "string"
+        );
+    }
+
+    #[test]
+    fn google_is_not_sent_an_empty_turn_and_reads_a_reply_with_no_parts() {
+        let messages = vec![
+            Message::user("Hi."),
+            Message {
+                role: Role::Assistant,
+                parts: vec![],
+            },
+            Message::user("Again."),
+        ];
+        let (_, _, body) = request(&endpoint(Provider::Google), "sys", &messages, &[], 1000);
+        assert_eq!(body["contents"].as_array().unwrap().len(), 2);
+
+        let cut_off =
+            json!({"candidates": [{"content": {"role": "model"}, "finishReason": "MAX_TOKENS"}]});
+        let turn = read_turn(Provider::Google, &cut_off).unwrap();
+        assert_eq!(turn.stop, Stop::Length);
+        assert!(turn.parts.is_empty());
+    }
+
+    #[test]
+    fn google_error_in_a_list_is_still_read() {
+        let wrapped = json!([{"error": {"code": 400, "message": "Unknown name \"x\""}}]);
+        assert_eq!(
+            error_sentence(&wrapped).as_deref(),
+            Some("Unknown name \"x\"")
+        );
+    }
+
+    #[test]
+    fn google_signs_back_only_the_parts_it_signed() {
+        let google_resp = json!({
+            "candidates": [{
+                "content": {"parts": [
+                    {"text": "Reasoning.", "thought": true},
+                    {"functionCall": {"name": "read_file", "args": {"path": "a"}}, "thoughtSignature": "first"},
+                    {"functionCall": {"name": "read_file", "args": {"path": "b"}}}
+                ]},
+                "finishReason": "STOP"
+            }]
+        });
+        let turn = read_turn(Provider::Google, &google_resp).unwrap();
+        let messages = vec![
+            Message::user("Inspect."),
+            Message {
+                role: Role::Assistant,
+                parts: turn.parts,
+            },
+        ];
+        let (_, _, body) = request(
+            &endpoint(Provider::Google),
+            "sys",
+            &messages,
+            &tools(),
+            1000,
+        );
+        let parts = &body["contents"][1]["parts"];
+        assert!(parts[0].get("thoughtSignature").is_none());
+        assert_eq!(parts[1]["thoughtSignature"], "first");
+        assert!(parts[2].get("thoughtSignature").is_none());
+        // Ids made up here are not sent: Google gave these calls none.
+        assert!(parts[1]["functionCall"].get("id").is_none());
     }
 
     #[test]
