@@ -14,6 +14,10 @@ assertions: BUG-059 through BUG-062 each had both a Backlog and a Fixed index
 row. Their item documents all say Fixed. Gate 0 also disabled building and
 publishing because the manifests still named the already-released 2.0.0.
 
+Pull request run `38125434703` then stalled restoring the code-quality Rust
+cache at 18.1%, before the checks started. Caching needs a bounded fallback so
+a download cannot hold up the release checks indefinitely.
+
 ## Acceptance criteria
 
 - Each of BUG-059 through BUG-062 has exactly one index row, matching its item.
@@ -22,6 +26,9 @@ publishing because the manifests still named the already-released 2.0.0.
   changelog section, including the existing macOS signing and download policy.
 - Record, version and release tests pass, frontend coverage meets its existing
   thresholds, and the Windows release binary builds.
+- Rust cache downloads have a two-minute segment limit and a five-minute step
+  limit in every build lane. Failed caching falls back to compiling dependencies;
+  required checks remain blocking.
 
 Publication and the Linux and macOS build results are verified by the existing
 main workflow after this correction is merged.

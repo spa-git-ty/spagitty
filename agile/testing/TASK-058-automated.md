@@ -25,3 +25,16 @@ Validated on Windows on 2026-10-11:
 
 Rust workspace tests and coverage, platform process tests and security checks
 also run on pull request #61 in CI.
+
+Cache timeout follow-up on 2026-10-11:
+
+- Parsed all three build workflow YAML files and compared them with the prior
+  commit: all eight cache steps have five-minute limits and optional fallback,
+  with two-minute segment limits. Triggers, permissions, matrices, cache keys
+  and every required check are unchanged.
+- Existing record/version/release-note/macOS/update tests: 978 cases pass.
+- `git diff --check`: passes. This follow-up changes no application code or
+  dependencies; the successful Windows build above remains applicable.
+- Cancelled the stalled PR run `38125434703`; requested force-cancellation when
+  ordinary cancellation did not stop the cache step. The next push restarts
+  CI with the updated workflow.

@@ -9,6 +9,9 @@
   one Fixed row per item; Cargo.lock changes only workspace package versions.
 - Reviewed the 2.0.1 notes: all five pending bug fixes are present, with the
   release-check correction and the existing macOS signing and download policy.
+- Reviewed the cache timeout follow-up: only optional caching tolerates failure;
+  all license, quality, coverage, security and build checks still block their
+  gates. All build lanes use the same limits without changing existing keys.
 - After merging, check that Gate 0 enables shipping and gates 1 through 6 pass,
   then verify the v2.0.1 release has all platform downloads: pending.
 

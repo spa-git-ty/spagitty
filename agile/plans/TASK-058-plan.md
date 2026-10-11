@@ -12,3 +12,6 @@
    from the pending fixes, retaining the existing download policy.
 5. Run existing record/version/release tests, frontend coverage and type checks,
    and build the Windows release binary before preparing a pull request to main.
+6. Cancel the PR run stalled restoring its Rust cache; bound cache segments and
+   cache steps in every build lane, retaining all required checks, then push
+   the correction to restart CI on the updated workflow.

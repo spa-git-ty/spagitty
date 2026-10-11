@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- CI and release builds stop waiting for a stalled Rust cache download: each segment has a two-minute limit and each cache step has a five-minute limit, after which Cargo compiles dependencies and the required checks still run.
+
 ## [2.0.1] - 2026-10-11
 
 ### Fixed
