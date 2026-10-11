@@ -17,7 +17,7 @@ vi.mock('$lib/api', () => ({
 }));
 
 import * as api from '$lib/api';
-import { requests } from './store.svelte';
+import { requests, retryRefusal } from './store.svelte';
 
 const forgeRepo = vi.mocked(api.forgeRepo);
 const pullRequests = vi.mocked(api.pullRequests);
@@ -68,6 +68,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	retryRefusal.afterMs = 0;
 	requests.clear();
 	// Re-established rather than left to the factory: `clearAllMocks` does not
 	// drain a queued `mockReturnValueOnce`, and one test sets a false here.
@@ -128,6 +129,46 @@ describe('load', () => {
 		await requests.load();
 
 		expect(requests.openId).toBe('a');
+	});
+
+	it('asks once more when the first read is refused, and shows nothing if the second works (BUG-067)', async () => {
+		pullRequests
+			.mockRejectedValueOnce('github.com: the token was refused. (signed in as grace)')
+			.mockResolvedValueOnce([request()]);
+
+		await requests.load();
+
+		expect(pullRequests).toHaveBeenCalledTimes(2);
+		expect(requests.error).toBeNull();
+		expect(requests.all).toHaveLength(1);
+	});
+
+	it('shows a refusal that is repeated, naming the account', async () => {
+		pullRequests.mockRejectedValue('github.com: the token was refused. (signed in as grace)');
+
+		await requests.load();
+
+		expect(pullRequests).toHaveBeenCalledTimes(2);
+		expect(requests.error).toContain('signed in as grace');
+	});
+
+	it('does not ask twice about a failure that is not a refusal', async () => {
+		pullRequests.mockRejectedValue('could not reach github.com');
+
+		await requests.load();
+
+		expect(pullRequests).toHaveBeenCalledTimes(1);
+	});
+
+	it('is signed in as the account for this repository’s host, not the first connected (BUG-067)', async () => {
+		vi.mocked(api.forgeAccounts).mockResolvedValue([
+			{ kind: 'gitLab', host: 'gitlab.work.example', user: 'work-me' },
+			{ kind: 'gitHub', host: 'github.com', user: 'home-me' }
+		]);
+
+		await requests.load();
+
+		expect(requests.currentUser).toBe('home-me');
 	});
 
 	it('surfaces the host’s own sentence rather than a generic failure', async () => {

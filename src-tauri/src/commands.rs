@@ -1924,7 +1924,22 @@ pub async fn pull_requests<R: Runtime>(
     state: State<'_, AppState>,
 ) -> Result<Vec<PullRequest>> {
     let (repo, token, user) = forge_credentials(&app, state)?;
-    off_thread(move || forge::pull_requests(&repo, &token, &user)).await
+    let account = user.clone();
+    off_thread(move || forge::pull_requests(&repo, &token, &user))
+        .await
+        .map_err(|error| name_account(error, &account))
+}
+
+/// A refusal says which account was refused (BUG-067). With more than one
+/// account connected, "the token was refused" is a sentence about nobody.
+fn name_account(error: Error, user: &str) -> Error {
+    match error {
+        Error::ForgeUnauthorized { host, detail } => Error::ForgeUnauthorized {
+            host,
+            detail: format!("{detail} (signed in as {user})"),
+        },
+        other => other,
+    }
 }
 
 /// Create a new pull request on the configured forge (FEAT-070).
@@ -2130,10 +2145,12 @@ pub async fn involved_pull_requests<R: Runtime>(
         });
     };
 
+    let user = account.user.clone();
     off_thread(move || {
         forge::involved_pull_requests(account.kind, &account.host, &token, &account.user)
     })
     .await
+    .map_err(|error| name_account(error, &user))
 }
 
 /// Bring a pull request's head and its target branch into the repository,

@@ -98,3 +98,18 @@ it('does not ask for involved pull requests without an account for the current h
 	expect(review.list).toEqual([]);
 	expect(api.involvedPullRequests).not.toHaveBeenCalled();
 });
+
+it('opened before Pull requests, with two accounts, reads as the repository’s account (BUG-067)', async () => {
+	vi.mocked(api.forgeAccounts).mockResolvedValue([
+		{ kind: 'gitLab', host: 'gitlab.work.example', user: 'work-me' },
+		{ kind: 'gitHub', host: 'github.com', user: 'mahmoud' }
+	]);
+	requests.clear();
+	review.clear();
+
+	review.prime(1);
+	await vi.waitFor(() => expect(requests.loading).toBe(false));
+
+	expect(review.me).toBe('mahmoud');
+	expect(review.error).toBeNull();
+});

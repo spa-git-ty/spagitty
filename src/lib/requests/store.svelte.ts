@@ -117,6 +117,14 @@ function restoreDrafts(prNumber: number): DraftComment[] {
 	return [];
 }
 
+/** How long to wait before asking again after a refusal. Tests set it to 0. */
+export const retryRefusal = { afterMs: 700 };
+
+/** The host's refusal of the sign-in, or the keychain not giving it up. */
+function refusal(error: unknown): boolean {
+	return /refused|keychain/i.test(String(error));
+}
+
 export const requests = {
 	get all(): PullRequest[] {
 		return list;
@@ -678,16 +686,29 @@ export const requests = {
 
 			if (typeof api.forgeAccounts === 'function') {
 				try {
+					// The account for this repository's host, not the first one
+					// connected: with two accounts "you" would be someone else on
+					// the other host (BUG-067).
 					const accounts = await api.forgeAccounts();
-					if (accounts && accounts.length > 0) {
-						currentUser = accounts[0].user;
-					}
+					currentUser =
+						accounts?.find((account) => account.host === where.host)?.user ?? accounts?.[0]?.user ?? null;
 				} catch {
 					// accounts not loaded
 				}
 			}
 
-			const found = await api.pullRequests();
+			let found: PullRequest[];
+			try {
+				found = await api.pullRequests();
+			} catch (first) {
+				// A sign-in refused on the very first read, and accepted on the next
+				// with nothing changed, is not a bad sign-in (BUG-067). Ask once more
+				// before telling the reader to go and fix their account.
+				if (!refusal(first)) throw first;
+				await new Promise((resolve) => setTimeout(resolve, retryRefusal.afterMs));
+				if (mine !== seq) return;
+				found = await api.pullRequests();
+			}
 			if (mine !== seq) return;
 			this.present(found);
 		} catch (e) {
