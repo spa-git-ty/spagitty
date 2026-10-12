@@ -1242,6 +1242,30 @@ pub fn pull(repo: &Path, remote: &str, mode: PullMode) -> Result<String> {
     run(repo, &args)
 }
 
+/// Bring a local branch that is checked out nowhere up to its upstream
+/// (FEAT-126): `git fetch <remote> <merge>:refs/heads/<name>`.
+///
+/// A fetch into a branch only ever moves it forward — git refuses a refspec
+/// without `+` that is not a fast-forward — and it never touches a working
+/// copy, which is what makes it the way to update a branch nobody has checked
+/// out. Git refuses it for a branch that *is* checked out, in any worktree;
+/// that one is [`pull`], run where it is checked out.
+///
+/// The remote and the ref are `branch.<name>.remote` and `branch.<name>.merge`,
+/// the two `git pull` reads.
+pub fn fetch_into(repo: &Path, name: &str) -> Result<String> {
+    let remote = get_config(repo, &format!("branch.{name}.remote"))?;
+    let merge = get_config(repo, &format!("branch.{name}.merge"))?;
+    let (Some(remote), Some(merge)) = (remote, merge) else {
+        return Err(Error::Git {
+            command: "pull".into(),
+            stderr: format!("{name} does not track a branch on a remote"),
+        });
+    };
+    let refspec = format!("{merge}:refs/heads/{name}");
+    run(repo, &["fetch", "--progress", &remote, &refspec])
+}
+
 // --- Remotes (FEAT-049) -----------------------------------------------------
 
 /// Add a remote. Configuration only — nothing is fetched.

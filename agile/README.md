@@ -176,6 +176,10 @@ rather than an audit.
 | [FEAT-121](items/FEAT-121-what-is-running-is-said-and-what-would-collide-waits.md) | What is running is said, and what would collide waits | chrome, 1A, 1C, 1F, 1G, 1S | Done |
 | [FEAT-122](items/FEAT-122-one-branch-menu-that-can-be-searched.md) | One branch menu, that can be searched and says where you are | chrome, 1S, 1E | Done |
 | [FEAT-123](items/FEAT-123-merger-checks-out-what-it-merged-into-and-offers-the-push.md) | Merger checks out the branch it merged into, and offers to push it | 1S | Done |
+| [FEAT-124](items/FEAT-124-an-agent-that-shows-it-is-working-and-asks-at-the-top.md) | An agent that shows it is working, and asks at the top of its card | 1R, 1S | Done |
+| [FEAT-125](items/FEAT-125-a-choice-on-a-conflict-can-be-cancelled-and-pick-lines-starts-empty.md) | A choice on a conflict can be cancelled, and Pick lines starts empty | 1S, 1D | Done |
+| [FEAT-126](items/FEAT-126-merger-says-a-branch-is-behind-its-remote-and-pulls-it.md) | Merger says a branch is behind its remote, and pulls it | 1S | Done |
+| [FEAT-127](items/FEAT-127-the-review-room-says-the-pull-request-moved-and-pulls-the-latest.md) | The review room says the pull request moved, and pulls the latest | 1R | Done |
 
 ## Bugs
 
@@ -336,6 +340,7 @@ of its own.
 | [TASK-067](items/TASK-067-the-attribution-check-does-not-read-who-wrote-a-commit.md) | The attribution check does not read who wrote a commit | — | Backlog |
 | [TASK-068](items/TASK-068-what-coderabbit-found-on-63-and-64.md) | What CodeRabbit found on pull requests #63 and #64 | 1S, 1R, 1K, 1Q | Done |
 | [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Backlog |
+| [TASK-070](items/TASK-070-the-plans-file-list-scrolls-in-a-card-the-height-of-its-neighbours.md) | The plan's file list scrolls, in a card the height of its neighbours | 1S | Done |
 
 ## Skipped identifiers
 

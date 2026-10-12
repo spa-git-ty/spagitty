@@ -5,7 +5,7 @@
 	import { chipsOf, progressOf, pushedSince, sizeLabel, sizeOf, type GroupId } from './inbox';
 	import type { ReviewRecord } from './record';
 	import Icon from '$lib/ui/Icon.svelte';
-	import { cardLine } from '$lib/agents/levels';
+	import { cardLine, isWorking } from '$lib/agents/levels';
 	import type { Assignment } from '$lib/agents/types';
 
 	/**
@@ -68,7 +68,7 @@
 			{#if chips.conflict}<span class="tag resolve">{chips.conflict}</span>{/if}
 			{#if chips.threads}<span class="tag on">{chips.threads}</span>{/if}
 			{#if agent}
-				<span class="agent" title={agent.sentence}><Icon name="agent" size="0.95em" weight={2} />{cardLine(agent)}</span>
+				<span class="agent" title={agent.sentence}><Icon name="agent" size="0.95em" weight={2} /><span class:shimmer={isWorking(agent, Math.floor(Date.now() / 1000))}>{cardLine(agent)}</span></span>
 			{/if}
 		</span>
 	</span>

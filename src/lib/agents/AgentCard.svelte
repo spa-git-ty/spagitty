@@ -4,6 +4,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Loader from '$lib/ui/Loader.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import StepDetails from './StepDetails.svelte';
@@ -14,13 +15,15 @@
 	import {
 		LEVELS,
 		above,
-		atGate,
-		choiceWords,
+		askOf,
+		findingPlace,
 		grouped,
 		isLive,
+		isWorking,
 		levelWords,
 		meter,
 		nowLine,
+		planOf,
 		quietFor,
 		quietWords,
 		share,
@@ -33,8 +36,14 @@
 	 *
 	 * Four layers, each quieter than the one before: one sentence that is
 	 * always true; its presence on the work (drawn by the screen, not here);
-	 * the timeline — finished steps folded to a line, the current one open, a
-	 * gate drawn as the one tinted card; and the raw output, folded under it.
+	 * the timeline — each step folded to a line; and the raw output, folded
+	 * under it.
+	 *
+	 * The sentence moves while the agent is at work and heard from, and only
+	 * then. When it stops for the person, what it asks is under the sentence
+	 * with its buttons, at the top of the card and never in the timeline, where
+	 * it scrolled out of sight; what exactly is asked opens under them
+	 * (FEAT-124).
 	 *
 	 * Every control is a button. Pause stops at the end of the step, Stop ends
 	 * the run now, and both keep everything proposed.
@@ -72,6 +81,8 @@
 	let raw = $state(false);
 	let transcript = $state<string | null>(null);
 	let told = $state('');
+	/** The step whose question is open in full. A new question starts closed. */
+	let asked = $state<number | null>(null);
 	let menu = $state<{ x: number; y: number; anchor: HTMLElement } | null>(null);
 
 	onMount(() => {
@@ -81,7 +92,9 @@
 
 	const a = $derived(assignment);
 	const live = $derived(isLive(a));
-	const gate = $derived(atGate(a));
+	const ask = $derived(askOf(a, names));
+	const more = $derived(ask?.step != null && asked === ask.step.index);
+	const plan = $derived(planOf(a));
 	const highest = $derived(agents.rules?.highest ?? 'signOff');
 	const remote = $derived(a.agent.reach === 'remote');
 	const budget = $derived(
@@ -105,6 +118,7 @@
 								? 'working'
 								: 'stopped'
 	);
+	const working = $derived(isWorking(a, now));
 	const steps = $derived(a.steps.filter((s) => s.kind.kind !== 'why'));
 	const lines = $derived(agents.lines(a.id));
 	const shown = $derived(
@@ -173,7 +187,7 @@
 		return 'circle';
 	}
 
-	const waitingProposals = $derived(gate?.proposals ?? []);
+	const waitingProposals = $derived(ask?.proposals ?? []);
 	const lastCommand = $derived([...a.steps].reverse().find((s) => s.command)?.command ?? null);
 </script>
 
@@ -205,12 +219,89 @@
 		{/if}
 	</div>
 
-	<p class="sentence {tone}" aria-live="polite">
-		{a.pausing && live ? 'Pausing after this step' : a.sentence}
-	</p>
-	{#if live && doing && a.state === 'working' && quiet === null}
-		<p class="doing note mono" data-testid="doing">{doing}</p>
-	{/if}
+	<div class="now" class:asking={ask !== null}>
+		<p class="sentence {tone}" aria-live="polite">
+			{#if working}<span class="strands" aria-hidden="true"><Loader size="inline" label="" /></span>{/if}
+			<span class:shimmer={working}>{a.pausing && live ? 'Pausing after this step' : a.sentence}</span>
+		</p>
+		{#if live && doing && a.state === 'working' && quiet === null}
+			<p class="doing note mono" data-testid="doing">{doing}</p>
+		{/if}
+		{#if ask}
+			{@const step = ask.step}
+			<!-- The sentence often says it already: "Waiting for you: bun test failed". -->
+			{#if !a.sentence.includes(ask.summary)}<span class="summary">{ask.summary}</span>{/if}
+			<div class="acts">
+				{#if !step}
+					<Btn primary quiet onclick={() => send({ kind: 'carryOn' })}>Carry on</Btn>
+					<Btn onclick={() => send({ kind: 'stop' })}>Stop</Btn>
+				{:else if step.gate === 'plan'}
+					<Btn primary quiet onclick={() => send({ kind: 'continue' })}>Go on</Btn>
+					<Btn onclick={() => redo(step)}>Redo with a note</Btn>
+				{:else if step.gate === 'send' || step.gate === 'land'}
+					<Btn primary quiet onclick={() => onlast?.()}>{step.gate === 'send' ? 'Finish review' : 'Complete merge'}</Btn>
+				{:else if step.gate === 'checks'}
+					<Btn primary quiet onclick={() => send({ kind: 'continue' })}>Go on</Btn>
+					<Btn onclick={() => send({ kind: 'redo', note: '' })}>Run again</Btn>
+				{:else}
+					{#if waitingProposals.length && onaccept}
+						<Btn primary quiet onclick={() => accept(waitingProposals)}>
+							{waitingProposals.length === 1 ? 'Accept' : waitingProposals.length === 2 ? 'Accept both' : 'Accept all'}
+						</Btn>
+					{/if}
+					{#if waitingProposals.length && ongo && waitingProposals[0].body.kind !== 'verdict'}
+						<Btn onclick={() => ongo?.(waitingProposals)}>{waitingProposals.length === 1 ? 'Go to it' : 'Go to them'}</Btn>
+					{/if}
+					<Btn onclick={() => send({ kind: 'continue' })}>{waitingProposals.length ? 'Go on, decide later' : 'Go on'}</Btn>
+					<Btn onclick={() => redo(step)}>Redo with a note</Btn>
+				{/if}
+			</div>
+			{#if step && ask.more}
+				<button class="raw-toggle note" aria-expanded={more} onclick={() => (asked = more ? null : step.index)}>
+					<Icon name={more ? 'chevron-down' : 'chevron-right'} size="0.9em" />{ask.more}
+				</button>
+				{#if more}
+					<div class="asked">
+						{#if step.gate === 'plan'}
+							{@const files = plan?.files ?? []}
+							<ol class="plan">
+								{#each files as item (item.path)}
+									<li>
+										<span class="what">
+											<span class="mono">{item.path}</span>
+											{#if item.why}<span class="note">{item.why}</span>{/if}
+										</span>
+										<Chip title="Leave {item.path} out" onclick={() => dropFromPlan(files.map((f) => f.path), item.path)}>
+											<Icon name="close" size="0.8em" />
+										</Chip>
+									</li>
+								{/each}
+							</ol>
+						{:else if step.gate === 'checks'}
+							{@const failed = step.checks.find((c) => !c.passed)}
+							{#if failed}<pre class="output">{failed.output.split('\n').slice(-12).join('\n')}</pre>{/if}
+						{:else}
+							<ul class="findings">
+								{#each waitingProposals as proposal (proposal.id)}
+									{#if proposal.body.kind === 'verdict'}
+										<li><span class="said">{proposal.body.summary}</span></li>
+									{:else if proposal.body.kind === 'comment'}
+										<li>
+											<span class="where">
+												<span class="mono">{findingPlace(proposal.body)}</span>
+												<span class="note">{proposal.body.severity}{proposal.sure ? '' : ' · unsure'}</span>
+											</span>
+											<span class="said">{proposal.body.body}</span>
+										</li>
+									{/if}
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				{/if}
+			{/if}
+		{/if}
+	</div>
 	{#if quiet !== null}
 		<div class="quiet" role="status">
 			<span>Nothing from {a.agent.name} for {quietWords(quiet)}.</span>
@@ -235,11 +326,11 @@
 		</div>
 	{/if}
 
-	<div class="timeline">
-		<VirtualRows items={steps} key={(step) => String(step.index)} estimate={(step) => (step.state === 'waiting' ? 150 : 34)} label="Timeline">
+	<div class="timeline" class:tight={more}>
+		<VirtualRows items={steps} key={(step) => String(step.index)} estimate={() => 34} label="Timeline">
 			{#snippet row(step)}
 				<div class="step {step.state}">
-<button
+					<button
 						class="line"
 						onclick={() => {
 							selected = step.index;
@@ -252,78 +343,9 @@
 						<span class="label">{step.label}</span>
 						<span class="note mono">{stepTime(step, now)}</span>
 					</button>
-										{#if step.state === 'waiting' && gate && gate.step.index === step.index}
-						<div class="gate">
-							{#if step.gate === 'plan'}
-								{@const plan = [...a.proposals].reverse().find((p) => p.body.kind === 'plan')}
-								{#if plan && plan.body.kind === 'plan'}
-									{@const files = plan.body.files.map((f) => f.path)}
-									<span>{plan.body.lookFor || 'The reading plan'}</span>
-									<ol class="plan">
-										{#each plan.body.files as item (item.path)}
-											<li>
-												<span class="mono">{item.path}</span>
-												<Chip title="Leave {item.path} out" onclick={() => dropFromPlan(files, item.path)}><Icon name="close" size="0.8em" /></Chip>
-											</li>
-										{/each}
-									</ol>
-								{/if}
-								<div class="acts">
-									<Btn primary quiet onclick={() => send({ kind: 'continue' })}>Go on</Btn>
-									<Btn onclick={() => redo(step)}>Redo with a note</Btn>
-								</div>
-							{:else if step.gate === 'send' || step.gate === 'land'}
-								<span>{step.gate === 'send' ? 'Ready for you to send.' : 'Ready for you to merge.'}</span>
-								<div class="acts">
-									<Btn primary quiet onclick={() => onlast?.()}>{step.gate === 'send' ? 'Finish review' : 'Complete merge'}</Btn>
-								</div>
-							{:else if step.gate === 'checks'}
-								{@const failed = step.checks.find((c) => !c.passed)}
-								<span>{failed ? `${failed.command} failed` : 'The checks passed.'}</span>
-								{#if failed}<pre class="output">{failed.output.split('\n').slice(-12).join('\n')}</pre>{/if}
-								<div class="acts">
-									<Btn primary quiet onclick={() => send({ kind: 'continue' })}>Go on</Btn>
-									<Btn onclick={() => send({ kind: 'redo', note: '' })}>Run again</Btn>
-								</div>
-							{:else}
-								{#if waitingProposals.length}
-									{#if waitingProposals.length === 1 && waitingProposals[0].body.kind === 'resolution'}
-										<span>{waitingProposals[0].body.why || choiceWords(waitingProposals[0].body.choice, names ?? { a: 'A', b: 'B' })}</span>
-									{:else if waitingProposals.length === 1 && waitingProposals[0].body.kind === 'verdict'}
-										<span>{waitingProposals[0].body.summary}</span>
-									{:else}
-										<span>{waitingProposals.length} {waitingProposals.length === 1 ? 'finding' : 'findings'}</span>
-									{/if}
-								{:else}
-									<span>Nothing to decide here.</span>
-								{/if}
-								<div class="acts">
-									{#if waitingProposals.length && ongo && waitingProposals[0].body.kind !== 'verdict'}
-										<Btn onclick={() => ongo?.(waitingProposals)}>{waitingProposals.length === 1 ? 'Go to it' : 'Go to them'}</Btn>
-									{/if}
-									{#if waitingProposals.length && onaccept}
-										<Btn primary quiet onclick={() => accept(waitingProposals)}>
-											{waitingProposals.length === 1 ? 'Accept' : waitingProposals.length === 2 ? 'Accept both' : 'Accept all'}
-										</Btn>
-									{/if}
-									<Btn onclick={() => send({ kind: 'continue' })}>{waitingProposals.length ? 'Go on, decide later' : 'Go on'}</Btn>
-									<Btn onclick={() => redo(step)}>Redo with a note</Btn>
-								</div>
-							{/if}
-						</div>
-					{/if}
 				</div>
 			{/snippet}
 		</VirtualRows>
-		{#if a.state === 'waiting' && !gate && a.reason}
-			<div class="gate">
-				<span>{a.reason}</span>
-				<div class="acts">
-					<Btn primary quiet onclick={() => send({ kind: 'carryOn' })}>Carry on</Btn>
-					<Btn onclick={() => send({ kind: 'stop' })}>Stop</Btn>
-				</div>
-			</div>
-		{/if}
 		{#if !live && (a.reason || a.tookOver)}
 			<p class="ended note" class:failed={a.state === 'failed'}>{a.tookOver ?? a.reason}</p>
 		{/if}
@@ -411,11 +433,67 @@
 		white-space: nowrap;
 	}
 
+	/* What it is doing now. When it stops for the person this is the one
+	   tinted card, with what it asks and the buttons that answer it. */
+	.now {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.now.asking {
+		padding: 10px 12px;
+		border-radius: var(--r-panel);
+		background: var(--agent-soft);
+		border: 1px solid var(--agent-edge);
+		animation: rise-in var(--t-slow) var(--ease) both;
+	}
+
 	.sentence {
 		margin: 0;
 		display: flex;
 		align-items: center;
 		gap: 8px;
+	}
+
+	.strands {
+		display: inline-flex;
+		flex: none;
+	}
+
+	/* Everything that is asked, once it is asked for: it scrolls in its own
+	   box, so the buttons over it stay where they are. */
+	.asked {
+		max-height: min(38vh, 300px);
+		overflow: auto;
+	}
+
+	.findings {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.findings li,
+	.what {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.where {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+	}
+
+	.said,
+	.what .mono {
+		overflow-wrap: anywhere;
 	}
 
 	.sentence.waiting {
@@ -431,7 +509,7 @@
 	}
 
 	.doing {
-		margin: -4px 0 0;
+		margin: -2px 0 0;
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -488,6 +566,11 @@
 		padding-top: 6px;
 	}
 
+	/* What is asked is open over it: the steps give way before the card overflows. */
+	.timeline.tight {
+		min-height: 72px;
+	}
+
 	.step {
 		padding: 1px 0;
 	}
@@ -540,21 +623,12 @@
 		white-space: nowrap;
 	}
 
-	.gate,
 	.ended {
 		margin: 6px 0;
 		padding: 10px 12px;
 		border-radius: var(--r-panel);
-		background: var(--agent-soft);
-		border: 1px solid var(--agent-edge);
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.ended {
 		background: var(--surface-2);
-		border-color: var(--soft);
+		border: 1px solid var(--soft);
 	}
 
 	.ended.failed {

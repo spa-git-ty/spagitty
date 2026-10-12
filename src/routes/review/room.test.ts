@@ -24,6 +24,7 @@ import { aFinding, aReview, aSnapshot, aStep } from '../../testing/agent-fixture
 import { requests } from '$lib/requests/store.svelte';
 import { reading } from '$lib/reading.svelte';
 import { review } from '$lib/review/store.svelte';
+import { room } from '$lib/review/room.svelte';
 import { filesView } from '$lib/review/files-view.svelte';
 import type { DiffLine, FileChange, FullFile, PullRequestComment } from '$lib/types';
 import Page from './+page.svelte';
@@ -850,4 +851,82 @@ it('sends an agent’s comments marked as drafted, unless the repository says no
 	const [, , body, drafts] = vi.mocked(api.submitReview).mock.calls.at(-1)!;
 	expect(body).toContain('1 of these comments was drafted with Claude Code.');
 	expect(drafts![0].body).toContain('_Drafted with Claude Code_');
+});
+
+describe('a pull request that moved on its host (FEAT-127)', () => {
+	const notice = () => view.find('.newer');
+	const moved = { ...PR, headSha: 'h2' };
+
+	it('says nothing while the host has the head that is read here', async () => {
+		await openRoom();
+		await vi.waitFor(() => expect(api.pullRequests).toHaveBeenCalledTimes(2));
+		await tick();
+
+		expect(notice()).toBeNull();
+	});
+
+	it('says the pull request has new commits, and reads them only when asked', async () => {
+		await openRoom();
+		// The author pushes; the room asks again when the window comes back.
+		vi.mocked(api.pullRequests).mockResolvedValue([moved]);
+		vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'h2', base: 'b1', mergeBase: 'm1' });
+		await room.check(true);
+		await vi.waitFor(() => expect(notice()).not.toBeNull());
+
+		expect(notice()!.textContent).toContain('New commits on GitHub since this was read.');
+		// Nothing was fetched for it: what is shown is still the old head.
+		expect(api.reviewCheckout).toHaveBeenCalledTimes(1);
+
+		click(button('Pull latest'));
+		await vi.waitFor(() => expect(api.reviewCheckout).toHaveBeenLastCalledWith(214, 'main', 'h2'));
+		await vi.waitFor(() => expect(api.reviewFiles).toHaveBeenLastCalledWith('m1', 'h2'));
+		await vi.waitFor(() => expect(notice()).toBeNull());
+		const saved = vi.mocked(api.setReviewState).mock.calls.at(-1)![1] as Record<string, unknown>;
+		expect(saved.headSha).toBe('h2');
+	});
+
+	it('takes a short id and a whole one for the same commit', async () => {
+		vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'h1'.padEnd(40, '0'), base: 'b1', mergeBase: 'm1' });
+		await openRoom();
+		await room.check(true);
+		await tick();
+
+		expect(notice()).toBeNull();
+	});
+
+	it('goes on as it was when the host cannot be asked', async () => {
+		await openRoom();
+		vi.mocked(api.pullRequests).mockRejectedValue(new Error('offline'));
+		await room.check(true);
+		await tick();
+
+		expect(notice()).toBeNull();
+		expect(view.find('[aria-label="Review controls"]')).not.toBeNull();
+	});
+
+	it('does not ask again within half a minute unless it is asked to', async () => {
+		await openRoom();
+		await vi.waitFor(() => expect(api.pullRequests).toHaveBeenCalledTimes(2));
+
+		await room.check();
+		window.dispatchEvent(new Event('focus'));
+		await tick();
+		expect(api.pullRequests).toHaveBeenCalledTimes(2);
+
+		await room.check(true);
+		expect(api.pullRequests).toHaveBeenCalledTimes(3);
+	});
+
+	it('keeps a comment being written: Pull latest waits for it', async () => {
+		await openRoom();
+		vi.mocked(api.pullRequests).mockResolvedValue([moved]);
+		await room.check(true);
+		await vi.waitFor(() => expect(notice()).not.toBeNull());
+		const pull = () => button('Pull latest') as HTMLButtonElement;
+		expect(pull().disabled).toBe(false);
+
+		room.compose(room.selected!, 0);
+		await vi.waitFor(() => expect(pull().disabled).toBe(true));
+		expect(pull().title).toBe('Save or cancel the comment you are writing first');
+	});
 });

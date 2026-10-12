@@ -5,6 +5,7 @@ import {
 	LEVELS,
 	above,
 	agentRead,
+	askOf,
 	atGate,
 	capped,
 	choiceWords,
@@ -12,16 +13,19 @@ import {
 	clock,
 	consentSlug,
 	findingLabel,
+	findingPlace,
 	findingsByPath,
 	cardLine,
 	grouped,
 	isLive,
+	isWorking,
 	leaves,
 	levelWords,
 	meter,
 	nowLine,
 	openFindings,
 	perRun,
+	planOf,
 	planned,
 	progressOf,
 	quietFor,
@@ -246,5 +250,141 @@ describe('how far through a run is (FEAT-119)', () => {
 		expect(
 			cardLine(aReview({ state: 'working', planned: 0, steps: [aStep({ label: 'Read the pull request', state: 'running', endedAt: null })] }), 1_000)
 		).toBe('Claude Code · Read the pull request');
+	});
+});
+
+describe('at work, and what it asks (FEAT-124)', () => {
+	it('is at work only while it is starting or working and has been heard from', () => {
+		const working = (state: Assignment['state'], since: number | null = null) =>
+			isWorking(aReview({ state, quietSince: since }), 1_000);
+		expect(working('starting')).toBe(true);
+		expect(working('working')).toBe(true);
+		expect(working('working', 1_000 - 60)).toBe(true);
+		expect(working('working', 1_000 - 240)).toBe(false);
+		for (const state of ['waiting', 'paused', 'stopped', 'failed', 'done'] as const) {
+			expect(working(state)).toBe(false);
+		}
+	});
+
+	it('asks nothing unless it waits', () => {
+		expect(askOf(aReview({ state: 'working' }))).toBeNull();
+		expect(askOf(aReview({ state: 'done' }))).toBeNull();
+		expect(askOf(aReview({ steps: [aStep()], reason: null }))).toBeNull();
+	});
+
+	it('says the findings in a line, by how serious they are', () => {
+		const ask = askOf(aReview())!;
+		expect(ask.step?.index).toBe(2);
+		expect(ask.proposals).toHaveLength(2);
+		expect(ask.summary).toBe('2 findings · 1 high, 1 low');
+		expect(ask.more).toBe('The findings');
+		const one = askOf(aReview({ proposals: [aFinding({}, { severity: 'medium' })] }))!;
+		expect(one.summary).toBe('1 finding · 1 medium');
+		expect(one.more).toBe('The finding');
+	});
+
+	it('has nothing more to open when nothing is left to decide', () => {
+		expect(askOf(aReview({ proposals: [aFinding({ state: 'accepted' })] }))).toMatchObject({
+			summary: 'Nothing to decide here.',
+			more: null
+		});
+	});
+
+	it('says what the plan looks for, with its files as the more', () => {
+		const plan = {
+			id: 'p1-0',
+			step: 1,
+			body: { kind: 'plan' as const, files: [{ path: 'a.rs', why: 'the cache' }], lookFor: 'races' },
+			sure: true,
+			state: 'proposed' as const,
+			decidedBy: null,
+			why: null,
+			stale: false
+		};
+		const waiting = aStep({ index: 1, kind: { kind: 'plan' }, state: 'waiting', gate: 'plan', endedAt: null });
+		const a = aReview({ steps: [aStep(), waiting], proposals: [plan] });
+		expect(planOf(a)?.files).toEqual([{ path: 'a.rs', why: 'the cache' }]);
+		expect(askOf(a)).toMatchObject({ summary: 'races', more: 'The plan' });
+		const bare = aReview({ steps: [aStep(), waiting], proposals: [{ ...plan, body: { ...plan.body, files: [], lookFor: '' } }] });
+		expect(askOf(bare)).toMatchObject({ summary: 'The reading plan', more: null });
+		expect(planOf(aReview())).toBeNull();
+	});
+
+	it('says which check failed, with its output as the more', () => {
+		const checks = (passed: boolean) =>
+			aMerge({
+				state: 'waiting',
+				steps: [
+					aStep({
+						kind: { kind: 'checks' },
+						state: 'waiting',
+						gate: 'checks',
+						endedAt: null,
+						checks: [{ command: 'bun test', passed, output: 'expected 2, got 3', durationMs: 10 }]
+					})
+				]
+			});
+		expect(askOf(checks(false))).toMatchObject({ summary: 'bun test failed', more: 'The output' });
+		expect(askOf(checks(true))).toMatchObject({ summary: 'The checks passed.', more: null });
+	});
+
+	it('says the last act is ready, and has nothing more to open', () => {
+		const last = (gate: 'send' | 'land') =>
+			askOf(aReview({ steps: [aStep({ kind: { kind: 'last' }, state: 'waiting', gate, endedAt: null })], proposals: [] }));
+		expect(last('send')).toMatchObject({ summary: 'Ready for you to send.', more: null });
+		expect(last('land')).toMatchObject({ summary: 'Ready for you to merge.', more: null });
+	});
+
+	it('says why a conflict was resolved as it was, or how when there is no why', () => {
+		const at = (why: string) =>
+			aMerge({
+				state: 'waiting',
+				steps: [aStep({ index: 1, kind: { kind: 'conflict', path: 'a', region: 0 }, state: 'waiting', gate: 'conflict', endedAt: null })],
+				proposals: [
+					{
+						...aMerge().proposals[0],
+						step: 1,
+						state: 'proposed',
+						body: { kind: 'resolution', path: 'a', region: 0, choice: { mode: 'a' }, why }
+					}
+				]
+			});
+		expect(askOf(at('Keeps both.'), { a: 'main', b: 'feat' })).toMatchObject({ summary: 'Keeps both.', more: null });
+		expect(askOf(at(''), { a: 'main', b: 'feat' })?.summary).toBe('Take main');
+		expect(askOf(at(''))?.summary).toBe('Take A');
+	});
+
+	it('says the verdict as its step does, with the summary as the more', () => {
+		const a = aReview({
+			steps: [aStep({ index: 3, kind: { kind: 'verdict' }, label: 'Verdict · Approve', state: 'waiting', gate: 'verdict', endedAt: null })],
+			proposals: [
+				{
+					id: 'p3-0',
+					step: 3,
+					body: { kind: 'verdict', summary: 'Reads well.', verdict: 'approve', sure: true },
+					sure: true,
+					state: 'proposed',
+					decidedBy: null,
+					why: null,
+					stale: false
+				}
+			]
+		});
+		expect(askOf(a)).toMatchObject({ summary: 'Verdict · Approve', more: 'The summary' });
+	});
+
+	it('asks whether to carry on when it stopped between steps', () => {
+		const a = aReview({ steps: [aStep()], reason: 'The pull request changed since the agent started.' });
+		expect(askOf(a)).toEqual({
+			step: null,
+			proposals: [],
+			summary: 'The pull request changed since the agent started.',
+			more: null
+		});
+	});
+
+	it('names where a finding is by its file and line', () => {
+		expect(findingPlace({ path: 'crates/spagitty-core/src/avatars.rs', line: 16 })).toBe('avatars.rs:16');
+		expect(findingPlace({ path: 'README.md', line: 1 })).toBe('README.md:1');
 	});
 });

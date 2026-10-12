@@ -11,7 +11,7 @@
  * mounting a screen.
  */
 
-import type { MergerFile, MergerForecast, MergerSide } from '../types';
+import type { BranchRow, MergerFile, MergerForecast, MergerSide } from '../types';
 
 /** Where the result lands. */
 export type Into = 'a' | 'b' | 'new';
@@ -318,6 +318,43 @@ export function connector(
 export function sinceSplit(side: MergerSide, baseShort: string): string {
 	if (side.ahead === 0) return `Nothing since they split at ${baseShort}`;
 	return `${plural(side.ahead, 'commit')} since they split at ${baseShort}`;
+}
+
+/**
+ * How far a local branch is from the branch it tracks (FEAT-126). As old as
+ * the last fetch: nothing here has asked the remote.
+ */
+export interface Drift {
+	upstream: string;
+	/** Commits the branch has that its upstream does not. */
+	ahead: number;
+	/** Commits its upstream has that it does not. Always more than none. */
+	behind: number;
+}
+
+/** Every local branch whose upstream has commits it lacks, by name. */
+export function driftsFrom(rows: BranchRow[]): Record<string, Drift> {
+	const out: Record<string, Drift> = {};
+	for (const row of rows) {
+		if (row.kind !== 'branch' || !row.upstream || !row.behind) continue;
+		out[row.name] = { upstream: row.upstream, ahead: row.ahead ?? 0, behind: row.behind };
+	}
+	return out;
+}
+
+/** `3 new commits on origin/main`. */
+export function behindLine(drift: Drift): string {
+	return `${drift.behind} new ${drift.behind === 1 ? 'commit' : 'commits'} on ${drift.upstream}`;
+}
+
+/**
+ * Why *Pull now* cannot move a branch, or null when it can. It only ever
+ * moves a branch forward, and a branch with commits of its own cannot be:
+ * bringing the upstream in is a merge, and this is the screen for that.
+ */
+export function pullRefusal(name: string, drift: Drift): string | null {
+	if (drift.ahead === 0) return null;
+	return `${name} has ${plural(drift.ahead, 'commit')} that ${drift.upstream} does not, so it cannot simply move forward. Pick ${drift.upstream} as the other branch to merge it in.`;
 }
 
 export type FileTone = 'danger' | 'ok' | 'a' | 'b' | 'muted';

@@ -98,15 +98,51 @@ it('every result line says where it came from, and later lines renumber', async 
 	expect(first()).toBe('7');
 });
 
-it('picks single lines, and the unticked ones fade', async () => {
+it('picks single lines from none ticked, and the unticked ones fade once one is', async () => {
 	await opened();
 
 	click(labelled('Pick lines from each side', 1));
 	await vi.waitFor(() => expect(cards()[1].querySelectorAll('input[type="checkbox"]').length).toBe(5));
-	const ticks = [...cards()[1].querySelectorAll('input[type="checkbox"]')] as HTMLInputElement[];
-	click(ticks[2]);
-	await vi.waitFor(() => expect(cards()[1].querySelectorAll('.own.dropped').length).toBe(1));
+	const ticks = () => [...cards()[1].querySelectorAll('input[type="checkbox"]')] as HTMLInputElement[];
+	// Nothing is ticked, nothing is resolved, and every line can still be read.
+	expect(ticks().filter((tick) => tick.checked)).toHaveLength(0);
+	expect(text(cards()[1])).toContain('Unresolved');
+	expect(text(cards()[1])).toContain('Tick the lines to keep');
+	expect(cards()[1].querySelectorAll('.own.dropped')).toHaveLength(0);
+	expect(view.text()).toContain('0 of 4 resolved');
+
+	click(ticks()[2]);
+	await vi.waitFor(() => expect(cards()[1].querySelectorAll('.own.dropped').length).toBe(4));
 	expect(text(cards()[1])).toContain('Picked lines');
+	expect(view.text()).toContain('1 of 4 resolved');
+});
+
+it('cancels a choice, however it was made, and a whole file of them', async () => {
+	await opened();
+	const cancel = (card: number) => cards()[card].querySelector<HTMLElement>('.choice.cancel');
+	expect(cancel(0)).toBeNull();
+
+	// One side.
+	click(labelled('Take main'));
+	await vi.waitFor(() => expect(view.text()).toContain('1 of 4 resolved'));
+	click(cancel(0)!);
+	await vi.waitFor(() => expect(view.text()).toContain('0 of 4 resolved'));
+	expect(text(cards()[0])).toContain('Choose what goes here');
+	expect(cancel(0)).toBeNull();
+
+	// By line, before and after a line is ticked.
+	click(labelled('Pick lines from each side'));
+	await vi.waitFor(() => expect(cards()[0].querySelectorAll('input[type="checkbox"]').length).toBeGreaterThan(0));
+	click(cancel(0)!);
+	await vi.waitFor(() => expect(cards()[0].querySelectorAll('input[type="checkbox"]')).toHaveLength(0));
+
+	// The whole file from one side, then all of it cancelled.
+	expect(view.all('button').find((b) => text(b) === 'Cancel all')).toBeUndefined();
+	click(view.all('button').find((b) => text(b).endsWith('All from main'))!);
+	await vi.waitFor(() => expect(view.text()).toContain('2 of 4 resolved'));
+	click(view.all('button').find((b) => text(b) === 'Cancel all')!);
+	await vi.waitFor(() => expect(view.text()).toContain('0 of 4 resolved'));
+	expect(view.all('button').find((b) => text(b) === 'Cancel all')).toBeUndefined();
 });
 
 it('edits by hand, starting from both sides', async () => {

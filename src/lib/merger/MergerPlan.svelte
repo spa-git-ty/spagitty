@@ -22,6 +22,7 @@
 	} from './plan';
 	import SideBadge from './SideBadge.svelte';
 	import { merger } from './store.svelte';
+	import { activity } from '$lib/activity/store.svelte';
 	import AssignPopover from '$lib/agents/AssignPopover.svelte';
 	import { agents } from '$lib/agents/store.svelte';
 	import { cardLine, isLive } from '$lib/agents/levels';
@@ -70,6 +71,8 @@
 	const summary = $derived(forecast && who ? conflictSummary(forecast, who, strategy) : null);
 	const action = $derived(forecast ? primaryAction(forecast, strategy) : null);
 	const nothing = $derived(forecast && who ? forecast[who.source].ahead === 0 : false);
+	/** What a pull would collide with, if anything is running (FEAT-126). */
+	const pullWaits = $derived(activity.blocked('repository', 'network'));
 	/** Why the forecast's primary action cannot run, or null. */
 	const stopped = $derived(
 		nothing ? 'Nothing comes in' : blocked ?? (choices.find((c) => c.id === strategy)?.reason ?? null)
@@ -116,6 +119,10 @@
 			other={merger.b}
 			current={merger.current}
 			onpick={(name) => merger.pickA(name)}
+			drift={merger.driftOf(merger.a)}
+			pulling={merger.pulling !== null && merger.pulling === merger.a}
+			waiting={pullWaits}
+			onpull={() => merger.a && merger.pullNow(merger.a)}
 		/>
 
 		{#if forecast && who}
@@ -241,6 +248,10 @@
 			other={merger.a}
 			current={merger.current}
 			onpick={(name) => merger.pickB(name)}
+			drift={merger.driftOf(merger.b)}
+			pulling={merger.pulling !== null && merger.pulling === merger.b}
+			waiting={pullWaits}
+			onpull={() => merger.b && merger.pullNow(merger.b)}
 		/>
 	</div>
 
@@ -742,9 +753,18 @@
 		font-size: var(--fs-secondary);
 	}
 
+	/*
+	 * As tall as the taller of the two cards beside it, and no taller: its
+	 * own content is left out of the row's height (`contain: size`), so a
+	 * long list of files scrolls inside the card and does not stretch How it
+	 * is merged and History after down the page with it. The least height is
+	 * for when the row wraps and it has a line to itself.
+	 */
 	.changes {
 		flex: 1 1 380px;
 		min-width: 0;
+		min-height: 240px;
+		contain: size;
 		padding: 14px;
 		display: flex;
 		flex-direction: column;
@@ -767,6 +787,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	/* A row keeps its height; the list scrolls, its rows never squeeze. */
+	.files li {
+		flex: none;
 	}
 
 	.file {

@@ -25,6 +25,7 @@ import * as farmApi from '../farm/api';
 import { network } from '../network/store.svelte';
 import { repo } from '../repo.svelte';
 import { requests } from '../requests/store.svelte';
+import { notice } from '../ui/notice.svelte';
 import type {
 	BranchRow,
 	MergeMethod,
@@ -37,10 +38,12 @@ import type {
 } from '../types';
 import {
 	defaultNewName,
+	driftsFrom,
 	effectiveStrategy,
 	pushPlan,
 	roles,
 	strategies,
+	type Drift,
 	type Into,
 	type PushPlan,
 	type Roles,
@@ -67,7 +70,14 @@ let loading = $state(false);
 let error = $state<string | null>(null);
 let pickables = $state<Pickable[]>([]);
 let current = $state<string | null>(null);
+/** The local branches whose upstream has commits they lack (FEAT-126). */
+let drifts = $state<Record<string, Drift>>({});
+/** The branch *Pull now* is bringing up to date, or null. */
+let pulling = $state<string | null>(null);
 let seq = 0;
+
+/** A pull writes refs, perhaps a working copy, and talks to a remote. */
+const PULL_LANES = ['repository', 'network'] as const;
 /** Each picker name's commit, as the last read of the refs found it. */
 let tips = new Map<string, string>();
 /**
@@ -275,6 +285,40 @@ export const merger = {
 	},
 	get pickables(): Pickable[] {
 		return pickables;
+	},
+	/** How far behind its upstream a branch is, when it is; as of the last fetch. */
+	driftOf(name: string | null): Drift | null {
+		return (name && drifts[name]) || null;
+	},
+	get pulling(): string | null {
+		return pulling;
+	},
+
+	/**
+	 * Pull now (FEAT-126): bring a branch up to its upstream, whichever branch
+	 * is checked out. Only forward. The refs are read again afterwards, so the
+	 * forecast is worked out against the branch as it is now.
+	 */
+	async pullNow(name: string): Promise<boolean> {
+		if (pulling) return false;
+		const step = activity.begin('pull', `Pulling ${name}`, PULL_LANES);
+		if (!step) {
+			notice.failed(`Could not pull ${name}`, activity.blocked(...PULL_LANES));
+			return false;
+		}
+		pulling = name;
+		try {
+			await api.pullBranch(name);
+			notice.ok(`${name} is up to date`);
+			return true;
+		} catch (cause) {
+			notice.failed(`Could not pull ${name}`, cause);
+			return false;
+		} finally {
+			pulling = null;
+			step.end();
+			await repo.refresh();
+		}
 	},
 	/** The branch checked out here, for the pickers to mark. */
 	get current(): string | null {
@@ -784,6 +828,7 @@ export const merger = {
 		}
 		const [rows, tags] = await Promise.all([api.branches(), api.tags().catch(() => [] as Tag[])]);
 		pickables = pickablesFrom(rows, tags);
+		drifts = driftsFrom(rows);
 		tips = new Map([...rows.map((row) => [row.name, row.id] as const), ...tags.map((tag) => [tag.name, tag.target] as const)]);
 		const wanted = preset;
 		preset = null;
@@ -905,6 +950,8 @@ export const merger = {
 		loading = false;
 		error = null;
 		pickables = [];
+		drifts = {};
+		pulling = null;
 		tips = new Map();
 		requested = null;
 		current = null;

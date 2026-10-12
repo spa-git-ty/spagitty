@@ -13,10 +13,11 @@ import {
 	locate,
 	offered,
 	parseRegions,
-	pickAll,
+	pickNone,
 	placeholder,
 	readFile,
 	resultText,
+	settles,
 	splitLines,
 	statusLabel,
 	toggled,
@@ -123,11 +124,27 @@ describe('every way out of a region', () => {
 		expect(kept(null, 'a', 0)).toBeNull();
 	});
 
-	it('starts Pick lines with every line ticked, and turns one over', () => {
-		const all = pickAll(first) as Choice & { mode: 'pick' };
-		expect(all).toEqual({ mode: 'pick', a: [true], b: [true, true] });
-		expect(toggled(all, 'b', 0)).toEqual({ mode: 'pick', a: [true], b: [false, true] });
-		expect(all.b[0]).toBe(true);
+	it('starts Pick lines with no line ticked, and turns one over', () => {
+		const none = pickNone(first) as Choice & { mode: 'pick' };
+		expect(none).toEqual({ mode: 'pick', a: [false], b: [false, false] });
+		expect(toggled(none, 'b', 0)).toEqual({ mode: 'pick', a: [false], b: [true, false] });
+		expect(none.b[0]).toBe(false);
+	});
+
+	it('does not count Pick lines as a choice until a line is ticked', () => {
+		const none = pickNone(first) as Choice & { mode: 'pick' };
+		expect(settles(none)).toBe(false);
+		expect(settles(toggled(none, 'a', 0))).toBe(true);
+		expect(settles(null)).toBe(false);
+		expect(settles(undefined)).toBe(false);
+		// Keeping nothing on purpose is a hand edit, and that does settle it.
+		expect(settles({ mode: 'edit', text: '' })).toBe(true);
+		expect(lines(none)).toBeUndefined();
+		expect(counts([file], { 'src/f.ts': [none, { mode: 'a' }] })).toEqual({ total: 2, resolved: 1 });
+		expect(resultText(file, [none, { mode: 'a' }])).toBeNull();
+		expect(landing(file, [none, { mode: 'a' }])).toBeNull();
+		// A hand edit started from it has both sides to work with, as from nothing.
+		expect(editSeed(first, none)).toEqual(editSeed(first, null));
 	});
 
 	it('starts a hand edit from the result so far, or both sides', () => {

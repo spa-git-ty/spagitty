@@ -371,6 +371,14 @@ export const review = {
 		room = null;
 	},
 
+	/**
+	 * The open pull request as the host has it now (FEAT-127): the room reads
+	 * it again, from its new head.
+	 */
+	update(pr: PullRequest): void {
+		if (room && room.pr.number === pr.number) room = { pr, key: room.key };
+	},
+
 	/** The pull request being checked out, or null. */
 	get checkingOut(): number | null {
 		return checkingOut;

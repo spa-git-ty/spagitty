@@ -15,6 +15,7 @@ import type {
 	Finding,
 	Job,
 	Level,
+	PlanItem,
 	Proposal,
 	RemoteAgent,
 	Step
@@ -153,6 +154,15 @@ export function quietFor(a: Assignment, now: number): number | null {
 	return quiet >= QUIET_AFTER ? quiet : null;
 }
 
+/**
+ * At work right now: started, not stopped for the person or paused, and heard
+ * from lately (FEAT-124). Only this moves on screen, so a run that has gone
+ * quiet stops moving when it stops talking.
+ */
+export function isWorking(a: Assignment, now: number): boolean {
+	return (a.state === 'starting' || a.state === 'working') && quietFor(a, now) === null;
+}
+
 /** `3 min`, or `1 h 5 min`. */
 export function quietWords(seconds: number): string {
 	const minutes = Math.max(1, Math.floor(seconds / 60));
@@ -239,6 +249,68 @@ export function atGate(a: Assignment): { step: Step; proposals: Proposal[] } | n
 	const step = a.steps.find((s) => s.state === 'waiting');
 	if (!step || a.state !== 'waiting') return null;
 	return { step, proposals: a.proposals.filter((p) => p.step === step.index && p.state === 'proposed') };
+}
+
+/** What the agent stopped to ask, for the top of its card (FEAT-124). */
+export interface Ask {
+	/** The step it stopped on; null when it stopped between steps. */
+	step: Step | null;
+	/** What it proposed there and nobody has decided. */
+	proposals: Proposal[];
+	/** One line: what is asked. */
+	summary: string;
+	/** The name of what opens under the line, or null when the line is all of it. */
+	more: string | null;
+}
+
+/** The plan the agent last proposed, if it proposed one. */
+export function planOf(a: Assignment): { files: PlanItem[]; lookFor: string } | null {
+	const plan = [...a.proposals].reverse().find((p) => p.body.kind === 'plan');
+	return plan && plan.body.kind === 'plan' ? plan.body : null;
+}
+
+/**
+ * What waits for the person, in one line, and whether there is more to open.
+ * The line is short enough to sit beside its buttons; the plan's files, a
+ * failed check's output and the findings themselves are the more.
+ */
+export function askOf(a: Assignment, names: { a: string; b: string } = { a: 'A', b: 'B' }): Ask | null {
+	if (a.state !== 'waiting') return null;
+	const at = atGate(a);
+	if (!at) return a.reason ? { step: null, proposals: [], summary: a.reason, more: null } : null;
+	const { step, proposals } = at;
+	const ask = (summary: string, more: string | null = null): Ask => ({ step, proposals, summary, more });
+	if (step.gate === 'plan') {
+		const plan = planOf(a);
+		return ask(plan?.lookFor || 'The reading plan', plan?.files.length ? 'The plan' : null);
+	}
+	if (step.gate === 'send') return ask('Ready for you to send.');
+	if (step.gate === 'land') return ask('Ready for you to merge.');
+	if (step.gate === 'checks') {
+		const failed = step.checks.find((c) => !c.passed);
+		return failed ? ask(`${failed.command} failed`, 'The output') : ask('The checks passed.');
+	}
+	if (proposals.length === 0) return ask('Nothing to decide here.');
+	const only = proposals.length === 1 ? proposals[0].body : null;
+	if (only?.kind === 'resolution') return ask(only.why || choiceWords(only.choice, names));
+	if (only?.kind === 'verdict') return ask(step.label, 'The summary');
+	const count = `${proposals.length} ${proposals.length === 1 ? 'finding' : 'findings'}`;
+	const severities = (['high', 'medium', 'low'] as const)
+		.map((severity) => ({
+			severity,
+			count: proposals.filter((p) => p.body.kind === 'comment' && p.body.severity === severity).length
+		}))
+		.filter((each) => each.count > 0)
+		.map((each) => `${each.count} ${each.severity}`);
+	return ask(
+		severities.length ? `${count} · ${severities.join(', ')}` : count,
+		proposals.length === 1 ? 'The finding' : 'The findings'
+	);
+}
+
+/** Where a finding is, as a reader says it: `avatars.rs:16`. */
+export function findingPlace(finding: Pick<Finding, 'path' | 'line'>): string {
+	return `${finding.path.split('/').pop()}:${finding.line}`;
 }
 
 /** The badge on a finding: `Codex · proposed · high`. */

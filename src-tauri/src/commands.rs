@@ -926,6 +926,15 @@ pub fn pull(state: State<'_, AppState>, remote: String, mode: PullMode) -> Resul
     })
 }
 
+/// Bring a local branch up to its upstream, whichever branch is checked out
+/// (FEAT-126). Only ever forward: git's refusal is the error when it cannot be.
+#[tauri::command(async)]
+pub fn pull_branch(state: State<'_, AppState>, name: String) -> Result<String> {
+    state.with_session("pull_branch", |session| {
+        ops::pull_branch(&session.repo.to_thread_local(), &name)
+    })
+}
+
 /// Push. `force` is `--force-with-lease`, never a plain force.
 ///
 /// On a worker, for the reasons in [`fetch`].
