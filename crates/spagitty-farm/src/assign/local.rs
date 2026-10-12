@@ -45,7 +45,7 @@ impl LocalDriver {
 }
 
 /// The provider's own read-only mode, where it has one. Keep options outside
-/// the prompt, whether it is a positional argument, a flag's value or stdin.
+/// the prompt, whether it is a positional argument or stdin.
 pub fn read_only(provider: AgentProvider, mut command: AgentCommand) -> AgentCommand {
     // Settings may explicitly opt Codex into Full Access. Do not add a
     // conflicting sandbox argument to that saved choice.
@@ -62,7 +62,6 @@ pub fn read_only(provider: AgentProvider, mut command: AgentCommand) -> AgentCom
     let flags: &[&str] = match provider {
         AgentProvider::ClaudeCode => &["--permission-mode", "plan"],
         AgentProvider::Codex => &["--sandbox", "read-only"],
-        AgentProvider::Agy => &["--mode", "plan"],
         AgentProvider::OhMyPi => &["--tools", "read,grep,glob"],
         _ => &[],
     };
@@ -72,7 +71,6 @@ pub fn read_only(provider: AgentProvider, mut command: AgentCommand) -> AgentCom
     let at = match provider {
         // `codex exec` must stay first: the flags belong to the subcommand.
         AgentProvider::Codex => 1.min(command.args.len()),
-        AgentProvider::Agy => 0,
         _ if command.stdin.is_some() => command.args.len(),
         _ => command.args.len().saturating_sub(1),
     };
@@ -194,20 +192,13 @@ fn codex_launch_failure(raw: &str) -> Option<String> {
         .map(|line| format!("Codex could not start its Windows sandbox: {line}\nRepair the Codex sandbox or select Full Access in Settings > Agents > Codex, then resume."))
 }
 
-/// A provider can report a launch or tool-permission failure even when it
-/// exits zero. Used by assignment steps and the Settings connection test.
+/// A provider can report a launch failure even when it exits zero. Used by
+/// assignment steps and the Settings connection test.
 pub fn launch_failure(provider: AgentProvider, raw: &str) -> Option<String> {
     match provider {
         AgentProvider::Codex => codex_launch_failure(raw),
-        AgentProvider::Agy => agy_permission_failure(raw),
         _ => None,
     }
-}
-
-fn agy_permission_failure(raw: &str) -> Option<String> {
-    raw.lines()
-        .find(|line| line.starts_with("jetski: no output produced") && line.contains("headless mode cannot prompt"))
-        .map(|line| format!("{line}\nConfigure agy's permissions.allow rules or enable Auto-approve tools in Settings > Agents > agy, then resume."))
 }
 
 /// The command line as the timeline shows it: the prompt is long and is in
@@ -224,18 +215,6 @@ fn shorten(line: &str) -> String {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-
-    #[test]
-    fn a_headless_agy_permission_denial_is_a_failed_step() {
-        let raw = "jetski: no output produced — a tool required the command permission that headless mode cannot prompt for, so it was auto-denied.";
-        assert!(agy_permission_failure(raw)
-            .unwrap()
-            .contains("Auto-approve tools"));
-        assert!(
-            agy_permission_failure("An ordinary finding about headless mode cannot prompt")
-                .is_none()
-        );
-    }
 
     #[test]
     fn a_zero_exit_with_a_broken_sandbox_is_a_failed_step() {
@@ -282,12 +261,6 @@ mod tests {
             out.args,
             ["exec", "--sandbox", "danger-full-access", "PROMPT"]
         );
-    }
-
-    #[test]
-    fn agy_reviews_in_plan_mode() {
-        let out = read_only(AgentProvider::Agy, command(&["--print", "PROMPT"]));
-        assert_eq!(out.args, ["--mode", "plan", "--print", "PROMPT"]);
     }
 
     #[test]

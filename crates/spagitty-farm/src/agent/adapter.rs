@@ -91,10 +91,10 @@ impl AgentCommand {
     ///
     /// A `.cmd` shim cannot be given an argument with a line break in it. An
     /// adapter that can read its instructions on standard input sends them
-    /// there ([`prompt_needs_stdin`]). agy's `--print` takes them as a value
-    /// and a custom agent's `{prompt}` goes where its arguments put it, so
-    /// those cannot. Asked before the process is started, so the person reads
-    /// what to change and not Windows' sentence about batch file arguments.
+    /// there ([`prompt_needs_stdin`]). A custom agent's `{prompt}` goes where
+    /// its arguments put it, so it cannot. Asked before the process is
+    /// started, so the person reads what to change and not Windows' sentence
+    /// about batch file arguments.
     pub fn refusal(&self) -> Option<String> {
         self.args
             .iter()
@@ -224,20 +224,20 @@ mod tests {
             args: args.iter().map(|arg| arg.to_string()).collect(),
             stdin: stdin.map(str::to_string),
         };
-        // agy takes its prompt as the value of `--print`; a custom agent's
-        // `{prompt}` is an argument too. Neither can go round a shim.
-        let agy = command("C:/tools/agy.cmd", &["--print", "one\ntwo"], None);
+        // A prompt that is the value of a flag is an argument, and so is a
+        // custom agent's `{prompt}`. Neither can go round a shim.
+        let shim = command("C:/tools/agent.cmd", &["--print", "one\ntwo"], None);
         let custom = command("C:/tools/aider.bat", &["--message", "one\ntwo"], None);
-        for refused in [&agy, &custom] {
+        for refused in [&shim, &custom] {
             assert_eq!(refused.refusal().is_some(), cfg!(windows));
         }
-        if let Some(reason) = agy.refusal() {
-            assert!(reason.contains("agy.cmd") && reason.contains("standard input"));
+        if let Some(reason) = shim.refusal() {
+            assert!(reason.contains("agent.cmd") && reason.contains("standard input"));
         }
         // A real executable, one line, or instructions already on stdin: fine.
         for allowed in [
-            command("C:/tools/agy.exe", &["--print", "one\ntwo"], None),
-            command("C:/tools/agy.cmd", &["--print", "one line"], None),
+            command("C:/tools/agent.exe", &["--print", "one\ntwo"], None),
+            command("C:/tools/agent.cmd", &["--print", "one line"], None),
             command("C:/npm/codex.cmd", &["exec", "-"], Some("one\ntwo")),
         ] {
             assert_eq!(allowed.refusal(), None);

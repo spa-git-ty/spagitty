@@ -71,7 +71,7 @@ const ALL_KINDS: TaskKind[] = [
 	'general'
 ];
 
-const ALL_PROVIDERS: AgentProvider[] = ['claudeCode', 'codex', 'cursor', 'ohMyPi', 'agy', 'custom'];
+const ALL_PROVIDERS: AgentProvider[] = ['claudeCode', 'codex', 'cursor', 'ohMyPi', 'custom'];
 
 describe('every closed set is labelled', () => {
 	it('labels every task status', () => {

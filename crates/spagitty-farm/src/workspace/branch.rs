@@ -79,7 +79,6 @@ pub fn provider_of(branch: &str) -> Option<AgentProvider> {
         AgentProvider::Codex,
         AgentProvider::Cursor,
         AgentProvider::OhMyPi,
-        AgentProvider::Agy,
         AgentProvider::Custom,
     ]
     .into_iter()

@@ -341,6 +341,7 @@ of its own.
 | [TASK-068](items/TASK-068-what-coderabbit-found-on-63-and-64.md) | What CodeRabbit found on pull requests #63 and #64 | 1S, 1R, 1K, 1Q | Done |
 | [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Backlog |
 | [TASK-070](items/TASK-070-the-plans-file-list-scrolls-in-a-card-the-height-of-its-neighbours.md) | The plan's file list scrolls, in a card the height of its neighbours | 1S | Done |
+| [TASK-071](items/TASK-071-remove-agy.md) | agy is removed | 1K, 1Q, 1R, 1S | Done |
 
 ## Skipped identifiers
 

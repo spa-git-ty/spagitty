@@ -85,7 +85,6 @@ export interface OmpOptions {
 
 export interface AgentsSnapshot {
 	codexFullAccess: boolean;
-	agyAutoApprove: boolean;
 	omp: OmpOptions;
 	local: LocalAgent[];
 	remote: RemoteAgent[];

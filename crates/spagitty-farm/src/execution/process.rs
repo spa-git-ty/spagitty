@@ -383,7 +383,7 @@ mod tests {
     fn a_many_line_argument_to_a_shim_is_refused_before_anything_starts() {
         let dir = tempfile::tempdir().unwrap();
         let command = AgentCommand {
-            program: PathBuf::from("C:/tools/agy.cmd"),
+            program: PathBuf::from("C:/tools/agent.cmd"),
             args: vec!["--print".into(), "one\ntwo".into()],
             stdin: None,
         };

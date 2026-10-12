@@ -284,6 +284,10 @@ A branch card says how many commits its upstream has that it lacks, with *Pull n
 
 The host is asked while a pull request is open; when the author has pushed the room says so and *Pull latest* reads it again.
 
+### 31. TASK-071 — agy is removed
+
+A review given to agy stopped at its first step, on a permission its headless mode cannot ask for. The author chose to remove it rather than work round it. A saved Farm agent list that names it still opens.
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

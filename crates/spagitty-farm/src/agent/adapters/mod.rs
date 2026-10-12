@@ -18,7 +18,6 @@
 //! 3. [`custom`] exists, so an agent Spagitty has never heard of is a
 //!    configuration rather than a patch.
 
-pub mod agy;
 pub mod claude;
 pub mod codex;
 pub mod cursor;

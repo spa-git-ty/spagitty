@@ -43,16 +43,7 @@ fn reads_file(provider: AgentProvider, expanded_access: bool) {
             .extra_args
             .extend(["--sandbox".into(), "danger-full-access".into()]);
     }
-    if expanded_access && provider == AgentProvider::Agy {
-        definition
-            .extra_args
-            .push("--dangerously-skip-permissions".into());
-    }
-    let prompt = if expanded_access && provider == AgentProvider::Agy {
-        "Repository access test only. Use your command/terminal tool to run a read-only shell command that prints access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file."
-    } else {
-        "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file."
-    };
+    let prompt = "Repository access test only. Use your file-reading tool to read access.txt in the working directory and reply with its exact contents. Do not edit anything, use subagents, or access the network. Stop after reading the file.";
     let request = AgentRunRequest {
         workdir: dir.path().to_path_buf(),
         prompt: prompt.into(),
@@ -89,16 +80,4 @@ fn codex_full_access_reads_a_temporary_workspace() {
 #[ignore = "requires authenticated OMP and Bun"]
 fn omp_is_detected_and_reads_in_print_mode() {
     reads_file(AgentProvider::OhMyPi, false);
-}
-
-#[test]
-#[ignore = "requires authenticated agy"]
-fn agy_is_detected_and_reads_in_print_plan_mode() {
-    reads_file(AgentProvider::Agy, false);
-}
-
-#[test]
-#[ignore = "requires authenticated agy; explicitly tests opt-in tool approval"]
-fn agy_auto_approved_command_reads_a_temporary_workspace() {
-    reads_file(AgentProvider::Agy, true);
 }

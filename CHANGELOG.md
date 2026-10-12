@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Removed
+
+- agy, Google's Antigravity command line, is no longer supported. Google is not worth supporting. Settings → Agents does not list agy, its **Auto-approve tools** choice is gone, and Review, Merger and Farm no longer offer it. A Farm agent list saved with agy in it opens without it, and every other agent keeps its settings. Gemini with an API key, under remote agents, is unchanged.
+
 ## [2.2.1] - 2026-10-12
 
 ### Added

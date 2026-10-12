@@ -209,15 +209,6 @@
 										<span class="note">Codex commands can access files outside the repository and use the network.</span>
 									{/if}
 								{/if}
-								{#if agent.provider === 'agy' && usable}
-									<div class="group" role="group" aria-label="agy tool permissions">
-										<Chip active={!snapshot.agyAutoApprove} disabled={saving > 0 || result === 'testing'} onclick={() => setAccess(agent.id, () => api.setAgyAutoApprove(false))}>Configured rules</Chip>
-										<Chip active={snapshot.agyAutoApprove} disabled={saving > 0 || result === 'testing'} onclick={() => setAccess(agent.id, () => api.setAgyAutoApprove(true))}>Auto-approve tools</Chip>
-										</div>
-									{#if snapshot.agyAutoApprove}
-										<span class="note">agy can run commands and access files without asking.</span>
-									{/if}
-								{/if}
 							</div>
 							{#if usable}
 								<div class="jobs" role="group" aria-label="What {agent.name} may do">
