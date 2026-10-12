@@ -24,7 +24,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - agy has a saved **Auto-approve tools** choice in Settings → Agents for
   headless Test, Review and Merger runs. Its configured permission rules remain
   the default; a headless permission denial stops the assignment with guidance.
-- CI refuses a pull request whose commits or description name an agent, a tool or a session as an author (`Co-Authored-By:` for an agent, `Claude-Session:`, *Generated with* lines). A person as co-author is allowed; history already on `main` is not read.
+- CI refuses a pull request whose commits or description name an agent, a tool or a session as an author (`Co-Authored-By:` for an agent, `Claude-Session:`, *Generated with* lines). A person as co-author is allowed, one who shares a first name with an agent included; history already on `main` is not read.
 
 ### Fixed
 
@@ -46,9 +46,9 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - A file the agent finishes reviewing is marked viewed against the version it
   read. Failed, unfinished and stale steps do not tick files; manually unticking
   a completed file is preserved when its assignment is synced again.
-- Command-line agents that Windows starts through a `.cmd` shim (npm installs of Codex, Oh My Pi and others) get their whole instructions. Windows cannot pass a line break as an argument, so Spagitty now sends the instructions on standard input to those agents. Settings *Test* uses a two-line instruction, so it checks the same path.
+- Command-line agents that Windows starts through a `.cmd` shim (npm installs of Codex, Oh My Pi and others) get their whole instructions. Windows cannot pass a line break as an argument, so Spagitty now sends the instructions on standard input to those agents. Settings *Test* uses a two-line instruction, so it checks the same path. An agent that cannot read standard input, such as a custom one with `{prompt}` in its arguments, is refused before it starts when it is a `.cmd` file, with what to change.
 - Extensions run on Spagitty 2 again. Every extension, the bundled CodeRabbit one included, was shown as needing Spagitty below 2.0.0. The bundled, example and template manifests no longer name an upper limit, and a test fails if a manifest we ship does not admit the version we ship.
-- Review no longer takes *you* from the first account you connected when the repository is on another host, and a refused token says which account was refused. A refusal on the first read is asked once more before Review tells you to fix your accounts.
+- Review no longer takes *you* from the first account you connected when the repository is on another host, and a refused token says which account was refused. A refusal on the first read is asked once more before Review tells you to fix your accounts, in *All my repos* too.
 - Review marks a file *conflict fix* only for lines that were written to resolve a conflict with the target branch. An ordinary commit, a change made in a merge away from any conflict, and a merge of some other branch are no longer shown as conflict fixes.
 - Added lines are green and removed lines red, whatever is on top. The focus ruler and the lines being commented on are laid over the line instead of replacing its colour, markup tags and type names are no longer the red of a removal, the comment button is neutral, and the green and red tints are stronger.
 - A pull request that conflicts with its base is marked as such: in Review's inbox, preview and room, and in Pull requests' list and workspace. Merger offers to resolve it.

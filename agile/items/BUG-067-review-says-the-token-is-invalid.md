@@ -43,6 +43,6 @@ Reading the code did not confirm the suspected cause: the backend's `involved_pu
 
 - `requests.load()` took *you* from the first connected account, not from the repository's host, so with two accounts the inbox grouped pull requests for the wrong person. It now picks the account for the repository's host.
 - A refusal now says which account was refused (`… (signed in as <login>)`), after the host that the sentence already named.
-- A first read refused, with nothing changed, is read once more after 700 ms before the reader is told to fix their account; a repeated refusal is shown as before.
+- A first read refused, with nothing changed, is read once more after 700 ms before the reader is told to fix their account; a repeated refusal is shown as before. Both lists do this, the repository's own and *All my repos* (`askAgainAfterRefusal`); the second was added on 2026-10-12.
 
 The cause of *refused on first open, fine after Pull requests* is still unknown. The retry is a mitigation, not a diagnosis. When it happens again the message now names the host and account; if the second read is what succeeds, that points at the first read racing something at start-up (the keychain is the first suspect).

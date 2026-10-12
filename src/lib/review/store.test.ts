@@ -6,7 +6,7 @@ import { calls, control } from '../../testing/repo-store.svelte';
 vi.mock('$lib/api');
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
 import * as api from '$lib/api';
-import { requests } from '$lib/requests/store.svelte';
+import { requests, retryRefusal } from '$lib/requests/store.svelte';
 import { review } from './store.svelte';
 
 const elsewhere = request({
@@ -84,6 +84,31 @@ it('opens the known clone and its pull request in repository scope', async () =>
 		name: 'thing',
 		number: 77
 	});
+});
+
+it('asks for involved pull requests once more when the first read is refused (BUG-067)', async () => {
+	retryRefusal.afterMs = 0;
+	vi.mocked(api.involvedPullRequests)
+		.mockRejectedValueOnce('github.com refused the token: Bad credentials (signed in as mahmoud)')
+		.mockResolvedValueOnce([elsewhere]);
+	review.setScope('all');
+	await vi.waitFor(() => expect(review.loading).toBe(false));
+
+	expect(api.involvedPullRequests).toHaveBeenCalledTimes(2);
+	expect(review.error).toBeNull();
+	expect(review.list).toEqual([elsewhere]);
+});
+
+it('shows a refusal of the involved pull requests that is repeated', async () => {
+	retryRefusal.afterMs = 0;
+	vi.mocked(api.involvedPullRequests).mockRejectedValue(
+		'github.com refused the token: Bad credentials (signed in as mahmoud)'
+	);
+	review.setScope('all');
+	await vi.waitFor(() => expect(review.loading).toBe(false));
+
+	expect(api.involvedPullRequests).toHaveBeenCalledTimes(2);
+	expect(review.list).toEqual([]);
 });
 
 it('does not ask for involved pull requests without an account for the current host', async () => {

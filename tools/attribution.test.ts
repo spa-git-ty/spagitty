@@ -31,6 +31,32 @@ describe('findAttribution', () => {
 		expect(findAttribution('Co-authored-by: Ada Lovelace <ada@example.com>')).toEqual([]);
 	});
 
+	it('lets a person whose name an agent shares be a co-author (BUG-078)', () => {
+		const people = [
+			'Co-Authored-By: Claude Dupont <claude.dupont@example.org>',
+			'Co-authored-by: Claude <claude@example.org>',
+			'Co-authored-by: Devin Smith <devin@example.io>',
+			'Co-authored-by: Cody Lee <cody.lee@users.noreply.github.com>',
+			'Co-authored-by: Ada Lovelace'
+		].join('\n');
+		expect(findAttribution(people)).toEqual([]);
+	});
+
+	it('still refuses the agents those people share a name with', () => {
+		const agents = [
+			'Co-Authored-By: Claude Opus 5.5 <someone@example.org>',
+			'Co-Authored-By: Claude Code <claude@example.org>',
+			'Co-authored-by: Claude <noreply@anthropic.com>',
+			'Co-authored-by: Devin AI <158243242+devin-ai-integration[bot]@users.noreply.github.com>',
+			'Co-authored-by: Devin <devin@cognition.ai>',
+			'Co-authored-by: Cursor Agent <cursoragent@cursor.com>',
+			'Co-authored-by: aider (gpt-4o) <noreply@aider.chat>',
+			'Co-authored-by: Antigravity <antigravity@google.com>',
+			'Co-authored-by: Gemini <gemini@google.com>'
+		];
+		expect(findAttribution(agents.join('\n'))).toEqual(agents);
+	});
+
 	it('leaves prose that names an agent alone', () => {
 		const prose = [
 			'fix(models): send Gemini what it accepts',

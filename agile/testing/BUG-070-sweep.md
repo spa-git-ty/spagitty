@@ -11,3 +11,4 @@
 | SWEEP-BUG070-03 | As above | Assign each to one Merger step | The step finishes with a plan | P1 | Not run. |
 | SWEEP-BUG070-04 | macOS and Linux | Repeat 01 to 03 | The same | P1 | Not run. |
 | SWEEP-BUG070-05 | Codex whose sandbox cannot start | Press *Test* | It fails and names Settings › Agents › Codex | P2 | Not run. |
+| SWEEP-BUG070-06 | Windows; a custom agent whose executable is a `.cmd` file and whose arguments hold `{prompt}` | Press *Test*, then assign it to a Review step | Both say the file is a `.cmd`, and to use its `.exe` or take `{prompt}` out; nothing is started | P2 | Not run. |

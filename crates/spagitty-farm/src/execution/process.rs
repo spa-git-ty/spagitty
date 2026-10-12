@@ -223,6 +223,9 @@ pub fn start(
     sink: Arc<dyn Sink>,
     narrator: Box<dyn Narrator>,
 ) -> Result<Session> {
+    if let Some(reason) = command.refusal() {
+        return Err(Error::Refused(reason));
+    }
     let mut process = Command::new(&command.program);
     process.args(&command.args).current_dir(workdir);
     if let Some(path) = crate::agent::detector::search_path() {
@@ -371,6 +374,30 @@ mod tests {
             args: vec!["-c".into(), script.into()],
             stdin: stdin.map(|text| text.to_string()),
         }
+    }
+
+    /// Windows would refuse it with a sentence about batch file arguments;
+    /// this refuses first, and says what to change (BUG-070).
+    #[cfg(windows)]
+    #[test]
+    fn a_many_line_argument_to_a_shim_is_refused_before_anything_starts() {
+        let dir = tempfile::tempdir().unwrap();
+        let command = AgentCommand {
+            program: PathBuf::from("C:/tools/agy.cmd"),
+            args: vec!["--print".into(), "one\ntwo".into()],
+            stdin: None,
+        };
+        let started = start(
+            &command,
+            dir.path(),
+            TranscriptWriter::create(&dir.path().join("run.log")).unwrap(),
+            Arc::new(Collected::default()),
+            Box::new(crate::execution::narrate::Verbatim),
+        );
+        let Err(error) = started else {
+            panic!("a shim was started with a many-line argument");
+        };
+        assert!(error.to_string().contains("standard input"));
     }
 
     struct Run {

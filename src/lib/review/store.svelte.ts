@@ -13,7 +13,7 @@
 import * as api from '../api';
 import type { ReviewKey } from '../api';
 import { repo } from '../repo.svelte';
-import { requests } from '../requests/store.svelte';
+import { askAgainAfterRefusal, requests } from '../requests/store.svelte';
 import { notice } from '../ui/notice.svelte';
 import type { ForgeKind, PullRequest, ReviewSummary } from '../types';
 import { groupInbox, inboxOrder, type InboxGroup } from './inbox';
@@ -292,8 +292,12 @@ export const review = {
 				return;
 			}
 			involvedNoAccount = false;
-			const found = await api.involvedPullRequests();
-			if (mine !== involvedSeq) return;
+			// The same second ask as the repository's own list (BUG-067).
+			const found = await askAgainAfterRefusal(
+				() => api.involvedPullRequests(),
+				() => mine === involvedSeq
+			);
+			if (found === undefined || mine !== involvedSeq) return;
 			searchHost = host;
 			searchKind = kind;
 			involved = found;

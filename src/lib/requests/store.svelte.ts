@@ -79,6 +79,24 @@ function refusal(error: unknown): boolean {
 	return /refused|keychain/i.test(String(error));
 }
 
+/**
+ * Ask, and ask once more after a refusal (BUG-067): a sign-in refused on the
+ * very first read and accepted on the next, with nothing changed, is not a bad
+ * sign-in, and the reader is not sent to fix their account for it. `still`
+ * says whether the answer is wanted after the wait; when it is not, nothing is
+ * asked again and the answer is undefined.
+ */
+export async function askAgainAfterRefusal<T>(ask: () => Promise<T>, still: () => boolean): Promise<T | undefined> {
+	try {
+		return await ask();
+	} catch (first) {
+		if (!refusal(first)) throw first;
+		await new Promise((resolve) => setTimeout(resolve, retryRefusal.afterMs));
+		if (!still()) return undefined;
+		return ask();
+	}
+}
+
 export const requests = {
 	get all(): PullRequest[] {
 		return list;
@@ -522,19 +540,11 @@ export const requests = {
 				}
 			}
 
-			let found: PullRequest[];
-			try {
-				found = await api.pullRequests();
-			} catch (first) {
-				// A sign-in refused on the very first read, and accepted on the next
-				// with nothing changed, is not a bad sign-in (BUG-067). Ask once more
-				// before telling the reader to go and fix their account.
-				if (!refusal(first)) throw first;
-				await new Promise((resolve) => setTimeout(resolve, retryRefusal.afterMs));
-				if (mine !== seq) return;
-				found = await api.pullRequests();
-			}
-			if (mine !== seq) return;
+			const found = await askAgainAfterRefusal(
+				() => api.pullRequests(),
+				() => mine === seq
+			);
+			if (found === undefined || mine !== seq) return;
 			this.present(found);
 		} catch (e) {
 			if (mine === seq) this.fail(String(e));
