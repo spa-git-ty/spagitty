@@ -39,6 +39,7 @@ In the picture a changelog conflicts: one side is forty wrapped lines. The card 
 
 - Lines are not held level across the columns. The three wrap differently and the result has lines neither side has, so there is no one alignment to keep; together is by share.
 - The files list on the left is unchanged. It already scrolled on its own.
+- A card has a least greatest-height of 240 pixels: its header, its choices and the least its columns can be. In a window so short that the list has less than that, the list scrolls the card, as it did before.
 
 ## What was done
 

@@ -18,7 +18,7 @@ The room's other mounted tests pass unchanged: the ruler, comments, threads, jum
 
 ## Results — 2026-10-12
 
-- `bunx vitest run`: 190 files, 4134 tests, all passed.
+- `bunx vitest run`: 190 files, 4136 tests, all passed.
 - `bun run check`: zero errors, zero warnings.
 - `bun run coverage`: passed its thresholds (lines 85.77%).
 - `bun run build`: succeeded.

@@ -32,31 +32,40 @@ export function follow(source: Scrolled, target: Scrolled): number {
 	return Math.round(share * room);
 }
 
-/** How long a column that was moved here ignores its own scroll events. */
-const SETTLE_MS = 120;
+/**
+ * How far a column may be from where it was put and still be taken as put
+ * there: a browser keeps a part of a pixel that the place asked for did not
+ * have.
+ */
+const NEAR = 2;
 
 /**
  * Keeps a set of columns in step.
  *
  * Moving a follower raises a scroll event on it, which would move the leader
- * back by a rounding error, and the two would creep. So the column the person
- * is scrolling leads, and for a moment the others only follow.
+ * back by a rounding error, and the two would creep. So each column remembers
+ * where it was last put from here, and the event that finds it there is its
+ * own echo and moves nothing. Any other event is the person's, whichever
+ * column it is on and however soon after the last: that column leads.
  */
-export function linker(now: () => number = () => performance.now()) {
-	let leader: Element | null = null;
-	let until = 0;
+export function linker() {
+	const put = new WeakMap<HTMLElement, number>();
 
 	return {
 		/** `from` was scrolled: put `others` where they belong. */
 		scrolled(from: HTMLElement, others: Iterable<HTMLElement>): void {
-			const at = now();
-			if (leader !== null && leader !== from && at < until) return;
-			leader = from;
-			until = at + SETTLE_MS;
+			const expected = put.get(from);
+			if (expected !== undefined) {
+				put.delete(from);
+				if (Math.abs(from.scrollTop - expected) <= NEAR) return;
+			}
 			for (const other of others) {
 				if (other === from) continue;
 				const top = follow(from, other);
-				if (other.scrollTop !== top) other.scrollTop = top;
+				// Already there: nothing moves, so no event will come to answer for.
+				if (other.scrollTop === top) continue;
+				other.scrollTop = top;
+				put.set(other, top);
 			}
 		}
 	};

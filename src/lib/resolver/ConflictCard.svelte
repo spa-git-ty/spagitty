@@ -335,10 +335,14 @@
 	 * for it. `cqh` is the list's height inside its padding, so the space the
 	 * pill floats over is already left out (the resolver makes the list a size
 	 * container). Past that the columns give way and scroll.
+	 *
+	 * The floor is what a card needs to be a card: its header, its choices
+	 * and the least its columns can be. In a window too short even for that,
+	 * the list scrolls it, which is better than a card whose columns are gone.
 	 */
 	.conflict {
 		flex: none;
-		max-height: max(300px, calc(100cqh - 12px));
+		max-height: max(240px, calc(100cqh - 12px));
 		box-sizing: border-box;
 		padding: 10px 12px 12px;
 		border-radius: 16px;

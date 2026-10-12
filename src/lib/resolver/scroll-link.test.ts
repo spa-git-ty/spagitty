@@ -39,28 +39,48 @@ describe('linker', () => {
 	it('puts the other columns where the scrolled one is', () => {
 		const [a, result, b] = [element(2000), element(1200), element(400)];
 		a.scrollTop = 800;
-		linker(() => 0).scrolled(a, [a, result, b]);
+		linker().scrolled(a, [a, result, b]);
 		expect([a.scrollTop, result.scrollTop, b.scrollTop]).toEqual([800, 400, 0]);
 	});
 
-	it('lets the column being scrolled lead, so a follower does not push it back', () => {
-		let now = 0;
-		const link = linker(() => now);
+	it('takes a follower’s own scroll event for what it is, and does not push the leader back', () => {
+		const link = linker();
 		const [a, result] = [element(2001), element(1200)];
 		a.scrollTop = 801;
 		link.scrolled(a, [a, result]);
 		const followed = result.scrollTop;
 
-		// The follower's own scroll event, raised by being moved, a moment later.
-		now = 10;
+		// The event raised on the follower by being moved. A browser may have
+		// kept a part of a pixel.
+		result.scrollTop = followed - 0.4;
 		link.scrolled(result, [a, result]);
 		expect(a.scrollTop).toBe(801);
-		expect(result.scrollTop).toBe(followed);
+	});
 
-		// Once it has settled, the other column may lead.
-		now = 500;
-		result.scrollTop = 0;
+	it('lets the person lead from another column straight away', () => {
+		const link = linker();
+		const [a, result] = [element(2000), element(1200)];
+		a.scrollTop = 800;
+		link.scrolled(a, [a, result]);
+		expect(result.scrollTop).toBe(400);
+
+		// The person turns to the result before its echo has even arrived.
+		result.scrollTop = 800;
 		link.scrolled(result, [a, result]);
-		expect(a.scrollTop).toBe(0);
+		expect(a.scrollTop).toBe(1600);
+
+		// And the leader's echo of that, in turn, moves nothing.
+		link.scrolled(a, [a, result]);
+		expect(result.scrollTop).toBe(800);
+	});
+
+	it('does not wait for an event from a column it did not have to move', () => {
+		const link = linker();
+		const [a, result] = [element(2000), element(1200)];
+		// Both at their tops already: nothing is moved, and nothing is expected.
+		link.scrolled(a, [a, result]);
+		result.scrollTop = 400;
+		link.scrolled(result, [a, result]);
+		expect(a.scrollTop).toBe(800);
 	});
 });

@@ -10,6 +10,6 @@ The review room's and the resolver's mounted tests pass unchanged, so both pills
 
 ## Results — 2026-10-12
 
-- `bunx vitest run`: 190 files, 4134 tests, all passed.
+- `bunx vitest run`: 190 files, 4136 tests, all passed.
 - `bun run check`: zero errors, zero warnings.
 - `bun run build`: succeeded.

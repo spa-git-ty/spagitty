@@ -11,7 +11,7 @@ Cards stop being shrinkable items of the list. A card that could shrink would be
 **The linking.** `scroll-link.ts`, apart from the component so it can be tested with no layout:
 
 - `follow(source, target)` gives where `target` belongs: the same share of its own scrollable distance as `source` is at.
-- `linker()` keeps a set in step. Moving a follower raises a scroll event on it, which would move the leader back by a rounding error; so whichever column the person scrolls leads, and for 120 milliseconds the others only follow.
+- `linker()` keeps a set in step. Moving a follower raises a scroll event on it, which would move the leader back by a rounding error. So each column remembers where it was last put, and the event that finds it there, within two pixels, is its own echo and moves nothing. Any other event is the person's and that column leads. The first version let a leader lead for 120 milliseconds and ignored the others for that long; a review pointed out that a person turning to another column inside that time was ignored too, and it was changed.
 
 The card registers its three columns with an action and listens for `scroll` on each. The resolver passes `linked` down and keeps it in `localStorage`, as the review room keeps whether its conversation is put away.
 

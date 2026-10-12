@@ -12,6 +12,6 @@ The tests that step through the pill with **Next unresolved** pass unchanged.
 
 ## Results — 2026-10-12
 
-- `bunx vitest run`: 190 files, 4134 tests, all passed.
+- `bunx vitest run`: 190 files, 4136 tests, all passed.
 - `bun run check`: zero errors, zero warnings.
 - `bun run build`: succeeded.
