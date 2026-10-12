@@ -15,6 +15,7 @@ vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.s
 
 import * as api from '$lib/api';
 import { calls as repoCalls, control as repoControl } from '../../testing/repo-store.svelte';
+import { activity } from '$lib/activity/store.svelte';
 import { branches, STALE_DAYS } from './store.svelte';
 
 const list = vi.mocked(api.branches);
@@ -56,6 +57,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	branches.clear();
 	repoControl.reset();
+	activity.reset();
 	vi.useFakeTimers({ now: NOW * 1000, toFake: ['Date'] });
 	list.mockResolvedValue([
 		row('main', { current: true, upstream: 'origin/main', ahead: 2, behind: 1 }),
@@ -225,6 +227,67 @@ describe('checkout', () => {
 
 		slow.resolve();
 		await first;
+	});
+});
+
+describe('said while it runs (FEAT-121)', () => {
+	it('names a switch for as long as git takes', async () => {
+		const git = deferred<void>();
+		checkout.mockReturnValueOnce(git.promise);
+
+		const running = branches.checkout('chore/tooling');
+		expect(activity.label).toBe('Switching to chore/tooling…');
+		expect(activity.is('checkout')).toBe(true);
+
+		git.resolve();
+		await running;
+		expect(activity.running).toBe(false);
+	});
+
+	it('lets go when git refuses the switch', async () => {
+		checkout.mockRejectedValueOnce('your local changes would be overwritten');
+
+		await branches.checkout('chore/tooling');
+
+		expect(activity.running).toBe(false);
+		expect(branches.writeError).toBe('your local changes would be overwritten');
+	});
+
+	it('does not switch over a write still running, and says which', async () => {
+		activity.begin('pull', 'Pulling', ['repository', 'network']);
+
+		expect(await branches.checkout('chore/tooling')).toBe(false);
+
+		expect(checkout).not.toHaveBeenCalled();
+		expect(branches.writeError).toBe('Pulling is still running');
+		expect(branches.busy).toBe(false);
+	});
+
+	it('switches while only the network is busy', async () => {
+		activity.begin('fetch', 'Fetching', ['network']);
+
+		expect(await branches.checkout('chore/tooling')).toBe(true);
+	});
+
+	it('names the other writes too', async () => {
+		const said: string[] = [];
+		renameBranch.mockImplementationOnce(async () => void said.push(activity.label));
+		deleteBranch.mockImplementation(async () => void said.push(activity.label));
+		createBranch.mockImplementationOnce(async () => void said.push(activity.label));
+
+		await branches.rename('chore/tooling', 'chore/tools');
+		await branches.delete('merged/old', false);
+		await branches.deleteMany(['a', 'b'], false);
+		branches.setNewName('topic');
+		await branches.create();
+
+		expect(said).toEqual([
+			'Renaming chore/tooling…',
+			'Deleting merged/old…',
+			'Deleting 2 branches…',
+			'Deleting 2 branches…',
+			'Creating topic…'
+		]);
 	});
 });
 

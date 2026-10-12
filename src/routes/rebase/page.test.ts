@@ -89,7 +89,7 @@ describe('rebase route', () => {
 		view = render(Page, {});
 
 		click(view.get('.picker'));
-		const main = [...document.querySelectorAll('[role="menuitem"]')].find(
+		const main = [...document.querySelectorAll('[role="option"]')].find(
 			(item) => item.textContent?.trim() === 'main'
 		) as HTMLElement;
 		click(main);

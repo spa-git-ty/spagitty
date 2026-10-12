@@ -248,6 +248,20 @@ Hideable, and compact or detailed.
 
 Starting with #52 (FEAT-115). Its findings become items of their own.
 
+## After 2.1.0 — the author's three requests of 2026-10-12
+
+Asked for together and built together, in this order because each uses the one before: Merger's checkout and push are named by FEAT-121, and its cards choose a branch with FEAT-122.
+
+### 23. FEAT-121 — what is running is said, and what would collide waits
+
+A pull, a stash and a checkout are named while they run, the button that started one shows it, and what would collide is dimmed with the reason. No layer over the window: the item records why.
+
+### 24. FEAT-122 — one branch menu, that can be searched
+
+The toolbar, Merger and Rebase choose a branch from one list with a field to type in, and the current branch is marked at full strength. TASK-069 is the two modals left with a native list.
+
+### 25. FEAT-123 — Merger checks out the branch it merged into, and offers to push it
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

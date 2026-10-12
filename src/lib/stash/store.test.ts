@@ -19,6 +19,7 @@ vi.mock('$lib/graph/actions', () => ({
 
 import * as api from '$lib/api';
 import { calls as repoCalls, control as repoControl } from '../../testing/repo-store.svelte';
+import { activity } from '$lib/activity/store.svelte';
 import { stash } from './store.svelte';
 
 const stashes = vi.mocked(api.stashes);
@@ -252,6 +253,33 @@ describe('push', () => {
 
 		slow.resolve();
 		await first;
+	});
+});
+
+describe('push, said while it runs (FEAT-121)', () => {
+	it('names the stash for as long as git takes', async () => {
+		activity.reset();
+		let finish!: () => void;
+		stashPush.mockReturnValueOnce(new Promise<void>((resolve) => (finish = resolve)));
+
+		const running = stash.push();
+		expect(activity.label).toBe('Stashing your changes…');
+		expect(activity.is('stash')).toBe(true);
+
+		finish();
+		await running;
+		expect(activity.running).toBe(false);
+	});
+
+	it('does not stash over a write still running, and says which', async () => {
+		activity.reset();
+		const step = activity.begin('checkout', 'Switching to main');
+
+		expect(await stash.push()).toBe(false);
+
+		expect(stashPush).not.toHaveBeenCalled();
+		expect(stash.writeError).toBe('Switching to main is still running');
+		step?.end();
 	});
 });
 

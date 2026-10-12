@@ -16,6 +16,7 @@
 
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from '../api';
+import { activity, type Step } from '../activity/store.svelte';
 import { repo } from '../repo.svelte';
 import { pushed } from '$lib/delight/watch';
 import { notice } from '../ui/notice.svelte';
@@ -43,11 +44,22 @@ let waiting: ((ok: boolean) => void)[] = [];
 let starting = false;
 /** Done events that came while `starting`: the worker can finish first. */
 let early: NetworkDoneEvent[] = [];
+/**
+ * The network lane, held while the operation runs (FEAT-121): the toolbar
+ * reads what is running from there, and a pull waits for it.
+ */
+let held: Step | null = null;
+
+function letGo(): void {
+	held?.end();
+	held = null;
+}
 
 /** What a done event means, once it is known to be this operation's. */
 function ended(payload: NetworkDoneEvent): void {
 	token = null;
 	step = null;
+	letGo();
 	// The worker cannot let go of itself — dropping it joins its own
 	// thread — so the screen says when it is finished with.
 	void api.networkRelease();
@@ -124,6 +136,10 @@ export const network = {
 
 	async start(begin: () => Promise<number>, next: NetworkOperation): Promise<boolean> {
 		if (token !== null) return false;
+		// A pull is fetching too, and it is not this worker's (FEAT-121).
+		const lane = activity.begin(next, next === 'push' ? 'Pushing' : 'Fetching', ['network']);
+		if (!lane) return false;
+		held = lane;
 
 		operation = next;
 		step = null;
@@ -144,6 +160,7 @@ export const network = {
 			token = null;
 			operation = null;
 			error = String(e);
+			letGo();
 			return false;
 		} finally {
 			starting = false;
@@ -173,6 +190,7 @@ export const network = {
 					percent: event.payload.percent,
 					line: event.payload.line
 				};
+				held?.progress(network.label);
 			}
 		);
 

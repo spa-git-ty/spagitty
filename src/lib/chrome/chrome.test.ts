@@ -50,6 +50,7 @@ import StatusStrip from './StatusStrip.svelte';
 import TitleBar from './TitleBar.svelte';
 import Toolbar from './Toolbar.svelte';
 import { NAV_ITEMS } from '$lib/nav';
+import { activity } from '$lib/activity/store.svelte';
 import { branching } from '$lib/graph/branching.svelte';
 import { version } from '$lib/version';
 import pkg from '../../../package.json';
@@ -109,6 +110,7 @@ beforeEach(() => {
 	repoControl.reset();
 	graphControl.reset();
 	branchControl.reset();
+	activity.reset();
 	vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 });
 
@@ -849,9 +851,11 @@ describe('Toolbar', () => {
 		view.destroy();
 	});
 
-	it('shows the branch already checked out, disabled, with its reason', async () => {
+	it('marks the branch checked out, first and at full strength, and does not switch to it', async () => {
+		// FEAT-122. It was listed disabled, "already on it" — which made where
+		// you are the faintest row in the list that is meant to say so.
 		repoControl.setInfo(info('main'));
-		branchControl.setRows([branchRow({ name: 'main', current: true }), branchRow({ name: 'topic' })]);
+		branchControl.setRows([branchRow({ name: 'topic' }), branchRow({ name: 'main', current: true })]);
 
 		const view = render(Toolbar, {});
 		click(view.get('.field'));
@@ -859,12 +863,67 @@ describe('Toolbar', () => {
 		await Promise.resolve();
 		flushSync();
 
-		const current = [...document.querySelectorAll('.entry')].find((entry) =>
-			entry.textContent?.includes('main')
-		);
-		expect((current as HTMLButtonElement).disabled).toBe(true);
-		expect(current?.textContent).toContain('already on it');
+		const [current] = [...document.querySelectorAll<HTMLElement>('.entry')];
+		expect(current.querySelector('.name')?.textContent?.trim()).toBe('main');
+		expect(current.classList.contains('chosen')).toBe(true);
+		expect(current.getAttribute('aria-selected')).toBe('true');
+		expect(current.querySelector('.here')?.textContent).toBe('current');
+		expect((current as HTMLButtonElement).disabled).toBe(false);
+		expect(current.getAttribute('aria-disabled')).toBeNull();
 
+		click(current);
+		await Promise.resolve();
+		expect(branchCalls.checkedOut).toEqual([]);
+
+		view.destroy();
+	});
+
+	it('finds a branch by typing part of its name (FEAT-122)', async () => {
+		repoControl.setInfo(info('main'));
+		branchControl.setRows([
+			branchRow({ name: 'main', current: true }),
+			branchRow({ name: 'feature/FEAT-121-say-what-is-running' }),
+			branchRow({ name: 'bugfix/BUG-076-merger-says-pushed' })
+		]);
+
+		const view = render(Toolbar, {});
+		click(view.get('.field'));
+		flushSync();
+		await Promise.resolve();
+		flushSync();
+
+		const query = view.get('input.query') as HTMLInputElement;
+		query.value = '121';
+		query.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+
+		const names = [...document.querySelectorAll('.entry .name')].map((e) => e.textContent?.trim());
+		expect(names).toEqual(['feature/FEAT-121-say-what-is-running']);
+
+		query.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		flushSync();
+		await Promise.resolve();
+
+		expect(branchCalls.checkedOut).toEqual(['feature/FEAT-121-say-what-is-running']);
+		view.destroy();
+	});
+
+	it('reads the branch list again on a later opening', async () => {
+		// A branch made on the graph or in Merger since the last opening is
+		// otherwise missing from the list that is meant to switch to it.
+		repoControl.setInfo(info('main'));
+		branchControl.setRows([branchRow({ name: 'main', current: true })]);
+
+		const view = render(Toolbar, {});
+		click(view.get('.field'));
+		flushSync();
+		click(view.get('.field'));
+		flushSync();
+		click(view.get('.field'));
+		flushSync();
+		await Promise.resolve();
+
+		expect(branchCalls.loads).toBe(2);
 		view.destroy();
 	});
 
@@ -926,6 +985,209 @@ describe('Toolbar', () => {
 
 		expect(view.text()).toContain('your local changes would be overwritten');
 		view.destroy();
+	});
+
+	/**
+	 * FEAT-121: what is running is said, and what would collide with it waits.
+	 * Nothing else is held, which is the point: the request was for a layer
+	 * over the whole window, and this is what was built instead.
+	 */
+	describe('while something runs (FEAT-121)', () => {
+		const tool = (view: ReturnType<typeof render>, label: string) =>
+			view.all('.tool').find((b) => b.textContent?.includes(label)) as HTMLButtonElement;
+
+		it('says what is running beside the branch, and stops saying it when it ends', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+			expect(view.find('.working')).toBeNull();
+
+			const step = activity.begin('stash', 'Stashing your changes');
+			flushSync();
+
+			const line = view.get('.working');
+			expect(line.getAttribute('role')).toBe('status');
+			expect(line.textContent).toContain('Stashing your changes…');
+
+			step?.end();
+			flushSync();
+			expect(view.find('.working')).toBeNull();
+			view.destroy();
+		});
+
+		it("follows the parts of a pull, and git's own progress", () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+
+			const step = activity.begin('pull', 'Stashing your changes', ['repository', 'network']);
+			step?.say('Pulling');
+			step?.progress('Receiving objects 45%');
+			flushSync();
+			expect(view.get('.working').textContent).toContain('Receiving objects 45%');
+
+			step?.say('Putting your changes back');
+			flushSync();
+			expect(view.get('.working').textContent).toContain('Putting your changes back…');
+			view.destroy();
+		});
+
+		it('shows the strands on the button whose work is running, in its icon\'s place', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+			expect(tool(view, 'Stash').querySelector('.glyph svg')).not.toBeNull();
+
+			activity.begin('stash', 'Stashing your changes');
+			flushSync();
+
+			const stash = tool(view, 'Stash');
+			expect(stash.getAttribute('aria-busy')).toBe('true');
+			expect(stash.querySelector('.glyph [role="status"]')).not.toBeNull();
+			expect(stash.querySelector('.glyph svg')).toBeNull();
+			// The others keep their icons: one thing is running, not five.
+			expect(tool(view, 'Fetch').getAttribute('aria-busy')).toBeNull();
+			expect(tool(view, 'Fetch').querySelector('.glyph svg')).not.toBeNull();
+			view.destroy();
+		});
+
+		it('makes what would collide wait, and says what for', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+
+			activity.begin('stash', 'Stashing your changes');
+			flushSync();
+
+			for (const label of ['Pull', 'Branch', 'Stash']) {
+				const button = tool(view, label);
+				expect(button.getAttribute('aria-disabled'), label).toBe('true');
+				expect(button.title, label).toBe('Stashing your changes is still running');
+			}
+			expect(view.get('.field').getAttribute('aria-disabled')).toBe('true');
+			expect(view.get('.field').title).toBe('Stashing your changes is still running');
+			view.destroy();
+		});
+
+		it('leaves alone what does not collide: a stash is no reason to refuse a fetch', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+
+			activity.begin('stash', 'Stashing your changes');
+			flushSync();
+
+			for (const label of ['Fetch', 'Push']) {
+				const button = tool(view, label);
+				expect(button.getAttribute('aria-disabled'), label).toBeNull();
+				expect(button.title, label).not.toContain('still running');
+			}
+			view.destroy();
+		});
+
+		it('holds the network actions for a fetch, and not the working copy', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+
+			activity.begin('fetch', 'Fetching', ['network']);
+			flushSync();
+
+			expect(tool(view, 'Pull').getAttribute('aria-disabled')).toBe('true');
+			expect(tool(view, 'Fetch').getAttribute('aria-disabled')).toBe('true');
+			expect(tool(view, 'Push').getAttribute('aria-disabled')).toBe('true');
+			expect(tool(view, 'Stash').getAttribute('aria-disabled')).toBeNull();
+			expect(tool(view, 'Branch').getAttribute('aria-disabled')).toBeNull();
+			expect(view.get('.field').getAttribute('aria-disabled')).toBeNull();
+			view.destroy();
+		});
+
+		it('holds everything for a pull, which fetches and then writes', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+
+			activity.begin('pull', 'Pulling', ['repository', 'network']);
+			flushSync();
+
+			for (const label of ['Pull', 'Fetch', 'Push', 'Branch', 'Stash']) {
+				expect(tool(view, label).getAttribute('aria-disabled'), label).toBe('true');
+			}
+			view.destroy();
+		});
+
+		it('keeps a waiting button a button: focusable, and never `disabled`', () => {
+			// `disabled` would drop the keyboard's focus the moment the work
+			// started, and a control that cannot be hovered cannot say why.
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+
+			activity.begin('pull', 'Pulling', ['repository', 'network']);
+			flushSync();
+
+			expect(view.all('.tool, .caret, .field').every((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+			view.destroy();
+		});
+
+		it('does nothing when a waiting button is pressed', () => {
+			repoControl.setInfo(info('main'));
+			at('/');
+			const view = render(Toolbar, {});
+			activity.begin('stash', 'Stashing your changes');
+			flushSync();
+
+			click(tool(view, 'Branch'));
+
+			expect(branching.at).toBeNull();
+			view.destroy();
+		});
+
+		it('does not open the branch list while a switch would collide', () => {
+			repoControl.setInfo(info('main'));
+			branchControl.setRows([branchRow({ name: 'main', current: true }), branchRow({ name: 'topic' })]);
+			const view = render(Toolbar, {});
+			activity.begin('checkout', 'Switching to topic');
+			flushSync();
+
+			click(view.get('.field'));
+			flushSync();
+
+			expect(view.find('.menu')).toBeNull();
+			view.destroy();
+		});
+
+		it('does not open the ways to pull while a pull would collide', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+			activity.begin('stash', 'Stashing your changes');
+			flushSync();
+
+			const caret = view.get('.caret[aria-label="How to pull"]');
+			expect(caret.getAttribute('aria-disabled')).toBe('true');
+			click(caret);
+
+			expect(view.find('.menu')).toBeNull();
+			view.destroy();
+		});
+
+		it('gives everything back when the work ends', () => {
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+			const step = activity.begin('pull', 'Pulling', ['repository', 'network']);
+			flushSync();
+
+			step?.end();
+			flushSync();
+
+			expect(view.all('[aria-disabled="true"]')).toHaveLength(0);
+			expect(view.all('[aria-busy="true"]')).toHaveLength(0);
+			expect(tool(view, 'Pull').title).toBe('Fetch and fast-forward the current branch');
+			view.destroy();
+		});
+
+		it('puts no layer over the window', () => {
+			// What was asked for first, and argued out of: see FEAT-121.
+			repoControl.setInfo(info('main'));
+			const view = render(Toolbar, {});
+			activity.begin('pull', 'Pulling', ['repository', 'network']);
+			flushSync();
+
+			expect(document.querySelector('[aria-modal="true"], .veil, .overlay, .backdrop')).toBeNull();
+			view.destroy();
+		});
 	});
 });
 

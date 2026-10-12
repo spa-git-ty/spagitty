@@ -8,7 +8,9 @@ vi.mock('$lib/api');
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 import * as api from '$lib/api';
+import { activity } from '$lib/activity/store.svelte';
 import { merger } from '$lib/merger/store.svelte';
+import { network } from '$lib/network/store.svelte';
 import Page from './+page.svelte';
 
 let view: Mounted;
@@ -19,6 +21,7 @@ const result = () => text(view.all('section[aria-label="Result"]')[0]);
 beforeEach(() => {
 	vi.clearAllMocks();
 	merger.reset();
+	activity.reset();
 	control.reset();
 	localStorage.clear();
 	openRepository();
@@ -231,6 +234,118 @@ describe('landing a merge with no conflicts (FEAT-101)', () => {
 			newName: 'merge/main-tab-drag',
 			message: "Merge branch 'feat/tab-drag' into merge/main-tab-drag"
 		});
+	});
+});
+
+/**
+ * FEAT-123: the branch that received the merge is checked out, and the one
+ * thing left to do is offered.
+ */
+describe('once it has landed (FEAT-123)', () => {
+	const LANDED = { target: 'feat/tab-drag', commit: '4f2c9d1'.padEnd(40, '0'), short: '4f2c9d1', written: 1 };
+
+	beforeEach(() => {
+		vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast());
+		vi.mocked(api.mergerLand).mockResolvedValue(LANDED);
+		vi.mocked(api.checkout).mockResolvedValue(undefined);
+		vi.mocked(api.remotes).mockResolvedValue([
+			{ name: 'origin', url: 'git@example.com:a/b.git', pushUrl: null, host: 'generic', refs: 4 }
+		]);
+	});
+
+	/** Merge `main` into `feat/tab-drag`, which is not the branch checked out. */
+	async function landIntoTheOther() {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
+		click(button('B Into feat/tab-drag'));
+		click(button('Merge now'));
+		await vi.waitFor(() => expect(button('Create merge commit')).toBeDefined());
+		click(button('Create merge commit'));
+		await vi.waitFor(() => expect(view.text()).toContain('feat/tab-drag now includes main'));
+	}
+
+	it('checks out the branch it merged into, says so, and offers to push it', async () => {
+		await landIntoTheOther();
+
+		await vi.waitFor(() => expect(view.text()).toContain('feat/tab-drag is checked out.'));
+		expect(api.checkout).toHaveBeenCalledWith('feat/tab-drag');
+		await vi.waitFor(() => expect(button('Push now')).toBeDefined());
+		// Where it goes is on the button, not in another sentence.
+		expect(button('Push now').title).toBe('Push feat/tab-drag to origin/feat/tab-drag');
+		expect(button('Not now')).toBeDefined();
+		expect(button('Open in Graph')).toBeDefined();
+		// The merge is made: nothing here is called Cancel, which would
+		// promise to take it back.
+		expect(button('Cancel')).toBeUndefined();
+	});
+
+	it('pushes when asked, and then has nothing more to ask', async () => {
+		const push = vi.spyOn(network, 'push').mockResolvedValue(true);
+		const done = vi.spyOn(network, 'whenDone').mockResolvedValue(true);
+		await landIntoTheOther();
+		await vi.waitFor(() => expect(button('Push now')).toBeDefined());
+
+		click(button('Push now'));
+
+		await vi.waitFor(() => expect(view.text()).toContain('Pushed to origin/feat/tab-drag.'));
+		expect(push).toHaveBeenCalledWith('origin', 'feat/tab-drag');
+		expect(button('Push now')).toBeUndefined();
+		expect(button('Not now')).toBeUndefined();
+		expect(button('Merge another')).toBeDefined();
+		push.mockRestore();
+		done.mockRestore();
+	});
+
+	it('Not now leaves the merge made and unpushed, and closes', async () => {
+		const push = vi.spyOn(network, 'push');
+		await landIntoTheOther();
+		await vi.waitFor(() => expect(button('Not now')).toBeDefined());
+
+		click(button('Not now'));
+
+		await vi.waitFor(() => expect(view.all('[role="dialog"]')).toHaveLength(0));
+		expect(push).not.toHaveBeenCalled();
+		push.mockRestore();
+	});
+
+	it("says why in git's words when the checkout is refused, and offers it again", async () => {
+		vi.mocked(api.checkout).mockRejectedValueOnce('Your local changes would be overwritten by checkout');
+		await landIntoTheOther();
+
+		await vi.waitFor(() =>
+			expect(view.text()).toContain(
+				'Merged, but feat/tab-drag could not be checked out: Your local changes would be overwritten by checkout'
+			)
+		);
+		// Still offered: the push names the branch, so it does not need the checkout.
+		await vi.waitFor(() => expect(button('Push now')).toBeDefined());
+
+		click(button('Check out feat/tab-drag'));
+		await vi.waitFor(() => expect(view.text()).toContain('feat/tab-drag is checked out.'));
+		expect(button('Check out feat/tab-drag')).toBeUndefined();
+	});
+
+	it('checks nothing out, and remarks on nothing, when it was already the branch here', async () => {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('No conflicts'));
+		vi.mocked(api.mergerLand).mockResolvedValue({ ...LANDED, target: 'main' });
+		click(button('Merge now'));
+		await vi.waitFor(() => expect(button('Create merge commit')).toBeDefined());
+		click(button('Create merge commit'));
+
+		await vi.waitFor(() => expect(button('Push now')).toBeDefined());
+		expect(api.checkout).not.toHaveBeenCalled();
+		expect(view.text()).not.toContain('checked out');
+	});
+
+	it('says there is nowhere to push, and offers no push, with no remote', async () => {
+		vi.mocked(api.remotes).mockResolvedValue([]);
+		await landIntoTheOther();
+
+		await vi.waitFor(() => expect(view.text()).toContain('No remote to push to.'));
+		expect(button('Push now')).toBeUndefined();
+		expect(button('Open in Graph')).toBeDefined();
+		expect(button('Merge another')).toBeDefined();
 	});
 });
 

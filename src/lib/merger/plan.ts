@@ -84,6 +84,46 @@ export function cannotLand(
 	return null;
 }
 
+/** Where a push of the branch that received a merge goes (FEAT-123). */
+export interface PushPlan {
+	remote: string;
+	/** `main`, or `main:trunk` when the upstream has another name. */
+	refspec: string;
+	/** What it updates, as it is written everywhere else: `origin/main`. */
+	to: string;
+}
+
+/**
+ * Where `branch` is pushed: its upstream when it has one on a remote of this
+ * repository, otherwise the same name on `origin`, or on the first remote
+ * when none is called that. Null when there is no remote at all.
+ *
+ * Named in full rather than left to `git push`: a bare push sends whatever is
+ * checked out, and the branch that received the merge may not be.
+ */
+export function pushPlan(
+	branch: string,
+	rows: readonly { name: string; kind: string; upstream: string | null }[],
+	remotes: readonly string[]
+): PushPlan | null {
+	if (remotes.length === 0) return null;
+
+	const upstream = rows.find((row) => row.kind === 'branch' && row.name === branch)?.upstream ?? null;
+	if (upstream) {
+		// The longest remote name that fits: a remote may have a slash in it.
+		const remote = [...remotes]
+			.sort((x, y) => y.length - x.length)
+			.find((name) => upstream.startsWith(`${name}/`));
+		if (remote) {
+			const theirs = upstream.slice(remote.length + 1);
+			return { remote, refspec: theirs === branch ? branch : `${branch}:${theirs}`, to: upstream };
+		}
+	}
+
+	const remote = remotes.includes('origin') ? 'origin' : remotes[0];
+	return { remote, refspec: branch, to: `${remote}/${branch}` };
+}
+
 /** Commits that come in from the source, for this direction. */
 export function incoming(forecast: MergerForecast, who: Roles): number {
 	return forecast[who.source].ahead;

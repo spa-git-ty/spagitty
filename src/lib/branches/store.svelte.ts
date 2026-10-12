@@ -9,6 +9,7 @@
  */
 
 import * as api from '../api';
+import { activity, type ActivityKind } from '../activity/store.svelte';
 import { repo } from '../repo.svelte';
 import type { BranchRow } from '../types';
 import { branchDeleted } from '$lib/delight/watch';
@@ -173,9 +174,23 @@ export const branches = {
 		}
 	},
 
-	/** Run a write, then re-read the list and the repository's own state. */
-	async run(operation: () => Promise<void>): Promise<boolean> {
+	/**
+	 * Run a write, then re-read the list and the repository's own state.
+	 *
+	 * `doing` is what the toolbar says while it runs (FEAT-121). A write that
+	 * would collide with one still running is not started, and says which.
+	 */
+	async run(
+		operation: () => Promise<void>,
+		doing = 'Changing the branches',
+		kind: ActivityKind = 'branch'
+	): Promise<boolean> {
 		if (busy) return false;
+		const step = activity.begin(kind, doing);
+		if (!step) {
+			writeError = activity.blocked('repository');
+			return false;
+		}
 		busy = true;
 		writeError = null;
 		try {
@@ -186,6 +201,7 @@ export const branches = {
 			return false;
 		} finally {
 			busy = false;
+			step.end();
 			await this.load();
 			await repo.refresh();
 		}
@@ -193,7 +209,7 @@ export const branches = {
 
 	/** Check out a branch. Refused by git if it would overwrite work. */
 	checkout(name: string): Promise<boolean> {
-		return this.run(() => api.checkout(name));
+		return this.run(() => api.checkout(name), `Switching to ${name}`, 'checkout');
 	},
 
 	/**
@@ -205,7 +221,7 @@ export const branches = {
 	 */
 	rename(from: string, to: string): Promise<boolean> {
 		if (to.trim() === '' || to === from) return Promise.resolve(false);
-		return this.run(() => api.renameBranch(from, to.trim()));
+		return this.run(() => api.renameBranch(from, to.trim()), `Renaming ${from}`);
 	},
 
 	/**
@@ -217,7 +233,7 @@ export const branches = {
 	 * it back.
 	 */
 	async delete(name: string, force: boolean): Promise<boolean> {
-		const gone = await this.run(() => api.deleteBranch(name, force));
+		const gone = await this.run(() => api.deleteBranch(name, force), `Deleting ${name}`);
 		if (gone) branchDeleted(name);
 		return gone;
 	},
@@ -233,11 +249,14 @@ export const branches = {
 	 */
 	deleteMany(names: string[], force: boolean): Promise<boolean> {
 		if (names.length === 0) return Promise.resolve(false);
-		return this.run(async () => {
-			for (const name of names) {
-				await api.deleteBranch(name, force);
-			}
-		});
+		return this.run(
+			async () => {
+				for (const name of names) {
+					await api.deleteBranch(name, force);
+				}
+			},
+			names.length === 1 ? `Deleting ${names[0]}` : `Deleting ${names.length} branches`
+		);
 	},
 
 	/** Create the branch the form describes. Clears the form on success. */
@@ -245,7 +264,10 @@ export const branches = {
 		const name = newName.trim();
 		if (name === '' || busy) return false;
 
-		const made = await this.run(() => api.createBranch(name, newStart.trim(), newCheckout));
+		const made = await this.run(
+			() => api.createBranch(name, newStart.trim(), newCheckout),
+			`Creating ${name}`
+		);
 		if (made) {
 			newName = '';
 			newStart = '';

@@ -173,6 +173,9 @@ rather than an audit.
 | [FEAT-118](items/FEAT-118-an-agents-work-shown-properly.md) | What an agent was sent and what it said, shown properly | 1R, 1S | Done |
 | [FEAT-119](items/FEAT-119-an-agents-progress-you-can-read.md) | An agent's progress you can read | 1R, 1S | Done |
 | [FEAT-120](items/FEAT-120-the-review-file-list-hides-and-has-two-sizes.md) | The review room's file list can be hidden, and is compact or detailed | 1R | Done |
+| [FEAT-121](items/FEAT-121-what-is-running-is-said-and-what-would-collide-waits.md) | What is running is said, and what would collide waits | chrome, 1A, 1C, 1F, 1G, 1S | Done |
+| [FEAT-122](items/FEAT-122-one-branch-menu-that-can-be-searched.md) | One branch menu, that can be searched and says where you are | chrome, 1S, 1E | Done |
+| [FEAT-123](items/FEAT-123-merger-checks-out-what-it-merged-into-and-offers-the-push.md) | Merger checks out the branch it merged into, and offers to push it | 1S | Done |
 
 ## Bugs
 
@@ -332,6 +335,7 @@ of its own.
 | [TASK-066](items/TASK-066-style-notes-from-the-2-0-audit.md) | Style notes from the 2.0 audit | — | Backlog |
 | [TASK-067](items/TASK-067-the-attribution-check-does-not-read-who-wrote-a-commit.md) | The attribution check does not read who wrote a commit | — | Backlog |
 | [TASK-068](items/TASK-068-what-coderabbit-found-on-63-and-64.md) | What CodeRabbit found on pull requests #63 and #64 | 1S, 1R, 1K, 1Q | Done |
+| [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Backlog |
 
 ## Skipped identifiers
 

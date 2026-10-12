@@ -14,6 +14,22 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- What Spagitty is doing is said while it does it. A pull, a stash, a checkout, a commit and the other writes are named in a capsule over the toolbar, as a fetch and a push already were, with git's own progress where it gives any. The button that started the work shows it, and the buttons whose work would collide are dimmed and say what they are waiting for. Nothing else is held: the graph, the diffs and the other screens stay usable, and a fetch does not stop a stash. A second write asked for while one is running is not sent to git, and says which one is in the way.
+- Branches can be searched wherever one is chosen: the toolbar's switcher, Merger's two cards and Rebase. Type any part of a name; the match is marked and Enter picks the best one. The list is grouped into branches, remote branches and tags with how many each holds.
+- After a merge in Merger, the branch that received it is checked out, and the dialog offers **Push now** or **Not now**. The push goes to that branch's upstream, or to `origin` under the same name when it has none. When git refuses the checkout, usually for uncommitted work in the way, the merge is still made, git's sentence is shown and the checkout can be asked for again. A pull request resolved in Merger and a Farm task are as before.
+
+### Changed
+
+- The branch you are on is ticked and marked `current` in the branch list, first in the toolbar's. It used to be the one greyed-out row.
+- The line that said what a fetch or a push was doing has moved out of the toolbar's pill to a capsule over it, so the buttons no longer slide sideways when it appears.
+- The toolbar's branch list is read again each time it is opened, so a branch made on the graph or in Merger is in it.
+
+### Fixed
+
+- A branch list opened near the right edge of the window stays inside it.
+
 ## [2.1.0] - 2026-10-12
 
 ### Added
