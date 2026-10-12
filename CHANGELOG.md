@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-12
+
 ### Added
 
 - Settings detects the `agy` CLI and runs it in print mode for Review, Merger
@@ -63,6 +65,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - An agent's work is shown properly. The card shows the step list and the current sentence, and *Details* opens what Spagitty sent for a step and what came back, each part labelled: replies as formatted text, commands and tool input as code, files it read as links into the diff, results and errors apart. None of it shows until you ask.
 - An agent's progress can be read. The card says which step the agent is on and for how long, counts steps until the plan says how many files there are, and says plainly when the agent has been quiet for three minutes, with a *Stop* beside it. The pulsing dot is gone.
 - The review room's file list can be put away (the button, or the *f* key; an edge tab brings it back) and listed in two sizes: *Detailed* as before, or *Compact*, a line per file with the marks as dots. Both choices are remembered.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.0.1. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
 
 ## [2.0.1] - 2026-10-11
 
