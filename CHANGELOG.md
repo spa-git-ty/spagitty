@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-10-12
+
 ### Added
 
 - Review has a third way to read a file, **Before and after**, beside **Changes** and **Whole file**. The whole file as it was is on the left and the whole file as it is on the right, each with its own line numbers. An unchanged line is on both sides, a changed line is level with what replaced it, and a side is left empty beside lines only the other file has. The two sides scroll as one. Comments are read and written in it as in the other two.
@@ -31,6 +33,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 - Once every conflict is resolved, the pill says **All resolved** and no longer offers it as a button. There was nothing for it to do.
 - The review pill stays inside the diff. With the conversation dragged wide in a window of ordinary width, the diff was left a strip, the file's name in the pill was squeezed to nothing, and the pill's buttons ran out across the conversation. The pill now has the whole column to be laid out in, and goes onto a second row when one will not hold it. The pill in Merger and Conflicts is fixed the same way.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.2.1. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
 
 ## [2.2.1] - 2026-10-12
 
