@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Investigate</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--warn:#9a5b00;--ok:#2f7d45;--danger:#b3124a;--lane-1:#c23b22;--lane-2:#2f8a52;--lane-3:#7a3fae;--lane-5:#2f6fb0;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--warn:#f0b54a;--ok:#7cc68d;--danger:#ff7a85;--lane-1:#f2715a;--lane-2:#7cc68d;--lane-3:#c6a0f6;--lane-5:#6aa7e0;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--agent-edge:color-mix(in srgb,var(--agent) 50%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool.l{border-radius:999px 0 0 999px;padding-right:6px}
+.caret{height:32px;padding:0 10px 0 5px;border-radius:0 999px 999px 0;color:var(--muted);font-size:var(--fs-mono)}
+.seg{display:flex;align-items:center;justify-content:center;height:28px;padding:0 14px;border-radius:999px;font-size:var(--fs-secondary)}
+.seg.on{background:var(--surface-2);box-shadow:var(--shadow-1);font-weight:600}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.card{background-color:var(--surface);border:1px solid var(--pane-edge);border-radius:14px}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.rail-item.new::after{content:'';position:absolute;bottom:7px;left:50%;width:14px;margin-left:-7px;height:2px;border-radius:2px;background:var(--agent)}
+.sw{width:38px;height:22px;border-radius:999px;position:relative;flex:none;border:1px solid var(--pane-edge)}
+.sw span{position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.ev{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;text-align:left;width:100%}
+.ev.on{background:var(--surface-2);box-shadow:var(--shadow-1)}
+.kind{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<button aria-label="Close spagitty" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="14">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 6px">Investigate</span>
+<div role="radiogroup" aria-label="What to investigate" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--pane-edge)">
+<button role="radio" aria-checked="true" class="seg on">File</button>
+<button role="radio" aria-checked="false" class="seg">Folder</button>
+<button role="radio" aria-checked="false" class="seg">Branch</button>
+<button role="radio" aria-checked="false" class="seg">Line</button>
+</div>
+<button class="btn" aria-haspopup="dialog" style="font-family: var(--font-mono); font-size: var(--fs-mono)">crates/spagitty-core/src/avatars.rs</button>
+<span style="flex: 1"></span>
+<span class="note">Follow renames</span>
+<button class="sw" role="switch" aria-checked="true" aria-label="Follow renames" style="background: var(--ok)"><span style="left: 18px"></span></button>
+<button class="btn" aria-haspopup="menu">All time<span class="note">▾</span></button>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 0 12px 12px; overflow: hidden">
+
+<section class="card" aria-label="Life of avatars.rs" style="flex: none; padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 18px">
+<span><span class="note">Born </span><span style="font-weight: 600">14 Mar</span><span class="note"> · Mahmoud · </span><span style="font-family: var(--font-mono); font-size: var(--fs-mono)">4b1e0aa</span></span>
+<span><span style="font-weight: 600">23</span><span class="note"> commits</span></span>
+<span><span style="font-weight: 600">4</span><span class="note"> authors</span></span>
+<span><span style="font-weight: 600">2</span><span class="note"> renames</span></span>
+<span><span style="font-weight: 600">21</span><span class="note"> lines today · peak 64</span></span>
+</div>
+
+<div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; row-gap: 6px; align-items: center">
+<span class="note" style="font-size: 12px">Lines</span>
+<div style="position: relative; height: 120px">
+<svg viewBox="0 0 1000 120" preserveAspectRatio="none" width="100%" height="120" role="img" aria-label="Lines in the file over time: rises to 64 by July, drops to 21 after the rewrite" style="display: block; position: absolute; inset: 0">
+<path d="M0 104 L60 98 L120 96 L220 84 L300 80 L380 60 L460 46 L540 30 L590 22 L600 70 L680 74 L760 78 L840 80 L930 84 L970 86 L1000 86 L1000 120 L0 120 Z" fill="color-mix(in srgb, var(--accent) 16%, transparent)"></path>
+<path d="M0 104 L60 98 L120 96 L220 84 L300 80 L380 60 L460 46 L540 30 L590 22 L600 70 L680 74 L760 78 L840 80 L930 84 L970 86 L1000 86" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+</svg>
+<sc-for list="{{marks}}" as="m" hint-placeholder-count="5">
+<div style="position: absolute; top: 0; bottom: 0; left: {{m.x}}; width: 0; border-left: 1px dashed {{m.ink}}">
+<span style="position: absolute; top: 2px; left: 6px; font-size: 11.5px; white-space: nowrap; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--pane-edge); color: {{m.ink}}">{{m.label}}</span>
+</div>
+</sc-for>
+</div>
+<sc-for list="{{authors}}" as="a" hint-placeholder-count="4">
+<div style="display: contents">
+<span style="font-size: 12px; display: flex; align-items: center; gap: 6px; color: {{a.ink}}; white-space: nowrap"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{a.ink}}"></span>{{a.name}}</span>
+<div style="position: relative; height: 14px; border-radius: 999px; background: var(--soft)">
+<sc-for list="{{a.ticks}}" as="t" hint-placeholder-count="5">
+<span style="position: absolute; top: 3px; left: {{t}}; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: {{a.ink}}"></span>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<span></span>
+<div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted)"><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
+</div>
+</section>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 10px">
+<section class="card" aria-label="Events" style="flex: 1 1 340px; max-width: 420px; min-height: 0; padding: 8px; display: flex; flex-direction: column; gap: 2px; overflow: hidden">
+<sc-for list="{{events}}" as="e" hint-placeholder-count="7">
+<button class="ev {{e.cls}}">
+<span style="font-size: 12px; color: var(--muted); width: 46px; flex: none; padding-top: 2px">{{e.date}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="display: flex; align-items: center; gap: 8px"><span class="kind" style="color: {{e.kInk}}">{{e.kind}}</span><span style="font-size: 12px; color: {{e.whoInk}}">{{e.who}}</span></span>
+<span style="font-size: var(--fs-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{e.msg}}</span>
+</span>
+<span style="font-family: var(--font-mono); font-size: 11.5px; white-space: nowrap; padding-top: 2px"><span style="color: var(--ok)">+{{e.add}}</span> <span style="color: var(--danger)">−{{e.del}}</span></span>
+</button>
+</sc-for>
+</section>
+
+<section class="card" aria-label="The rewrite, 20 Jul" style="flex: 999 1 480px; min-width: 0; min-height: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<span class="kind" style="color: var(--warn)">rewrite</span>
+<span style="font-size: var(--fs-ui); font-weight: 600">Expire avatars daily</span>
+<span class="note">Omar · 20 Jul</span>
+<span style="flex: 1"></span>
+<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--muted)">c81d2e4</span>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 22px; font-weight: 600">62%</span><span class="note" style="font-size: 12px">of the file changed</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 22px; font-weight: 600">5 / 21</span><span class="note" style="font-size: 12px">of its lines still alive</span></div>
+<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px">
+<span class="note" style="font-size: 12px">Who owns it today</span>
+<div role="img" aria-label="Mahmoud 43 percent, Omar 38 percent, Codex 19 percent" style="display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 2px">
+<span style="width: 43%; background: var(--lane-5)"></span><span style="width: 38%; background: var(--lane-2)"></span><span style="width: 19%; background: var(--agent)"></span>
+</div>
+<div style="display: flex; gap: 14px; font-size: 12px"><span style="color: var(--lane-5)">Mahmoud 43%</span><span style="color: var(--lane-2)">Omar 38%</span><span style="color: var(--agent)">⬡ Codex 19%</span></div>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; border-radius: 10px; background: var(--sunken); border: 1px solid var(--pane-edge); overflow: hidden; font-family: var(--font-mono); font-size: 12.5px; line-height: 21px">
+<div style="padding: 4px 12px; color: var(--muted); border-bottom: 1px solid var(--soft)">@@ -4,9 +4,12 @@ pub fn avatar</div>
+<sc-for list="{{diff}}" as="d" hint-placeholder-count="9">
+<div style="display: grid; grid-template-columns: 22px minmax(0, 1fr); padding: 0 12px; background: {{d.bg}}; white-space: pre; overflow: hidden"><span style="color: {{d.ink}}">{{d.sign}}</span><span>{{d.t}}</span></div>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<a class="btn" href="Viewer.dc.html">Open file at c81d2e4</a>
+<button class="btn">Compare with today</button>
+<button class="btn">Show in Graph</button>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · working copy clean · fetched 4 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<div style="display: flex; align-items: center; gap: 2px">
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button><button class="caret" aria-label="How to pull" aria-haspopup="menu">▾</button></span>
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button><button class="caret" aria-label="What to fetch" aria-haspopup="menu">▾</button></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+<span class="vr" style="margin: 0 6px"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"></path><path d="M7 4.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 8.5a2.5 2.5 0 1 0 0-.02"></path></svg>Branch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 8l2-4h14l2 4"></path><path d="M9.5 13h5"></path></svg>Stash</button>
+</div>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · Submodules 0<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v3.0.0</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z','M7 4v-1','M7 9.5v-.5','M7 15v-.5'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','|','investigate','search','more','|','settings'];
+var NEW = { terminal: 1, files: 1, recipes: 1, investigate: 1 };
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', investigate:'Investigate', search:'Log', folder:'All repositories', settings:'Settings', more:'More'};
+ICONS.more = ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'];
+var ACTIVE = 'investigate';
+class Component extends DCLogic {
+ renderVals() {
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: (k === ACTIVE ? 'on ' : '') + (NEW[k] && k !== ACTIVE ? 'new' : '') };
+  });
+  var KIND = { born: 'var(--ok)', renamed: 'var(--lane-5)', moved: 'var(--lane-3)', rewrite: 'var(--warn)', edit: 'var(--muted)' };
+  var events = [
+   ['10 Oct', 'edit', 'Codex', 'var(--agent)', 'Cache avatars on disk instead of in memory', 9, 4, ''],
+   ['2 Sep', 'edit', 'Sara', 'var(--lane-3)', 'Handle 404 from gravatar', 3, 1, ''],
+   ['20 Jul', 'rewrite', 'Omar', 'var(--lane-2)', 'Expire avatars daily', 31, 52, 'on'],
+   ['8 Jul', 'edit', 'Mahmoud', 'var(--lane-5)', 'Key avatars by size', 6, 2, ''],
+   ['2 Jun', 'moved', 'Mahmoud', 'var(--lane-5)', 'src-tauri/src → crates/spagitty-core/src', 0, 0, ''],
+   ['30 Apr', 'renamed', 'Mahmoud', 'var(--lane-5)', 'avatar.rs → avatars.rs', 0, 0, ''],
+   ['14 Mar', 'born', 'Mahmoud', 'var(--lane-5)', 'Add avatar cache', 18, 0, '']
+  ].map(function (e) { return { date: e[0], kind: e[1], kInk: KIND[e[1]], who: e[2], whoInk: e[3], msg: e[4], add: e[5], del: e[6], cls: e[7] }; });
+  var diff = [
+   [' ', '    let key = cache_key(email, size);', ''],
+   ['−', '    if let Some(hit) = MEMORY.lock().get(&key) {', 'del'],
+   ['−', '        return Ok(hit.clone());', 'del'],
+   ['+', '    if let Some(hit) = MEMORY.lock().get(&key) {', 'add'],
+   ['+', '        if hit.fetched.elapsed() < MAX_AGE {', 'add'],
+   ['+', '            return Ok(hit.avatar.clone());', 'add'],
+   ['+', '        }', 'add'],
+   [' ', '    }', ''],
+   [' ', '    let bytes = fetch_gravatar(email, size)?;', '']
+  ].map(function (d) {
+   return { sign: d[0], t: d[1], ink: d[2] === 'del' ? 'var(--danger)' : d[2] === 'add' ? 'var(--ok)' : 'var(--muted)', bg: d[2] === 'del' ? 'color-mix(in srgb, var(--danger) 12%, transparent)' : d[2] === 'add' ? 'color-mix(in srgb, var(--ok) 12%, transparent)' : 'transparent' };
+  });
+  return {
+   theme: this.props.theme || 'dark', rail: rail, events: events, diff: diff,
+   marks: [
+    { x: '0%', label: 'born', ink: 'var(--ok)' },
+    { x: '22%', label: 'renamed', ink: 'var(--lane-5)' },
+    { x: '38%', label: 'moved', ink: 'var(--lane-3)' },
+    { x: '59.5%', label: 'rewrite −62%', ink: 'var(--warn)' },
+    { x: '97%', label: '⬡', ink: 'var(--agent)' }
+   ],
+   authors: [
+    { name: 'Mahmoud', ink: 'var(--lane-5)', ticks: ['1%', '8%', '14%', '22%', '30%', '38%', '45%', '52%', '55%'] },
+    { name: 'Omar', ink: 'var(--lane-2)', ticks: ['48%', '59.5%', '64%', '70%'] },
+    { name: 'Sara', ink: 'var(--lane-3)', ticks: ['72%', '84%'] },
+    { name: '⬡ Codex', ink: 'var(--agent)', ticks: ['93%', '97%'] }
+   ]
+  };
+ }
+}
+</script>
+</body>
+</html>
