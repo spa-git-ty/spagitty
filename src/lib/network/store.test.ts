@@ -189,6 +189,35 @@ describe('while it runs', () => {
 	});
 });
 
+describe('waiting for it to end (BUG-076)', () => {
+	it('says how a push went once git has said so, not when it started', async () => {
+		await network.push('origin', 'pr-61:feat/thing');
+		let ended: boolean | null = null;
+		void network.whenDone().then((ok) => (ended = ok));
+		await Promise.resolve();
+		expect(ended).toBeNull();
+
+		finish();
+		await Promise.resolve();
+
+		expect(ended).toBe(true);
+	});
+
+	it('says a rejected push did not go well, with git’s words kept', async () => {
+		await network.push('origin', 'pr-61:feat/thing');
+		const waited = network.whenDone();
+
+		finish({ ok: false, error: '! [rejected] pr-61 -> feat/thing (fetch first)' });
+
+		expect(await waited).toBe(false);
+		expect(network.error).toContain('rejected');
+	});
+
+	it('answers at once when nothing is running', async () => {
+		expect(await network.whenDone()).toBe(true);
+	});
+});
+
 describe('when it finishes', () => {
 	it('releases the worker, so the next one may start', async () => {
 		// The worker cannot let go of itself; a leak here would refuse every

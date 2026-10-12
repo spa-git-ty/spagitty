@@ -37,6 +37,8 @@ let step = $state<CloneProgress | null>(null);
 /** git's own last words about the operation that finished. */
 let summary = $state<string | null>(null);
 let error = $state<string | null>(null);
+/** Whoever is waiting for the operation running now to end. */
+let waiting: ((ok: boolean) => void)[] = [];
 
 export const network = {
 	get running(): boolean {
@@ -103,6 +105,17 @@ export const network = {
 		}
 	},
 
+	/**
+	 * How the operation running now ends: true when it went well, and `error`
+	 * holds git's words when it did not. `fetch` and `push` resolve when the
+	 * work has started; a caller whose next step depends on the outcome waits
+	 * here (BUG-076).
+	 */
+	whenDone(): Promise<boolean> {
+		if (token === null) return Promise.resolve(error === null);
+		return new Promise((resolve) => waiting.push(resolve));
+	},
+
 	/** Listen for progress. Attached by the layout before anything can emit. */
 	async attach(): Promise<() => void> {
 		const offProgress: UnlistenFn = await listen<NetworkProgressEvent>(
@@ -146,6 +159,7 @@ export const network = {
 				summary = null;
 				notice.failed(`Could not ${event.payload.operation}`, error);
 			}
+			for (const resolve of waiting.splice(0)) resolve(event.payload.ok);
 		});
 
 		return () => {

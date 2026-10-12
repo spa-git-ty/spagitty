@@ -254,6 +254,8 @@ rather than an audit.
 | [BUG-073](items/BUG-073-two-quick-assign-clicks-start-two-agents.md) | Two quick Assign clicks start two agents on one pull request | 1R, 1S | Open |
 | [BUG-074](items/BUG-074-a-remote-agents-token-limit-is-read-only-between-steps.md) | A remote agent's token limit is read only between steps | 1K, 1R, 1S | Open |
 | [BUG-075](items/BUG-075-a-reply-that-cannot-be-read-is-taken-as-empty.md) | A model's reply that cannot be read is taken as an empty one | 1K, 1R, 1S | Open |
+| [BUG-076](items/BUG-076-merger-says-pushed-when-the-push-failed.md) | Merger says *Pushed* when the push failed, and no fetch or push works after it | 1S | Open |
+| [BUG-077](items/BUG-077-a-farm-task-merged-in-merger-skips-the-farms-checks.md) | A Farm task merged in Merger skips the Farm's own checks | 1Q, 1S | Open |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

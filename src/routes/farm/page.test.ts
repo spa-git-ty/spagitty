@@ -139,10 +139,30 @@ describe('Farm journey routes and actions', () => {
 		};
 		await show([sampleTask('T1', { status: 'review', branch: 'farm/T1-work', mergeTarget: 'main' })]);
 		click(button('Merge it in Merger'));
-		expect(goto).toHaveBeenCalledWith('/merge');
+		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/merge'));
+		// The Farm is asked whether it would merge the task before Merger opens (BUG-077).
+		expect(api.mergeCheck).toHaveBeenCalledWith('T1');
 		expect(merger.origin).toMatchObject({ kind: 'farmTask', id: 'T1', branch: 'farm/T1-work', target: 'main' });
 		// The Farm makes no merge of its own from this screen.
 		expect(api).not.toHaveProperty('mergeTask');
+	});
+	it('does not open Merger on a task the Farm would not merge, and says why (BUG-077)', async () => {
+		evidence.T1 = {
+			verification: { passed: true, unverified: false, results: [] },
+			review: { decision: 'approve', summary: 'Good', issues: [] }
+		};
+		vi.mocked(api.mergeCheck).mockRejectedValueOnce(
+			'This task requires a current supplemental review before merging.'
+		);
+		await show([sampleTask('T1', { status: 'review', branch: 'farm/T1-work', mergeTarget: 'main' })]);
+		click(button('Merge it in Merger'));
+		await vi.waitFor(() =>
+			expect(notice.failed).toHaveBeenCalledWith(
+				'Could not open Merger',
+				expect.stringContaining('supplemental review')
+			)
+		);
+		expect(goto).not.toHaveBeenCalledWith('/merge');
 	});
 	it('does not present unverified work as ready to land', async () => {
 		evidence.T1 = {
@@ -447,7 +467,7 @@ describe('Farm journey routes and actions', () => {
 		};
 		await show([sampleTask('T1', { status: 'review', branch: null, mergeTarget: null })]);
 		click(button('Merge it in Merger'));
-		expect(notice.failed).toHaveBeenCalled();
+		await vi.waitFor(() => expect(notice.failed).toHaveBeenCalled());
 		expect(goto).not.toHaveBeenCalledWith('/merge');
 	});
 });

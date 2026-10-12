@@ -1938,23 +1938,65 @@ impl FarmService {
         self.merge_checked(id, false)
     }
 
+    /// The task, when its work may be merged: in review, with no run of its
+    /// own still going. Asked first by every way of merging one, the farm's
+    /// own and a merge made in Merger (BUG-077).
+    fn awaiting_merge(&self, id: &TaskId) -> Result<(Task, AgentProvider)> {
+        let state = self.state.lock().expect("farm lock");
+        let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
+        let task = farm.task(id).ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+        if task.status != TaskStatus::Review
+            || state
+                .runs
+                .iter()
+                .any(|run| &run.task == id && run.outcome == RunOutcome::Running)
+        {
+            return Err(Error::Refused(
+                "Wait for the task and its review to finish before merging.".into(),
+            ));
+        }
+        Ok((task.clone(), self.provider_of(task)))
+    }
+
+    /// Whether a task's work may be merged in Merger now (BUG-077).
+    ///
+    /// Merger makes the merge, so what the farm asks before a merge of its own
+    /// is asked before Merger is opened: the task is in review with nothing
+    /// running, its worktree is clean, and a required supplemental review is
+    /// current. [`Self::mark_merged`] asks again when the merge is written.
+    pub fn check_mergeable(&self, id: &TaskId) -> Result<()> {
+        let (task, _) = self.awaiting_merge(id)?;
+        if task.branch.is_none() {
+            return Err(Error::Refused("This task has no branch to merge.".into()));
+        }
+        let workdir = task
+            .worktree
+            .as_deref()
+            .map(Path::new)
+            .ok_or_else(|| Error::Refused("This task has no worktree.".into()))?;
+        evidence::clean_commit(workdir)?;
+        self.check_supplemental(&task)
+    }
+
     /// A task whose branch was merged in Merger is done (FEAT-117).
     ///
     /// Merger makes every merge a person asks for; the farm only has to learn
-    /// that it happened. So this checks rather than trusts: the task's commit
-    /// has to be in the branch it was meant for now, and only then is the task
-    /// finished and its worktree removed, as a merge made here would have done.
+    /// that it happened. So this checks rather than trusts: the task has to be
+    /// one the farm would have merged itself, and its commit has to be in the
+    /// branch it was meant for now. Only then is the task finished and its
+    /// worktree removed, as a merge made here would have done.
     pub fn mark_merged(&self, id: &TaskId) -> Result<()> {
         let merge_guard = self.merge_lock.lock().expect("merge lock");
-        let (task, provider) = {
+        {
             let state = self.state.lock().expect("farm lock");
             let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
             let task = farm.task(id).ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+            // Telling the farm twice changes nothing.
             if task.status == TaskStatus::Done {
                 return Ok(());
             }
-            (task.clone(), self.provider_of(task))
-        };
+        }
+        let (task, provider) = self.awaiting_merge(id)?;
         let branch = task
             .branch
             .clone()
@@ -1965,6 +2007,7 @@ impl FarmService {
             .map(Path::new)
             .ok_or_else(|| Error::Refused("This task has no worktree.".into()))?;
         let commit = evidence::clean_commit(workdir)?;
+        self.check_supplemental(&task)?;
         let destination = match &task.merge_target {
             Some(target) => target.clone(),
             None => evidence::branch(&self.repo)?,
@@ -1997,22 +2040,7 @@ impl FarmService {
 
     fn merge_checked(&self, id: &TaskId, automatic: bool) -> Result<()> {
         let merge_guard = self.merge_lock.lock().expect("merge lock");
-        let (task, provider) = {
-            let state = self.state.lock().expect("farm lock");
-            let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
-            let task = farm.task(id).ok_or_else(|| Error::NoSuchTask(id.clone()))?;
-            if task.status != TaskStatus::Review
-                || state
-                    .runs
-                    .iter()
-                    .any(|run| &run.task == id && run.outcome == RunOutcome::Running)
-            {
-                return Err(Error::Refused(
-                    "Wait for the task and its review to finish before merging.".into(),
-                ));
-            }
-            (task.clone(), self.provider_of(task))
-        };
+        let (task, provider) = self.awaiting_merge(id)?;
         let branch = task
             .branch
             .clone()

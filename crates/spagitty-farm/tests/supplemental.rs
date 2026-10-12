@@ -134,6 +134,61 @@ fn a_person_can_merge_with_current_supplemental_evidence() {
     assert_eq!(r.task().status, TaskStatus::Done);
     assert!(r.provider.calls.load(Ordering::SeqCst) >= 2);
 }
+/// A merge made in Merger is held to what the farm asks of its own (BUG-077).
+/// The rig's branch is already in `main`, so nothing but these checks stands
+/// between the task and Done.
+#[test]
+fn a_merge_made_in_merger_needs_the_required_review_too() {
+    let r = Rig::new();
+    assert!(r
+        .service
+        .check_mergeable(&r.id)
+        .unwrap_err()
+        .to_string()
+        .contains("supplemental"));
+    assert!(r
+        .service
+        .mark_merged(&r.id)
+        .unwrap_err()
+        .to_string()
+        .contains("supplemental"));
+    assert_eq!(r.task().status, TaskStatus::Review);
+    assert!(
+        r.workdir.exists(),
+        "the worktree of an unfinished task went"
+    );
+
+    r.review();
+    r.service.check_mergeable(&r.id).unwrap();
+    r.service.mark_merged(&r.id).unwrap();
+    assert_eq!(r.task().status, TaskStatus::Done);
+    // Telling it again changes nothing.
+    r.service.mark_merged(&r.id).unwrap();
+}
+#[test]
+fn a_task_that_is_not_in_review_is_not_finished_from_merger() {
+    let r = Rig::new();
+    r.service
+        .configure(|f| f.supplemental.mode = Mode::Advisory)
+        .unwrap();
+    r.service
+        .edit_task(&r.id, |task| task.status = TaskStatus::Ready)
+        .unwrap();
+    for refused in [
+        r.service.check_mergeable(&r.id),
+        r.service.mark_merged(&r.id),
+    ] {
+        assert!(refused
+            .unwrap_err()
+            .to_string()
+            .contains("Wait for the task"));
+    }
+    assert_eq!(r.task().status, TaskStatus::Ready);
+    assert!(
+        r.workdir.exists(),
+        "the worktree of an unfinished task went"
+    );
+}
 #[test]
 fn unavailable_provider_blocks_even_with_a_previous_pass() {
     let r = Rig::new();
