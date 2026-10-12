@@ -112,6 +112,21 @@ let sending = $state(false);
 const threads = $derived(threadsOf(comments));
 const reading_ = new Set<string>();
 let seq = 0;
+/**
+ * The pull request as its host has it now, when that is not the head read
+ * here (FEAT-127): the author pushed since. Null while the two agree, and
+ * while the host has not been asked.
+ */
+let newer = $state.raw<PullRequest | null>(null);
+/** When the host was last asked, so a window that keeps gaining focus does not keep asking. */
+let askedAt = 0;
+/** No sooner than this after the last ask, unless it is asked for by hand. */
+const ASK_NO_SOONER = 30_000;
+
+/** Two names for one commit: a host may give either the whole id or its start. */
+function sameCommit(x: string, y: string): boolean {
+	return x.startsWith(y) || y.startsWith(x);
+}
 
 function noteFor(file: RoomFile): string | null {
 	if (file.binary) return 'Binary file. There are no lines to show.';
@@ -211,6 +226,35 @@ export const room = {
 		return head;
 	},
 
+	/** The pull request as the host has it now, when it has moved on from what is read here. */
+	get newer(): PullRequest | null {
+		return newer;
+	},
+
+	/**
+	 * Ask the host whether the pull request has moved since it was read
+	 * (FEAT-127). Nothing is fetched and nothing on screen changes but the
+	 * notice: reading the new commits is the person's to ask for. A host that
+	 * cannot be reached is not news here, so a failure says nothing.
+	 */
+	async check(force = false): Promise<void> {
+		const at = current;
+		if (!at || phase !== 'ready') return;
+		const now = Date.now();
+		if (!force && now - askedAt < ASK_NO_SOONER) return;
+		askedAt = now;
+		const mine = seq;
+		try {
+			const rows = await api.pullRequests();
+			if (mine !== seq) return;
+			const there = rows.find((row) => row.number === at.pr.number) ?? null;
+			const shown = head?.head ?? at.pr.headSha;
+			newer = there && there.headSha && shown && !sameCommit(there.headSha, shown) ? there : null;
+		} catch {
+			// Offline, or the token lapsed: the room goes on as it was.
+		}
+	},
+
 	get files(): RoomFile[] {
 		return files;
 	},
@@ -225,6 +269,8 @@ export const room = {
 		phase = 'reading';
 		error = null;
 		fallback = null;
+		newer = null;
+		askedAt = 0;
 		head = null;
 		files = [];
 		contents = {};
@@ -306,6 +352,7 @@ export const room = {
 		seq += 1;
 		current = null;
 		phase = 'idle';
+		newer = null;
 		head = null;
 		files = [];
 		contents = {};

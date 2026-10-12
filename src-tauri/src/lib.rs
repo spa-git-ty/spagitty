@@ -91,6 +91,7 @@ pub fn run() {
             commands::delete_tag,
             commands::stash_action,
             commands::pull,
+            commands::pull_branch,
             commands::fetch,
             commands::push,
             commands::search_start,

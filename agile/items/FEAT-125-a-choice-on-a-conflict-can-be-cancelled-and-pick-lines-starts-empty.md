@@ -2,7 +2,7 @@
 
 # FEAT-125 — A choice on a conflict can be cancelled, and Pick lines starts empty
 
-**Status:** Done — on `feature/FEAT-124-an-agent-that-shows-it-is-working-and-asks-at-the-top`, with FEAT-124 and TASK-070; unmerged. Covered by mounted tests; not looked at in a browser or in the running app.
+**Status:** Done — on `feature/FEAT-124-an-agent-that-shows-it-is-working-and-asks-at-the-top`, with FEAT-124, FEAT-126, FEAT-127 and TASK-070; unmerged. Covered by mounted tests; not looked at in a browser or in the running app.
 **Screens:** 1S, 1D.
 **Raised by:** the author, 2026-10-12, on 2.2.0.
 

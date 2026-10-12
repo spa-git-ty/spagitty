@@ -44,6 +44,29 @@
 	});
 
 	const viewed = $derived(room.viewedCount);
+
+	/**
+	 * The author may push while this is being read (FEAT-127). The host is
+	 * asked on arrival, when the window comes back to the front, and every few
+	 * minutes; the room says so when the pull request has moved, and reads the
+	 * new commits only when asked to.
+	 */
+	const ASK_EVERY = 3 * 60_000;
+	$effect(() => {
+		if (room.phase !== 'ready') return;
+		untrack(() => void room.check(true));
+		const timer = setInterval(() => void room.check(), ASK_EVERY);
+		const back = () => void room.check();
+		window.addEventListener('focus', back);
+		return () => {
+			clearInterval(timer);
+			window.removeEventListener('focus', back);
+		};
+	});
+
+	const newer = $derived(room.newer);
+	/** A comment half written would be lost with the page it is written on. */
+	const writing = $derived(room.composer !== null);
 	/** The Finish review card is open (FEAT-093). */
 	let finishing = $state(false);
 
@@ -245,6 +268,26 @@
 			{/if}
 			{#if host}<span>·</span><span>{host}</span>{/if}
 		</div>
+		{#if newer}
+			<div class="newer" role="status">
+				<Icon name="fetch" size="1em" weight={2} />
+				<span class="newer-line">
+					New commits on {host ?? 'the host'} since this was read. What is shown is the pull request as it
+					was.
+				</span>
+				<Btn
+					primary
+					quiet
+					disabled={writing}
+					title={writing
+						? 'Save or cancel the comment you are writing first'
+						: 'Read the pull request again from its new head. Your pending comments are kept.'}
+					onclick={() => review.update(newer)}
+				>
+					Pull latest
+				</Btn>
+			</div>
+		{/if}
 
 		<div class="body">
 			{#if filesView.hidden}
@@ -510,6 +553,27 @@
 
 	.error {
 		color: var(--danger);
+	}
+
+	/* The pull request moved on its host: said across the room, above what
+	   is now out of date, with the way to catch up at its end. */
+	.newer {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		margin: 0 12px 10px;
+		padding: 8px 10px 8px 14px;
+		border-radius: var(--r-panel);
+		color: var(--warn);
+		background: color-mix(in srgb, var(--warn) 12%, transparent);
+		border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+	}
+
+	.newer-line {
+		flex: 1 1 260px;
+		min-width: 0;
+		font-size: var(--fs-secondary);
 	}
 
 	.fallback {

@@ -1158,6 +1158,15 @@ export function pull(mode: PullMode, remote = ''): Promise<string> {
 }
 
 /**
+ * Bring a local branch up to the branch it tracks, whichever branch is
+ * checked out (FEAT-126). Only ever forward: nothing is merged or rewritten,
+ * and it rejects with git's own sentence when the branch cannot simply move.
+ */
+export function pullBranch(name: string): Promise<string> {
+	return invoke('pull_branch', { name });
+}
+
+/**
  * Push. `force` is `--force-with-lease`, never a plain force.
  *
  * Resolves to the token its events carry, the same as `fetch`.

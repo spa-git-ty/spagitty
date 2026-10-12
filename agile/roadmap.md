@@ -276,6 +276,14 @@ The agent's sentence moves while it works and is heard from. When it stops for t
 
 Merger's *What changes* is the height of the two cards beside it and scrolls inside.
 
+### 29. FEAT-126 — Merger says a branch is behind its remote, and pulls it
+
+A branch card says how many commits its upstream has that it lacks, with *Pull now*, which moves the branch forward whichever branch is checked out. Merger does not fetch on its own: the item says why, and what would change that.
+
+### 30. FEAT-127 — the review room says the pull request moved, and pulls the latest
+
+The host is asked while a pull request is open; when the author has pushed the room says so and *Pull latest* reads it again.
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

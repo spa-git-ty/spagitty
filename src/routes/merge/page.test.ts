@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, render, type Mounted } from '../../testing/mount';
 import { openRepository } from '../../testing/git-fixtures';
 import { branchRow, cleanForecast, forecast } from '../../testing/merger-fixtures';
-import { control } from '../../testing/repo-store.svelte';
+import { calls, control } from '../../testing/repo-store.svelte';
 vi.mock('$lib/api');
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
@@ -381,4 +381,91 @@ it('changing only the strategy keeps the plan without a loader (BUG-061)', async
 	await vi.waitFor(() => expect(result()).toContain('after the squash'));
 	expect(result()).not.toContain('Working out the merge…');
 	expect(api.mergerForecast).toHaveBeenCalledTimes(1);
+});
+
+describe('a branch whose upstream has moved (FEAT-126)', () => {
+	const card = (which: 'A' | 'B') => view.get(`section[aria-label="Branch ${which}"]`);
+	const pullButton = (which: 'A' | 'B') =>
+		[...card(which).querySelectorAll('button')].find((b) => /^Pull/.test(text(b))) as HTMLButtonElement | undefined;
+
+	function behind(extra: { main?: object; feat?: object } = {}) {
+		vi.mocked(api.branches).mockResolvedValue([
+			branchRow('main', { current: true, time: 1_700_000_000, upstream: 'origin/main', ahead: 0, behind: 3, ...extra.main }),
+			branchRow('feat/tab-drag', { time: 1_700_000_500, ...extra.feat }),
+			branchRow('origin/main', { kind: 'remote', fullName: 'refs/remotes/origin/main' })
+		]);
+	}
+
+	it('says nothing on a card whose branch is level, or tracks nothing', async () => {
+		view = render(Page, {});
+		await vi.waitFor(() => expect(result()).toContain('4 conflicts in 3 files'));
+		expect(view.find('.behind')).toBeNull();
+		expect(pullButton('A')).toBeUndefined();
+	});
+
+	it('says how far behind a branch is on its own card, and pulls it on asking', async () => {
+		behind();
+		vi.mocked(api.pullBranch).mockResolvedValue('');
+		view = render(Page, {});
+		await vi.waitFor(() => expect(text(card('A'))).toContain('3 new commits on origin/main'));
+		expect(card('B').querySelector('.behind')).toBeNull();
+
+		const refreshed = calls.refreshed;
+		click(pullButton('A')!);
+		await vi.waitFor(() => expect(api.pullBranch).toHaveBeenCalledWith('main'));
+		// The refs are read again, so the plan is worked out against the branch as it is now.
+		await vi.waitFor(() => expect(calls.refreshed).toBe(refreshed + 1));
+		expect(merger.pulling).toBeNull();
+		expect(activity.running).toBe(false);
+	});
+
+	it('pulls the branch that is not checked out, by its own name', async () => {
+		behind({ main: { upstream: null, ahead: null, behind: null }, feat: { upstream: 'origin/feat/tab-drag', ahead: 0, behind: 1 } });
+		vi.mocked(api.pullBranch).mockResolvedValue('');
+		view = render(Page, {});
+		await vi.waitFor(() => expect(text(card('B'))).toContain('1 new commit on origin/feat/tab-drag'));
+		expect(card('A').querySelector('.behind')).toBeNull();
+
+		click(pullButton('B')!);
+		await vi.waitFor(() => expect(api.pullBranch).toHaveBeenCalledWith('feat/tab-drag'));
+	});
+
+	it('does not offer to pull a branch that has commits of its own, and says why', async () => {
+		behind({ main: { ahead: 2 } });
+		view = render(Page, {});
+		await vi.waitFor(() => expect(text(card('A'))).toContain('3 new commits on origin/main'));
+
+		const pull = pullButton('A')!;
+		expect(pull.disabled).toBe(true);
+		expect(pull.title).toContain('main has 2 commits that origin/main does not');
+		click(pull);
+		expect(api.pullBranch).not.toHaveBeenCalled();
+	});
+
+	it('waits while something else is writing, and says what', async () => {
+		behind();
+		view = render(Page, {});
+		await vi.waitFor(() => expect(pullButton('A')).toBeDefined());
+
+		const step = activity.begin('fetch', 'Fetching', ['network'])!;
+		await vi.waitFor(() => expect(pullButton('A')!.disabled).toBe(true));
+		expect(pullButton('A')!.title).toBe('Fetching is still running');
+		expect(await merger.pullNow('main')).toBe(false);
+		expect(api.pullBranch).not.toHaveBeenCalled();
+		step.end();
+		await vi.waitFor(() => expect(pullButton('A')!.disabled).toBe(false));
+	});
+
+	it('lets the lanes go and reads the refs again when git refuses', async () => {
+		behind();
+		vi.mocked(api.pullBranch).mockRejectedValue('git pull failed: Your local changes would be overwritten');
+		view = render(Page, {});
+		await vi.waitFor(() => expect(pullButton('A')).toBeDefined());
+
+		const refreshed = calls.refreshed;
+		expect(await merger.pullNow('main')).toBe(false);
+		expect(activity.running).toBe(false);
+		expect(merger.pulling).toBeNull();
+		expect(calls.refreshed).toBe(refreshed + 1);
+	});
 });

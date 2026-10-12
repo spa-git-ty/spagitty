@@ -198,6 +198,25 @@ pub fn pull(repo: &gix::Repository, remote: &str, mode: shell::PullMode) -> Resu
     shell::pull(workdir(repo)?, remote, mode)
 }
 
+/// Bring a local branch up to its upstream, whichever branch is checked out
+/// here (FEAT-126): Merger's *Pull now*.
+///
+/// Only ever forward. A branch checked out in a worktree — this one or
+/// another — is pulled there, fast-forward only, so its files move with it. A
+/// branch checked out nowhere is fetched into, which touches no working copy.
+/// A branch with commits its upstream lacks is not moved by either: git
+/// refuses, and its sentence is the error.
+pub fn pull_branch(repo: &gix::Repository, name: &str) -> Result<String> {
+    match crate::merger::checked_out(repo).get(name) {
+        Some(worktree) => shell::pull(
+            std::path::Path::new(worktree),
+            "",
+            shell::PullMode::FastForwardOnly,
+        ),
+        None => shell::fetch_into(workdir(repo)?, name),
+    }
+}
+
 /// Push, with `--force-with-lease` when `force` is set.
 pub fn push(repo: &gix::Repository, remote: &str, refspec: &str, force: bool) -> Result<String> {
     shell::push(workdir(repo)?, remote, refspec, force)
@@ -221,6 +240,86 @@ fn parent_count(repo: &gix::Repository, revision: &str) -> Result<usize> {
 mod tests {
     use super::*;
     use crate::fixture::Fixture;
+
+    /// A bare remote holding `main` and `feature/split-view` as they are now,
+    /// with both tracking it. Kept alive by the caller.
+    fn with_origin(fixture: &Fixture) -> tempfile::TempDir {
+        let remote = tempfile::tempdir().expect("temp dir");
+        let url = remote.path().to_str().expect("a utf-8 path").to_string();
+        fixture.git(&["init", "-q", "--bare", &url]);
+        fixture.git(&["remote", "add", "origin", &url]);
+        fixture.git(&["push", "-q", "-u", "origin", "main", "feature/split-view"]);
+        remote
+    }
+
+    #[test]
+    fn a_branch_checked_out_nowhere_is_moved_up_to_its_upstream() {
+        let fixture = Fixture::woven();
+        let _remote = with_origin(&fixture);
+        let tip = fixture.rev("feature/split-view");
+        let head = fixture.head();
+        fixture.git(&[
+            "update-ref",
+            "refs/heads/feature/split-view",
+            "feature/split-view~1",
+        ]);
+
+        pull_branch(&fixture.open(), "feature/split-view").expect("the pull");
+
+        assert_eq!(fixture.rev("feature/split-view"), tip);
+        assert_eq!(fixture.head(), head, "the branch checked out did not move");
+        assert_eq!(
+            fixture.git(&["symbolic-ref", "--short", "HEAD"]).trim(),
+            "main",
+            "and is still the one checked out"
+        );
+    }
+
+    #[test]
+    fn the_branch_checked_out_is_pulled_where_it_is_and_its_files_move() {
+        let fixture = Fixture::woven();
+        let _remote = with_origin(&fixture);
+        let tip = fixture.head();
+        fixture.git(&["reset", "-q", "--hard", "HEAD~1"]);
+        assert!(!fixture.at("split.txt").exists(), "the merge is gone");
+
+        pull_branch(&fixture.open(), "main").expect("the pull");
+
+        assert_eq!(fixture.head(), tip);
+        assert!(
+            fixture.at("split.txt").exists(),
+            "the working copy followed"
+        );
+    }
+
+    #[test]
+    fn a_branch_with_commits_of_its_own_is_refused_and_left_alone() {
+        let fixture = Fixture::woven();
+        let _remote = with_origin(&fixture);
+        // A commit the remote's branch does not have, and none of its newest.
+        let own = fixture.rev("merged/already-in-main");
+        fixture.git(&["update-ref", "refs/heads/feature/split-view", &own]);
+
+        let refused = pull_branch(&fixture.open(), "feature/split-view");
+
+        assert!(matches!(refused, Err(Error::Git { .. })), "{refused:?}");
+        assert_eq!(fixture.rev("feature/split-view"), own);
+    }
+
+    #[test]
+    fn a_branch_that_tracks_nothing_says_so() {
+        let fixture = Fixture::woven();
+
+        let refused = pull_branch(&fixture.open(), "merged/already-in-main");
+
+        let Err(Error::Git { stderr, .. }) = refused else {
+            panic!("expected a refusal, got {refused:?}");
+        };
+        assert_eq!(
+            stderr,
+            "merged/already-in-main does not track a branch on a remote"
+        );
+    }
 
     #[test]
     fn a_soft_reset_moves_the_branch_and_leaves_the_changes_staged() {

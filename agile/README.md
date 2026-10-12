@@ -178,6 +178,8 @@ rather than an audit.
 | [FEAT-123](items/FEAT-123-merger-checks-out-what-it-merged-into-and-offers-the-push.md) | Merger checks out the branch it merged into, and offers to push it | 1S | Done |
 | [FEAT-124](items/FEAT-124-an-agent-that-shows-it-is-working-and-asks-at-the-top.md) | An agent that shows it is working, and asks at the top of its card | 1R, 1S | Done |
 | [FEAT-125](items/FEAT-125-a-choice-on-a-conflict-can-be-cancelled-and-pick-lines-starts-empty.md) | A choice on a conflict can be cancelled, and Pick lines starts empty | 1S, 1D | Done |
+| [FEAT-126](items/FEAT-126-merger-says-a-branch-is-behind-its-remote-and-pulls-it.md) | Merger says a branch is behind its remote, and pulls it | 1S | Done |
+| [FEAT-127](items/FEAT-127-the-review-room-says-the-pull-request-moved-and-pulls-the-latest.md) | The review room says the pull request moved, and pulls the latest | 1R | Done |
 
 ## Bugs
 

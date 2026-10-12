@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { cleanForecast, file, forecast, side } from '../../testing/merger-fixtures';
+import { branchRow, cleanForecast, file, forecast, side } from '../../testing/merger-fixtures';
 import {
+	behindLine,
 	cannotLand,
 	cardRole,
 	conflictSummary,
 	connector,
 	defaultNewName,
+	driftsFrom,
 	effectiveStrategy,
 	fileStatus,
 	filesLine,
 	meter,
 	primaryAction,
+	pullRefusal,
 	pushPlan,
 	roles,
 	sentence,
@@ -222,5 +225,37 @@ describe('what changes', () => {
 
 	it('says how many it touched and how many change', () => {
 		expect(filesLine(plan, intoMain)).toBe('7 files touched by either branch · 6 change on main');
+	});
+});
+
+describe('a branch whose upstream has moved (FEAT-126)', () => {
+	it('is every local branch that is behind the branch it tracks, and no other', () => {
+		const drifts = driftsFrom([
+			branchRow('main', { upstream: 'origin/main', ahead: 0, behind: 3 }),
+			branchRow('feat/x', { upstream: 'origin/feat/x', ahead: 2, behind: 1 }),
+			branchRow('level', { upstream: 'origin/level', ahead: 0, behind: 0 }),
+			branchRow('ahead-only', { upstream: 'origin/ahead-only', ahead: 4, behind: 0 }),
+			branchRow('local-only'),
+			// Configured and never fetched: nothing to compare against.
+			branchRow('unfetched', { upstream: 'origin/unfetched', ahead: null, behind: null }),
+			branchRow('origin/main', { kind: 'remote', upstream: 'origin/main', ahead: 0, behind: 5 })
+		]);
+		expect(drifts).toEqual({
+			main: { upstream: 'origin/main', ahead: 0, behind: 3 },
+			'feat/x': { upstream: 'origin/feat/x', ahead: 2, behind: 1 }
+		});
+	});
+
+	it('says how many commits are new, and where', () => {
+		expect(behindLine({ upstream: 'origin/main', ahead: 0, behind: 3 })).toBe('3 new commits on origin/main');
+		expect(behindLine({ upstream: 'origin/main', ahead: 0, behind: 1 })).toBe('1 new commit on origin/main');
+	});
+
+	it('can only move a branch forward, and says what to do when it cannot', () => {
+		expect(pullRefusal('main', { upstream: 'origin/main', ahead: 0, behind: 3 })).toBeNull();
+		expect(pullRefusal('feat/x', { upstream: 'origin/feat/x', ahead: 2, behind: 1 })).toBe(
+			'feat/x has 2 commits that origin/feat/x does not, so it cannot simply move forward. Pick origin/feat/x as the other branch to merge it in.'
+		);
+		expect(pullRefusal('feat/x', { upstream: 'origin/feat/x', ahead: 1, behind: 1 })).toContain('has 1 commit that');
 	});
 });

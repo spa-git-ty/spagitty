@@ -2,7 +2,7 @@
 
 # TASK-070 — The plan's file list scrolls, in a card the height of its neighbours
 
-**Status:** Done — on `feature/FEAT-124-an-agent-that-shows-it-is-working-and-asks-at-the-top`, with FEAT-124 and FEAT-125; unmerged. Seen in the built frontend against fixtures, drawn by headless Chrome; not yet in the running app.
+**Status:** Done — on `feature/FEAT-124-an-agent-that-shows-it-is-working-and-asks-at-the-top`, with FEAT-124 to FEAT-127; unmerged. Seen in the built frontend against fixtures, drawn by headless Chrome; not yet in the running app.
 **Screens:** 1S.
 **Raised by:** the author, 2026-10-12, on 2.2.0, with two pictures. The pictures did not reach the session that built this; the request was read from its words and from the code.
 
