@@ -113,6 +113,7 @@ const api = vi.hoisted(() => ({
 vi.mock('$lib/api', () => api);
 
 import * as actions from '$lib/graph/actions';
+import { activity } from '$lib/activity/store.svelte';
 
 /** The last options object handed to `dialog.confirm`. */
 function lastConfirmation(): Asked {
@@ -127,6 +128,190 @@ beforeEach(() => {
 	confirmHistoryRewrite = true;
 	confirm.mockResolvedValue(true);
 	prompt.mockResolvedValue('given-name');
+	activity.reset();
+});
+
+/** A call the test finishes when it chooses. */
+function held() {
+	let finish!: () => void;
+	const promise = new Promise<void>((resolve) => (finish = resolve));
+	return { promise, finish };
+}
+
+/**
+ * FEAT-121. Every one of these ran with nothing on screen until it ended, and
+ * a second press started a second git over the first.
+ */
+describe('said while it runs (FEAT-121)', () => {
+	it('names the work for as long as git takes, and lets go when it ends', async () => {
+		const git = held();
+		api.checkout.mockReturnValueOnce(git.promise);
+
+		const running = actions.checkoutBranch('main');
+		await vi.waitFor(() => expect(activity.label).toBe('Switching to main…'));
+		expect(activity.is('checkout')).toBe(true);
+
+		git.finish();
+		await running;
+		expect(activity.running).toBe(false);
+	});
+
+	it('lets go when git refuses', async () => {
+		api.checkout.mockRejectedValueOnce('your local changes would be overwritten');
+
+		await actions.checkoutBranch('main');
+
+		expect(activity.running).toBe(false);
+		expect(failed).toHaveBeenCalledWith(
+			'Could not switch to main',
+			'your local changes would be overwritten'
+		);
+	});
+
+	it('does not start a second write over one still running, and says which', async () => {
+		activity.begin('pull', 'Pulling', ['repository', 'network']);
+
+		await actions.checkoutBranch('main');
+
+		expect(api.checkout).not.toHaveBeenCalled();
+		expect(failed).toHaveBeenCalledWith('Could not switch to main', 'Pulling is still running');
+		expect(ok).not.toHaveBeenCalled();
+		expect(repoRefresh).not.toHaveBeenCalled();
+	});
+
+	it('holds nothing while a question is still open', async () => {
+		// The lane is taken when git starts, not when a dialog does: a
+		// confirmation left open must not freeze the toolbar behind it.
+		let answer!: (agreed: boolean) => void;
+		confirm.mockReturnValueOnce(new Promise<boolean>((resolve) => (answer = resolve)));
+
+		const running = actions.revertCommit('a'.repeat(40), 'aaaaaaa');
+		await Promise.resolve();
+		expect(activity.running).toBe(false);
+
+		answer(false);
+		await running;
+		expect(activity.running).toBe(false);
+	});
+
+	it('names a stash as a stash, so the toolbar knows whose button it is', async () => {
+		working = 3;
+		prompt.mockResolvedValueOnce('WIP');
+		const git = held();
+		api.stashPush.mockReturnValueOnce(git.promise);
+
+		const running = actions.quickStash();
+		await vi.waitFor(() => expect(activity.is('stash')).toBe(true));
+		expect(activity.label).toBe('Stashing your changes…');
+
+		git.finish();
+		await running;
+	});
+
+	it.each([
+		['fastForwardOnly', 'Pulling…'],
+		['rebase', 'Pulling and rebasing…']
+	] as const)('names a %s pull and holds both lanes for it', async (mode, label) => {
+		const seen: { label: string; repository: string | null; network: string | null }[] = [];
+		api.pull.mockImplementationOnce(async () => {
+			seen.push({
+				label: activity.label,
+				repository: activity.blocked('repository'),
+				network: activity.blocked('network')
+			});
+			return '';
+		});
+
+		await actions.pull(mode);
+
+		expect(seen).toHaveLength(1);
+		expect(seen[0].label).toBe(label);
+		expect(seen[0].repository).not.toBeNull();
+		expect(seen[0].network).not.toBeNull();
+		expect(activity.running).toBe(false);
+	});
+
+	it('says each of the three parts of a pull over uncommitted work', async () => {
+		working = 2;
+		const said: string[] = [];
+		api.stashPush.mockImplementationOnce(async () => void said.push(activity.label));
+		api.pull.mockImplementationOnce(async () => {
+			said.push(activity.label);
+			return '';
+		});
+		api.stashAction.mockImplementationOnce(async () => void said.push(activity.label));
+
+		await actions.pull();
+
+		expect(said).toEqual(['Stashing your changes…', 'Pulling…', 'Putting your changes back…']);
+		expect(activity.running).toBe(false);
+	});
+
+	it('lets go when the pull fails with the changes in the stash', async () => {
+		working = 2;
+		api.pull.mockRejectedValueOnce('Not possible to fast-forward');
+
+		await actions.pull();
+
+		expect(activity.running).toBe(false);
+	});
+
+	it('lets go when the stash before a pull fails', async () => {
+		working = 2;
+		api.stashPush.mockRejectedValueOnce('could not write index');
+
+		await actions.pull();
+
+		expect(api.pull).not.toHaveBeenCalled();
+		expect(activity.running).toBe(false);
+	});
+
+	it('does not pull while a fetch is running, and asks nothing first', async () => {
+		working = 2;
+		activity.begin('fetch', 'Fetching', ['network']);
+
+		await actions.pull();
+
+		expect(confirm).not.toHaveBeenCalled();
+		expect(api.stashPush).not.toHaveBeenCalled();
+		expect(api.pull).not.toHaveBeenCalled();
+		expect(failed).toHaveBeenCalledWith('Could not pull', 'Fetching is still running');
+	});
+
+	it('does not pull over something that started while the question was open', async () => {
+		working = 2;
+		confirm.mockImplementationOnce(async () => {
+			activity.begin('stash', 'Stashing your changes');
+			return true;
+		});
+
+		await actions.pull();
+
+		expect(api.stashPush).not.toHaveBeenCalled();
+		expect(api.pull).not.toHaveBeenCalled();
+		expect(failed).toHaveBeenCalledWith('Could not pull', 'Stashing your changes is still running');
+	});
+
+	it('does not fetch or push while a pull is running, and says so', async () => {
+		activity.begin('pull', 'Pulling', ['repository', 'network']);
+
+		await actions.fetchAll();
+		await actions.pushCurrent();
+
+		expect(startFetch).not.toHaveBeenCalled();
+		expect(startPush).not.toHaveBeenCalled();
+		expect(failed).toHaveBeenCalledWith('Could not fetch', 'Pulling is still running');
+		expect(failed).toHaveBeenCalledWith('Could not push', 'Pulling is still running');
+	});
+
+	it('fetches and pushes while only the working copy is being written', async () => {
+		activity.begin('stash', 'Stashing your changes');
+
+		await actions.fetchAll();
+
+		expect(startFetch).toHaveBeenCalled();
+		expect(failed).not.toHaveBeenCalled();
+	});
 });
 
 describe('perform — the shape every action shares', () => {

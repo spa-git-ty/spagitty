@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { activity, type ActivityKind, type Lane } from '$lib/activity/store.svelte';
+	import BranchMenu from '$lib/branches/BranchMenu.svelte';
+	import type { BranchOption } from '$lib/branches/pick';
 	import { branches } from '$lib/branches/store.svelte';
 	import { page } from '$app/state';
 	import { graph } from '$lib/graph/store.svelte';
@@ -11,6 +14,7 @@
 	import { remotes } from '$lib/remotes/store.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
+	import Loader from '$lib/ui/Loader.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import type { MenuItem } from '$lib/ui/menu';
 	import { repo } from '$lib/repo.svelte';
@@ -34,14 +38,14 @@
 	 * Opened under the control rather than at the pointer, so a keyboard
 	 * activation puts the list in the same place a click does.
 	 *
-	 * The list is loaded on opening and not before: the toolbar is drawn for
+	 * The list is read on opening and not before: the toolbar is drawn for
 	 * every screen, and reading every branch on start-up to fill a menu nobody
 	 * opened is work done for nothing. `branches.load` is the same call the
 	 * Branches screen makes and is guarded by the store's own sequence counter,
 	 * so the two cannot race into a stale list.
 	 */
 	function openBranchMenu(event: MouseEvent) {
-		// A second click on the control closes it. `Menu` leaves mousedowns on
+		// A second click on the control closes it. The menu leaves mousedowns on
 		// its anchor alone precisely so that this decision is made here, once,
 		// rather than by a mousedown that closes and a click that reopens
 		// (BUG-018).
@@ -49,10 +53,16 @@
 			branchMenu = null;
 			return;
 		}
+		// A switch would write the working copy under whatever is writing it
+		// now (FEAT-121). The control says why, and stays where it is.
+		if (switchWaits) return;
 		const button = event.currentTarget as HTMLElement;
 		const box = button.getBoundingClientRect();
 		branchMenu = { x: box.left, y: box.bottom + 4, anchor: button };
-		if (!branches.loaded && !branches.loading) void branches.load();
+		// Read again on every opening (FEAT-122): a branch made on the graph or
+		// in Merger since the last one is otherwise missing from the list that
+		// is meant to switch to it. What was read before is shown meanwhile.
+		if (!branches.loading) void branches.load();
 	}
 
 	/**
@@ -62,36 +72,19 @@
 	 * — so offering one in a switcher is how an accidental detached HEAD
 	 * happens. The Branches screen still shows every ref there is.
 	 *
-	 * The branch already checked out is listed, disabled, with its reason, which
-	 * is the convention `Menu` is built around: a list whose contents change with
-	 * state is one nobody can learn.
+	 * The branch already checked out is listed first, ticked and marked
+	 * `current`, at full strength (FEAT-122). It used to be the one disabled
+	 * row, which made where you are the faintest thing in the list.
 	 */
-	const BRANCH_ITEMS: MenuItem[] = $derived.by(() => {
-		const heading: MenuItem = { heading: 'Switch to' };
+	const BRANCH_OPTIONS: BranchOption[] = $derived(
+		branches.rows
+			.filter((row) => row.kind === 'branch')
+			.sort((x, y) => Number(y.name === head?.branch) - Number(x.name === head?.branch))
+			.map((row) => ({ name: row.name, group: 'local' as const }))
+	);
 
-		if (!branches.loaded) {
-			return [heading, { id: 'loading', label: 'reading branches…', disabled: true, run: () => {} }];
-		}
-
-		const local = branches.rows.filter((row) => row.kind === 'branch');
-		if (local.length === 0) {
-			return [heading, { id: 'none', label: 'no local branches', disabled: true, run: () => {} }];
-		}
-
-		return [
-			heading,
-			...local.map((row) => ({
-				id: row.fullName,
-				label: row.name,
-				note: row.upstream ?? undefined,
-				disabled: row.current,
-				reason: row.current ? 'already on it' : undefined,
-				run: () => {
-					void branches.checkout(row.name);
-				}
-			}))
-		];
-	});
+	/** Why the branch cannot be switched just now, or null (FEAT-121). */
+	const switchWaits = $derived(activity.blocked('repository'));
 
 	/**
 	 * There is no `PENDING` any more, and that is the change (BUG-030).
@@ -121,6 +114,14 @@
 		/** What it does, for the actions that are not. */
 		act?: () => void;
 		title?: string;
+		/**
+		 * What kind of work it starts and which lanes that work writes to
+		 * (FEAT-121). While one of its kind runs, the button shows the strands;
+		 * while a lane it needs is taken, it waits, dimmed, and says for what.
+		 * Absent for an action that starts nothing by itself.
+		 */
+		kind?: ActivityKind;
+		lanes?: Lane[];
 		/**
 		 * The alternatives this action offers, and the label its caret
 		 * announces. Present means the button is a split button: the main half
@@ -249,6 +250,8 @@
 				icon: 'pull',
 				label: 'Pull',
 				title: 'Fetch and fast-forward the current branch',
+				kind: 'pull',
+				lanes: ['repository', 'network'],
 				act: () => pull(),
 				alternatives: { label: 'How to pull', open: openPullMenu }
 			},
@@ -258,6 +261,8 @@
 				title: settings.settings.pruneOnFetch
 					? 'Fetch every remote, pruning'
 					: 'Fetch every remote',
+				kind: 'fetch',
+				lanes: ['network'],
 				act: () => fetchAll(),
 				alternatives: { label: 'What to fetch', open: (anchor) => void openFetchMenu(anchor) }
 			},
@@ -265,6 +270,8 @@
 				icon: 'push',
 				label: 'Push',
 				title: 'Push the current branch',
+				kind: 'push',
+				lanes: ['network'],
 				act: () => pushCurrent()
 			}
 		],
@@ -275,12 +282,16 @@
 				title: head?.id
 					? 'Name a branch at the commit selected in the graph, or at HEAD'
 					: 'Nothing to branch from yet',
+				kind: 'branch',
+				lanes: ['repository'],
 				act: () => branchHere()
 			},
 			{
 				icon: 'stash',
 				label: 'Stash',
 				title: 'Stash the work in progress',
+				kind: 'stash',
+				lanes: ['repository'],
 				act: () => void quickStash()
 			}
 		]
@@ -288,12 +299,16 @@
 </script>
 
 {#if branchMenu}
-	<Menu
+	<BranchMenu
 		x={branchMenu.x}
 		y={branchMenu.y}
 		anchor={branchMenu.anchor}
 		label="Switch branch"
-		items={BRANCH_ITEMS}
+		options={BRANCH_OPTIONS}
+		value={head?.branch ?? null}
+		current={head?.branch ?? null}
+		loading={!branches.loaded}
+		onpick={(name) => void branches.checkout(name)}
 		onclose={() => (branchMenu = null)}
 	/>
 {/if}
@@ -326,6 +341,22 @@
 -->
 <div class="toolbar ornament" role="toolbar" aria-label="Repository actions">
 	<!--
+		What is running, in git's own words where it has given any (FEAT-121):
+		a pull, a stash, a checkout and the rest, as well as the fetch and the
+		push that used to say so in the pill.
+
+		Over the pill rather than in it. A line inside widens the pill, the
+		pill is centred, and so every button slid sideways from under the
+		pointer that had just pressed one. Here nothing moves, and it takes no
+		clicks from what is under it.
+	-->
+	{#if activity.running}
+		<span class="working" role="status">
+			<Loader size="inline" label="Working" />
+			<span class="doing">{activity.label}</span>
+		</span>
+	{/if}
+	<!--
 		Where you are: the branch, as a real list (FEAT-045). The repository's
 		name left with the bar — the active tab says it, one row up (FEAT-082).
 	-->
@@ -333,9 +364,10 @@
 		{#if repo.info}
 			<button
 				class="field"
-				aria-haspopup="menu"
+				aria-haspopup="listbox"
 				aria-expanded={branchMenu !== null}
-				title="Switch branch"
+				aria-disabled={switchWaits ? 'true' : undefined}
+				title={switchWaits ?? 'Switch branch'}
 				onclick={openBranchMenu}
 			>
 				<span class="value">{branchLabel}</span>
@@ -356,13 +388,11 @@
 		{/if}
 
 		<!--
-			What the network is doing, in git's own words (FEAT-018). Beside the
-			location rather than over the buttons: it is about the repository,
-			and a spinner on the button that started it would move the target
-			out from under the pointer.
+			How the last fetch or push ended, in git's own words (FEAT-018).
+			Beside the location: it is about the repository.
 		-->
-		{#if network.running}
-			<span class="note working" role="status">{network.label}</span>
+		{#if activity.running}
+			<!-- Said over the pill while it runs: see `.working`. -->
 		{:else if network.error}
 			<span class="note error" role="alert" title={network.error}>{network.error}</span>
 		{:else if network.summary}
@@ -389,12 +419,30 @@
 					whole defect being fixed, since a `contextmenu` handler is
 					unreachable without a pointer and undiscoverable with one.
 				-->
-				<div class="tool-group" class:split={action.alternatives !== undefined}>
+				{@const waits = action.lanes ? activity.blocked(...action.lanes) : null}
+				{@const mine = action.kind !== undefined && activity.is(action.kind)}
+				<!--
+					Dimmed, not removed, and not `disabled` (FEAT-121): a button
+					that turned `disabled` under the keyboard would drop the
+					focus, and one that cannot be hovered cannot say what it is
+					waiting for.
+				-->
+				<div
+					class="tool-group"
+					class:split={action.alternatives !== undefined}
+					class:waits={waits !== null}
+				>
 					<button
 						class="tool"
-						title={action.title}
+						title={waits ?? action.title}
+						aria-disabled={waits ? 'true' : undefined}
+						aria-busy={mine || undefined}
 						oncontextmenu={(event) => {
 							if (!action.alternatives) return;
+							if (waits) {
+								event.preventDefault();
+								return;
+							}
 							// Kept: it was the only way in, and taking it away
 							// would break the habit of everybody who found it.
 							event.preventDefault();
@@ -405,12 +453,26 @@
 							// does not have to be tabbed to separately.
 							if (!action.alternatives || event.key !== 'ArrowDown') return;
 							event.preventDefault();
+							if (waits) return;
 							action.alternatives.open(event.currentTarget as HTMLElement);
 						}}
-						onclick={() => (action.act ? action.act() : action.href && goto(action.href))}
+						onclick={() => {
+							if (waits) return;
+							if (action.act) action.act();
+							else if (action.href) void goto(action.href);
+						}}
 					>
-						<Icon name={action.icon} size="1.25em" />
-						<span>{action.label}</span>
+						<!--
+							The strands take the icon's own box while this is the
+							thing running, so the label does not move.
+						-->
+						<span class="glyph">
+							{#if mine}<Loader size="inline" label="Working" />{:else}<Icon
+									name={action.icon}
+									size="1.25em"
+								/>{/if}
+						</span>
+						<span class="label">{action.label}</span>
 					</button>
 					{#if action.alternatives}
 						{@const open = action.alternatives.open}
@@ -419,8 +481,11 @@
 							aria-haspopup="menu"
 							aria-expanded={(action.label === 'Pull' ? pullMenu : fetchMenu) !== null}
 							aria-label={action.alternatives.label}
-							title={action.alternatives.label}
-							onclick={(event) => open(event.currentTarget as HTMLElement)}
+							aria-disabled={waits ? 'true' : undefined}
+							title={waits ?? action.alternatives.label}
+							onclick={(event) => {
+								if (!waits) open(event.currentTarget as HTMLElement);
+							}}
 						>
 							<span aria-hidden="true">▾</span>
 						</button>
@@ -445,7 +510,7 @@
 				aria-pressed={commandLog.open}
 				onclick={() => commandLog.toggle()}
 			>
-				<span aria-hidden="true">≡</span><span>Commands</span>
+				<span aria-hidden="true">≡</span><span class="label">Commands</span>
 			</button>
 		</div>
 	{/if}
@@ -510,6 +575,91 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	/*
+	 * What is running (FEAT-121): a small capsule over the middle of the pill.
+	 * It waits a moment before it shows: most checkouts and stashes are over
+	 * inside that moment, and a line that flashed for each of them would be
+	 * noise about nothing.
+	 */
+	.working {
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 8px);
+		transform: translateX(-50%);
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		max-width: min(440px, calc(100vw - 32px));
+		padding: 5px 13px;
+		border: 1px solid var(--pane-edge);
+		border-top-color: var(--glass-edge);
+		border-radius: var(--r-pill);
+		background: var(--surface-2);
+		box-shadow: var(--shadow-2);
+		font-size: var(--fs-secondary);
+		color: var(--ink);
+		white-space: nowrap;
+		pointer-events: none;
+		animation: settle 0.2s var(--ease) 0.18s both;
+	}
+
+	.doing {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	@keyframes settle {
+		from {
+			opacity: 0;
+		}
+	}
+
+	/*
+	 * Waiting for what is running. Dimmed after the same moment, for the
+	 * same reason, and nothing else about it changes: it keeps its place,
+	 * its focus and its title, which now says what it is waiting for.
+	 */
+	.field[aria-disabled='true'],
+	.waits .tool,
+	.waits .caret {
+		opacity: 0.42;
+		cursor: default;
+		transition: opacity 0.2s var(--ease) 0.18s;
+	}
+
+	.field[aria-disabled='true']:hover {
+		border-color: var(--pane-edge);
+		background: color-mix(in srgb, var(--sunken) 70%, transparent);
+	}
+
+	.waits .tool:hover,
+	.waits .caret:hover,
+	.waits .tool:active,
+	.waits .caret:active {
+		color: var(--ink);
+		background: transparent;
+	}
+
+	.waits .tool:hover :global(svg) {
+		color: var(--muted);
+	}
+
+	/* The one that is running keeps its strength: it is the answer to "did
+	   that do anything", not something in the way. */
+	.waits .tool[aria-busy='true'] {
+		opacity: 1;
+	}
+
+	.glyph {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.25em;
+		height: 1.25em;
+		flex: none;
 	}
 
 	/* An error is the palette's red, which is what the rest of the application
@@ -656,7 +806,7 @@
 	 * The caret's glyph is not a label and must not go with them.
 	 */
 	@media (max-width: 1180px) {
-		.tool > span:last-child {
+		.tool > .label {
 			display: none;
 		}
 

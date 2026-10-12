@@ -22,9 +22,13 @@
  *
  * Nothing here throws. A failed operation is a notice, because the caller is a
  * menu entry and a menu entry has nowhere to catch.
+ *
+ * While the second step runs, it is named (FEAT-121): the toolbar says what
+ * git is doing, and anything else that would write to the repository waits.
  */
 
 import * as api from '../api';
+import { activity, type ActivityKind } from '../activity/store.svelte';
 import { graph } from './store.svelte';
 import { repo } from '../repo.svelte';
 import { settings } from '../settings/store.svelte';
@@ -45,8 +49,13 @@ async function refresh(): Promise<void> {
 /**
  * Run `work`, report either way, and refresh on success.
  *
- * `success` is written in the past tense and names what changed, because it is
- * read after the fact: "Reset to a1b2c3d", not "Resetting…".
+ * `doing` is what the toolbar says while it runs, with no dots: "Resetting to
+ * a1b2c3d". `success` is written in the past tense and names what changed,
+ * because it is read after the fact: "Reset to a1b2c3d".
+ *
+ * Refused, with what is in the way, while another write to the repository is
+ * still running: two of them would fight for the same lock, and git's own
+ * sentence about `index.lock` explains nothing.
  *
  * Answers whether the repository changed. Most callers are menu entries with
  * nothing to do with the answer and ignore it; a screen holding its own list of
@@ -54,10 +63,17 @@ async function refresh(): Promise<void> {
  * something new to read.
  */
 async function perform(
+	doing: string,
 	success: string,
 	failure: string,
-	work: () => Promise<unknown>
+	work: () => Promise<unknown>,
+	kind: ActivityKind = 'other'
 ): Promise<boolean> {
+	const step = activity.begin(kind, doing);
+	if (!step) {
+		notice.failed(failure, activity.blocked('repository'));
+		return false;
+	}
 	try {
 		await work();
 		notice.ok(success);
@@ -66,6 +82,8 @@ async function perform(
 	} catch (error) {
 		notice.failed(failure, error);
 		return false;
+	} finally {
+		step.end();
 	}
 }
 
@@ -93,8 +111,12 @@ export async function copyId(id: string, short: string): Promise<void> {
  * the graph's own name field, opened by the toolbar's Branch (FEAT-104).
  */
 export function createBranchNamed(name: string, id: string): Promise<boolean> {
-	return perform(`Created ${name}`, 'Could not create the branch', () =>
-		api.createBranch(name, id, true)
+	return perform(
+		`Creating ${name}`,
+		`Created ${name}`,
+		'Could not create the branch',
+		() => api.createBranch(name, id, true),
+		'branch'
 	);
 }
 
@@ -119,7 +141,13 @@ export async function quickStash(): Promise<boolean> {
 		confirmLabel: 'Stash now'
 	});
 	if (message === null) return false;
-	return perform('Stashed', 'Could not stash', () => api.stashPush(message, true));
+	return perform(
+		'Stashing your changes',
+		'Stashed',
+		'Could not stash',
+		() => api.stashPush(message, true),
+		'stash'
+	);
 }
 
 export async function createTagAt(id: string, short: string): Promise<void> {
@@ -132,8 +160,11 @@ export async function createTagAt(id: string, short: string): Promise<void> {
 	});
 	if (name === null) return;
 
-	await perform(`Tagged ${short} as ${name}`, 'Could not create the tag', () =>
-		api.createTag(name, id)
+	await perform(
+		`Tagging ${short}`,
+		`Tagged ${short} as ${name}`,
+		'Could not create the tag',
+		() => api.createTag(name, id)
 	);
 }
 
@@ -160,7 +191,9 @@ export async function resetTo(id: string, short: string, mode: ResetMode): Promi
 		if (!agreed) return;
 	}
 
-	await perform(`Reset ${mode} to ${short}`, 'Could not reset', () => api.reset(id, mode));
+	await perform(`Resetting to ${short}`, `Reset ${mode} to ${short}`, 'Could not reset', () =>
+		api.reset(id, mode)
+	);
 }
 
 export async function revertCommit(id: string, short: string): Promise<void> {
@@ -171,7 +204,9 @@ export async function revertCommit(id: string, short: string): Promise<void> {
 	});
 	if (!agreed) return;
 
-	await perform(`Reverted ${short}`, 'Could not revert', () => api.revert(id));
+	await perform(`Reverting ${short}`, `Reverted ${short}`, 'Could not revert', () =>
+		api.revert(id)
+	);
 }
 
 /**
@@ -193,8 +228,11 @@ export async function cherryPick(ids: string[], labels: string[]): Promise<void>
 	});
 	if (!agreed) return;
 
-	const done = await perform(`Cherry picked ${what}`, 'Could not cherry pick', () =>
-		api.cherryPick(ids)
+	const done = await perform(
+		`Cherry picking ${what}`,
+		`Cherry picked ${what}`,
+		'Could not cherry pick',
+		() => api.cherryPick(ids)
 	);
 	if (done) cherryPicked(ids.length);
 }
@@ -216,7 +254,9 @@ export async function rebaseOntoCommit(id: string, short: string): Promise<void>
 	});
 	if (!agreed) return;
 
-	await perform(`Rebased onto ${short}`, 'Could not rebase', () => api.rebaseOnto(id));
+	await perform(`Rebasing onto ${short}`, `Rebased onto ${short}`, 'Could not rebase', () =>
+		api.rebaseOnto(id)
+	);
 }
 
 /**
@@ -251,6 +291,7 @@ export async function rebaseRangeOnto(
 	if (!agreed) return;
 
 	await perform(
+		`Rebasing onto ${target}`,
 		`Rebased ${count} onto ${target}`,
 		'Could not rebase the selection',
 		// `<oldest>^` is the parent: everything after it, up to HEAD, moves.
@@ -268,8 +309,12 @@ export async function checkoutCommit(id: string, short: string): Promise<void> {
 	});
 	if (!agreed) return;
 
-	await perform(`Checked out ${short}`, 'Could not check out that commit', () =>
-		api.checkoutDetached(id)
+	await perform(
+		`Checking out ${short}`,
+		`Checked out ${short}`,
+		'Could not check out that commit',
+		() => api.checkoutDetached(id),
+		'checkout'
 	);
 }
 
@@ -288,8 +333,12 @@ function detached(): boolean {
 
 export async function checkoutBranch(name: string): Promise<void> {
 	const wasDetached = detached();
-	const done = await perform(`Switched to ${name}`, `Could not switch to ${name}`, () =>
-		api.checkout(name)
+	const done = await perform(
+		`Switching to ${name}`,
+		`Switched to ${name}`,
+		`Could not switch to ${name}`,
+		() => api.checkout(name),
+		'checkout'
 	);
 	if (!done) return;
 
@@ -307,8 +356,12 @@ export async function renameBranch(name: string): Promise<void> {
 	});
 	if (next === null || next === name) return;
 
-	await perform(`Renamed ${name} to ${next}`, 'Could not rename the branch', () =>
-		api.renameBranch(name, next)
+	await perform(
+		`Renaming ${name}`,
+		`Renamed ${name} to ${next}`,
+		'Could not rename the branch',
+		() => api.renameBranch(name, next),
+		'branch'
 	);
 }
 
@@ -330,8 +383,12 @@ export async function deleteBranch(name: string, merged: boolean): Promise<void>
 	});
 	if (!agreed) return;
 
-	await perform(`Deleted ${name}`, 'Could not delete the branch', () =>
-		api.deleteBranch(name, !merged)
+	await perform(
+		`Deleting ${name}`,
+		`Deleted ${name}`,
+		'Could not delete the branch',
+		() => api.deleteBranch(name, !merged),
+		'branch'
 	);
 }
 
@@ -344,25 +401,33 @@ export async function deleteTag(name: string): Promise<void> {
 	});
 	if (!agreed) return;
 
-	await perform(`Deleted ${name}`, 'Could not delete the tag', () => api.deleteTag(name));
+	await perform(`Deleting ${name}`, `Deleted ${name}`, 'Could not delete the tag', () =>
+		api.deleteTag(name)
+	);
 }
 
 // --- Stashes ---------------------------------------------------------------
 
-const STASH_WORDING: Record<StashAction, { title: string; body: string; done: string }> = {
+const STASH_WORDING: Record<
+	StashAction,
+	{ title: string; body: string; doing: string; done: string }
+> = {
 	apply: {
 		title: 'Apply',
 		body: 'The stashed changes are put back into your files and the entry is kept.',
+		doing: 'Applying',
 		done: 'Applied'
 	},
 	pop: {
 		title: 'Pop',
 		body: 'The stashed changes are put back into your files and the entry is removed.',
+		doing: 'Popping',
 		done: 'Popped'
 	},
 	drop: {
 		title: 'Drop',
 		body: 'The entry is removed without being restored. It survives in the reflog until git expires it.',
+		doing: 'Dropping',
 		done: 'Dropped'
 	}
 };
@@ -385,31 +450,44 @@ export async function stash(
 	});
 	if (!agreed) return false;
 
-	return await perform(`${wording.done} ${name}`, `Could not ${action} ${name}`, () =>
-		api.stashAction(index, action)
+	return await perform(
+		`${wording.doing} ${name}`,
+		`${wording.done} ${name}`,
+		`Could not ${action} ${name}`,
+		() => api.stashAction(index, action),
+		'stash'
 	);
 }
 
 // --- Remotes ---------------------------------------------------------------
 
 /** What each way of pulling does, in the words the confirmation uses. */
-const PULL_WORDING: Record<PullMode, { title: string; body: string; done: string }> = {
+const PULL_WORDING: Record<
+	PullMode,
+	{ title: string; body: string; doing: string; done: string }
+> = {
 	fastForwardOnly: {
 		title: 'Pull',
 		body: 'Your branch moves forward to match the remote. If it has commits of its own, nothing happens and git says so — this can never write a merge commit or leave a conflict.',
+		doing: 'Pulling',
 		done: 'Pulled'
 	},
 	merge: {
 		title: 'Pull and merge',
 		body: 'Your branch moves forward where it can, and a merge commit is written where it cannot. A conflict here stops in the working copy for you to resolve.',
+		doing: 'Pulling',
 		done: 'Pulled'
 	},
 	rebase: {
 		title: 'Pull and rebase',
 		body: 'Your own commits are replayed on top of the remote’s. They are rewritten, so anything already pushed will need a force push.',
+		doing: 'Pulling and rebasing',
 		done: 'Pulled and rebased'
 	}
 };
+
+/** A pull fetches and then writes the working copy, so it holds both lanes. */
+const PULL_LANES = ['repository', 'network'] as const;
 
 /**
  * Pull, and deal with uncommitted work first.
@@ -422,10 +500,21 @@ const PULL_WORDING: Record<PullMode, { title: string; body: string; done: string
  * The stash is popped afterwards **only if the pull succeeded**. A failed pull
  * that then restored the changes on top would hand back a working copy in a
  * state neither the user nor git put it in.
+ *
+ * Each of the three parts is named while it runs (FEAT-121): a pull over a
+ * slow network used to be a button that had been pressed and nothing else.
  */
 export async function pull(mode: PullMode = 'fastForwardOnly'): Promise<void> {
 	const wording = PULL_WORDING[mode];
 	const dirty = repo.counts.working ?? 0;
+
+	// Said before anything is asked: a confirmation for a pull that cannot
+	// start would be a question with no use for the answer.
+	const waiting = activity.blocked(...PULL_LANES);
+	if (waiting) {
+		notice.failed('Could not pull', waiting);
+		return;
+	}
 
 	if (dirty > 0) {
 		const agreed = await dialog.confirm({
@@ -439,31 +528,47 @@ export async function pull(mode: PullMode = 'fastForwardOnly'): Promise<void> {
 		});
 		if (!agreed) return;
 
-		try {
-			await api.stashPush('Before pull', true);
-		} catch (error) {
-			notice.failed('Could not stash your changes, so nothing was pulled', error);
+		// Something may have started while the question was open.
+		const step = activity.begin('pull', 'Stashing your changes', PULL_LANES);
+		if (!step) {
+			notice.failed('Could not pull', activity.blocked(...PULL_LANES));
 			return;
 		}
 
 		try {
-			await api.pull(mode, '');
-		} catch (error) {
-			notice.failed('Could not pull — your changes are in the stash', error);
+			try {
+				await api.stashPush('Before pull', true);
+			} catch (error) {
+				notice.failed('Could not stash your changes, so nothing was pulled', error);
+				return;
+			}
+
+			step.say(wording.doing);
+			try {
+				await api.pull(mode, '');
+			} catch (error) {
+				notice.failed('Could not pull — your changes are in the stash', error);
+				await refresh();
+				return;
+			}
+
+			step.say('Putting your changes back');
+			try {
+				await api.stashAction(0, 'pop');
+				notice.ok(`${wording.done}, and your changes are back`);
+			} catch (error) {
+				// The pull worked; only the restore did not. Say which, because
+				// the two have very different next steps.
+				notice.failed(
+					'Pulled, but could not put your changes back — they are in the stash',
+					error
+				);
+			}
+
 			await refresh();
-			return;
+		} finally {
+			step.end();
 		}
-
-		try {
-			await api.stashAction(0, 'pop');
-			notice.ok(`${wording.done}, and your changes are back`);
-		} catch (error) {
-			// The pull worked; only the restore did not. Say which, because the
-			// two have very different next steps.
-			notice.failed('Pulled, but could not put your changes back — they are in the stash', error);
-		}
-
-		await refresh();
 		return;
 	}
 
@@ -477,7 +582,20 @@ export async function pull(mode: PullMode = 'fastForwardOnly'): Promise<void> {
 		if (!agreed) return;
 	}
 
-	await perform(wording.done, 'Could not pull', () => api.pull(mode, ''));
+	const step = activity.begin('pull', wording.doing, PULL_LANES);
+	if (!step) {
+		notice.failed('Could not pull', activity.blocked(...PULL_LANES));
+		return;
+	}
+	try {
+		await api.pull(mode, '');
+		notice.ok(wording.done);
+		await refresh();
+	} catch (error) {
+		notice.failed('Could not pull', error);
+	} finally {
+		step.end();
+	}
 }
 
 /**
@@ -488,6 +606,11 @@ export async function pull(mode: PullMode = 'fastForwardOnly'): Promise<void> {
  * what happens in between is on the toolbar.
  */
 export async function fetchAll(): Promise<void> {
+	const waiting = activity.blocked('network');
+	if (waiting) {
+		notice.failed('Could not fetch', waiting);
+		return;
+	}
 	if (!(await network.fetch())) {
 		if (network.error) notice.failed('Could not fetch', network.error);
 	}
@@ -495,6 +618,11 @@ export async function fetchAll(): Promise<void> {
 
 /** Push the current branch. Starts a worker, the same as `fetchAll`. */
 export async function pushCurrent(): Promise<void> {
+	const waiting = activity.blocked('network');
+	if (waiting) {
+		notice.failed('Could not push', waiting);
+		return;
+	}
 	if (!(await network.push())) {
 		if (network.error) notice.failed('Could not push', network.error);
 	}

@@ -53,6 +53,7 @@ vi.mock('$lib/ui/notice.svelte', () => ({
 
 import * as api from '$lib/api';
 import { calls as repoCalls, control as repoControl } from '../../testing/repo-store.svelte';
+import { activity } from '$lib/activity/store.svelte';
 import { network } from './store.svelte';
 
 const fetchCall = vi.mocked(api.fetch);
@@ -87,6 +88,7 @@ beforeEach(async () => {
 	// that started one finishes it the way the application would.
 	if (network.running) finish();
 	network.clear();
+	activity.reset();
 });
 
 describe('starting', () => {
@@ -285,5 +287,89 @@ describe('when it finishes', () => {
 
 		expect(network.running).toBe(true);
 		expect(network.summary).toBeNull();
+	});
+});
+
+/**
+ * FEAT-121. The network store used to be the only thing that knew a fetch
+ * was running, and it told one line of the toolbar. It holds a lane now, so
+ * that a pull waits for it and the buttons that would collide are dimmed.
+ */
+describe('the network lane (FEAT-121)', () => {
+	it('is held from the start of a fetch to its end, and the repository is not', async () => {
+		await network.fetch();
+
+		expect(activity.is('fetch')).toBe(true);
+		expect(activity.blocked('network')).toBe('Fetching is still running');
+		// A stash does not have to wait for a fetch.
+		expect(activity.blocked('repository')).toBeNull();
+
+		finish();
+		expect(activity.running).toBe(false);
+	});
+
+	it('names a push as a push', async () => {
+		await network.push();
+
+		expect(activity.is('push')).toBe(true);
+		expect(activity.label).toBe('Pushing…');
+	});
+
+	it("passes git's own progress on to whatever is showing it", async () => {
+		await network.fetch();
+
+		emit(NETWORK_PROGRESS_EVENT, {
+			token: 1,
+			phase: 'Receiving objects',
+			percent: 45,
+			line: 'Receiving objects:  45% (450/1000)'
+		});
+		expect(activity.label).toBe('Receiving objects 45%');
+
+		emit(NETWORK_PROGRESS_EVENT, {
+			token: 1,
+			phase: 'Enumerating objects',
+			percent: null,
+			line: 'remote: Enumerating objects: 12, done.'
+		});
+		expect(activity.label).toBe('remote: Enumerating objects: 12, done.');
+	});
+
+	it('is let go when git says the operation failed', async () => {
+		await network.push();
+
+		finish({ operation: 'push', ok: false, error: 'non-fast-forward', summary: null });
+
+		expect(activity.running).toBe(false);
+	});
+
+	it('is let go when the operation could not start at all', async () => {
+		fetchCall.mockRejectedValueOnce(new Error('no repository is open'));
+
+		expect(await network.fetch()).toBe(false);
+
+		expect(activity.running).toBe(false);
+	});
+
+	it('is let go when the worker finished before its token came back', async () => {
+		// The early done event (BUG-076) ends the operation inside `start`.
+		pushCall.mockImplementationOnce(async () => {
+			emit(NETWORK_DONE_EVENT, { token: 7, operation: 'push', ok: false, error: 'rejected', summary: null });
+			return 7;
+		});
+
+		await network.push();
+
+		expect(network.running).toBe(false);
+		expect(activity.running).toBe(false);
+	});
+
+	it('does not start while a pull holds it: a pull is fetching too', async () => {
+		activity.begin('pull', 'Pulling', ['repository', 'network']);
+
+		expect(await network.push()).toBe(false);
+
+		expect(pushCall).not.toHaveBeenCalled();
+		expect(network.running).toBe(false);
 	});
 });

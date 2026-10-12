@@ -12,6 +12,7 @@ import {
 	filesLine,
 	meter,
 	primaryAction,
+	pushPlan,
 	roles,
 	sentence,
 	stats,
@@ -33,6 +34,72 @@ describe('roles', () => {
 	it('names a new branch from the last part of each', () => {
 		expect(defaultNewName('main', 'feat/tab-drag')).toBe('merge/main-tab-drag');
 		expect(defaultNewName('origin/release/2.0', 'fix')).toBe('merge/2.0-fix');
+	});
+});
+
+describe('where a push of the receiving branch goes (FEAT-123)', () => {
+	const row = (name: string, upstream: string | null = null, kind = 'branch') => ({ name, kind, upstream });
+
+	it('goes to its upstream', () => {
+		expect(pushPlan('main', [row('main', 'origin/main')], ['origin'])).toEqual({
+			remote: 'origin',
+			refspec: 'main',
+			to: 'origin/main'
+		});
+	});
+
+	it('names both ends when the upstream is called something else', () => {
+		// A bare `git push origin main` would make a second branch there.
+		expect(pushPlan('main', [row('main', 'origin/trunk')], ['origin'])).toEqual({
+			remote: 'origin',
+			refspec: 'main:trunk',
+			to: 'origin/trunk'
+		});
+	});
+
+	it('goes to the remote the upstream is on, not to origin by habit', () => {
+		expect(pushPlan('main', [row('main', 'fork/main')], ['origin', 'fork'])).toMatchObject({ remote: 'fork' });
+	});
+
+	it('reads a remote with a slash in its name whole', () => {
+		expect(pushPlan('main', [row('main', 'team/a/main')], ['team', 'team/a'])).toEqual({
+			remote: 'team/a',
+			refspec: 'main',
+			to: 'team/a/main'
+		});
+	});
+
+	it('goes to origin under its own name when it has no upstream: a new branch', () => {
+		expect(pushPlan('merge/main-tab-drag', [row('main', 'origin/main')], ['fork', 'origin'])).toEqual({
+			remote: 'origin',
+			refspec: 'merge/main-tab-drag',
+			to: 'origin/merge/main-tab-drag'
+		});
+	});
+
+	it('goes to the first remote when none is called origin', () => {
+		expect(pushPlan('main', [row('main')], ['upstream', 'fork'])).toMatchObject({
+			remote: 'upstream',
+			to: 'upstream/main'
+		});
+	});
+
+	it('does not take a remote branch of the same name for the branch itself', () => {
+		const rows = [row('main', 'elsewhere/main', 'remote'), row('main')];
+		expect(pushPlan('main', rows, ['origin'])).toMatchObject({ remote: 'origin', refspec: 'main' });
+	});
+
+	it('falls back to the same name when the upstream is not on a remote here', () => {
+		// An upstream that is a local branch: there is no remote to name.
+		expect(pushPlan('topic', [row('topic', 'main')], ['origin'])).toEqual({
+			remote: 'origin',
+			refspec: 'topic',
+			to: 'origin/topic'
+		});
+	});
+
+	it('is nowhere when the repository has no remote', () => {
+		expect(pushPlan('main', [row('main')], [])).toBeNull();
 	});
 });
 

@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Loader from '$lib/ui/Loader.svelte';
 	import { relativeTime } from '$lib/format';
 	import { plural, type Strategy, type SummaryRow } from './plan';
 	import SideBadge from './SideBadge.svelte';
@@ -15,6 +16,12 @@
 	 * with what was chosen for it, takes the message, and names the strategy on
 	 * its button. A rebase has no message box — each replayed commit keeps its
 	 * own — and a fast-forward writes no commit at all.
+	 *
+	 * Done, a merge somebody chose here says where it left them — the branch
+	 * that received it is checked out — and asks the one thing that is left:
+	 * push it now, or not now (FEAT-123). *Not now* rather than *Cancel*: the
+	 * merge is made, and nothing here takes it back. Where the push goes is the
+	 * button's title; a branch that was already checked out is not remarked on.
 	 */
 	interface Props {
 		/** Each conflict and what was chosen, or none for a clean merge. */
@@ -112,6 +119,53 @@
 					<Btn primary={merger.pushed} onclick={() => merger.backToPullRequest()}>
 						Back to the pull request
 					</Btn>
+				</div>
+			{:else if merger.origin === null}
+				{@const target = done.landed.target}
+				{@const out = merger.checkout}
+				{#if out?.state === 'switching'}
+					<span class="note line"><Loader size="inline" label="Working" />Checking out {target}…</span>
+				{:else if out?.state === 'done'}
+					<span class="note"><span class="mono">{target}</span> is checked out.</span>
+				{:else if out?.state === 'elsewhere'}
+					<span class="note" title="A branch can be checked out in one worktree at a time. It is up to date there.">
+						<span class="mono">{target}</span> is checked out in <span class="mono">{out.path}</span>, not here.
+					</span>
+				{:else if out?.state === 'failed'}
+					<p class="note error" role="alert">
+						Merged, but {target} could not be checked out: {out.error}
+					</p>
+				{/if}
+				{#if merger.pushed && merger.pushTo}
+					<span class="note">Pushed to <span class="mono">{merger.pushTo.to}</span>.</span>
+				{:else if merger.nowhereToPush}
+					<span class="note">No remote to push to.</span>
+				{/if}
+				{#if merger.pushError}<p class="note error" role="alert">{merger.pushError}</p>{/if}
+				<div class="buttons start">
+					{#if (merger.pushTo || merger.pushReading) && !merger.pushed}
+						<Btn
+							primary
+							busy={merger.pushing}
+							disabled={!merger.pushTo}
+							title={merger.pushTo ? `Push ${target} to ${merger.pushTo.to}` : undefined}
+							onclick={() => merger.pushLanded()}
+						>
+							{merger.pushing ? 'Pushing…' : 'Push now'}
+						</Btn>
+						<Btn disabled={merger.pushing} onclick={() => merger.again()}>Not now</Btn>
+						{#if out?.state === 'failed'}
+							<Btn onclick={() => merger.checkOutLanded()}>Check out {target}</Btn>
+						{/if}
+						<span class="grow"></span>
+						<Btn onclick={ongraph}>Open in Graph</Btn>
+					{:else}
+						<Btn primary onclick={ongraph}>Open in Graph</Btn>
+						{#if out?.state === 'failed'}
+							<Btn onclick={() => merger.checkOutLanded()}>Check out {target}</Btn>
+						{/if}
+						<Btn onclick={() => merger.again()}>Merge another</Btn>
+					{/if}
 				</div>
 			{:else}
 				<div class="buttons start">
@@ -289,6 +343,17 @@
 
 	.buttons.start {
 		justify-content: flex-start;
+		flex-wrap: wrap;
+	}
+
+	.grow {
+		flex: 1;
+	}
+
+	.line {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
 	}
 
 	.error {

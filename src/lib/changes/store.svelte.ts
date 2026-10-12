@@ -13,6 +13,7 @@
  */
 
 import * as api from '../api';
+import { activity } from '../activity/store.svelte';
 import { commitLanded } from '$lib/delight/watch';
 import { repo } from '../repo.svelte';
 import { hooks } from '$lib/hooks/store.svelte';
@@ -331,7 +332,11 @@ export const changes = {
 		let failure: string | null = null;
 		const committed = await this.run(async () => {
 			try {
-				await api.commit(subject, body, amend, skip, token);
+				// Named while it runs, hooks included, and not started over a
+				// pull or a checkout (FEAT-121).
+				await activity.run('commit', amend ? 'Amending the commit' : 'Committing', () =>
+					api.commit(subject, body, amend, skip, token)
+				);
 			} catch (e) {
 				failure = String(e);
 				throw e;

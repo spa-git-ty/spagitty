@@ -15,6 +15,7 @@
  */
 
 import * as api from '../api';
+import { activity } from '../activity/store.svelte';
 import * as act from '../graph/actions';
 import { repo } from '../repo.svelte';
 import type { CommitDiff, FileDiff, StashAction, StashEntry } from '../types';
@@ -244,6 +245,13 @@ export const stash = {
 	/** Stash the working copy, then re-read the list and the rail. */
 	async push(): Promise<boolean> {
 		if (busy) return false;
+		// Named while it runs, and not started over a pull or a checkout
+		// (FEAT-121).
+		const step = activity.begin('stash', 'Stashing your changes');
+		if (!step) {
+			writeError = activity.blocked('repository');
+			return false;
+		}
 		busy = true;
 		writeError = null;
 		try {
@@ -255,6 +263,7 @@ export const stash = {
 			return false;
 		} finally {
 			busy = false;
+			step.end();
 			await this.load();
 			await repo.refresh();
 		}

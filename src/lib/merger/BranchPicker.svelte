@@ -1,14 +1,16 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import BranchMenu from '$lib/branches/BranchMenu.svelte';
+	import type { BranchOption } from '$lib/branches/pick';
 	import Icon from '$lib/ui/Icon.svelte';
-	import Menu from '$lib/ui/Menu.svelte';
-	import type { MenuItem } from '$lib/ui/menu';
 	import type { Pickable } from './store.svelte';
 
 	/**
-	 * The name on a branch card, and the menu that changes it (FEAT-100): any
+	 * The name on a branch card, and the list that changes it (FEAT-100): any
 	 * local branch, any remote-tracking branch, or a tag as something to merge
-	 * from. The other card's branch is listed, disabled, with its reason.
+	 * from. The other card's branch is listed, with its reason, and cannot be
+	 * picked. The list is the one every branch is chosen from (FEAT-122): it
+	 * can be searched, and the branch checked out is marked in it.
 	 */
 	interface Props {
 		value: string | null;
@@ -26,35 +28,15 @@
 
 	let open = $state<{ x: number; y: number; anchor: HTMLElement } | null>(null);
 
-	/** Past this many tags only the newest are offered; Tags lists them all. */
-	const TAGS = 30;
-
-	const GROUPS: { group: Pickable['group']; heading: string }[] = [
-		{ group: 'local', heading: 'Branches' },
-		{ group: 'remote', heading: 'Remote branches' },
-		{ group: 'tag', heading: 'Tags' }
-	];
-
-	const items = $derived.by((): MenuItem[] => {
-		const list: MenuItem[] = [];
-		for (const { group, heading } of GROUPS) {
-			const rows = options.filter((option) => option.group === group).slice(0, group === 'tag' ? TAGS : undefined);
-			if (rows.length === 0) continue;
-			list.push({ heading });
-			for (const row of rows) {
-				list.push({
-					id: `${group}:${row.name}`,
-					label: row.name,
-					note: row.name === current ? 'checked out' : undefined,
-					disabled: row.name === other || row.name === value,
-					reason: row.name === other ? `already ${which === 'A' ? 'B' : 'A'}` : undefined,
-					run: () => onpick(row.name)
-				});
-			}
-		}
-		if (list.length === 0) list.push({ id: 'none', label: 'no branches', disabled: true, run: () => {} });
-		return list;
-	});
+	const choices = $derived(
+		options.map(
+			(option): BranchOption => ({
+				name: option.name,
+				group: option.group,
+				reason: option.name === other ? `already ${which === 'A' ? 'B' : 'A'}` : null
+			})
+		)
+	);
 
 	function toggle(event: MouseEvent) {
 		const button = event.currentTarget as HTMLElement;
@@ -69,7 +51,7 @@
 
 <button
 	class="picker mono"
-	aria-haspopup="menu"
+	aria-haspopup="listbox"
 	aria-expanded={open !== null}
 	aria-label="Branch {which}: {value ?? 'none'}"
 	title="Choose branch {which}"
@@ -80,12 +62,15 @@
 </button>
 
 {#if open}
-	<Menu
+	<BranchMenu
 		x={open.x}
 		y={open.y}
 		anchor={open.anchor}
 		label="Branch {which}"
-		{items}
+		options={choices}
+		{value}
+		{current}
+		{onpick}
 		onclose={() => (open = null)}
 	/>
 {/if}

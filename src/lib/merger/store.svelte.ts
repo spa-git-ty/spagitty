@@ -12,11 +12,18 @@
  * Landing (FEAT-101) goes through the commit dialog, from the plan when there
  * is nothing to resolve: it names what will be written and takes the message,
  * and only its button writes.
+ *
+ * Once it has landed, the branch that received it is checked out, and a push
+ * of it is offered (FEAT-123). Landing itself still checks nothing out: the
+ * merge is made from the dry run, and the checkout is a separate step that
+ * git may refuse without the merge being any less made.
  */
 
 import * as api from '../api';
+import { activity } from '../activity/store.svelte';
 import * as farmApi from '../farm/api';
 import { network } from '../network/store.svelte';
+import { repo } from '../repo.svelte';
 import { requests } from '../requests/store.svelte';
 import type {
 	BranchRow,
@@ -31,9 +38,11 @@ import type {
 import {
 	defaultNewName,
 	effectiveStrategy,
+	pushPlan,
 	roles,
 	strategies,
 	type Into,
+	type PushPlan,
 	type Roles,
 	type Strategy,
 	type StrategyChoice
@@ -132,6 +141,38 @@ let landError = $state<string | null>(null);
 /** What landed, and what it came from, for the done state. */
 let landed = $state<{ landed: MergerLanded; source: string; strategy: Strategy } | null>(null);
 
+/**
+ * What became of checking out the branch that received the merge (FEAT-123).
+ *
+ * - `switching`: git is doing it now.
+ * - `done`: it is checked out here now.
+ * - `already`: it was the branch checked out, and landing brought it forward.
+ * - `elsewhere`: it is checked out in another worktree, which git allows only
+ *   once. Landing updated it there; here stays where it was.
+ * - `failed`: git refused, in `error`'s words. The merge is made all the same.
+ */
+export type Checkout =
+	| { state: 'switching' }
+	| { state: 'done' }
+	| { state: 'already' }
+	| { state: 'elsewhere'; path: string }
+	| { state: 'failed'; error: string };
+
+let checkout = $state<Checkout | null>(null);
+/** Where a push of the branch that received it would go; null with no remote. */
+let pushTo = $state<PushPlan | null>(null);
+/** The remotes have been read, so a null `pushTo` means there are none. */
+let pushKnown = $state(false);
+/** They are being read: the push is about to be offered, or said to have nowhere to go. */
+let pushReading = $state(false);
+/**
+ * Which landing the work after it belongs to. The reads and the checkout that
+ * follow a merge are not waited for, so the dialog can be closed, and another
+ * merge made, while they are still out. What comes back for an earlier landing
+ * is dropped: it would offer a push of the branch before this one.
+ */
+let settlement = 0;
+
 const KEY = 'spagitty.merger.pick';
 
 interface Remembered {
@@ -163,6 +204,14 @@ function remember(repo: string | null) {
 }
 
 let repoPath: string | null = null;
+
+/** Two spellings of one directory: separators and a trailing one aside. */
+function samePath(x: string | null, y: string | null): boolean {
+	if (x === null || y === null) return false;
+	const plain = (path: string) => path.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+	return plain(x) === plain(y);
+}
+
 /** A pair asked for from elsewhere — the graph's drag — taken on the next prime. */
 let preset: { a: string; b: string; into: Into } | null = null;
 
@@ -276,6 +325,22 @@ export const merger = {
 	},
 	get landed() {
 		return landed;
+	},
+	/** What became of checking out the branch that received the merge. */
+	get checkout(): Checkout | null {
+		return checkout;
+	},
+	/** Where *Push now* would send it, or null. */
+	get pushTo(): PushPlan | null {
+		return pushTo;
+	},
+	/** Read, and there is no remote to push to. */
+	get nowhereToPush(): boolean {
+		return pushKnown && pushTo === null;
+	},
+	/** Where a push would go is still being read. */
+	get pushReading(): boolean {
+		return pushReading;
 	},
 
 	// --- What Merger was opened for (FEAT-117) ---------------------------
@@ -446,7 +511,8 @@ export const merger = {
 			pushError = `Spagitty does not know where ${o.pr.sourceBranch} is: it has not been fetched from this repository's remote, or the pull request comes from a fork. Fetch and try again, or push ${branch} to it yourself.`;
 			return false;
 		}
-		if (network.running) {
+		// A pull fetches too, and is not the network store's (FEAT-121).
+		if (network.running || activity.blocked('network')) {
 			pushError = 'A fetch or a push is running. Push again when it has finished.';
 			return false;
 		}
@@ -556,13 +622,34 @@ export const merger = {
 		// A rebase lands from its own worktree once every commit is replayed
 		// (FEAT-103), not in one call.
 		const rebase = ask.strategy === 'rebase';
+		// Where the receiving branch is checked out, as the forecast read it:
+		// asked now, because the forecast is re-read once this has landed.
+		const side = ask.target === 'new' ? null : (this.forecast?.[ask.target] ?? null);
+		const elsewhere = side?.checkedOut ?? null;
 		landing = true;
 		landError = null;
+		settlement += 1;
+		checkout = null;
+		pushTo = null;
+		pushKnown = false;
+		pushReading = false;
 		try {
-			const result = rebase ? await api.mergerRebaseFinish(ask) : await api.mergerLand(ask);
+			// Named while it runs, and not started over a pull or a checkout
+			// that is still writing (FEAT-121).
+			const result = await activity.run('merge', 'Merging', () =>
+				rebase ? api.mergerRebaseFinish(ask) : api.mergerLand(ask)
+			);
 			landed = { landed: result, source: who.sourceName, strategy: ask.strategy };
 			phase = 'done';
 			if (origin?.kind === 'farmTask') await this.finishFarmTask();
+			// A merge somebody chose here. A pull request's branch is already
+			// checked out and has its own push; a Farm task is the Farm's.
+			if (origin === null) {
+				pushing = false;
+				pushed = false;
+				pushError = null;
+				void this.settle(result.target, elsewhere);
+			}
 			return true;
 		} catch (e) {
 			landError = String(e);
@@ -572,10 +659,110 @@ export const merger = {
 		}
 	},
 
+	/**
+	 * After a merge has landed: check out the branch that received it, and
+	 * work out where a push of it would go (FEAT-123).
+	 *
+	 * Not part of landing, and never its failure. The merge is made by then;
+	 * a checkout git refuses — uncommitted work in the way is the usual
+	 * reason — is said in git's words beside it, and can be asked for again.
+	 */
+	async settle(target: string, elsewhere: string | null = null): Promise<void> {
+		// Where a push would go is read first and beside the checkout: it is
+		// quick, and the dialog's buttons are then the same from the moment it
+		// opens rather than changing under the pointer when a checkout ends.
+		const mine = settlement;
+		pushReading = true;
+		const reading = Promise.all([api.branches(), api.remotes()])
+			.then(([rows, known]) => {
+				if (mine !== settlement) return;
+				pushTo = pushPlan(
+					target,
+					rows,
+					known.map((remote) => remote.name)
+				);
+				pushKnown = true;
+			})
+			.catch(() => {
+				if (mine !== settlement) return;
+				// Unread: no push is offered, and none is said to be impossible.
+				pushTo = null;
+				pushKnown = false;
+			})
+			.finally(() => {
+				if (mine === settlement) pushReading = false;
+			});
+
+		if (current === target || samePath(elsewhere, repoPath)) {
+			checkout = { state: 'already' };
+		} else if (elsewhere !== null) {
+			checkout = { state: 'elsewhere', path: elsewhere };
+		} else {
+			await this.checkOutLanded();
+		}
+		await reading;
+	},
+
+	/** Check out the branch that received the merge; again, after a refusal. */
+	async checkOutLanded(): Promise<boolean> {
+		const target = landed?.landed.target;
+		if (!target || checkout?.state === 'switching') return false;
+		const mine = settlement;
+		checkout = { state: 'switching' };
+		try {
+			await activity.run('checkout', `Switching to ${target}`, () => api.checkout(target));
+			// True whoever is still asking: git has moved HEAD.
+			current = target;
+			if (mine === settlement) checkout = { state: 'done' };
+			return true;
+		} catch (e) {
+			if (mine === settlement) checkout = { state: 'failed', error: String(e) };
+			return false;
+		} finally {
+			// HEAD moved, or did not: the chrome reads which from here.
+			void repo.refresh();
+		}
+	},
+
+	/**
+	 * Push the branch that received the merge, and wait for git to say how it
+	 * went, as a pull request's branch is pushed (BUG-076). The remote and the
+	 * branch are named, so this does not depend on the checkout having worked.
+	 */
+	async pushLanded(): Promise<boolean> {
+		const plan = pushTo;
+		if (!landed || !plan || pushing || pushed) return false;
+		const waiting = activity.blocked('network');
+		if (waiting) {
+			pushError = `${waiting}. Push again when it has finished.`;
+			return false;
+		}
+		pushing = true;
+		pushError = null;
+		try {
+			const started = await network.push(plan.remote, plan.refspec);
+			if (!started || !(await network.whenDone())) {
+				pushError = network.error ?? 'The push did not go through.';
+				return false;
+			}
+			pushed = true;
+			return true;
+		} finally {
+			pushing = false;
+		}
+	},
+
 	/** Merge another: back to the plan, read afresh. */
 	again() {
 		phase = 'plan';
 		landed = null;
+		settlement += 1;
+		checkout = null;
+		pushTo = null;
+		pushKnown = false;
+		pushReading = false;
+		pushed = false;
+		pushError = null;
 		typedMessage = null;
 		landError = null;
 		void this.load();
@@ -729,6 +916,11 @@ export const merger = {
 		landing = false;
 		landError = null;
 		landed = null;
+		settlement += 1;
+		checkout = null;
+		pushTo = null;
+		pushKnown = false;
+		pushReading = false;
 		origin = null;
 		prMethod = 'merge';
 		prTitle = '';
