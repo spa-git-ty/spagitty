@@ -366,7 +366,8 @@
 
 	.agent-side {
 		width: var(--room-conversation-w);
-		flex: none;
+		flex: 0 1 auto;
+		min-width: 240px;
 		display: flex;
 		min-height: 0;
 		margin: 0 0 10px;
@@ -538,9 +539,15 @@
 		padding: 0 10px;
 	}
 
+	/*
+	 * The diff keeps a width it can be read at, and that its pill fits in
+	 * (BUG-080). The files and the conversation give way first: each can be
+	 * dragged wide, and in a narrow window the two together left the diff a
+	 * strip. They come back to their own widths when there is room.
+	 */
 	.diff {
-		flex: 1;
-		min-width: 0;
+		flex: 1 0 0;
+		min-width: min(560px, 100%);
 		position: relative;
 		display: flex;
 		flex-direction: column;

@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import type { DiffLine, Hunk } from '../types';
-import { blocksOf, blocksOfHunks, headerOf, lineRows, plainHeaderOf, rowsOf, type Row } from './rows';
+import {
+	blocksOf,
+	blocksOfHunks,
+	headerOf,
+	holds,
+	lineOfRow,
+	lineRows,
+	plainHeaderOf,
+	rowsOf,
+	sideBySide,
+	type Row
+} from './rows';
 import { threadsByPlace, type Thread } from './threads';
 
 /** A file of `count` unchanged lines with one line edited at `at` (0-based). */
@@ -150,5 +161,101 @@ describe('rowsOf', () => {
 		]);
 		expect(kinds(rows)).toEqual(['file', 'note', 'file', 'note']);
 		expect(rows[3].kind === 'note' && rows[3].text).toBe('Reading…');
+	});
+});
+
+describe('sideBySide', () => {
+	const thread: Thread = {
+		id: 7,
+		path: 'src/a.rs',
+		line: 15,
+		side: 'RIGHT',
+		resolved: false,
+		threadId: null,
+		general: false,
+		comments: []
+	};
+	const whole = (lines: DiffLine[], threads: Thread[] = []) =>
+		sideBySide(rowsOf([{ path: 'src/a.rs', lines, blocks: blocksOf(lines, 'sides') }], threadsByPlace(threads)));
+	const pairs = (rows: Row[]) => rows.filter((row) => row.kind === 'pair');
+	const numbers = (rows: Row[]) =>
+		pairs(rows).map((row) => [row.before?.line.old ?? null, row.after?.line.new ?? null]);
+
+	it('shows the whole file as one part, like Whole file', () => {
+		const lines = edited(29, 14);
+		expect(blocksOf(lines, 'sides')).toEqual(blocksOf(lines, 'whole'));
+		expect(blocksOf(lines, 'sides', new Set(), new Set())).toEqual([{ kind: 'hunk', from: 0, to: 30 }]);
+	});
+
+	it('sets an unchanged line on both sides, and a changed one beside what replaced it', () => {
+		const rows = whole(edited(29, 14));
+		// 30 lines became 29 rows: the removed line and the added one share a row.
+		expect(kinds(rows)).toEqual(['file', 'head', ...Array(29).fill('pair')]);
+		const [first, changed] = [pairs(rows)[0], pairs(rows)[14]];
+		expect(first.before).toBe(first.after);
+		expect(changed.before?.line.text).toBe('old 15');
+		expect(changed.after?.line.text).toBe('new 15');
+		expect(pairs(rows).map((row) => row.last)).toEqual([...Array(28).fill(false), true]);
+	});
+
+	it('reads as the whole of each file, in order, on its own side', () => {
+		const rows = whole(edited(29, 14));
+		const before = numbers(rows).map(([old]) => old);
+		const after = numbers(rows).map(([, now]) => now);
+		expect(before).toEqual(Array.from({ length: 29 }, (_, i) => i + 1));
+		expect(after).toEqual(Array.from({ length: 29 }, (_, i) => i + 1));
+	});
+
+	it('leaves a side empty beside lines the other file does not have', () => {
+		const lines: DiffLine[] = [
+			{ origin: 'context', old: 1, new: 1, text: 'a' },
+			{ origin: 'removed', old: 2, new: null, text: 'b' },
+			{ origin: 'removed', old: 3, new: null, text: 'c' },
+			{ origin: 'added', old: null, new: 2, text: 'B' },
+			{ origin: 'context', old: 4, new: 3, text: 'd' },
+			{ origin: 'added', old: null, new: 4, text: 'e' },
+			{ origin: 'added', old: null, new: 5, text: 'f' }
+		];
+		expect(numbers(whole(lines))).toEqual([
+			[1, 1],
+			[2, 2],
+			[3, null],
+			[4, 3],
+			[null, 4],
+			[null, 5]
+		]);
+	});
+
+	it('keeps a thread under the row its line is in, and inside the card', () => {
+		const rows = whole(edited(29, 14), [thread]);
+		const at = rows.findIndex((row) => row.kind === 'thread');
+		const above = rows[at - 1];
+		expect(above.kind === 'pair' && above.after?.line.new).toBe(15);
+		expect(rows[at].kind === 'thread' && rows[at].chunk).toBe(above.kind === 'pair' && above.chunk);
+		// A thread under the last line is what closes the card, not the line.
+		const end = whole(edited(29, 14), [{ ...thread, line: 29 }]);
+		expect(end[end.length - 1].kind).toBe('thread');
+		expect(end.slice(-2).map((row) => 'last' in row && row.last)).toEqual([false, true]);
+	});
+
+	it('finds a line by its key on either side, and steps a row at a time', () => {
+		const rows = whole(edited(29, 14));
+		const changed = pairs(rows)[14];
+		const at = rows.indexOf(changed);
+		expect(holds(changed, changed.before!.key)).toBe(true);
+		expect(holds(changed, changed.after!.key)).toBe(true);
+		expect(holds(changed, pairs(rows)[0].after!.key)).toBe(false);
+		// Read by the line as it is now, or as it was when it is gone.
+		expect(lineOfRow(changed)).toBe(changed.after);
+		expect(lineOfRow(rows[0])).toBeNull();
+		expect(lineRows(rows)).toContain(at);
+		expect(lineRows(rows)).toHaveLength(29);
+	});
+
+	it('leaves rows that are not lines as they are', () => {
+		const rows = rowsOf([
+			{ path: 'a.png', lines: [], blocks: [], note: 'Binary file. There are no lines to show.' }
+		]);
+		expect(sideBySide(rows)).toEqual(rows);
 	});
 });

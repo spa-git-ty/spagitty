@@ -27,6 +27,7 @@
 		type AgentProposal
 	} from './model';
 	import { paint } from './paint';
+	import { linker } from './scroll-link';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 
@@ -38,6 +39,10 @@
 	 * will land, each line badged with where it came from, numbered as the
 	 * file will be. Under it, every way out, and the way back: Cancel returns
 	 * the conflict to unresolved, whichever way it was chosen.
+	 *
+	 * The card is never taller than the room it is shown in (FEAT-128). A long
+	 * conflict scrolls inside its columns, so its header and its choices stay
+	 * where they are, and the columns move as one or each alone.
 	 */
 	interface Props {
 		file: ResolverFile;
@@ -51,6 +56,8 @@
 		showBase: boolean;
 		baseShort: string | null;
 		current: boolean;
+		/** The three columns scroll together. */
+		linked?: boolean;
 		onchoose: (choice: Choice | null) => void;
 		onfocus: () => void;
 		/** The agent that chose what stands here, when one did (2.0). */
@@ -72,6 +79,7 @@
 		showBase,
 		baseShort,
 		current,
+		linked = true,
 		onchoose,
 		onfocus,
 		author = null,
@@ -79,6 +87,24 @@
 		onaccept,
 		onwhy
 	}: Props = $props();
+
+	/** The three columns, and what keeps them in step while they are linked. */
+	const columns = new Set<HTMLElement>();
+	const link = linker();
+
+	function column(node: HTMLElement) {
+		columns.add(node);
+		const onscroll = () => {
+			if (linked) link.scrolled(node, columns);
+		};
+		node.addEventListener('scroll', onscroll, { passive: true });
+		return {
+			destroy() {
+				node.removeEventListener('scroll', onscroll);
+				columns.delete(node);
+			}
+		};
+	}
 
 	/**
 	 * Text an agent wrote is the fourth origin, beside A, B and ✎. An agent's
@@ -175,7 +201,7 @@
 
 	<div class="columns">
 		{#snippet side(key: SideKey, before: Numbered[], block: string[], after: Numbered[], tokens: Token[][], start: number | null)}
-			<div class="column code side-{key}">
+			<div class="column code side-{key}" use:column>
 				{#if sideNote(key)}
 					<span class="note small pad">{sideNote(key)}</span>
 				{:else}
@@ -214,7 +240,7 @@
 
 		{@render side('a', place.aBefore, region.a, place.aAfter, aTokens, region.aLine)}
 
-		<div class="column code result" class:chosen={settled}>
+		<div class="column code result" class:chosen={settled} use:column>
 			{#each place.before as line, i (i)}
 				<div class="row context">
 					<span class="mark"></span><span class="n">{line.n ?? ''}</span>
@@ -304,13 +330,30 @@
 </article>
 
 <style>
+	/*
+	 * As tall as what it holds, and never taller than the room the list has
+	 * for it. `cqh` is the list's height inside its padding, so the space the
+	 * pill floats over is already left out (the resolver makes the list a size
+	 * container). Past that the columns give way and scroll.
+	 *
+	 * The floor is what a card needs to be a card: its header, its choices
+	 * and the least its columns can be. In a window too short even for that,
+	 * the list scrolls it, which is better than a card whose columns are gone.
+	 */
 	.conflict {
+		flex: none;
+		max-height: max(240px, calc(100cqh - 12px));
+		box-sizing: border-box;
 		padding: 10px 12px 12px;
 		border-radius: 16px;
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
 		scroll-margin: 12px;
+	}
+
+	.conflict > :global(*) {
+		flex: none;
 	}
 
 	.conflict.unresolved {
@@ -387,6 +430,13 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+		/* A long base scrolls in its own strip and leaves the columns room. */
+		max-height: 30cqh;
+		overflow-y: auto;
+	}
+
+	.base > :global(*) {
+		flex: none;
 	}
 
 	.base-line {
@@ -396,11 +446,18 @@
 		opacity: 0.8;
 	}
 
+	/* The one part of the card that gives way: its row is the height that is
+	   left, and each column scrolls within it. */
+	.conflict > .columns {
+		flex: 0 1 auto;
+		min-height: 96px;
+	}
+
 	.columns {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr);
 		gap: 10px;
-		align-items: start;
 	}
 
 	.code {
@@ -414,8 +471,12 @@
 		border-radius: 10px;
 		background: color-mix(in srgb, var(--sunken) 45%, transparent);
 		padding: 4px 0;
-		overflow: hidden;
+		overflow-x: hidden;
+		overflow-y: auto;
 		min-width: 0;
+		min-height: 0;
+		/* Reaching a column's end does not start moving the list behind it. */
+		overscroll-behavior: contain;
 	}
 
 	.result.chosen {

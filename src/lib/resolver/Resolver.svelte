@@ -70,6 +70,30 @@
 	let showBase = $state(false);
 	let list = $state<HTMLElement | null>(null);
 
+	/**
+	 * A conflict's three columns scroll as one, or each alone (FEAT-128).
+	 * Together unless it was switched off; remembered on this machine.
+	 */
+	const LINKED_KEY = 'spagitty.resolver.scrollTogether';
+	let linked = $state(readLinked());
+
+	function readLinked(): boolean {
+		try {
+			return localStorage.getItem(LINKED_KEY) !== '0';
+		} catch {
+			return true;
+		}
+	}
+
+	function setLinked(next: boolean) {
+		linked = next;
+		try {
+			localStorage.setItem(LINKED_KEY, next ? '1' : '0');
+		} catch {
+			// A private window: the choice lasts the session.
+		}
+	}
+
 	const file = $derived(files.find((f) => f.path === selected) ?? files[0] ?? null);
 	const places = $derived(file ? layout(file, choices[file.path] ?? []) : []);
 	const language = $derived(file ? languageOf(file.path) : 'plain');
@@ -238,6 +262,7 @@
 						{showBase}
 						{baseShort}
 						current={current?.path === file.path && current.index === region.index}
+						{linked}
 						onchoose={(choice) => {
 							current = { path: file.path, index: region.index };
 							onchoose(file.path, region.index, choice);
@@ -255,11 +280,13 @@
 				total={all.length}
 				file={current ? base(current.path) : ''}
 				{showBase}
+				{linked}
 				done={unresolved.length === 0}
 				canTake={current !== null}
 				{names}
 				onstep={step}
 				onbase={() => (showBase = !showBase)}
+				onlink={() => setLinked(!linked)}
 				ontake={take}
 				onnext={nextUnresolved}
 			/>
@@ -499,9 +526,15 @@
 		justify-content: flex-end;
 	}
 
+	/*
+	 * The cards measure themselves against this (`cqh` in ConflictCard): none is
+	 * taller than the list, so a long conflict scrolls in its own columns and
+	 * the list moves only from one conflict to the next (FEAT-128).
+	 */
 	.list {
 		flex: 1;
 		min-height: 0;
+		container-type: size;
 		overflow: auto;
 		padding: 0 8px 100px;
 		display: flex;

@@ -144,9 +144,12 @@
 
 <style>
 	/* An inset card, like the commit detail on Graph. */
+	/* It gives way before the diff is squeezed (BUG-080), down to the least
+	   width it can be dragged to. */
 	.conversation {
 		width: var(--room-conversation-w);
-		flex: none;
+		flex: 0 1 auto;
+		min-width: 240px;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
@@ -156,7 +159,6 @@
 		border: 1px solid var(--pane-edge);
 		border-top-color: var(--glass-edge);
 		border-radius: var(--r-floating);
-		min-width: 0;
 		overflow: hidden;
 	}
 

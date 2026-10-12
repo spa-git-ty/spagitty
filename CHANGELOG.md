@@ -14,9 +14,37 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-10-12
+
+### Added
+
+- Review has a third way to read a file, **Before and after**, beside **Changes** and **Whole file**. The whole file as it was is on the left and the whole file as it is on the right, each with its own line numbers. An unchanged line is on both sides, a changed line is level with what replaced it, and a side is left empty beside lines only the other file has. The two sides scroll as one. Comments are read and written in it as in the other two.
+- A long conflict scrolls inside its three columns, in Merger and in Conflicts. Its header and its choices stay where they are, and the conflict is never taller than the window. **Scroll together**, in the pill, moves the three columns as one, each by the same share of its own length, so they reach their ends together. Switch it off to scroll each column alone. The choice is remembered.
+
+### Changed
+
+- In the review room the diff keeps a width of at least 560 pixels. The files and the conversation narrow to make room for it in a small window, and return to the widths you dragged them to in a larger one.
+
 ### Removed
 
 - agy, Google's Antigravity command line, is no longer supported. Google is not worth supporting. Settings → Agents does not list agy, its **Auto-approve tools** choice is gone, and Review, Merger and Farm no longer offer it. A Farm agent list saved with agy in it opens without it, and every other agent keeps its settings. Gemini with an API key, under remote agents, is unchanged.
+
+### Fixed
+
+- Once every conflict is resolved, the pill says **All resolved** and no longer offers it as a button. There was nothing for it to do.
+- The review pill stays inside the diff. With the conversation dragged wide in a window of ordinary width, the diff was left a strip, the file's name in the pill was squeezed to nothing, and the pill's buttons ran out across the conversation. The pill now has the whole column to be laid out in, and goes onto a second row when one will not hold it. The pill in Merger and Conflicts is fixed the same way.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.2.1. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
 
 ## [2.2.1] - 2026-10-12
 

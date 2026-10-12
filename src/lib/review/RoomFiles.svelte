@@ -174,9 +174,12 @@
 		color: var(--muted);
 	}
 
+	/* Gives way before the diff is squeezed (BUG-080), down to the least
+	   width it can be dragged to. */
 	.files {
 		width: var(--room-files-w);
-		flex: none;
+		flex: 0 1 auto;
+		min-width: 180px;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;

@@ -11,7 +11,7 @@
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import { room } from './room.svelte';
 	import type { ConflictFix } from '$lib/types';
-	import { lineRows, rowsOf, type Row, type SideName } from './rows';
+	import { holds, lineOfRow, lineRows, rowsOf, sideBySide, type LineRow, type Row, type SideName } from './rows';
 	import { draftsByPlace } from './drafts';
 	import { paint } from '$lib/diff/highlight';
 	import { threadsByPlace, type Thread } from './threads';
@@ -35,19 +35,25 @@
 	 * shift-clicking a line number stretches it over a range, and what is
 	 * written waits, tinted, under its lines until Finish review. Threads
 	 * from the host take a reply and are resolved or reopened in place.
+	 *
+	 * Before and after (FEAT-129) is the same list with each line of a file
+	 * set beside its counterpart: the file as it was on the left, as it is on
+	 * the right. One column, so both sides move as one and stay level.
 	 */
 
 	/** Room under the last row for the review pill floating over it. */
-	const TAIL = 96;
+	const TAIL = 132;
 
 	let list = $state<VirtualRows<Row> | null>(null);
 
-	const rows = $derived(
+	const laidOut = $derived(
 		rowsOf(room.laid, threadsByPlace(room.threads), room.sides, {
 			drafts: draftsByPlace(room.currentDrafts),
 			composer: room.composer
 		})
 	);
+	const paired = $derived(room.scope === 'sides');
+	const rows = $derived(paired ? sideBySide(laidOut) : laidOut);
 	/** The lines the comment being written covers, by index, in its file. */
 	const covered = $derived.by(() => {
 		const writing = room.composer;
@@ -73,10 +79,13 @@
 	let replying = $state<number | null>(null);
 	const target = $derived(room.pr?.targetBranch ?? 'main');
 	const lines = $derived(lineRows(rows));
-	const focusAt = $derived(room.focus === null ? -1 : rows.findIndex((row) => row.key === room.focus));
+	const focusAt = $derived.by(() => {
+		const key = room.focus;
+		return key === null ? -1 : rows.findIndex((row) => holds(row, key));
+	});
 	const focusChunk = $derived.by(() => {
 		const row = rows[focusAt];
-		return row && row.kind === 'line' ? row.chunk : null;
+		return (row && lineOfRow(row)?.chunk) ?? null;
 	});
 
 	/** One line's height before it is measured. */
@@ -100,6 +109,7 @@
 			case 'side':
 				return 44 + linePx * Math.max(1, sideLines(row.fix, row.side).length);
 			case 'line':
+			case 'pair':
 				return linePx + (row.last ? 10 : 0);
 			case 'thread':
 				return 120 + 64 * row.thread.comments.length + (row.last ? 10 : 0);
@@ -122,18 +132,16 @@
 	// was on is no longer shown.
 	$effect(() => {
 		if (focusAt >= 0 || lines.length === 0) return;
-		const first = lines.find((at) => {
-			const row = rows[at];
-			return row.kind === 'line' && row.line.origin !== 'context';
-		});
-		room.setFocus(rows[first ?? lines[0]].key);
+		const first = lines.find((at) => lineOfRow(rows[at])?.line.origin !== 'context');
+		const line = lineOfRow(rows[first ?? lines[0]]);
+		if (line) room.setFocus(line.key);
 	});
 
 	// A jump from the Conversation card, once its row is drawn.
 	$effect(() => {
 		const target = room.target;
 		if (target === null) return;
-		const at = rows.findIndex((row) => row.key === target);
+		const at = rows.findIndex((row) => holds(row, target));
 		if (at < 0) return;
 		list?.scrollToIndex(at, 'center');
 		room.reached();
@@ -143,7 +151,8 @@
 		if (lines.length === 0) return;
 		const here = lines.indexOf(focusAt);
 		const next = here < 0 ? 0 : Math.min(lines.length - 1, Math.max(0, here + by));
-		room.setFocus(rows[lines[next]].key);
+		const line = lineOfRow(rows[lines[next]]);
+		if (line) room.setFocus(line.key);
 		list?.scrollToIndex(lines[next], 'nearest');
 	}
 
@@ -166,7 +175,7 @@
 	}
 
 	/** A line number pressed: the ruler there, or with shift a range to comment on. */
-	function pressNumber(event: MouseEvent, row: Extract<Row, { kind: 'line' }>) {
+	function pressNumber(event: MouseEvent, row: LineRow) {
 		if (event.shiftKey && room.head) {
 			room.extend(row.path, row.index);
 			return;
@@ -174,7 +183,7 @@
 		room.setFocus(row.key);
 	}
 
-	function compose(row: Extract<Row, { kind: 'line' }>) {
+	function compose(row: LineRow) {
 		room.setFocus(row.key);
 		room.compose(row.path, row.index);
 		draftText = '';
@@ -237,6 +246,54 @@
 
 <svelte:window {onkeydown} />
 
+<!--
+	One line of a file. `both` is the line in the one column, numbered by the
+	new file where it is in it. `before` and `after` are the two halves of a
+	pair: the same line twice when it did not change, each by its own file's
+	number. A comment is started from the side the line is read on: the new
+	file's, or the old one's for a line that was removed.
+-->
+{#snippet cells(row: LineRow, side: 'both' | 'before' | 'after')}
+	{@const content = room.contentOf(row.path)}
+	{@const runs = paint(
+		content?.syntax[row.index] ?? [{ type: 'plain', text: row.line.text }],
+		content?.words.get(row.index)
+	)}
+	{@const focused = room.focus === row.key}
+	{@const number = side === 'before' ? row.line.old : side === 'after' ? row.line.new : (row.line.new ?? row.line.old)}
+	<div
+		class="line {row.line.origin}"
+		class:fixed={row.fixed}
+		class:covered={covered !== null && covered.path === row.path && row.index >= covered.from && row.index <= covered.to}
+		class:focused
+		class:ruled={room.ruler && focused}
+		class:dim={room.ruler && room.rulerMode === 'chunk' && focusChunk !== null && row.chunk !== focusChunk}
+	>
+		<span class="marker"></span>
+		<button
+			class="num"
+			class:old={side === 'both' && row.line.new === null}
+			aria-label="Focus line"
+			onclick={(event) => pressNumber(event, row)}>{number ?? ''}</button
+		>
+		<span class="sign">{sign(row.line.origin)}</span>
+		<span class="plus-cell">
+			{#if room.head && (side !== 'before' || row.line.origin === 'removed')}
+				<button
+					class="plus"
+					class:shown={focused || (covered !== null && covered.path === row.path && covered.to === row.index)}
+					aria-label="Comment on this line"
+					onclick={() => compose(row)}><Icon name="plus" size="0.75em" weight={2.6} /></button
+				>
+			{/if}
+		</span>
+		<span class="text"
+			>{#each runs as run, p (p)}<span class="tok-{run.type}" class:word={run.changed}>{run.text}</span
+				>{/each}{#if row.line.text === ''}&#8203;{/if}</span
+		>
+	</div>
+{/snippet}
+
 <VirtualRows bind:this={list} items={rows} key={keyOf} {estimate} tail={TAIL} label="Diff">
 	{#snippet row(row: Row, index: number)}
 		{#if row.kind === 'file'}
@@ -281,7 +338,11 @@
 						{/if}
 					</div>
 				{/if}
-				<div class="head-text mono">{row.text}</div>
+				{#if paired}
+					<div class="head-text sides"><span>Before</span><span>After</span></div>
+				{:else}
+					<div class="head-text mono">{row.text}</div>
+				{/if}
 			</div>
 		{:else if row.kind === 'side'}
 			{@const lines = sideLines(row.fix, row.side)}
@@ -298,44 +359,16 @@
 				</div>
 			</div>
 		{:else if row.kind === 'line'}
-			{@const content = room.contentOf(row.path)}
-			{@const runs = paint(
-				content?.syntax[row.index] ?? [{ type: 'plain', text: row.line.text }],
-				content?.words.get(row.index)
-			)}
 			<div class="slot" class:gap={row.last}>
 				<div class="part {row.tone}" class:end={row.last}>
-					<div
-						class="line {row.line.origin}"
-						class:fixed={row.fixed}
-						class:covered={covered !== null && covered.path === row.path && row.index >= covered.from && row.index <= covered.to}
-						class:focused={focusAt === index}
-						class:ruled={room.ruler && focusAt === index}
-						class:dim={room.ruler && room.rulerMode === 'chunk' && focusChunk !== null && row.chunk !== focusChunk}
-					>
-						<span class="marker"></span>
-						<button
-							class="num"
-							class:old={row.line.new === null}
-							aria-label="Focus line"
-							onclick={(event) => pressNumber(event, row)}>{row.line.new ?? row.line.old ?? ''}</button
-						>
-						<span class="sign">{sign(row.line.origin)}</span>
-						<span class="plus-cell">
-							{#if room.head}
-								<button
-									class="plus"
-									class:shown={focusAt === index || (covered !== null && covered.path === row.path && covered.to === row.index)}
-									aria-label="Comment on this line"
-									onclick={() => compose(row)}><Icon name="plus" size="0.75em" weight={2.6} /></button
-								>
-							{/if}
-						</span>
-						<span class="text"
-							>{#each runs as run, p (p)}<span class="tok-{run.type}" class:word={run.changed}>{run.text}</span
-								>{/each}{#if row.line.text === ''}&#8203;{/if}</span
-						>
-					</div>
+					{@render cells(row, 'both')}
+				</div>
+			</div>
+		{:else if row.kind === 'pair'}
+			<div class="slot" class:gap={row.last}>
+				<div class="part pair {row.tone}" class:end={row.last}>
+					{#if row.before}{@render cells(row.before, 'before')}{:else}<div class="line none"></div>{/if}
+					{#if row.after}{@render cells(row.after, 'after')}{:else}<div class="line none"></div>{/if}
 				</div>
 			</div>
 		{:else if row.kind === 'thread'}
@@ -632,6 +665,29 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Before and after (FEAT-129): the row is two lines, the file as it was
+	   and the file as it is, with a rule between them. */
+	.part.pair {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.part.pair > .line + .line {
+		border-left: 1px solid var(--pane-edge);
+	}
+
+	/* Nothing on this side: the line is only in the other file. */
+	.line.none {
+		background-color: color-mix(in srgb, var(--sunken) 70%, transparent);
+	}
+
+	.head-text.sides {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		font-size: var(--fs-mono);
+		font-weight: 600;
 	}
 
 	.line {
