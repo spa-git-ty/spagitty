@@ -139,15 +139,17 @@ pub fn spawn<R: Runtime>(
     let handle = std::thread::Builder::new()
         .name(format!("spagitty-{}-{token}", operation.label()))
         .spawn(move || {
-            let last = stderr.and_then(|stderr| report(&app, token, operation, stderr));
+            let output = stderr
+                .map(|stderr| report(&app, token, operation, stderr))
+                .unwrap_or_default();
             let status = child.wait();
 
             let error = match &status {
                 Ok(status) if status.success() => None,
-                // git's last words. For a rejected push or a missing credential
-                // they are the whole of the useful content.
+                // Keep the refusal, even when git follows it with hints (BUG-081).
                 Ok(status) => Some(
-                    last.clone()
+                    output
+                        .error()
                         .unwrap_or_else(|| format!("git {} failed ({status})", operation.label())),
                 ),
                 Err(error) => Some(error.to_string()),
@@ -159,7 +161,7 @@ pub fn spawn<R: Runtime>(
                     token,
                     operation,
                     ok: error.is_none(),
-                    summary: if error.is_none() { last } else { None },
+                    summary: if error.is_none() { output.last } else { None },
                     error,
                 },
             );
@@ -171,8 +173,24 @@ pub fn spawn<R: Runtime>(
     })
 }
 
-/// Forward git's progress until it stops talking, and return the last thing it
-/// said.
+/// Git's last line for a successful operation, and its refusal for a failure.
+#[derive(Default)]
+struct Output {
+    last: Option<String>,
+    failures: Vec<String>,
+}
+
+impl Output {
+    fn error(&self) -> Option<String> {
+        if self.failures.is_empty() {
+            self.last.clone()
+        } else {
+            Some(self.failures.join("\n"))
+        }
+    }
+}
+
+/// Forward git's progress until it stops talking, keeping its error lines.
 ///
 /// The same shape as the clone worker's, and for the same reason: git ends a
 /// progress update with a carriage return rather than a newline, because it is
@@ -181,22 +199,30 @@ fn report<R: Runtime>(
     app: &AppHandle<R>,
     token: u64,
     operation: Operation,
-    stderr: std::process::ChildStderr,
-) -> Option<String> {
+    stderr: impl std::io::Read,
+) -> Output {
     use std::io::{BufReader, Read};
 
     let mut reader = BufReader::new(stderr);
     let mut line: Vec<u8> = Vec::new();
     let mut byte = [0u8; 1];
     let mut last: Option<Progress> = None;
+    let mut output = Output::default();
 
-    let flush = |line: &mut Vec<u8>, last: &mut Option<Progress>| {
+    let mut flush = |line: &mut Vec<u8>, last: &mut Option<Progress>| {
         let text = String::from_utf8_lossy(line).into_owned();
         line.clear();
 
         let Some(step) = clone::progress(&text) else {
             return;
         };
+        if step.line.starts_with("fatal:")
+            || step.line.starts_with("error:")
+            || step.line.starts_with("! [")
+        {
+            output.failures.push(step.line.clone());
+        }
+        output.last = Some(step.line.clone());
         if clone::is_new_step(last.as_ref(), &step) {
             let _ = app.emit(
                 PROGRESS_EVENT,
@@ -218,5 +244,129 @@ fn report<R: Runtime>(
     }
     flush(&mut line, &mut last);
 
-    last.map(|step| step.line)
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::{self, Emitted};
+    use serde_json::Value;
+    use spagitty_core::fixture::Fixture;
+
+    #[test]
+    fn a_refusal_survives_the_hints_that_follow_it() {
+        let app = testing::app();
+        let steps = Emitted::<Value>::on(app.handle(), PROGRESS_EVENT);
+        let output = report(
+            app.handle(),
+            81,
+            Operation::Push,
+            &b"Writing objects: 50% (1/2)\rWriting objects: 100% (2/2)\r\n \
+              ! [rejected] main -> main (non-fast-forward)\n\
+              error: failed to push some refs\n\
+              hint: See the 'Note about fast-forwards' in 'git push --help'.\n"[..],
+        );
+
+        assert_eq!(
+            output.error().as_deref(),
+            Some("! [rejected] main -> main (non-fast-forward)\nerror: failed to push some refs")
+        );
+        let steps = steps.all();
+        assert_eq!(steps[0]["percent"], 50);
+        assert_eq!(steps[1]["percent"], 100);
+        assert_eq!(steps[0]["token"], 81);
+        assert_eq!(steps[0]["operation"], "push");
+    }
+
+    #[test]
+    fn remote_errors_and_a_final_line_without_a_newline_are_kept() {
+        let app = testing::app();
+        let output = report(
+            app.handle(),
+            82,
+            Operation::Fetch,
+            &b"remote: error: access denied\r\nfatal: Could not read from remote repository.\n\
+              Please make sure you have the correct access rights"[..],
+        );
+        assert_eq!(
+            output.error().as_deref(),
+            Some("error: access denied\nfatal: Could not read from remote repository.")
+        );
+        assert_eq!(
+            output.last.as_deref(),
+            Some("Please make sure you have the correct access rights")
+        );
+    }
+
+    #[test]
+    fn success_and_unclassified_failures_keep_the_last_nonempty_line() {
+        let app = testing::app();
+        let output = report(
+            app.handle(),
+            83,
+            Operation::Push,
+            &b"Enumerating objects: 2, done.\nEverything up-to-date\n\n"[..],
+        );
+        assert_eq!(output.last.as_deref(), Some("Everything up-to-date"));
+        assert_eq!(output.error(), output.last);
+        assert!(report(app.handle(), 84, Operation::Fetch, &b"\r\n"[..])
+            .error()
+            .is_none());
+    }
+
+    #[test]
+    fn a_rejected_push_emits_gits_reason_and_leaves_the_remote_unchanged() {
+        let app = testing::app();
+        let done = Emitted::<Value>::on(app.handle(), DONE_EVENT);
+        let local = Fixture::empty();
+        local.write("notes.txt", "Base\n");
+        local.git(&["add", "notes.txt"]);
+        local.commit("Base");
+        let remote = tempfile::tempdir().expect("remote");
+        let initialized = shell::program("git")
+            .current_dir(remote.path())
+            .args(["init", "--bare"])
+            .output()
+            .expect("bare remote");
+        assert!(initialized.status.success());
+        let remote_path = remote.path().to_str().expect("remote path");
+        local.git(&["remote", "add", "origin", remote_path]);
+        local.git(&["push", "--set-upstream", "origin", "main"]);
+
+        let other = Fixture::empty();
+        other.git(&["remote", "add", "origin", remote_path]);
+        other.git(&["fetch", "origin"]);
+        other.git(&["reset", "--hard", "origin/main"]);
+        other.write("notes.txt", "Their change\n");
+        let remote_head = other.commit_all("Their change");
+        other.git(&["push", "origin", "main"]);
+        local.write("notes.txt", "Our change\n");
+        local.commit_all("Our change");
+
+        let worker = spawn(
+            app.handle().clone(),
+            local.path().to_path_buf(),
+            Job::Push {
+                remote: "origin".into(),
+                refspec: "main".into(),
+                force: false,
+            },
+            85,
+        )
+        .expect("push worker");
+        let events = done.at_least(1);
+        drop(worker);
+        assert_eq!(events[0]["ok"], false);
+        assert!(events[0]["summary"].is_null());
+        let error = events[0]["error"].as_str().expect("git's error");
+        assert!(error.contains("! [rejected]"), "{error}");
+        assert!(error.contains("error: failed to push"), "{error}");
+        assert!(!error.contains("hint:"), "{error}");
+        let remote_ref = local.git(&["ls-remote", "origin", "refs/heads/main"]);
+        assert_eq!(
+            remote_ref.split_whitespace().next(),
+            Some(remote_head.as_str())
+        );
+    }
 }

@@ -14,7 +14,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ResetMode, StashAction } from '$lib/types';
+import type { BranchRow, Remote, ResetMode, StashAction } from '$lib/types';
 
 /** The options object every action hands to the dialog, as far as tests care. */
 interface Asked {
@@ -52,7 +52,7 @@ vi.mock('$lib/graph/store.svelte', () => ({ graph: { reload: () => reload() } })
  * running the first test's fetch during the second test's push.
  */
 const startFetch = vi.fn(() => Promise.resolve(true));
-const startPush = vi.fn(() => Promise.resolve(true));
+const startPush = vi.fn((_remote: string, _refspec: string) => Promise.resolve(true));
 let startError: string | null = null;
 vi.mock('$lib/network/store.svelte', () => ({
 	network: {
@@ -60,13 +60,14 @@ vi.mock('$lib/network/store.svelte', () => ({
 			return startError;
 		},
 		fetch: () => startFetch(),
-		push: () => startPush()
+		push: (remote: string, refspec: string) => startPush(remote, refspec)
 	}
 }));
 
 const repoRefresh = vi.fn(() => Promise.resolve());
 
 let working = 0;
+let currentBranch: string | null = 'feature/tabs';
 vi.mock('$lib/repo.svelte', () => ({
 	repo: {
 		refresh: () => repoRefresh(),
@@ -74,7 +75,7 @@ vi.mock('$lib/repo.svelte', () => ({
 			return { working };
 		},
 		get info() {
-			return { head: { branch: 'feature/tabs', short: 'abc1234' } };
+			return { head: { branch: currentBranch, short: 'abc1234' } };
 		}
 	}
 }));
@@ -93,6 +94,8 @@ vi.mock('$lib/settings/store.svelte', () => ({
  * this file and `() => api` would dereference the binding before it exists.
  */
 const api = vi.hoisted(() => ({
+	branches: vi.fn<() => Promise<Pick<BranchRow, 'name' | 'kind' | 'upstream'>[]>>(() => Promise.resolve([])),
+	remotes: vi.fn<() => Promise<Pick<Remote, 'name'>[]>>(() => Promise.resolve([])),
 	pull: vi.fn(() => Promise.resolve('')),
 	stashPush: vi.fn(() => Promise.resolve()),
 	reset: vi.fn(() => Promise.resolve()),
@@ -125,6 +128,9 @@ function lastConfirmation(): Asked {
 beforeEach(() => {
 	vi.clearAllMocks();
 	working = 0;
+	currentBranch = 'feature/tabs';
+	api.branches.mockResolvedValue([]);
+	api.remotes.mockResolvedValue([{ name: 'origin' }]);
 	confirmHistoryRewrite = true;
 	confirm.mockResolvedValue(true);
 	prompt.mockResolvedValue('given-name');
@@ -675,11 +681,62 @@ describe('remotes', () => {
 		expect(startFetch).toHaveBeenCalledTimes(1);
 	});
 
-	it('pushes without asking', async () => {
+	it('pushes a new branch to origin without asking (BUG-081)', async () => {
 		await actions.pushCurrent();
 
 		expect(confirm).not.toHaveBeenCalled();
-		expect(startPush).toHaveBeenCalledTimes(1);
+		expect(prompt).not.toHaveBeenCalled();
+		expect(startPush).toHaveBeenCalledExactlyOnceWith('origin', 'feature/tabs');
+	});
+
+	it('pushes to the upstream even when its remote and branch have different names', async () => {
+		api.branches.mockResolvedValueOnce([
+			{ name: 'feature/tabs', kind: 'branch', upstream: 'team/trunk' }
+		]);
+		api.remotes.mockResolvedValueOnce([
+			{ name: 'origin' },
+			{ name: 'team' }
+		]);
+
+		await actions.pushCurrent();
+
+		expect(startPush).toHaveBeenCalledExactlyOnceWith('team', 'feature/tabs:trunk');
+	});
+
+	it('uses the first remote when none is named origin', async () => {
+		api.remotes.mockResolvedValueOnce([{ name: 'team' }]);
+
+		await actions.pushCurrent();
+
+		expect(startPush).toHaveBeenCalledExactlyOnceWith('team', 'feature/tabs');
+	});
+
+	it('explains that there is no remote without starting a push', async () => {
+		api.remotes.mockResolvedValueOnce([]);
+
+		await actions.pushCurrent();
+
+		expect(startPush).not.toHaveBeenCalled();
+		expect(failed).toHaveBeenCalledWith('Could not push', 'This repository has no remote to push to');
+	});
+
+	it.each(['branches', 'remotes'] as const)('reports a failed %s read without starting a push', async (read) => {
+		api[read].mockRejectedValueOnce('repository is closed');
+
+		await actions.pushCurrent();
+
+		expect(startPush).not.toHaveBeenCalled();
+		expect(failed).toHaveBeenCalledWith('Could not push', 'repository is closed');
+	});
+
+	it('leaves a detached HEAD for git to refuse', async () => {
+		currentBranch = null;
+
+		await actions.pushCurrent();
+
+		expect(api.branches).not.toHaveBeenCalled();
+		expect(api.remotes).not.toHaveBeenCalled();
+		expect(startPush).toHaveBeenCalledExactlyOnceWith('', '');
 	});
 
 	it('reports a start that failed, which is the only outcome it sees', async () => {

@@ -307,9 +307,15 @@ export const settings = {
 		if (busy) return;
 		busy = true;
 		writeError = null;
+		const savingScope = scope;
+		const submitted = drafts[key];
 		try {
-			identity = await api.setIdentity(scope, key, drafts[key]);
-			resetDrafts();
+			identity = await api.setIdentity(savingScope, key, submitted);
+			// Saving one field must keep the other field's unsaved edit (BUG-082).
+			// An edit made while git was writing belongs to the next save too.
+			if (scope === savingScope && drafts[key] === submitted) {
+				drafts = { ...drafts, [key]: storedValue(key) };
+			}
 		} catch (e) {
 			writeError = String(e);
 		} finally {
