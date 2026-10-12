@@ -27,6 +27,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Fixed
 
+- A remote agent whose API key is missing is stopped with that reason, in Settings *Test* and when a Review or Merger assignment starts, instead of being sent without one and told "Bad request". An OpenAI-compatible endpoint, which may be open, is not stopped.
 - CI and release builds stop waiting for a stalled Rust cache download: each segment has a two-minute limit and each cache step has a five-minute limit, after which Cargo compiles dependencies and the required checks still run.
 - A Gemini agent from Google AI Studio no longer gets "Bad request". Gemini 3 and thinking models sign each tool call and refuse the next turn unless the signature comes back, so Spagitty now sends back each signature on the part that carried it. Also fixed: Gemini's `default_api:` tool-name prefix, a tool that takes nothing, an empty turn in the history, a reply cut off while thinking, an error that arrives wrapped in a list, and *Test* running out of output allowance on a thinking model.
 - Codex's Settings test can run in a temporary directory, and assignments

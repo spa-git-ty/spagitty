@@ -901,6 +901,23 @@ fn key_for(id: Option<&str>, typed: Option<String>) -> Result<String> {
     }
 }
 
+/// A provider that wants a key and has none is stopped here, with the reason
+/// (BUG-072). Sent without one, Google answers 400 and the others 401, and
+/// the person is told the request was bad, not that the key was never found.
+fn require_key(provider: Provider, name: &str, key: String, saved: bool) -> Result<String> {
+    if !key.is_empty() || provider == Provider::Compatible {
+        return Ok(key);
+    }
+    Err(Failure::new(
+        "refused",
+        if saved {
+            format!("{name}'s API key is not in the keychain. Enter it again in Settings › Agents.")
+        } else {
+            format!("Enter {name}'s API key first.")
+        },
+    ))
+}
+
 /// What an endpoint is tested and listed with, before or after it is saved.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -922,7 +939,12 @@ impl Probe {
             provider: self.provider,
             base: self.base.clone(),
             model: self.model.clone(),
-            key: key_for(self.id.as_deref(), self.key.clone())?,
+            key: require_key(
+                self.provider,
+                self.provider.label(),
+                key_for(self.id.as_deref(), self.key.clone())?,
+                self.id.is_some(),
+            )?,
         })
     }
 }
@@ -1162,7 +1184,12 @@ pub fn assignment_start<R: Runtime>(
             }
             per_run = Some(per_run.map_or(left, |run| run.min(left)));
         }
-        let key = keychain::read(KEY_HOST, &remote.id)?.unwrap_or_default();
+        let key = require_key(
+            remote.provider,
+            &remote.name,
+            keychain::read(KEY_HOST, &remote.id)?.unwrap_or_default(),
+            true,
+        )?;
         (
             AgentRef {
                 id: remote.id.clone(),
@@ -1423,6 +1450,24 @@ mod tests {
         assert!(!machine.codex_full_access);
         assert!(!machine.agy_auto_approve);
         assert_eq!(machine.omp, OmpOptions::default());
+    }
+
+    #[test]
+    fn a_provider_with_no_key_is_stopped_with_the_reason() {
+        let missing = require_key(Provider::Google, "Gemini", String::new(), true).unwrap_err();
+        assert_eq!(missing.kind, "refused");
+        assert!(missing.message.contains("not in the keychain"));
+        let untyped = require_key(Provider::Anthropic, "Claude", String::new(), false).unwrap_err();
+        assert!(untyped.message.starts_with("Enter Claude"));
+        assert_eq!(
+            require_key(Provider::OpenAi, "GPT", "sk-x".into(), true).unwrap(),
+            "sk-x"
+        );
+        // A self-hosted endpoint may be open.
+        assert_eq!(
+            require_key(Provider::Compatible, "Local", String::new(), true).unwrap(),
+            ""
+        );
     }
 
     #[test]
