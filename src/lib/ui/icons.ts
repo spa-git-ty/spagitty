@@ -76,7 +76,8 @@ export type IconName =
 	| 'lock'
 	| 'upload'
 	| 'person'
-	| 'arrow-right';
+	| 'arrow-right'
+	| 'link';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -172,6 +173,8 @@ export const ICONS: Record<IconName, string[]> = {
 	person: ['M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 'M5 20a7 7 0 0 1 14 0'],
 	// Send a line to the agent.
 	'arrow-right': ['M5 12h14', 'M13 6l6 6-6 6'],
+	// Two links of a chain: things that move as one (FEAT-128).
+	link: ['M15 7h3a5 5 0 0 1 0 10h-3', 'M9 17H6A5 5 0 0 1 6 7h3', 'M8.5 12h7'],
 	// A clock turned back: where HEAD has been.
 	history: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3 4v4h4', 'M12 8v4.5l3 1.8'],
 	folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],

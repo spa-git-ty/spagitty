@@ -448,6 +448,7 @@ it('reads the host’s patch when the pull request cannot be fetched', async () 
 	expect(view.text()).toContain("From GitHub's patch: the pull request could not be fetched");
 	expect(view.text()).toContain('fn b() {}');
 	expect(button('Whole file').hasAttribute('disabled')).toBe(true);
+	expect(button('Before and after').hasAttribute('disabled')).toBe(true);
 	expect(api.reviewFile).not.toHaveBeenCalled();
 });
 
@@ -929,4 +930,41 @@ describe('a pull request that moved on its host (FEAT-127)', () => {
 		await vi.waitFor(() => expect(pull().disabled).toBe(true));
 		expect(pull().title).toBe('Save or cancel the comment you are writing first');
 	});
+});
+
+it('sets the whole file as it was beside the whole file as it is', async () => {
+	// FEAT-129: a third way to read a file, beside Changes and Whole file.
+	await openRoom();
+	click(button('Before and after'));
+	expect(button('Before and after').getAttribute('aria-pressed')).toBe('true');
+	expect(view.all('button.fold')).toHaveLength(0);
+	expect(view.text()).toContain('Before');
+	expect(view.text()).toContain('After');
+	expect(view.text()).not.toContain('@@ -');
+
+	// 30 lines in 29 rows: the edited line is one row, old beside new.
+	const pairs = view.all('.part.pair');
+	expect(pairs).toHaveLength(29);
+	const changed = pairs.find((pair) => pair.querySelector('.line.removed'))!;
+	const [before, after] = [...changed.querySelectorAll('.line')];
+	expect(before.className).toContain('removed');
+	expect(before.textContent).toContain('MEMORY.lock().get(&key)');
+	expect(after.className).toContain('added');
+	expect(after.textContent).toContain('path.exists() && !is_stale(&path)');
+	expect(before.querySelector('.num')?.textContent).toBe('15');
+	expect(after.querySelector('.num')?.textContent).toBe('15');
+
+	// An unchanged line is on both sides, and is commented on from the new one.
+	const same = pairs[0].querySelectorAll('.line');
+	expect(same).toHaveLength(2);
+	expect(same[0].textContent).toContain('pub fn avatar() {');
+	expect(same[1].textContent).toContain('pub fn avatar() {');
+	expect(same[0].querySelector('button.plus')).toBeNull();
+	expect(same[1].querySelector('button.plus')).not.toBeNull();
+	// A removed line is only in the old file, so that is where it is commented on.
+	expect(before.querySelector('button.plus')).not.toBeNull();
+
+	click(button('Changes'));
+	expect(view.all('.part.pair')).toHaveLength(0);
+	expect(view.all('button.fold')).toHaveLength(2);
 });

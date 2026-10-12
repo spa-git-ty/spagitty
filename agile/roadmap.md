@@ -288,6 +288,24 @@ The host is asked while a pull request is open; when the author has pushed the r
 
 A review given to agy stopped at its first step, on a permission its headless mode cannot ask for. The author chose to remove it rather than work round it. A saved Farm agent list that names it still opens.
 
+## After 2.2.1 — the author's four notes of 2026-10-12
+
+### 32. BUG-079 — *All resolved* is not a button
+
+The resolver's pill says it and offers nothing, once there is no conflict left to go to.
+
+### 33. FEAT-128 — a conflict's columns scroll in place
+
+A conflict is never taller than the window: its three columns scroll, together by the same share of their lengths or each alone, and its header and choices stay put.
+
+### 34. FEAT-129 — a file before and after, side by side
+
+A third way to read a file in Review: the whole of it as it was beside the whole of it as it is, in one column that scrolls as one.
+
+### 35. BUG-080 — the review pill stays in its column
+
+The pill has the whole diff column to be laid out in and wraps when it must, and the diff keeps a least width while the panels beside it give way.
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

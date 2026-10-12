@@ -180,6 +180,8 @@ rather than an audit.
 | [FEAT-125](items/FEAT-125-a-choice-on-a-conflict-can-be-cancelled-and-pick-lines-starts-empty.md) | A choice on a conflict can be cancelled, and Pick lines starts empty | 1S, 1D | Done |
 | [FEAT-126](items/FEAT-126-merger-says-a-branch-is-behind-its-remote-and-pulls-it.md) | Merger says a branch is behind its remote, and pulls it | 1S | Done |
 | [FEAT-127](items/FEAT-127-the-review-room-says-the-pull-request-moved-and-pulls-the-latest.md) | The review room says the pull request moved, and pulls the latest | 1R | Done |
+| [FEAT-128](items/FEAT-128-a-conflicts-columns-scroll-together-or-each-alone.md) | A conflict's columns scroll in place, together or each alone | 1D, 1S | Done |
+| [FEAT-129](items/FEAT-129-review-shows-a-file-before-and-after-side-by-side.md) | Review shows a file before and after, side by side | 1R | Done |
 
 ## Bugs
 
@@ -264,6 +266,8 @@ rather than an audit.
 | [BUG-076](items/BUG-076-merger-says-pushed-when-the-push-failed.md) | Merger says *Pushed* when the push failed, and no fetch or push works after it | 1S | Open |
 | [BUG-077](items/BUG-077-a-farm-task-merged-in-merger-skips-the-farms-checks.md) | A Farm task merged in Merger skips the Farm's own checks | 1Q, 1S | Open |
 | [BUG-078](items/BUG-078-the-attribution-check-refuses-a-person-named-like-an-agent.md) | The attribution check refuses a person whose name an agent shares | — | Fixed |
+| [BUG-079](items/BUG-079-all-resolved-is-drawn-as-a-button.md) | *All resolved* is drawn as a button | 1D, 1S | Fixed |
+| [BUG-080](items/BUG-080-the-review-pill-runs-out-of-a-narrow-diff.md) | The review pill runs out of a narrow diff, over the conversation | 1R, 1D, 1S | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

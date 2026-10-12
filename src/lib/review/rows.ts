@@ -18,7 +18,12 @@ import type { ConflictFix, DiffLine, Hunk } from '../types';
 import type { PendingComment } from './record';
 import { placeOf, type Thread } from './threads';
 
-export type Scope = 'changes' | 'whole';
+/**
+ * How much of a file is shown, and how: its changed parts; the whole file with
+ * its changes in place; or the whole file twice, as it was beside as it is
+ * (FEAT-129).
+ */
+export type Scope = 'changes' | 'whole' | 'sides';
 
 /** Unchanged lines kept on each side of a change, as `git diff` keeps them. */
 export const CONTEXT = 3;
@@ -119,15 +124,16 @@ export function blocksOf(
 	fixed: ReadonlySet<number> = new Set()
 ): Block[] {
 	if (lines.length === 0) return [];
+	const whole = scope !== 'changes';
 	const unchanged = (from: number, to: number): Block =>
-		scope === 'whole' || expanded.has(from) ? { kind: 'plain', from, to } : { kind: 'fold', from, to };
+		whole || expanded.has(from) ? { kind: 'plain', from, to } : { kind: 'fold', from, to };
 
 	const ranges = changedRanges(lines, fixed);
 	if (ranges.length === 0) return [unchanged(0, lines.length)];
 
 	const blocks: Block[] = [];
 	let at = 0;
-	if (scope === 'whole') {
+	if (whole) {
 		for (const { from, to } of ranges.filter((range) => range.fixed)) {
 			if (from > at) blocks.push({ kind: 'hunk', from: at, to: from });
 			blocks.push({ kind: 'hunk', from, to });
@@ -269,9 +275,26 @@ export type Row =
 			from: number;
 			to: number;
 			last: boolean;
+	  }
+	| {
+			/**
+			 * One line of the file as it was beside one line of it as it is
+			 * (FEAT-129). An unchanged line is both; a removed line has nothing
+			 * after it and an added line nothing before, unless they changed in
+			 * the same place, and then they are set side by side.
+			 */
+			kind: 'pair';
+			key: string;
+			path: string;
+			chunk: string;
+			tone: Tone;
+			before: LineRow | null;
+			after: LineRow | null;
+			last: boolean;
 	  };
 
 export type LineRow = Extract<Row, { kind: 'line' }>;
+export type PairRow = Extract<Row, { kind: 'pair' }>;
 
 /** Where a comment is being written: a file and the lines it covers, by index. */
 export interface Composing {
@@ -419,6 +442,103 @@ export function rowsOf(
 	return rows;
 }
 
+/**
+ * The same rows with each file set out twice: as it was on the left, as it is
+ * on the right (FEAT-129).
+ *
+ * An unchanged line is on both sides. Where lines were removed and lines were
+ * added in the same place, the first removed is beside the first added, and so
+ * on down, and the side with fewer is left empty beside the rest. So each side
+ * read on its own is the whole of its file, in order.
+ *
+ * What sits under a line — a thread, a pending comment, the box one is being
+ * written in — stays under the row that line is in, across both sides.
+ */
+export function sideBySide(rows: Row[]): Row[] {
+	type Entry = { line: LineRow; under: Row[] };
+	const out: Row[] = [];
+	const pair = (before: LineRow | null, after: LineRow | null): PairRow => {
+		const lead = (after ?? before)!;
+		return {
+			kind: 'pair',
+			key: `${lead.key}\npair`,
+			path: lead.path,
+			chunk: lead.chunk,
+			tone: lead.tone,
+			before,
+			after,
+			last: false
+		};
+	};
+	const isUnder = (row: Row | undefined, chunk: string) =>
+		row !== undefined &&
+		(row.kind === 'thread' || row.kind === 'draft' || row.kind === 'composer') &&
+		row.chunk === chunk;
+
+	let i = 0;
+	/** A line, and the rows under it. */
+	const take = (): Entry => {
+		const line = rows[i++] as LineRow;
+		const under: Row[] = [];
+		while (isUnder(rows[i], line.chunk)) under.push(rows[i++]);
+		return { line, under };
+	};
+	const changed = (origin: 'removed' | 'added', chunk: string) => {
+		const row = rows[i];
+		return row !== undefined && row.kind === 'line' && row.chunk === chunk && row.line.origin === origin;
+	};
+
+	while (i < rows.length) {
+		const row = rows[i];
+		if (row.kind !== 'line') {
+			out.push(row);
+			i++;
+			continue;
+		}
+		if (row.line.origin === 'context') {
+			const { line, under } = take();
+			out.push(pair(line, line), ...under);
+			continue;
+		}
+		// One change: what was removed, then what was added in its place.
+		const removed: Entry[] = [];
+		const added: Entry[] = [];
+		while (changed('removed', row.chunk)) removed.push(take());
+		while (changed('added', row.chunk)) added.push(take());
+		if (removed.length + added.length === 0) {
+			// A kind of line this does not know: shown as it is, never looped on.
+			out.push(row);
+			i++;
+			continue;
+		}
+		for (let k = 0; k < Math.max(removed.length, added.length); k++) {
+			out.push(pair(removed[k]?.line ?? null, added[k]?.line ?? null));
+			out.push(...(removed[k]?.under ?? []), ...(added[k]?.under ?? []));
+		}
+	}
+
+	// The last row of each card closes it, whichever kind it now is.
+	return out.map((row, at) => {
+		if (!('last' in row)) return row;
+		const next = out[at + 1];
+		const last = !(next !== undefined && 'chunk' in next && next.chunk === row.chunk);
+		return row.last === last ? row : { ...row, last };
+	});
+}
+
+/** The line a row holds under `key`: the row itself, or either side of a pair. */
+export function holds(row: Row, key: string): boolean {
+	if (row.kind === 'pair') return row.before?.key === key || row.after?.key === key;
+	return row.key === key;
+}
+
+/** The line a row is read by: its own, or a pair's as it is now, else as it was. */
+export function lineOfRow(row: Row): LineRow | null {
+	if (row.kind === 'line') return row;
+	if (row.kind === 'pair') return row.after ?? row.before;
+	return null;
+}
+
 /** The row a thread is drawn under, or -1 when it is not drawn. */
 export function rowOfThread(rows: Row[], thread: Thread): number {
 	return rows.findIndex((row) => row.kind === 'thread' && row.thread.id === thread.id);
@@ -428,7 +548,7 @@ export function rowOfThread(rows: Row[], thread: Thread): number {
 export function lineRows(rows: Row[]): number[] {
 	const out: number[] = [];
 	rows.forEach((row, index) => {
-		if (row.kind === 'line') out.push(index);
+		if (row.kind === 'line' || row.kind === 'pair') out.push(index);
 	});
 	return out;
 }

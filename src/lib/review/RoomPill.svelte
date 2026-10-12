@@ -28,21 +28,23 @@
 </script>
 
 <div class="pill ornament" role="toolbar" aria-label="Review controls">
-	<button class="tool icon" aria-label="Previous file" onclick={() => room.step(-1)}>
-		<Icon name="chevron-left" size="1.1em" weight={1.9} />
-	</button>
-	<span class="where">
-		{#if room.layout === 'one'}
-			<span class="name mono" title={file?.path}>{name}</span>
-			<span class="note">{room.position + 1} of {room.files.length}</span>
-		{:else}
-			<span class="name mono">All files</span>
-			<span class="note">{room.files.length} {room.files.length === 1 ? 'file' : 'files'}</span>
-		{/if}
+	<span class="group">
+		<button class="tool icon" aria-label="Previous file" onclick={() => room.step(-1)}>
+			<Icon name="chevron-left" size="1.1em" weight={1.9} />
+		</button>
+		<span class="where">
+			{#if room.layout === 'one'}
+				<span class="name mono" title={file?.path}>{name}</span>
+				<span class="note">{room.position + 1} of {room.files.length}</span>
+			{:else}
+				<span class="name mono">All files</span>
+				<span class="note">{room.files.length} {room.files.length === 1 ? 'file' : 'files'}</span>
+			{/if}
+		</span>
+		<button class="tool icon" aria-label="Next file" onclick={() => room.step(1)}>
+			<Icon name="chevron-right" size="1.1em" weight={1.9} />
+		</button>
 	</span>
-	<button class="tool icon" aria-label="Next file" onclick={() => room.step(1)}>
-		<Icon name="chevron-right" size="1.1em" weight={1.9} />
-	</button>
 	<span class="vr"></span>
 	<span class="segments">
 		<button class="tool" aria-pressed={room.scope === 'changes'} onclick={() => room.setScope('changes')}>
@@ -56,6 +58,17 @@
 			onclick={() => room.setScope('whole')}
 		>
 			Whole file
+		</button>
+		<button
+			class="tool"
+			aria-pressed={room.scope === 'sides'}
+			disabled={!room.canShowWhole}
+			title={room.canShowWhole
+				? 'The whole file as it was, beside the whole file as it is'
+				: 'Needs the pull request fetched'}
+			onclick={() => room.setScope('sides')}
+		>
+			Before and after
 		</button>
 	</span>
 	<span class="segments">
@@ -79,20 +92,38 @@
 </div>
 
 <style>
+	/*
+	 * Centred by its margins, between the column's two edges, and its groups
+	 * go onto a second row when one row will not hold them (BUG-080). With
+	 * left at 50% and a transform it had half the column to be laid out in:
+	 * in a narrow column the file's name was squeezed to nothing and the rest
+	 * ran out over the conversation.
+	 */
 	.pill {
 		position: absolute;
-		left: 50%;
+		left: 8px;
+		right: 8px;
 		bottom: 14px;
-		transform: translateX(-50%);
+		width: fit-content;
+		max-width: calc(100% - 16px);
+		margin-inline: auto;
+		box-sizing: border-box;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 4px 6px;
+		min-height: 52px;
+		padding: 9px;
+		border-radius: 26px;
+		white-space: nowrap;
+		z-index: 2;
+	}
+
+	.group {
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		height: 52px;
-		padding: 0 9px;
-		border-radius: var(--r-pill);
-		white-space: nowrap;
-		max-width: calc(100% - 16px);
-		z-index: 2;
 	}
 
 	.tool {
@@ -128,7 +159,7 @@
 		display: flex;
 		flex-direction: column;
 		line-height: 1.15;
-		min-width: 0;
+		flex: none;
 		max-width: 150px;
 	}
 
@@ -143,7 +174,7 @@
 		font-size: var(--fs-mono);
 	}
 
-	/* Two choices in a sunken track; the chosen one raised out of it. */
+	/* Two or three choices in a sunken track; the chosen one raised out of it. */
 	.segments {
 		display: flex;
 		padding: 2px;

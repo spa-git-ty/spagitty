@@ -513,7 +513,7 @@ export const room = {
 	},
 
 	setScope(next: Scope): void {
-		if (next === 'whole' && !this.canShowWhole) return;
+		if (next !== 'changes' && !this.canShowWhole) return;
 		scope = next;
 		// Back to the changes means back to them folded.
 		if (next === 'changes') expanded = {};

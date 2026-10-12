@@ -340,3 +340,64 @@ it('the commit says who chose each conflict, and credits the agent', async () =>
 		'Co-authored-by: Codex <agent@spagitty.invalid>'
 	);
 });
+
+it('says All resolved in the pill without offering it as a button', async () => {
+	// BUG-079: with nothing left there is no next conflict to go to.
+	await opened();
+	expect(button('Next unresolved')).toBeDefined();
+	expect(view.all('.pill [role="status"]')).toHaveLength(0);
+
+	click(labelled('Take main'));
+	click(labelled('Take feat/tab-drag', 1));
+	click(button('Next unresolved'));
+	await vi.waitFor(() => expect(view.text()).toContain('metrics.ts'));
+	click(view.all('button[aria-label="Take main here"]')[0]);
+	click(button('Next unresolved'));
+	await vi.waitFor(() => expect(cards()[0]?.id).toContain('CHANGELOG.md'));
+	click(labelled('Both, main first'));
+
+	await vi.waitFor(() => expect(text(view.all('.pill [role="status"]')[0])).toBe('All resolved'));
+	expect(button('All resolved')).toBeUndefined();
+	expect(button('Next unresolved')).toBeUndefined();
+	expect(view.all('.pill [role="status"]')[0].tagName).toBe('SPAN');
+});
+
+it('scrolls a conflict’s three columns together, or each alone, and remembers which', async () => {
+	// FEAT-128. There is no layout here, so the columns are told their sizes.
+	await opened();
+	const columns = () => [...cards()[0].querySelectorAll('.columns > .column')] as HTMLElement[];
+	expect(columns()).toHaveLength(3);
+	const size = (element: HTMLElement, scrollHeight: number) => {
+		let top = 0;
+		Object.defineProperties(element, {
+			scrollHeight: { configurable: true, value: scrollHeight },
+			clientHeight: { configurable: true, value: 400 },
+			scrollTop: { configurable: true, get: () => top, set: (value: number) => (top = value) }
+		});
+	};
+	const [a, result, b] = columns();
+	size(a, 2000);
+	size(result, 1200);
+	size(b, 400);
+
+	const together = () => button('Scroll together');
+	expect(together().getAttribute('aria-pressed')).toBe('true');
+	a.scrollTop = 800;
+	a.dispatchEvent(new Event('scroll'));
+	// Half way down its own text; the side with nothing to scroll stays put.
+	expect([result.scrollTop, b.scrollTop]).toEqual([400, 0]);
+
+	click(together());
+	await vi.waitFor(() => expect(together().getAttribute('aria-pressed')).toBe('false'));
+	expect(localStorage.getItem('spagitty.resolver.scrollTogether')).toBe('0');
+	a.scrollTop = 1600;
+	a.dispatchEvent(new Event('scroll'));
+	expect(result.scrollTop).toBe(400);
+
+	// Remembered: the resolver opens the way it was left.
+	view.destroy();
+	merger.reset();
+	resolving.reset();
+	await opened();
+	expect(together().getAttribute('aria-pressed')).toBe('false');
+});
