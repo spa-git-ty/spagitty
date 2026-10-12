@@ -251,6 +251,9 @@ rather than an audit.
 | [BUG-070](items/BUG-070-local-agents-do-not-get-their-instructions.md) | Local agents do not get their instructions, and some cannot start in Review or Merger | 1R, 1S, 1K | Open |
 | [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Open |
 | [BUG-072](items/BUG-072-a-remote-agent-with-no-key-is-told-bad-request.md) | A remote agent with no key is told "Bad request", not that its key is missing | 1K, 1R, 1S | Open |
+| [BUG-073](items/BUG-073-two-quick-assign-clicks-start-two-agents.md) | Two quick Assign clicks start two agents on one pull request | 1R, 1S | Open |
+| [BUG-074](items/BUG-074-a-remote-agents-token-limit-is-read-only-between-steps.md) | A remote agent's token limit is read only between steps | 1K, 1R, 1S | Open |
+| [BUG-075](items/BUG-075-a-reply-that-cannot-be-read-is-taken-as-empty.md) | A model's reply that cannot be read is taken as an empty one | 1K, 1R, 1S | Open |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -320,7 +323,10 @@ of its own.
 | [TASK-060](items/TASK-060-agent-permissions-with-standard-names.md) | Agent permissions with standard names | 1K, 1R, 1S | Done |
 | [TASK-061](items/TASK-061-plain-words-for-merging-and-approval.md) | Plain words for merging and stopping for approval | all | Done |
 | [TASK-062](items/TASK-062-finish-the-open-pull-requests.md) | Finish the three open pull requests | — | Done |
-| [TASK-063](items/TASK-063-audit-the-merged-pull-requests.md) | Audit the pull requests merged since 2.0.0 | — | Backlog |
+| [TASK-063](items/TASK-063-audit-the-merged-pull-requests.md) | Audit the pull requests merged since 2.0.0 | — | Partial |
+| [TASK-064](items/TASK-064-refuse-agent-attribution-in-ci.md) | Refuse agent attribution in commits and descriptions, in CI | — | Done |
+| [TASK-065](items/TASK-065-run-the-agents-sweep-where-it-was-skipped.md) | Run the agents sweep that FEAT-115 was closed without | 1K, 1R, 1S | Backlog |
+| [TASK-066](items/TASK-066-style-notes-from-the-2-0-audit.md) | Style notes from the 2.0 audit | — | Backlog |
 
 ## Skipped identifiers
 
