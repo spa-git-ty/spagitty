@@ -21,6 +21,10 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main, dev]
+    # `edited` as well as the defaults: gate 1 reads the description, and a
+    # description changed after it passed, or corrected after it failed, is not
+    # read again otherwise. A re-run would read the one it was started with.
+    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: gates-${{ github.ref }}

@@ -8,7 +8,8 @@ Pull request #60 is the first half: it keeps Gemini's thought signature and
 sends it back, and strips the `default_api:` prefix from tool names. Reviewing
 it found two faults of its own: the signature was also written *inside*
 `functionCall`, where Google has no such field, and one signature was copied
-onto every call and thought in the turn when Google signs only the first call.
+onto every call and thought in the turn when, of calls made in parallel, Google
+signs only the first. Calls made one after another each carry their own.
 Both are corrected so a signature goes back on exactly the part it came on.
 
 Then the other ways Google refuses a request, all in `crates/spagitty-core/src/models.rs`:

@@ -43,10 +43,14 @@ function isAgent(coAuthor) {
 	return PRODUCT.test(name) || PRODUCT_BY_WHAT_FOLLOWS.test(name) || AGENT_ADDRESS.test(address.trim());
 }
 
+/** What a "Generated with" line names when it is attribution. */
+const TOOL =
+	'claude|anthropic|codex|openai|chatgpt|gpt-?\\d\\w*|gemini|copilot|cursor|aider|devin|windsurf|cody|coderabbit|opencode|agy|antigravity|an?\\s+ai';
+
 /** Lines that are attribution whoever they name. */
 const ALWAYS = [
 	/^\s*claude-session\s*:/i,
-	/(?<![a-z])generated\s+(?:with|by)\s+\[?(?:claude|codex|gemini|copilot|cursor|an?\s+ai)/i,
+	new RegExp(`(?<![a-z])generated\\s+(?:with|by)\\s+\\[?(?:${TOOL})\\b`, 'i'),
 	/(?<![a-z])created\s+(?:with|by)\s+\[?claude\s+code/i
 ];
 

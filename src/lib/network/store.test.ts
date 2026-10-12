@@ -213,6 +213,23 @@ describe('waiting for it to end (BUG-076)', () => {
 		expect(network.error).toContain('rejected');
 	});
 
+	it('hears a push that ended before its token came back', async () => {
+		// The worker starts before the command returns its token, so a push git
+		// refuses at once can be done first; nobody must be left waiting.
+		let hand: (token: number) => void = () => {};
+		pushCall.mockReturnValueOnce(new Promise<number>((resolve) => (hand = resolve)));
+		const started = network.push('origin', 'pr-61:feat/thing');
+
+		emit(NETWORK_DONE_EVENT, { token: 7, operation: 'push', ok: false, error: 'rejected', summary: null });
+		hand(7);
+
+		expect(await started).toBe(true);
+		expect(network.running).toBe(false);
+		expect(await network.whenDone()).toBe(false);
+		expect(network.error).toBe('rejected');
+		expect(release).toHaveBeenCalled();
+	});
+
 	it('answers at once when nothing is running', async () => {
 		expect(await network.whenDone()).toBe(true);
 	});

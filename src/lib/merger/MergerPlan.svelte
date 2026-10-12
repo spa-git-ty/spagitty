@@ -252,7 +252,8 @@
 				<button
 					class="segment"
 					aria-pressed={merger.into === direction.into}
-					title={reason ?? undefined}
+					title={merger.forFarm && direction.into !== 'a' ? 'A Farm task goes where it was meant to' : (reason ?? undefined)}
+					disabled={merger.forFarm && direction.into !== 'a'}
 					onclick={() => merger.setInto(direction.into)}
 				>
 					{#if direction.badge}<SideBadge side={direction.badge} />{/if}
@@ -260,7 +261,7 @@
 				</button>
 			{/each}
 		</span>
-		<Btn onclick={() => merger.swap()} title="Swap the two branches' roles">
+		<Btn disabled={merger.forFarm} onclick={() => merger.swap()} title="Swap the two branches' roles">
 			<Icon name="swap" size="1em" weight={1.9} />Swap
 		</Btn>
 	</div>

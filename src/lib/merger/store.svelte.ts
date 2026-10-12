@@ -116,6 +116,10 @@ let pushError = $state<string | null>(null);
 /** The Farm could not be told its task was merged. */
 let farmError = $state<string | null>(null);
 
+/** Why a Farm task cannot be squashed or rebased in. */
+export const FARM_KEEPS_COMMITS =
+	'A Farm task is merged with its commits kept, so the Farm can see its work is in the branch';
+
 /** Where the screen is: the plan, resolving, the commit dialog, or done. */
 export type Phase = 'plan' | 'resolve' | 'commit' | 'done';
 let phase = $state<Phase>('plan');
@@ -237,7 +241,20 @@ export const merger = {
 	get choices(): StrategyChoice[] {
 		const who = this.roles;
 		const plan = this.forecast;
-		return plan && who ? strategies(plan, who) : [];
+		const all = plan && who ? strategies(plan, who) : [];
+		if (!this.forFarm) return all;
+		// The Farm finishes a task when the task's own commit is in the branch
+		// it was meant for. A squash or a rebase writes other commits, so the
+		// Farm would never see the task as merged (BUG-077).
+		return all.map((choice) =>
+			choice.id === 'squash' || choice.id === 'rebase'
+				? { ...choice, reason: choice.reason ?? FARM_KEEPS_COMMITS }
+				: choice
+		);
+	},
+	/** Opened for a Farm task: its branch goes into its target, with its commits kept. */
+	get forFarm(): boolean {
+		return origin?.kind === 'farmTask';
 	},
 	/** The strategy shown: the one asked for, unless it is not possible here. */
 	get strategy(): Strategy {
@@ -648,11 +665,14 @@ export const merger = {
 		void this.load();
 	},
 	setInto(next: Into) {
+		// A Farm task goes where it was meant to (BUG-077).
+		if (this.forFarm && next !== 'a') return;
 		into = next;
 		remember(repoPath);
 	},
 	/** Turn the direction round: into A becomes into B and back. */
 	swap() {
+		if (this.forFarm) return;
 		into = into === 'b' ? 'a' : 'b';
 		remember(repoPath);
 	},

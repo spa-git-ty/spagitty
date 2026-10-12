@@ -2,7 +2,7 @@
 
 # TASK-062 — Finish the three open pull requests
 
-**Status:** Done — the three are rebased, reviewed and fixed, and wait for the author to merge them (2026-10-11).
+**Status:** Done — the three were rebased, reviewed and fixed, and merged together as pull request #63 on 2026-10-12; #57, #59 and #60 were closed in its favour.
 **Screens:** —.
 **Raised by:** the author, 2026-10-11: three pull requests are open, none merged, and their validity and quality are not known.
 

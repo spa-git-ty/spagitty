@@ -232,6 +232,24 @@ describe('a Farm task', () => {
 		expect(merger.origin).toMatchObject({ kind: 'farmTask', id: 'T3' });
 	});
 
+	it('keeps its commits and its direction, so the Farm can see it is merged (BUG-077)', async () => {
+		vi.mocked(api.branches).mockResolvedValue([branchRow('main', { current: true }), branchRow(TASK.branch)]);
+		vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast());
+		merger.presentFarmTask(TASK);
+		await merger.prime('/repo', 'main');
+
+		// A squash or a rebase writes other commits than the task's own.
+		const refused = merger.choices.filter((choice) => choice.id === 'squash' || choice.id === 'rebase');
+		expect(refused).toHaveLength(2);
+		for (const choice of refused) expect(choice.reason).toContain('Farm');
+		merger.setStrategy('squash');
+		expect(merger.strategy).not.toBe('squash');
+
+		merger.setInto('b');
+		merger.swap();
+		expect(merger.into).toBe('a');
+	});
+
 	it('is told to the Farm once the merge is written', async () => {
 		vi.mocked(api.branches).mockResolvedValue([branchRow('main', { current: true }), branchRow(TASK.branch)]);
 		vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast());

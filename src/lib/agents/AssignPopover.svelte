@@ -116,7 +116,11 @@
 			<Chip
 				active={lands && landsMeans}
 				disabled={!landsMeans}
-				title={landsMeans ? 'The agent resolves, runs the checks and merges' : 'Needs Ask before sending or merging, or Full access'}
+				title={!landsMeans
+					? 'Needs Ask before sending or merging, or Full access'
+					: level === 'signOff'
+						? 'The agent resolves, runs the checks and asks you before it merges'
+						: 'The agent resolves, runs the checks and merges'}
 				onclick={() => (lands = true)}
 			>
 				Resolve, check and merge

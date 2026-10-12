@@ -304,10 +304,7 @@ pub fn conflicts(
 ) -> Result<ConflictFixes> {
     let found = merges(repo, id(merge_base)?, id(head)?)?;
     let target = id(target)?;
-    let mut report = ConflictFixes {
-        truncated: found.len() > MAX_MERGES,
-        ..ConflictFixes::default()
-    };
+    let mut report = ConflictFixes::default();
 
     // What the pull request adds, by file, as the head numbers it.
     let mut added: HashMap<String, (BTreeSet<u32>, bool)> = HashMap::new();
@@ -331,7 +328,7 @@ pub fn conflicts(
             .clone()
     };
 
-    for (merge, first, second) in found.into_iter().take(MAX_MERGES) {
+    for (merge, first, second) in found {
         let commit = repo
             .find_commit(merge)
             .map_err(|e| Error::Walk(e.to_string()))?;
@@ -352,6 +349,12 @@ pub fn conflicts(
             (false, true) => false,
             _ => continue,
         };
+        // Counted here, after the merges of something else are passed over, so
+        // they do not use the limit up and hide a merge of the target behind them.
+        if report.merges.len() == MAX_MERGES {
+            report.truncated = true;
+            break;
+        }
 
         report.merges.push(short.clone());
         let text = shell::remerge_diff(dir, &merge.to_string())?;
