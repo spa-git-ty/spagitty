@@ -24,6 +24,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - agy has a saved **Auto-approve tools** choice in Settings → Agents for
   headless Test, Review and Merger runs. Its configured permission rules remain
   the default; a headless permission denial stops the assignment with guidance.
+- CI refuses a pull request whose commits or description name an agent, a tool or a session as an author (`Co-Authored-By:` for an agent, `Claude-Session:`, *Generated with* lines). A person as co-author is allowed; history already on `main` is not read.
 
 ### Fixed
 
