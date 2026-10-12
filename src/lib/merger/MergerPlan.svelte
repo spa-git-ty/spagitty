@@ -742,9 +742,18 @@
 		font-size: var(--fs-secondary);
 	}
 
+	/*
+	 * As tall as the taller of the two cards beside it, and no taller: its
+	 * own content is left out of the row's height (`contain: size`), so a
+	 * long list of files scrolls inside the card and does not stretch How it
+	 * is merged and History after down the page with it. The least height is
+	 * for when the row wraps and it has a line to itself.
+	 */
 	.changes {
 		flex: 1 1 380px;
 		min-width: 0;
+		min-height: 240px;
+		contain: size;
 		padding: 14px;
 		display: flex;
 		flex-direction: column;
@@ -767,6 +776,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	/* A row keeps its height; the list scrolls, its rows never squeeze. */
+	.files li {
+		flex: none;
 	}
 
 	.file {

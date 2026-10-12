@@ -264,9 +264,21 @@ export interface ResultLine {
 	from: SideKey | 'mine' | 'agent';
 }
 
-/** The lines a choice puts in the result, or null for no choice yet. */
+/**
+ * Whether a choice settles its region. Pick lines with nothing ticked does
+ * not: it is the question still open, with the boxes showing. So opening
+ * Pick lines resolves nothing until a line is ticked, and a region is never
+ * emptied by a press that only meant to look. Keeping nothing on purpose is
+ * Edit by hand with the box cleared.
+ */
+export function settles(choice: Choice | null | undefined): choice is Choice {
+	if (!choice) return false;
+	return choice.mode !== 'pick' || choice.a.some(Boolean) || choice.b.some(Boolean);
+}
+
+/** The lines a choice puts in the result, or null while nothing settles it. */
 export function chosenLines(region: Region, choice: Choice | null): ResultLine[] | null {
-	if (!choice) return null;
+	if (!settles(choice)) return null;
 	const take = (lines: string[], from: SideKey) => lines.map((text) => ({ text, from }));
 	switch (choice.mode) {
 		case 'a':
@@ -308,9 +320,9 @@ export function kept(choice: Choice | null, side: SideKey, i: number): boolean |
 	}
 }
 
-/** Every line of both sides ticked: where Pick lines starts. */
-export function pickAll(region: Region): Choice {
-	return { mode: 'pick', a: region.a.map(() => true), b: region.b.map(() => true) };
+/** No line of either side ticked: where Pick lines starts. */
+export function pickNone(region: Region): Choice {
+	return { mode: 'pick', a: region.a.map(() => false), b: region.b.map(() => false) };
 }
 
 /** Pick lines with one line's tick turned over. */
@@ -478,14 +490,14 @@ export function lineOf(region: Region, place: RegionLayout): number {
 	return region.aLine ?? place.resultStart;
 }
 
-/** How many regions, and how many have a choice. */
+/** How many regions, and how many have a choice that settles them. */
 export function counts(files: ResolverFile[], choices: Record<string, (Choice | null)[]>): { total: number; resolved: number } {
 	let total = 0;
 	let resolved = 0;
 	for (const file of files) {
 		for (const region of file.regions) {
 			total += 1;
-			if (choices[file.path]?.[region.index]) resolved += 1;
+			if (settles(choices[file.path]?.[region.index])) resolved += 1;
 		}
 	}
 	return { total, resolved };

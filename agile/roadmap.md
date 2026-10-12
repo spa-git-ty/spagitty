@@ -262,6 +262,20 @@ The toolbar, Merger and Rebase choose a branch from one list with a field to typ
 
 ### 25. FEAT-123 — Merger checks out the branch it merged into, and offers to push it
 
+## After 2.2.0
+
+### 26. FEAT-124 — an agent that shows it is working, and asks at the top of its card
+
+The agent's sentence moves while it works and is heard from. When it stops for the person, what it asks and the buttons that answer it are at the top of the card, not in the timeline, and what exactly is asked opens under them.
+
+### 27. FEAT-125 — a choice on a conflict can be cancelled, and Pick lines starts empty
+
+*Cancel* beside the choices and *Cancel all* for a file, in the resolver Merger and Conflicts share. Pick lines opens with nothing ticked and resolves nothing until a line is.
+
+### 28. TASK-070 — the plan's file list scrolls
+
+Merger's *What changes* is the height of the two cards beside it and scrolls inside.
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

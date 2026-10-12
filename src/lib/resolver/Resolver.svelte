@@ -2,8 +2,10 @@
 <script lang="ts">
 	import { tick, type Snippet } from 'svelte';
 	import SideBadge from '$lib/merger/SideBadge.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
+	import { dialog } from '$lib/ui/dialog.svelte';
 	import ConflictCard from './ConflictCard.svelte';
-	import { layout, type AgentProposal, type Choice, type Names, type ResolverFile, type SideKey } from './model';
+	import { layout, settles, type AgentProposal, type Choice, type Names, type ResolverFile, type SideKey } from './model';
 	import { languageOf } from './paint';
 	import ResolverPill from './ResolverPill.svelte';
 
@@ -77,7 +79,7 @@
 	const position = $derived(
 		current ? all.findIndex((c) => c.path === current!.path && c.index === current!.index) : -1
 	);
-	const unresolved = $derived(all.filter((c) => !choices[c.path]?.[c.index]));
+	const unresolved = $derived(all.filter((c) => !settles(choices[c.path]?.[c.index])));
 
 	$effect(() => {
 		// Opening on a file: the one asked for, or the first with something left.
@@ -99,7 +101,30 @@
 	}
 
 	function resolvedIn(f: ResolverFile): number {
-		return f.regions.filter((r) => choices[f.path]?.[r.index]).length;
+		return f.regions.filter((r) => settles(choices[f.path]?.[r.index])).length;
+	}
+
+	/** The regions of a file that have anything chosen, settled or not. */
+	function chosenIn(f: ResolverFile): number[] {
+		return f.regions.filter((r) => choices[f.path]?.[r.index]).map((r) => r.index);
+	}
+
+	/**
+	 * Cancel all: every conflict of the file back to unresolved. A side can be
+	 * pressed again; what was typed cannot be, so that is asked about first.
+	 */
+	async function cancelAll(f: ResolverFile) {
+		const typed = chosenIn(f).filter((index) => choices[f.path]?.[index]?.mode === 'edit').length;
+		if (typed > 0) {
+			const agreed = await dialog.confirm({
+				title: 'Cancel every choice in this file',
+				body: `What was typed by hand in ${typed} ${typed === 1 ? 'conflict' : 'conflicts'} is dropped with the rest.`,
+				confirmLabel: 'Cancel them',
+				danger: true
+			});
+			if (!agreed) return;
+		}
+		for (const index of chosenIn(f)) onchoose(f.path, index, null);
 	}
 
 	async function go(target: { path: string; index: number }) {
@@ -148,7 +173,7 @@
 				{#if split(f.path).dir}<span class="dir mono">{split(f.path).dir}</span>{/if}
 				<span class="dots">
 					{#each f.regions as region (region.index)}
-						{@const chosen = Boolean(choices[f.path]?.[region.index])}
+						{@const chosen = settles(choices[f.path]?.[region.index])}
 						<span
 							class="dot"
 							class:resolved={chosen}
@@ -189,6 +214,11 @@
 				<span class="note small">Whole file:</span>
 				<button class="chip" onclick={() => onwhole(file.path, 'a')}><SideBadge side="a" />All from {names.a}</button>
 				<button class="chip" onclick={() => onwhole(file.path, 'b')}><SideBadge side="b" />All from {names.b}</button>
+				{#if chosenIn(file).length > 0}
+					<button class="chip" title="Every conflict in this file back to unresolved" onclick={() => cancelAll(file)}>
+						<Icon name="undo" size="0.9em" weight={2.2} />Cancel all
+					</button>
+				{/if}
 			</div>
 			<div class="column-heads">
 				<span class="column-head"><SideBadge side="a" />{names.a}<span class="note">· {roles.a}</span></span>

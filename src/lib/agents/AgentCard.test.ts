@@ -2,7 +2,8 @@
 
 /**
  * The Agent card (2.0), mounted: the sentence, the meter, the timeline, each
- * kind of gate, and every control reaching the engine.
+ * kind of gate — asked at the top of the card (FEAT-124) — and every control
+ * reaching the engine.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -243,6 +244,29 @@ describe('how far through it is (FEAT-119)', () => {
 		view.destroy();
 	});
 
+	it('moves the sentence while the agent is at work, with the strands before it (FEAT-124)', () => {
+		const view = mount(at('working', { sentence: 'Reading the pull request' }));
+		expect(text(view.get('.sentence .shimmer'))).toBe('Reading the pull request');
+		expect(view.find('.sentence .strands')).not.toBeNull();
+		view.destroy();
+	});
+
+	it.each<Assignment['state']>(['waiting', 'paused', 'stopped', 'failed', 'done'])(
+		'keeps the sentence still when the run is %s',
+		(state) => {
+			const view = mount(aReview({ state }));
+			expect(view.find('.sentence .shimmer')).toBeNull();
+			expect(view.find('.sentence .strands')).toBeNull();
+			view.destroy();
+		}
+	);
+
+	it('keeps the sentence still once the agent has gone quiet', () => {
+		const view = mount(at('working', { quietSince: Math.floor(Date.now() / 1000) - 5 * 60 }));
+		expect(view.find('.sentence .shimmer')).toBeNull();
+		view.destroy();
+	});
+
 	it('says plainly that an agent has gone quiet, and offers to stop it', () => {
 		const view = mount(at('working', { quietSince: Math.floor(Date.now() / 1000) - 5 * 60 }));
 		expect(view.get('.sentence').className).toContain('quiet');
@@ -279,7 +303,7 @@ describe('the gates', () => {
 		const ongo = vi.fn();
 		const onaccept = vi.fn();
 		const view = mount(aReview(), { ongo, onaccept });
-		expect(view.get('.gate').textContent).toContain('2 findings');
+		expect(view.get('.now.asking').textContent).toContain('2 findings · 1 high, 1 low');
 		click(button(view, 'Go to them'));
 		expect(ongo).toHaveBeenCalled();
 		click(button(view, 'Accept both'));
@@ -310,7 +334,10 @@ describe('the gates', () => {
 			]
 		});
 		const view = mount(review);
-		expect(view.get('.gate').textContent).toContain('races');
+		expect(view.get('.now.asking').textContent).toContain('races');
+		// The files are the more: closed until asked for.
+		expect(view.text()).not.toContain('b.rs');
+		click(button(view, 'The plan'));
 		click(view.all('button').find((b) => b.getAttribute('title') === 'Leave a.rs out')!);
 		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'plan', files: ['b.rs'] });
 		click(button(view, 'Go on'));
@@ -343,8 +370,11 @@ describe('the gates', () => {
 				]
 			})
 		);
-		expect(view.get('.gate').textContent).toContain('bun test failed');
-		expect(view.get('.gate').textContent).toContain('expected 2, got 3');
+		expect(view.get('.now.asking').textContent).toContain('bun test failed');
+		// The sentence in the fixture is the merge's, so the card says what failed itself.
+		expect(view.find('.asked')).toBeNull();
+		click(button(view, 'The output'));
+		expect(view.get('.asked').textContent).toContain('expected 2, got 3');
 		click(button(view, 'Run again'));
 		expect(api.control).toHaveBeenCalledWith('merge-1', { kind: 'redo', note: '' });
 	});
@@ -356,7 +386,7 @@ describe('the gates', () => {
 			proposals: [{ ...aMerge().proposals[0], step: 1, state: 'proposed' }]
 		});
 		const view = mount(merge, { names: { a: 'main', b: 'feat' }, ongo: vi.fn(), onaccept: vi.fn() });
-		expect(view.get('.gate').textContent).toContain('Keeps pinned from main and dragging from feat/tab-drag.');
+		expect(view.get('.now.asking').textContent).toContain('Keeps pinned from main and dragging from feat/tab-drag.');
 		expect(button(view, 'Go to it')).toBeDefined();
 		expect(button(view, 'Accept')).toBeDefined();
 	});
@@ -370,8 +400,91 @@ describe('the gates', () => {
 
 	it('a gate with nothing to decide just goes on', () => {
 		const view = mount(aReview({ proposals: [aFinding({ state: 'accepted' })] }));
-		expect(view.get('.gate').textContent).toContain('Nothing to decide here.');
+		expect(view.get('.now.asking').textContent).toContain('Nothing to decide here.');
 		click(button(view, 'Go on'));
 		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'continue' });
+	});
+});
+
+describe('what it asks, at the top of the card (FEAT-124)', () => {
+	it('is asked above the meter and the timeline, never in the timeline', () => {
+		const view = mount(aReview(), { ongo: vi.fn(), onaccept: vi.fn() });
+		const asking = view.get('.now.asking');
+		const accept = button(view, 'Accept both');
+		expect(asking.contains(accept)).toBe(true);
+		expect(asking.contains(view.get('.sentence'))).toBe(true);
+		const follows = (later: Element) => asking.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING;
+		expect(follows(view.get('.meter'))).toBeTruthy();
+		expect(follows(view.get('.timeline'))).toBeTruthy();
+		expect(view.get('.timeline').querySelectorAll('.acts')).toHaveLength(0);
+	});
+
+	it('is not drawn when the agent is not waiting', () => {
+		const view = mount(aReview({ state: 'working' }));
+		expect(view.find('.now.asking')).toBeNull();
+		expect(view.find('.now .acts')).toBeNull();
+	});
+
+	it('says the findings in one line, and each of them once that is opened', () => {
+		const view = mount(aReview(), { ongo: vi.fn(), onaccept: vi.fn() });
+		expect(view.text()).not.toContain('Two windows can write this file at once.');
+		const toggle = button(view, 'The findings');
+		expect(toggle.getAttribute('aria-expanded')).toBe('false');
+		click(toggle);
+		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		const items = [...view.get('.asked').querySelectorAll('li')].map(text);
+		expect(items).toEqual([
+			'avatars.rs:16 high Two windows can write this file at once. Write to a temporary file, then rename.',
+			'avatars.rs:15 low · unsure Offline, a stale file now fails the avatar.'
+		]);
+		click(toggle);
+		expect(view.find('.asked')).toBeNull();
+	});
+
+	it('does not say twice what the sentence already says', () => {
+		const view = mount(
+			aReview({
+				sentence: 'Waiting for you: Finish review',
+				steps: [aStep({ kind: { kind: 'last' }, label: 'Finish review', state: 'waiting', gate: 'send', endedAt: null })],
+				proposals: []
+			})
+		);
+		expect(view.get('.summary').textContent).toBe('Ready for you to send.');
+		view.destroy();
+
+		const moved = mount(
+			aReview({
+				sentence: 'Waiting for you: The pull request changed since the agent started.',
+				steps: [aStep()],
+				reason: 'The pull request changed since the agent started.'
+			})
+		);
+		expect(moved.find('.summary')).toBeNull();
+		expect(button(moved, 'Carry on')).toBeDefined();
+	});
+
+	it('says the verdict in a line, and its summary once that is opened', () => {
+		const view = mount(
+			aReview({
+				sentence: 'Waiting for you: the verdict',
+				steps: [aStep({ index: 3, kind: { kind: 'verdict' }, label: 'Verdict · Request changes', state: 'waiting', gate: 'verdict', endedAt: null })],
+				proposals: [
+					{
+						id: 'p3-0',
+						step: 3,
+						body: { kind: 'verdict', summary: 'The cache can be written twice at once.', verdict: 'requestChanges', sure: true },
+						sure: true,
+						state: 'proposed',
+						decidedBy: null,
+						why: null,
+						stale: false
+					}
+				]
+			})
+		);
+		expect(view.get('.summary').textContent).toBe('Verdict · Request changes');
+		expect(view.text()).not.toContain('The cache can be written twice at once.');
+		click(button(view, 'The summary'));
+		expect(view.get('.asked').textContent).toContain('The cache can be written twice at once.');
 	});
 });

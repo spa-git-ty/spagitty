@@ -14,6 +14,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- An agent that is working shows it. On its card in Review and Merger, the sentence that says what it is doing has the three strands before it and a band of colour crossing the words. It moves only while the agent is working and has been heard from: it is still when the agent waits for you, is paused, has ended, or has said nothing for three minutes. The agent's line on a pull request in the Review list moves the same way, and the room's **Agent** tab shows the strands while you read the conversation. With motion reduced on the desktop the words are still.
+- A choice on a conflict can be cancelled. In Merger and Conflicts, **Cancel** is at the end of the row of choices once one is made, and puts the conflict back to unresolved whether you took a side, took both, picked lines or typed. **Cancel all**, beside **All from …**, does it for every conflict of the file, and asks first when one of them was typed by hand.
+
+### Changed
+
+- **Pick lines** starts with no line ticked. Tick the ones to keep. Until one is ticked the conflict stays unresolved and the merge cannot be completed, so opening it never empties a conflict by itself.
+- The **Reset** button in a conflict's header is gone; **Cancel** beside the choices does the same.
+- In Merger's plan, **What changes** is as tall as **How it is merged** and **History after**, and its list of files scrolls. A merge that touches many files no longer stretches the other two cards down the page.
+- When an agent stops for you, what it asks is at the top of its card with the buttons that answer it: **Go on**, **Accept**, **Finish review** and the rest. They were under the waiting step in the timeline, which scrolls, so on a long run they were out of sight. One line says what waits, such as *2 findings · 1 high, 1 low*, and what exactly is asked opens under the buttons: each finding with its file, line and severity, the plan's files, a failed check's output, or the verdict's summary.
+
 ## [2.2.0] - 2026-10-12
 
 ### Added

@@ -10,8 +10,9 @@
 		kept,
 		lineOf,
 		offered,
-		pickAll,
+		pickNone,
 		placeholder,
+		settles,
 		statusLabel,
 		toggled,
 		why,
@@ -35,7 +36,8 @@
 	 * order whatever the direction. Each side shows its own lines by its own
 	 * numbers, with the context around them dimmed; the Result shows what
 	 * will land, each line badged with where it came from, numbered as the
-	 * file will be. Under it, every way out.
+	 * file will be. Under it, every way out, and the way back: Cancel returns
+	 * the conflict to unresolved, whichever way it was chosen.
 	 */
 	interface Props {
 		file: ResolverFile;
@@ -92,6 +94,8 @@
 	 * badged as its own, until the person takes it over with Edit by hand. */
 	const editing = $derived(choice?.mode === 'edit' && !author ? choice : null);
 	const picking = $derived(choice?.mode === 'pick' ? choice : null);
+	/** Pick lines with nothing ticked yet is a choice being made, not one made. */
+	const settled = $derived(settles(choice));
 	const name = $derived(file.path.slice(file.path.lastIndexOf('/') + 1));
 
 	/** Each column's lines, painted as one block so open strings carry. */
@@ -115,7 +119,7 @@
 
 	function pick(mode: Mode) {
 		if (choice?.mode === mode && !(mode === 'edit' && author)) return;
-		if (mode === 'pick') onchoose(pickAll(region));
+		if (mode === 'pick') onchoose(pickNone(region));
 		else if (mode === 'edit') onchoose(editSeed(region, choice));
 		else onchoose({ mode } as Choice);
 	}
@@ -135,7 +139,7 @@
 <article
 	class="card conflict"
 	class:current
-	class:unresolved={!choice}
+	class:unresolved={!settled}
 	id="conflict-{file.path}-{region.index}"
 	aria-label="Conflict {number}"
 >
@@ -149,14 +153,9 @@
 				><Icon name="agent" size="0.85em" weight={2.2} />{proposal.agent} proposes: {proposal.words}{proposal.sure ? '' : ' · unsure'}</span
 			>
 		{:else}
-			<span class="status" class:resolved={choice !== null}>{statusLabel(choice, names)}</span>
+			<span class="status" class:resolved={settled}>{statusLabel(settled ? choice : null, names)}</span>
 		{/if}
 		<span class="why note">{!choice && proposal ? proposal.why : why(region, file, names)}</span>
-		{#if choice}
-			<button class="chip reset" onclick={() => onchoose(null)}>
-				<Icon name="undo" size="0.85em" weight={2.2} />Reset
-			</button>
-		{/if}
 	</header>
 
 	{#if showBase && !file.whole}
@@ -188,7 +187,7 @@
 					{/each}
 					{#each block as text, i (i)}
 						{@const keep = kept(choice, key, i)}
-						<div class="row own {key}" class:dropped={keep === false}>
+						<div class="row own {key}" class:dropped={keep === false && settled}>
 							<span class="mark"></span>
 							<span class="n">{start === null ? '' : start + i}</span>
 							{#if picking}
@@ -215,7 +214,7 @@
 
 		{@render side('a', place.aBefore, region.a, place.aAfter, aTokens, region.aLine)}
 
-		<div class="column code result" class:chosen={choice !== null}>
+		<div class="column code result" class:chosen={settled}>
 			{#each place.before as line, i (i)}
 				<div class="row context">
 					<span class="mark"></span><span class="n">{line.n ?? ''}</span>
@@ -235,7 +234,7 @@
 				</div>
 			{:else if !lines}
 				<div class="choose">
-					<span class="choose-title">Choose what goes here</span>
+					<span class="choose-title">{picking ? 'Tick the lines to keep' : 'Choose what goes here'}</span>
 					<span class="note small">{placeholder(region, names)}</span>
 				</div>
 			{:else if lines.length === 0}
@@ -282,6 +281,16 @@
 				{entry.label(names)}
 			</button>
 		{/each}
+		{#if choice}
+			<button
+				class="chip choice cancel"
+				aria-label="Cancel the choice for conflict {number}"
+				title="Back to unresolved. Nothing is kept for this conflict."
+				onclick={() => onchoose(null)}
+			>
+				<Icon name="undo" size="0.95em" weight={2.2} />Cancel
+			</button>
+		{/if}
 	</div>
 	{#if picking}
 		<span class="note small center">Tick the lines to keep on either side. {names.a}'s lines come first; switch to Edit by hand to reorder or reword.</span>
@@ -610,6 +619,17 @@
 		color: var(--ink);
 		background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 		font-weight: 600;
+	}
+
+	/* The way back, set a little apart from the ways out. */
+	.choice.cancel {
+		margin-left: 8px;
+		padding-left: 10px;
+		color: var(--muted);
+	}
+
+	.choice.cancel:hover {
+		color: var(--ink);
 	}
 
 	.choice.mine[aria-pressed='true'] {

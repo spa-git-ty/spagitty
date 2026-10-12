@@ -16,7 +16,7 @@
 import { agents } from '$lib/agents/store.svelte';
 import { choiceWords, consentSlug, isLive } from '$lib/agents/levels';
 import type { Assigned, Assignment, MergeFile, Proposal, StartRequest } from '$lib/agents/types';
-import type { AgentProposal, Choice, ResolverFile } from '$lib/resolver/model';
+import { settles, type AgentProposal, type Choice, type ResolverFile } from '$lib/resolver/model';
 import { repo } from '$lib/repo.svelte';
 import { notice } from '$lib/ui/notice.svelte';
 import { resolving } from './resolve.svelte';
@@ -117,7 +117,8 @@ export function personChose(path: string, index: number, choice: Choice | null):
 	const a = current();
 	if (!a || !isLive(a)) return;
 	const p = standing(a).get(`${path}#${index}`);
-	if (!p || !choice) return;
+	// Pick lines opened and nothing ticked is not a decision yet.
+	if (!p || !settles(choice)) return;
 	if (JSON.stringify(choice) === JSON.stringify(p.body.choice)) return;
 	void agents.control(a.id, { kind: 'decide', proposal: p.id, state: 'dismissed', choice });
 }

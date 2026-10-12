@@ -21,7 +21,7 @@
 	import AgentCard from '$lib/agents/AgentCard.svelte';
 	import AssignPopover from '$lib/agents/AssignPopover.svelte';
 	import { agents } from '$lib/agents/store.svelte';
-	import { isLive, readingNow } from '$lib/agents/levels';
+	import { isLive, isWorking, readingNow } from '$lib/agents/levels';
 	import type { Assigned, Proposal } from '$lib/agents/types';
 	import * as agentWork from './agent.svelte';
 
@@ -185,6 +185,9 @@
 		<Chip active={side === 'conversation'} onclick={() => (side = 'conversation')}>Conversation {openThreads}</Chip>
 		<Chip active={side === 'agent'} onclick={() => (side = 'agent')}>
 			<Icon name="agent" size="0.95em" weight={2} />Agent
+			{#if assignment && isWorking(assignment, Math.floor(Date.now() / 1000))}
+				<Loader size="inline" label="{assignment.agent.name} is working" />
+			{/if}
 		</Chip>
 	</div>
 {/snippet}

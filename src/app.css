@@ -1225,6 +1225,45 @@ input[type='radio'] {
 	}
 }
 
+/*
+ * Words for work that is going on now (FEAT-124): a band of the agent's colour
+ * crossing them, the way a terminal agent's "Thinking…" does. Put it on the
+ * words only while the work is live and heard from — it is the one thing on
+ * screen that says so, and it means nothing if it also moves when stuck.
+ *
+ * The words are painted by the background, so with the motion off, or with the
+ * system's colours forced, the background goes and the words are their own
+ * colour again.
+ */
+.shimmer {
+	--shimmer-rest: color-mix(in srgb, currentColor 58%, transparent);
+	background: linear-gradient(
+			100deg,
+			var(--shimmer-rest) 0 44%,
+			var(--shimmer-band, var(--agent)) 50%,
+			var(--shimmer-rest) 56% 100%
+		)
+		100% 0 / 300% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer-cross 2.2s linear infinite;
+}
+
+@keyframes shimmer-cross {
+	to {
+		background-position: 0 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+	.shimmer {
+		animation: none;
+		background: none;
+		-webkit-text-fill-color: currentColor;
+	}
+}
+
 /* A pane of glass catching the light as it appears. */
 @keyframes sheen-sweep {
 	from {
