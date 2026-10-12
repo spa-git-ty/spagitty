@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-10-12
+
 ### Added
 
 - An agent that is working shows it. On its card in Review and Merger, the sentence that says what it is doing has the three strands before it and a band of colour crossing the words. It moves only while the agent is working and has been heard from: it is still when the agent waits for you, is paused, has ended, or has said nothing for three minutes. The agent's line on a pull request in the Review list moves the same way, and the room's **Agent** tab shows the strands while you read the conversation. With motion reduced on the desktop the words are still.
@@ -25,6 +27,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - The **Reset** button in a conflict's header is gone; **Cancel** beside the choices does the same.
 - In Merger's plan, **What changes** is as tall as **How it is merged** and **History after**, and its list of files scrolls. A merge that touches many files no longer stretches the other two cards down the page.
 - When an agent stops for you, what it asks is at the top of its card with the buttons that answer it: **Go on**, **Accept**, **Finish review** and the rest. They were under the waiting step in the timeline, which scrolls, so on a long run they were out of sight. One line says what waits, such as *2 findings · 1 high, 1 low*, and what exactly is asked opens under the buttons: each finding with its file, line and severity, the plan's files, a failed check's output, or the verdict's summary.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.2.0. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
 
 ## [2.2.0] - 2026-10-12
 
