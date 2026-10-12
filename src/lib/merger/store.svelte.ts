@@ -16,6 +16,7 @@
 
 import * as api from '../api';
 import * as farmApi from '../farm/api';
+import { network } from '../network/store.svelte';
 import { requests } from '../requests/store.svelte';
 import type {
 	BranchRow,
@@ -86,8 +87,14 @@ export type Origin =
 	| {
 			kind: 'pullRequest';
 			pr: PullRequest;
-			/** Set while its conflicts are being resolved here: the branch and what it takes in. */
-			local: { branch: string; target: string } | null;
+			/**
+			 * Set while its conflicts are being resolved here: the branch, what it
+			 * takes in, and the remote the pull request's own branch is on. The
+			 * remote is null when that branch is not known to be one of this
+			 * repository's remote's: a fork's is not, and a push from here would
+			 * not reach it (BUG-076).
+			 */
+			local: { branch: string; target: string; remote: string | null } | null;
 	  }
 	| { kind: 'farmTask'; id: string; branch: string; target: string; title: string };
 
@@ -108,6 +115,10 @@ let pushed = $state(false);
 let pushError = $state<string | null>(null);
 /** The Farm could not be told its task was merged. */
 let farmError = $state<string | null>(null);
+
+/** Why a Farm task cannot be squashed or rebased in. */
+export const FARM_KEEPS_COMMITS =
+	'A Farm task is merged with its commits kept, so the Farm can see its work is in the branch';
 
 /** Where the screen is: the plan, resolving, the commit dialog, or done. */
 export type Phase = 'plan' | 'resolve' | 'commit' | 'done';
@@ -230,7 +241,20 @@ export const merger = {
 	get choices(): StrategyChoice[] {
 		const who = this.roles;
 		const plan = this.forecast;
-		return plan && who ? strategies(plan, who) : [];
+		const all = plan && who ? strategies(plan, who) : [];
+		if (!this.forFarm) return all;
+		// The Farm finishes a task when the task's own commit is in the branch
+		// it was meant for. A squash or a rebase writes other commits, so the
+		// Farm would never see the task as merged (BUG-077).
+		return all.map((choice) =>
+			choice.id === 'squash' || choice.id === 'rebase'
+				? { ...choice, reason: choice.reason ?? FARM_KEEPS_COMMITS }
+				: choice
+		);
+	},
+	/** Opened for a Farm task: its branch goes into its target, with its commits kept. */
+	get forFarm(): boolean {
+		return origin?.kind === 'farmTask';
 	},
 	/** The strategy shown: the one asked for, unless it is not possible here. */
 	get strategy(): Strategy {
@@ -376,11 +400,18 @@ export const merger = {
 			const fetched = await api.reviewCheckout(pr.number, pr.targetBranch, pr.headSha);
 			const done = await api.reviewCheckOut(pr.number, fetched.head, pr.sourceBranch, pr.targetBranch);
 			const [rows, tags] = await Promise.all([api.branches(), api.tags().catch(() => [] as Tag[])]);
-			const target =
-				pickablesFrom(rows, tags).find(
-					(option) => option.group === 'remote' && option.name.endsWith('/' + pr.targetBranch)
-				)?.name ?? pr.targetBranch;
-			origin = { kind: 'pullRequest', pr, local: { branch: done.branch, target } };
+			const fetchedTarget = pickablesFrom(rows, tags).find(
+				(option) => option.group === 'remote' && option.name.endsWith('/' + pr.targetBranch)
+			)?.name;
+			const target = fetchedTarget ?? pr.targetBranch;
+			// The target was fetched from the remote the pull request is on. Its
+			// own branch is pushed there only when that remote is seen to have it.
+			const from = fetchedTarget ? fetchedTarget.slice(0, -(pr.targetBranch.length + 1)) : null;
+			const own =
+				from !== null &&
+				(done.upstream !== null ||
+					rows.some((row) => row.kind === 'remote' && row.name === `${from}/${pr.sourceBranch}`));
+			origin = { kind: 'pullRequest', pr, local: { branch: done.branch, target, remote: own ? from : null } };
 			preset = { a: done.branch, b: target, into: 'a' };
 			phase = 'plan';
 			landed = null;
@@ -398,19 +429,37 @@ export const merger = {
 		}
 	},
 
-	/** Push the resolved branch to the pull request's own branch. */
+	/**
+	 * Push the resolved branch to the pull request's own branch, and wait for
+	 * git to say how it went (BUG-076).
+	 *
+	 * Through the network store, like every other push: it names the remote,
+	 * which is what makes git take the refspec; it lets go of the worker when
+	 * the push ends, so the next fetch or push can start; and *Pushed* is said
+	 * only once git has said so.
+	 */
 	async pushPullRequestHead(): Promise<boolean> {
 		const o = origin;
 		if (!o || o.kind !== 'pullRequest' || !o.local || pushing) return false;
+		const { branch, remote } = o.local;
+		if (remote === null) {
+			pushError = `Spagitty does not know where ${o.pr.sourceBranch} is: it has not been fetched from this repository's remote, or the pull request comes from a fork. Fetch and try again, or push ${branch} to it yourself.`;
+			return false;
+		}
+		if (network.running) {
+			pushError = 'A fetch or a push is running. Push again when it has finished.';
+			return false;
+		}
 		pushing = true;
 		pushError = null;
 		try {
-			await api.push('', `${o.local.branch}:${o.pr.sourceBranch}`);
+			const started = await network.push(remote, `${branch}:${o.pr.sourceBranch}`);
+			if (!started || !(await network.whenDone())) {
+				pushError = network.error ?? 'The push did not go through.';
+				return false;
+			}
 			pushed = true;
 			return true;
-		} catch (e) {
-			pushError = String(e);
-			return false;
 		} finally {
 			pushing = false;
 		}
@@ -616,11 +665,14 @@ export const merger = {
 		void this.load();
 	},
 	setInto(next: Into) {
+		// A Farm task goes where it was meant to (BUG-077).
+		if (this.forFarm && next !== 'a') return;
 		into = next;
 		remember(repoPath);
 	},
 	/** Turn the direction round: into A becomes into B and back. */
 	swap() {
+		if (this.forFarm) return;
 		into = into === 'b' ? 'a' : 'b';
 		remember(repoPath);
 	},

@@ -258,6 +258,7 @@ pub fn run() {
             farm::farm_task_detail,
             farm::farm_transcript,
             farm::farm_merge_task,
+            farm::farm_merge_check,
             farm::farm_task_merged,
             farm::farm_review_supplemental,
             farm::farm_review_task,

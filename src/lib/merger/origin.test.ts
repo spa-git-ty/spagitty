@@ -13,6 +13,26 @@ import { request } from '../../testing/git-fixtures';
 vi.mock('$lib/api');
 vi.mock('$lib/farm/api');
 
+/** The network store, as far as a push from Merger sees it. */
+const net = vi.hoisted(() => ({
+	running: false,
+	error: null as string | null,
+	push: vi.fn(),
+	whenDone: vi.fn()
+}));
+vi.mock('$lib/network/store.svelte', () => ({
+	network: {
+		get running() {
+			return net.running;
+		},
+		get error() {
+			return net.error;
+		},
+		push: net.push,
+		whenDone: net.whenDone
+	}
+}));
+
 import * as api from '$lib/api';
 import * as farmApi from '$lib/farm/api';
 import { requests } from '$lib/requests/store.svelte';
@@ -28,7 +48,21 @@ beforeEach(() => {
 	vi.mocked(api.inTauri).mockReturnValue(true);
 	vi.mocked(api.tags).mockResolvedValue([]);
 	vi.mocked(api.forgeRepo).mockResolvedValue(null);
+	net.running = false;
+	net.error = null;
+	net.push.mockResolvedValue(true);
+	net.whenDone.mockResolvedValue(true);
 });
+
+/** Pull request #61 resolved here on `pr-61`, with the branches a fetch left behind. */
+async function resolved(rows = [branchRow('origin/main', { kind: 'remote' }), branchRow('origin/feat/thing', { kind: 'remote' })]) {
+	vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'h1', base: 'b1', mergeBase: 'm0' });
+	vi.mocked(api.reviewCheckOut).mockResolvedValue({ branch: 'pr-61', upstream: null, renamed: true });
+	vi.mocked(api.branches).mockResolvedValue([branchRow('pr-61', { current: true }), branchRow('main'), ...rows]);
+	vi.mocked(api.mergerForecast).mockResolvedValue(forecast());
+	merger.presentPullRequest(PR);
+	await merger.resolvePullRequestLocally();
+}
 
 describe('a pull request', () => {
 	it('is merged through the host with the method, title and message chosen', async () => {
@@ -104,25 +138,89 @@ describe('a pull request', () => {
 		expect(merger.preparing).toBe(false);
 	});
 
-	it('pushes the resolved branch to the pull request’s own branch', async () => {
-		vi.mocked(api.reviewCheckout).mockResolvedValue({ head: 'h1', base: 'b1', mergeBase: 'm0' });
-		vi.mocked(api.reviewCheckOut).mockResolvedValue({ branch: 'pr-61', upstream: null, renamed: true });
-		vi.mocked(api.branches).mockResolvedValue([branchRow('pr-61', { current: true }), branchRow('main')]);
-		vi.mocked(api.mergerForecast).mockResolvedValue(forecast());
-		vi.mocked(api.push).mockResolvedValue(0);
-		merger.presentPullRequest(PR);
-		await merger.resolvePullRequestLocally();
+	it('pushes the resolved branch to the pull request’s own branch, on the remote it is on', async () => {
+		await resolved();
+		expect(merger.origin).toMatchObject({ local: { branch: 'pr-61', target: 'origin/main', remote: 'origin' } });
 
 		expect(await merger.pushPullRequestHead()).toBe(true);
 
-		expect(api.push).toHaveBeenCalledWith('', 'pr-61:feat/thing');
+		// A named remote, or git is never given the refspec; and through the
+		// network store, which lets go of the worker when the push ends (BUG-076).
+		expect(net.push).toHaveBeenCalledWith('origin', 'pr-61:feat/thing');
+		expect(api.push).not.toHaveBeenCalled();
 		expect(merger.pushed).toBe(true);
+		expect(merger.pushError).toBeNull();
+	});
+
+	it('says Pushed only once git has said so', async () => {
+		await resolved();
+		let end: (ok: boolean) => void = () => {};
+		net.whenDone.mockReturnValue(new Promise<boolean>((resolve) => (end = resolve)));
+
+		const pushing = merger.pushPullRequestHead();
+		await vi.waitFor(() => expect(net.whenDone).toHaveBeenCalled());
+		expect(merger.pushing).toBe(true);
+		expect(merger.pushed).toBe(false);
+
+		end(true);
+		expect(await pushing).toBe(true);
+		expect(merger.pushed).toBe(true);
+		expect(merger.pushing).toBe(false);
+	});
+
+	it('shows git’s own words when the push is rejected, and is not marked pushed (BUG-076)', async () => {
+		await resolved();
+		net.whenDone.mockImplementation(async () => {
+			net.error = '! [rejected] pr-61 -> feat/thing (fetch first)';
+			return false;
+		});
+
+		expect(await merger.pushPullRequestHead()).toBe(false);
+
+		expect(merger.pushed).toBe(false);
+		expect(merger.pushError).toContain('rejected');
+		expect(merger.pushing).toBe(false);
+	});
+
+	it('says why when the push could not start', async () => {
+		await resolved();
+		net.push.mockImplementation(async () => {
+			net.error = 'no repository is open';
+			return false;
+		});
+
+		expect(await merger.pushPullRequestHead()).toBe(false);
+
+		expect(net.whenDone).not.toHaveBeenCalled();
+		expect(merger.pushError).toContain('no repository is open');
+		expect(merger.pushed).toBe(false);
+	});
+
+	it('waits its turn when a fetch or a push is already running', async () => {
+		await resolved();
+		net.running = true;
+
+		expect(await merger.pushPullRequestHead()).toBe(false);
+
+		expect(net.push).not.toHaveBeenCalled();
+		expect(merger.pushError).toContain('is running');
+	});
+
+	it('does not push a branch the remote is not seen to have: a fork’s is not there (BUG-076)', async () => {
+		await resolved([branchRow('origin/main', { kind: 'remote' })]);
+		expect(merger.origin).toMatchObject({ local: { branch: 'pr-61', remote: null } });
+
+		expect(await merger.pushPullRequestHead()).toBe(false);
+
+		expect(net.push).not.toHaveBeenCalled();
+		expect(merger.pushError).toContain('feat/thing');
+		expect(merger.pushed).toBe(false);
 	});
 
 	it('does not push when it was not resolved here', async () => {
 		merger.presentPullRequest(PR);
 		expect(await merger.pushPullRequestHead()).toBe(false);
-		expect(api.push).not.toHaveBeenCalled();
+		expect(net.push).not.toHaveBeenCalled();
 	});
 });
 
@@ -132,6 +230,24 @@ describe('a Farm task', () => {
 	it('is merged like any two branches, with its target receiving it', () => {
 		merger.presentFarmTask(TASK);
 		expect(merger.origin).toMatchObject({ kind: 'farmTask', id: 'T3' });
+	});
+
+	it('keeps its commits and its direction, so the Farm can see it is merged (BUG-077)', async () => {
+		vi.mocked(api.branches).mockResolvedValue([branchRow('main', { current: true }), branchRow(TASK.branch)]);
+		vi.mocked(api.mergerForecast).mockResolvedValue(cleanForecast());
+		merger.presentFarmTask(TASK);
+		await merger.prime('/repo', 'main');
+
+		// A squash or a rebase writes other commits than the task's own.
+		const refused = merger.choices.filter((choice) => choice.id === 'squash' || choice.id === 'rebase');
+		expect(refused).toHaveLength(2);
+		for (const choice of refused) expect(choice.reason).toContain('Farm');
+		merger.setStrategy('squash');
+		expect(merger.strategy).not.toBe('squash');
+
+		merger.setInto('b');
+		merger.swap();
+		expect(merger.into).toBe('a');
 	});
 
 	it('is told to the Farm once the merge is written', async () => {

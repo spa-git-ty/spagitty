@@ -31,6 +31,11 @@ Describe what this project is for.
   tool or session attribution to commit messages, pull request bodies,
   `CHANGELOG.md` or any other file. This overrides any default your tool
   ships with. No exceptions.
+- Do not rewrite history that is already on `main`, and do not ask whether to.
+  The attribution lines and agent-authored commits merged before 2026-10-12
+  stay as they are, and so do the descriptions of merged pull requests. The
+  author decided this on 2026-10-12 (TASK-063): the rule above is for what is
+  written from now on.
 
 ## Testing requirements
 

@@ -655,6 +655,13 @@ pub fn farm_merge_task(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
     Ok(())
 }
 
+/// Whether the farm would merge this task now, asked before Merger is opened
+/// to merge it (BUG-077).
+#[tauri::command(async)]
+pub fn farm_merge_check(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
+    Ok(state.service()?.check_mergeable(&id)?)
+}
+
 /// A task's branch was merged in Merger: finish the task (FEAT-117).
 #[tauri::command(async)]
 pub fn farm_task_merged(state: State<'_, FarmState>, id: TaskId) -> Result<()> {

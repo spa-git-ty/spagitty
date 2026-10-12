@@ -8,6 +8,8 @@
 | --- | --- |
 | `crates/spagitty-farm/src/agent/adapter.rs` | Only a Windows `.cmd`/`.bat` agent given a many-line prompt needs stdin; an executable, another platform or a one-line prompt does not. |
 | `crates/spagitty-farm/src/agent/adapters/{codex,claude,pi}.rs` | A `.cmd` agent on Windows gets the prompt on stdin (Codex with `-`, Claude Code with no argument, Oh My Pi in stdin mode); elsewhere the prompt stays an argument. |
+| `crates/spagitty-farm/src/agent/adapter.rs` | A command with a many-line argument to a `.cmd` or `.bat` file is refused on Windows, naming the file and standard input: agy's `--print` and a custom agent's argument. An `.exe`, a one-line argument, and instructions already on stdin are not refused. |
+| `crates/spagitty-farm/src/execution/process.rs` | On Windows, `start` refuses such a command before anything is started. |
 
 Pull request #59's own cases (BUG-065) run with these.
 
@@ -16,3 +18,8 @@ Pull request #59's own cases (BUG-065) run with these.
 - `cargo test -p spagitty-farm adapters`: 30 passed.
 - `bunx vitest run src/lib/agents src/lib/review`: 147 passed. `bun run check`: zero errors, zero warnings.
 - `cargo clippy --workspace --all-targets -D warnings`: clean. The `execution::process` tests that use `/bin/sh` fail on Windows as they do on `main`.
+
+## Results — 2026-10-12
+
+- `cargo test -p spagitty-farm --lib -- a_many_line_argument only_a_windows_shim` on Windows: 3 passed.
+- `cargo test -p spagitty-farm` in WSL: every target passed.

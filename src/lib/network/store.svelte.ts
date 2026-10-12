@@ -37,6 +37,44 @@ let step = $state<CloneProgress | null>(null);
 /** git's own last words about the operation that finished. */
 let summary = $state<string | null>(null);
 let error = $state<string | null>(null);
+/** Whoever is waiting for the operation running now to end. */
+let waiting: ((ok: boolean) => void)[] = [];
+/** An operation has been asked for and its token has not come back yet. */
+let starting = false;
+/** Done events that came while `starting`: the worker can finish first. */
+let early: NetworkDoneEvent[] = [];
+
+/** What a done event means, once it is known to be this operation's. */
+function ended(payload: NetworkDoneEvent): void {
+	token = null;
+	step = null;
+	// The worker cannot let go of itself — dropping it joins its own
+	// thread — so the screen says when it is finished with.
+	void api.networkRelease();
+
+	const what = payload.operation === 'push' ? 'Pushed' : 'Fetched';
+
+	if (payload.ok) {
+		summary = payload.summary;
+		error = null;
+		// The notice as well as the toolbar line: the toolbar's is
+		// transient state that the next operation overwrites, and a
+		// notice is what somebody looking at another screen sees.
+		notice.ok(what, summary);
+		// Spagitty never passes `--force-with-lease` from the UI today,
+		// so this is always the gentle kind. The flag is carried anyway
+		// so that the day it can, the badge is already wired (FEAT-072).
+		if (payload.operation === 'push') pushed(false);
+		// A fetch moves remote-tracking refs and a push moves the
+		// upstream; both change what every divergence on screen means.
+		void repo.refresh();
+	} else {
+		error = payload.error;
+		summary = null;
+		notice.failed(`Could not ${payload.operation}`, error);
+	}
+	for (const resolve of waiting.splice(0)) resolve(payload.ok);
+}
 
 export const network = {
 	get running(): boolean {
@@ -92,15 +130,36 @@ export const network = {
 		summary = null;
 		error = null;
 
+		starting = true;
+		early = [];
 		try {
-			token = await begin();
+			const mine = await begin();
+			token = mine;
+			// The worker is started before its token comes back, so a push git
+			// refuses at once can be done first. Its event was kept for now.
+			const already = early.find((payload) => payload.token === mine);
+			if (already) ended(already);
 			return true;
 		} catch (e) {
 			token = null;
 			operation = null;
 			error = String(e);
 			return false;
+		} finally {
+			starting = false;
+			early = [];
 		}
+	},
+
+	/**
+	 * How the operation running now ends: true when it went well, and `error`
+	 * holds git's words when it did not. `fetch` and `push` resolve when the
+	 * work has started; a caller whose next step depends on the outcome waits
+	 * here (BUG-076).
+	 */
+	whenDone(): Promise<boolean> {
+		if (token === null) return Promise.resolve(error === null);
+		return new Promise((resolve) => waiting.push(resolve));
 	},
 
 	/** Listen for progress. Attached by the layout before anything can emit. */
@@ -118,34 +177,11 @@ export const network = {
 		);
 
 		const offDone: UnlistenFn = await listen<NetworkDoneEvent>(NETWORK_DONE_EVENT, (event) => {
-			if (event.payload.token !== token) return;
-			token = null;
-			step = null;
-			// The worker cannot let go of itself — dropping it joins its own
-			// thread — so the screen says when it is finished with.
-			void api.networkRelease();
-
-			const what = event.payload.operation === 'push' ? 'Pushed' : 'Fetched';
-
-			if (event.payload.ok) {
-				summary = event.payload.summary;
-				error = null;
-				// The notice as well as the toolbar line: the toolbar's is
-				// transient state that the next operation overwrites, and a
-				// notice is what somebody looking at another screen sees.
-				notice.ok(what, summary);
-				// Spagitty never passes `--force-with-lease` from the UI today,
-				// so this is always the gentle kind. The flag is carried anyway
-				// so that the day it can, the badge is already wired (FEAT-072).
-				if (event.payload.operation === 'push') pushed(false);
-				// A fetch moves remote-tracking refs and a push moves the
-				// upstream; both change what every divergence on screen means.
-				void repo.refresh();
-			} else {
-				error = event.payload.error;
-				summary = null;
-				notice.failed(`Could not ${event.payload.operation}`, error);
+			if (event.payload.token !== token) {
+				if (starting) early.push(event.payload);
+				return;
 			}
+			ended(event.payload);
 		});
 
 		return () => {

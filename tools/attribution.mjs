@@ -11,6 +11,11 @@
  * agent resolved is written into the user's commits by the application, which
  * never passes through here.
  *
+ * Claude, Devin and Cody are people's names too (BUG-078). A co-author is an
+ * agent when the name is one only a product has, when a model or "AI" follows
+ * a name a person could have, or when the address is one only an agent writes
+ * from. "Claude Dupont" is a person; "Claude Opus 5" is not.
+ *
  * Usage:
  *   node tools/attribution.mjs commits <range>   every message in `git log <range>`
  *   node tools/attribution.mjs text <file|->      a pull request description
@@ -20,21 +25,39 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-/** Names that make a co-author an agent or a tool and not a person. */
-const AGENT =
-	/\b(claude|anthropic|codex|openai|chatgpt|gpt-?\d|gemini|copilot|cursor|aider|devin|windsurf|cody|coderabbit|opencode|agy)\b/i;
+/** Names only a product has: nobody is called these. */
+const PRODUCT =
+	/^(?:(?:openai\s+)?codex|chatgpt|gpt-?\d\S*|(?:google\s+)?gemini|(?:github\s+)?copilot|cursor|aider|windsurf|coderabbit|opencode|agy|antigravity|anthropic|openai)\b/i;
+
+/** A name a person can have, which is a product once a model, "Code" or "AI" follows it. */
+const PRODUCT_BY_WHAT_FOLLOWS =
+	/^(?:claude\s+(?:code|opus|sonnet|haiku|fable|instant|\d)|devin\s+ai|cody\s+ai|sourcegraph\s+cody)\b/i;
+
+/** Addresses only an agent or a tool writes from. */
+const AGENT_ADDRESS =
+	/@(?:[\w-]+\.)*(?:anthropic\.com|openai\.com|cursor\.com|aider\.chat|cognition\.ai|codeium\.com|windsurf\.com|coderabbit\.ai)$|\[bot\]/i;
+
+/** Whether a `Co-Authored-By:` value, `Name <address>`, names an agent or a tool. */
+function isAgent(coAuthor) {
+	const [, name = '', address = ''] = /^(.*?)\s*(?:<([^>]*)>?)?\s*$/.exec(coAuthor) ?? [];
+	return PRODUCT.test(name) || PRODUCT_BY_WHAT_FOLLOWS.test(name) || AGENT_ADDRESS.test(address.trim());
+}
+
+/** What a "Generated with" line names when it is attribution. */
+const TOOL =
+	'claude|anthropic|codex|openai|chatgpt|gpt-?\\d\\w*|gemini|copilot|cursor|aider|devin|windsurf|cody|coderabbit|opencode|agy|antigravity|an?\\s+ai';
 
 /** Lines that are attribution whoever they name. */
 const ALWAYS = [
 	/^\s*claude-session\s*:/i,
-	/(?<![a-z])generated\s+(?:with|by)\s+\[?(?:claude|codex|gemini|copilot|cursor|an?\s+ai)/i,
+	new RegExp(`(?<![a-z])generated\\s+(?:with|by)\\s+\\[?(?:${TOOL})\\b`, 'i'),
 	/(?<![a-z])created\s+(?:with|by)\s+\[?claude\s+code/i
 ];
 
 /**
  * The lines of `text` that are agent, tool or session attribution, each as it
  * was written. A `Co-Authored-By:` line counts when it names an agent or a
- * tool, or carries an address at a vendor's `noreply`.
+ * tool, or carries an address only one writes from.
  */
 export function findAttribution(text) {
 	const found = [];
@@ -44,7 +67,7 @@ export function findAttribution(text) {
 			continue;
 		}
 		const trailer = /^\s*co-authored-by\s*:\s*(.*)$/i.exec(line);
-		if (trailer && (AGENT.test(trailer[1]) || /noreply@(anthropic|openai)\.com/i.test(trailer[1]))) {
+		if (trailer && isAgent(trailer[1])) {
 			found.push(line.trim());
 		}
 	}

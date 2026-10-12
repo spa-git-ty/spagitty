@@ -666,6 +666,12 @@
 		background-image: linear-gradient(var(--covered), var(--covered));
 	}
 
+	/* Both at once, which is where a comment usually starts: one over the other. */
+	.line.ruled.covered {
+		background-image:
+			linear-gradient(var(--covered), var(--covered)), linear-gradient(var(--ruler), var(--ruler));
+	}
+
 	.line.dim {
 		opacity: 0.42;
 	}

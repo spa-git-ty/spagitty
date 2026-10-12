@@ -59,7 +59,10 @@ impl AgentAdapter for PiAdapter {
         let on_stdin = definition.input_mode == AgentInputMode::Stdin
             || prompt_needs_stdin(&definition.executable, &request.prompt);
         let mut args = vec!["--print".into()];
-        if request.unattended {
+        // `--auto-approve` is Oh My Pi's. The plain `pi` it grew out of is found
+        // by this adapter too and names its approval flags differently, so it
+        // is given none it may not know.
+        if request.unattended && !is_plain_pi(&definition.executable) {
             args.push("--auto-approve".into());
         }
         args.extend(definition.extra_args.clone());
@@ -75,12 +78,36 @@ impl AgentAdapter for PiAdapter {
     }
 }
 
+/// Whether the executable is `pi` itself and not Oh My Pi (`omp`, `ohmypi`).
+fn is_plain_pi(executable: &std::path::Path) -> bool {
+    executable
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(|stem| stem.eq_ignore_ascii_case("pi"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn definition() -> AgentDefinition {
-        PiAdapter.default_definition(PathBuf::from("pi"))
+        PiAdapter.default_definition(PathBuf::from("omp"))
+    }
+
+    #[test]
+    fn plain_pi_is_not_given_oh_my_pis_approval_flag() {
+        for executable in ["pi", "/usr/local/bin/pi", "C:/npm/pi.cmd"] {
+            let command = PiAdapter.command(
+                &PiAdapter.default_definition(PathBuf::from(executable)),
+                &request(),
+            );
+            assert_eq!(command.args, ["--print"], "{executable}");
+        }
+        let omp = PiAdapter.command(
+            &PiAdapter.default_definition(PathBuf::from("/opt/ohmypi")),
+            &request(),
+        );
+        assert_eq!(omp.args, ["--print", "--auto-approve"]);
     }
 
     fn request() -> AgentRunRequest {

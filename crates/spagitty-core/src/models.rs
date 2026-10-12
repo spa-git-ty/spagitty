@@ -448,6 +448,12 @@ fn google_declaration(tool: &Tool) -> Value {
     declaration
 }
 
+/// How an id made up here for a Google call begins. Google gives some calls
+/// no id; one is made up so the answer can be matched to its call, and it is
+/// never sent back. Long and ours, so an id Google did give is not taken for
+/// one and dropped.
+const MADE_UP_ID: &str = "spagitty-call-";
+
 fn google_message(message: &Message) -> Value {
     let parts: Vec<Value> = message
         .parts
@@ -468,7 +474,7 @@ fn google_message(message: &Message) -> Value {
                 signature,
             } => {
                 let mut call = json!({"name": name, "args": input});
-                if !id.is_empty() && !id.starts_with("call-") {
+                if !id.is_empty() && !id.starts_with(MADE_UP_ID) {
                     call["id"] = json!(id);
                 }
                 // Google reads the signature as a sibling of `functionCall`
@@ -483,7 +489,7 @@ fn google_message(message: &Message) -> Value {
                 id, name, content, ..
             } => {
                 let mut fr = json!({"name": name, "response": {"content": content}});
-                if !id.is_empty() && !id.starts_with("call-") {
+                if !id.is_empty() && !id.starts_with(MADE_UP_ID) {
                     fr["id"] = json!(id);
                 }
                 json!({"functionResponse": fr})
@@ -652,7 +658,7 @@ pub fn read_turn(provider: Provider, value: &Value) -> Option<Turn> {
                         .get("id")
                         .and_then(Value::as_str)
                         .map(str::to_string)
-                        .unwrap_or_else(|| format!("call-{index}"));
+                        .unwrap_or_else(|| format!("{MADE_UP_ID}{index}"));
                     parts.push(Part::Call {
                         id,
                         name: call.get("name")?.as_str()?.to_string(),
@@ -1024,6 +1030,50 @@ mod tests {
         assert!(parts[2].get("thoughtSignature").is_none());
         // Ids made up here are not sent: Google gave these calls none.
         assert!(parts[1]["functionCall"].get("id").is_none());
+    }
+
+    #[test]
+    fn an_id_google_gave_is_sent_back_whatever_it_looks_like() {
+        let google_resp = json!({
+            "candidates": [{
+                "content": {"parts": [
+                    {"functionCall": {"id": "call-7", "name": "read_file", "args": {"path": "a"}}}
+                ]},
+                "finishReason": "STOP"
+            }]
+        });
+        let turn = read_turn(Provider::Google, &google_resp).unwrap();
+        let messages = vec![
+            Message::user("Inspect."),
+            Message {
+                role: Role::Assistant,
+                parts: turn.parts,
+            },
+            Message {
+                role: Role::User,
+                parts: vec![Part::Result {
+                    id: "call-7".into(),
+                    name: "read_file".into(),
+                    content: "x".into(),
+                    is_error: false,
+                }],
+            },
+        ];
+        let (_, _, body) = request(
+            &endpoint(Provider::Google),
+            "sys",
+            &messages,
+            &tools(),
+            1000,
+        );
+        assert_eq!(
+            body["contents"][1]["parts"][0]["functionCall"]["id"],
+            "call-7"
+        );
+        assert_eq!(
+            body["contents"][2]["parts"][0]["functionResponse"]["id"],
+            "call-7"
+        );
     }
 
     #[test]

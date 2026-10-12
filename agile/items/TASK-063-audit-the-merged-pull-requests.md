@@ -2,7 +2,7 @@
 
 # TASK-063 — Audit the pull requests merged since 2.0.0
 
-**Status:** Partial — audited and filed, and the attribution check is in CI (TASK-064); waiting on the author's decision about the history already on `main` (2026-10-12).
+**Status:** Done — audited and filed, the attribution check is in CI (TASK-064), and the author decided on 2026-10-12 to leave the history already on `main` as it is; unmerged.
 **Screens:** —.
 **Raised by:** the author, 2026-10-11: check the pull requests the author and Codex merged, for code style and correctness.
 
@@ -54,20 +54,22 @@ How this was done: each diff was read against `AGENTS.md` and the code around it
 
 Not worth an item: the symlink case in `guard.rs`. `put_back` writes through a link, but only where a local agent could already write, since a local agent runs with the person's own rights; the guard is there to keep a review's worktree clean, not to confine the agent.
 
-## What waits on the author
+## What the author decided, 2026-10-12
 
-- **History.** Leave the 127 trailer lines and 29 *Claude*-authored commits as they are (the proposal), or rewrite `main`.
-- **Descriptions.** The merged pull requests' descriptions (#52, #55, #56, #58) can be edited to take the line out without touching history. It has not been done, because they are merged.
-- **FEAT-115's status**, as TASK-065 asks.
+- **History.** It is not rewritten. The 127 trailer lines and the 29 *Claude*-authored commits on `main` stay as they are.
+- **Descriptions.** The merged pull requests' descriptions (#52, #55, #56, #58) stay as they were written.
+- **From now on.** The rule is for what is written next, and the question is not to be asked again. It is in `AGENTS.md` under *Forbidden changes*, and TASK-064's check enforces it on each pull request.
+
+Still with the author: **FEAT-115's status**, as TASK-065 asks.
 
 ## Acceptance criteria
 
 - Each pull request above has a written verdict, one paragraph, kept in this item. *Met.*
 - Each finding has an item, or is listed here as not worth one, with the reason. *Met.*
-- The attribution check runs in CI, and the author has decided what happens to the existing history. *The check is in; the decision is open.*
+- The attribution check runs in CI, and the author has decided what happens to the existing history. *Met: the check is in, and the history stays as it is (2026-10-12).*
 
 ## For the agent who picks this up
 
 **Who:** unassigned. Any agent working on this repository can start cold.
 
-- What is left is the author's decision above, and TASK-064's sweep once the check has run on a real pull request.
+- What is left is the two refusals in TASK-064's sweep, TASK-067, and FEAT-115's status (TASK-065).
