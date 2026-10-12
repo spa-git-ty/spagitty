@@ -375,6 +375,68 @@ describe('offering the push', () => {
 		expect(merger.pushError).toBeNull();
 	});
 
+	it('drops what comes back for a merge whose dialog was closed', async () => {
+		// The reads after a landing are not waited for. One still out when the
+		// dialog is closed would otherwise offer a push of that merge's branch
+		// under the next one.
+		await planned('main', free());
+		let answer!: (remotes: Remote[]) => void;
+		vi.mocked(api.remotes).mockReturnValueOnce(new Promise<Remote[]>((resolve) => (answer = resolve)));
+		expect(await merger.land()).toBe(true);
+		await vi.waitFor(() => expect(merger.pushReading).toBe(true));
+
+		merger.again();
+		answer([ORIGIN]);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(merger.pushTo).toBeNull();
+		expect(merger.nowhereToPush).toBe(false);
+		expect(merger.pushReading).toBe(false);
+		expect(await merger.pushLanded()).toBe(false);
+		expect(net.push).not.toHaveBeenCalled();
+	});
+
+	it('does not let an earlier merge end the reading of a later one', async () => {
+		await planned('main', free());
+		let first!: (remotes: Remote[]) => void;
+		let second!: (remotes: Remote[]) => void;
+		vi.mocked(api.remotes)
+			.mockReturnValueOnce(new Promise<Remote[]>((resolve) => (first = resolve)))
+			.mockReturnValueOnce(new Promise<Remote[]>((resolve) => (second = resolve)));
+		expect(await merger.land()).toBe(true);
+		merger.again();
+		await vi.waitFor(() => expect(merger.forecast).not.toBeNull());
+		vi.mocked(api.mergerLand).mockResolvedValue({ ...LANDED, target: 'feat/tab-drag' });
+		merger.setInto('b');
+		expect(await merger.land()).toBe(true);
+		await vi.waitFor(() => expect(api.remotes).toHaveBeenCalledTimes(2));
+
+		first([ORIGIN]);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(merger.pushTo).toBeNull();
+		expect(merger.pushReading).toBe(true);
+
+		second([ORIGIN]);
+		await vi.waitFor(() => expect(merger.pushTo).toMatchObject({ refspec: 'feat/tab-drag' }));
+		expect(merger.pushReading).toBe(false);
+	});
+
+	it('keeps what is true of a checkout that ends after its dialog was closed', async () => {
+		await planned('feat/tab-drag', free());
+		let finish!: () => void;
+		vi.mocked(api.checkout).mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+		expect(await merger.land()).toBe(true);
+		await vi.waitFor(() => expect(merger.checkout).toEqual({ state: 'switching' }));
+
+		merger.again();
+		finish();
+		await vi.waitFor(() => expect(activity.running).toBe(false));
+
+		// git moved HEAD, and that is kept. The dialog it was for is gone.
+		expect(merger.current).toBe('main');
+		expect(merger.checkout).toBeNull();
+	});
+
 	it("leaves a pull request's own push as it was", async () => {
 		// Its branch is already checked out, and it is pushed to the pull
 		// request's branch, not to an upstream (BUG-076).

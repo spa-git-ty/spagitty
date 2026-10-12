@@ -165,6 +165,13 @@ let pushTo = $state<PushPlan | null>(null);
 let pushKnown = $state(false);
 /** They are being read: the push is about to be offered, or said to have nowhere to go. */
 let pushReading = $state(false);
+/**
+ * Which landing the work after it belongs to. The reads and the checkout that
+ * follow a merge are not waited for, so the dialog can be closed, and another
+ * merge made, while they are still out. What comes back for an earlier landing
+ * is dropped: it would offer a push of the branch before this one.
+ */
+let settlement = 0;
 
 const KEY = 'spagitty.merger.pick';
 
@@ -621,9 +628,11 @@ export const merger = {
 		const elsewhere = side?.checkedOut ?? null;
 		landing = true;
 		landError = null;
+		settlement += 1;
 		checkout = null;
 		pushTo = null;
 		pushKnown = false;
+		pushReading = false;
 		try {
 			// Named while it runs, and not started over a pull or a checkout
 			// that is still writing (FEAT-121).
@@ -662,9 +671,11 @@ export const merger = {
 		// Where a push would go is read first and beside the checkout: it is
 		// quick, and the dialog's buttons are then the same from the moment it
 		// opens rather than changing under the pointer when a checkout ends.
+		const mine = settlement;
 		pushReading = true;
 		const reading = Promise.all([api.branches(), api.remotes()])
 			.then(([rows, known]) => {
+				if (mine !== settlement) return;
 				pushTo = pushPlan(
 					target,
 					rows,
@@ -673,12 +684,13 @@ export const merger = {
 				pushKnown = true;
 			})
 			.catch(() => {
+				if (mine !== settlement) return;
 				// Unread: no push is offered, and none is said to be impossible.
 				pushTo = null;
 				pushKnown = false;
 			})
 			.finally(() => {
-				pushReading = false;
+				if (mine === settlement) pushReading = false;
 			});
 
 		if (current === target || samePath(elsewhere, repoPath)) {
@@ -695,14 +707,16 @@ export const merger = {
 	async checkOutLanded(): Promise<boolean> {
 		const target = landed?.landed.target;
 		if (!target || checkout?.state === 'switching') return false;
+		const mine = settlement;
 		checkout = { state: 'switching' };
 		try {
 			await activity.run('checkout', `Switching to ${target}`, () => api.checkout(target));
+			// True whoever is still asking: git has moved HEAD.
 			current = target;
-			checkout = { state: 'done' };
+			if (mine === settlement) checkout = { state: 'done' };
 			return true;
 		} catch (e) {
-			checkout = { state: 'failed', error: String(e) };
+			if (mine === settlement) checkout = { state: 'failed', error: String(e) };
 			return false;
 		} finally {
 			// HEAD moved, or did not: the chrome reads which from here.
@@ -742,6 +756,7 @@ export const merger = {
 	again() {
 		phase = 'plan';
 		landed = null;
+		settlement += 1;
 		checkout = null;
 		pushTo = null;
 		pushKnown = false;
@@ -901,6 +916,7 @@ export const merger = {
 		landing = false;
 		landError = null;
 		landed = null;
+		settlement += 1;
 		checkout = null;
 		pushTo = null;
 		pushKnown = false;
