@@ -84,7 +84,6 @@ export function someRules(overrides: Partial<RepoRules> = {}): RepoRules {
 export function aSnapshot(overrides: Partial<AgentsSnapshot> = {}): AgentsSnapshot {
 	return {
 		codexFullAccess: false,
-		agyAutoApprove: false,
 		omp: { model: '', profile: '' },
 		local: [aLocal(), aMissing('cursor', 'Cursor')],
 		remote: [aRemote()],

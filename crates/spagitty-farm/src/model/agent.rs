@@ -33,19 +33,17 @@ pub enum AgentProvider {
     Codex,
     Cursor,
     OhMyPi,
-    Agy,
     Custom,
 }
 
 impl AgentProvider {
     /// Every provider with a built-in adapter, in the order the settings screen
     /// lists them.
-    pub const BUILT_IN: [AgentProvider; 5] = [
+    pub const BUILT_IN: [AgentProvider; 4] = [
         AgentProvider::ClaudeCode,
         AgentProvider::Codex,
         AgentProvider::Cursor,
         AgentProvider::OhMyPi,
-        AgentProvider::Agy,
     ];
 
     /// The name a person would use.
@@ -55,7 +53,6 @@ impl AgentProvider {
             AgentProvider::Codex => "Codex",
             AgentProvider::Cursor => "Cursor",
             AgentProvider::OhMyPi => "Oh My Pi",
-            AgentProvider::Agy => "agy",
             AgentProvider::Custom => "Custom",
         }
     }
@@ -71,7 +68,6 @@ impl AgentProvider {
             AgentProvider::Codex => "codex",
             AgentProvider::Cursor => "cursor",
             AgentProvider::OhMyPi => "pi",
-            AgentProvider::Agy => "agy",
             AgentProvider::Custom => "custom",
         }
     }
@@ -280,7 +276,6 @@ mod tests {
             AgentProvider::Codex,
             AgentProvider::Cursor,
             AgentProvider::OhMyPi,
-            AgentProvider::Agy,
             AgentProvider::Custom,
         ] {
             let slug = provider.slug();

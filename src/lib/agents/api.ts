@@ -41,10 +41,6 @@ export function setOmpOptions(options: OmpOptions): Promise<void> {
 	return invoke('agents_set_omp_options', { options });
 }
 
-export function setAgyAutoApprove(enabled: boolean): Promise<void> {
-	return invoke('agents_set_agy_auto_approve', { enabled });
-}
-
 export function saveCustom(definition: AgentDefinition): Promise<void> {
 	return invoke('agents_save_custom', { definition });
 }

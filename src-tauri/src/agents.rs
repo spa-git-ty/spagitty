@@ -212,8 +212,6 @@ impl Default for Notify {
 pub struct Machine {
     /// Opt-in: Codex commands run without its filesystem or network sandbox.
     pub codex_full_access: bool,
-    /// Opt-in: headless agy runs approve tool permission requests.
-    pub agy_auto_approve: bool,
     pub omp: OmpOptions,
     /// Per built-in or custom agent id.
     pub jobs: BTreeMap<String, Jobs>,
@@ -345,7 +343,6 @@ pub struct RemoteView {
 #[serde(rename_all = "camelCase")]
 pub struct AgentsSnapshot {
     pub codex_full_access: bool,
-    pub agy_auto_approve: bool,
     pub omp: OmpOptions,
     pub local: Vec<LocalView>,
     pub remote: Vec<RemoteView>,
@@ -369,7 +366,6 @@ fn locals(machine: &Machine) -> Vec<LocalView> {
                 .unwrap_or_else(|| PathBuf::from(adapter.executables()[0]));
             let mut definition = adapter.default_definition(executable);
             codex_access(&mut definition, machine.codex_full_access);
-            agy_access(&mut definition, machine.agy_auto_approve);
             machine.omp.apply(&mut definition);
             let id = definition.id.as_str().to_string();
             LocalView {
@@ -418,14 +414,6 @@ fn codex_access(definition: &mut AgentDefinition, full_access: bool) {
     }
 }
 
-fn agy_access(definition: &mut AgentDefinition, auto_approve: bool) {
-    if definition.provider == AgentProvider::Agy && auto_approve {
-        definition
-            .extra_args
-            .push("--dangerously-skip-permissions".into());
-    }
-}
-
 /// Custom agents in the farm registries of repositories this machine knows,
 /// not yet on the machine list. Built-in ones are detected anyway.
 fn offer<R: Runtime>(app: &AppHandle<R>, machine: &Machine) -> Vec<AgentDefinition> {
@@ -460,7 +448,6 @@ pub fn agents_snapshot<R: Runtime>(
     let machine = load(&app);
     Ok(AgentsSnapshot {
         codex_full_access: machine.codex_full_access,
-        agy_auto_approve: machine.agy_auto_approve,
         omp: machine.omp.clone(),
         local: locals(&machine),
         remote: remotes(&machine),
@@ -479,19 +466,6 @@ pub fn agents_set_codex_full_access<R: Runtime>(
 ) -> Result<()> {
     change(&app, &state, |machine| {
         machine.codex_full_access = enabled;
-        Ok(())
-    })?;
-    Ok(())
-}
-
-#[tauri::command(async)]
-pub fn agents_set_agy_auto_approve<R: Runtime>(
-    app: AppHandle<R>,
-    state: State<'_, AgentsState>,
-    enabled: bool,
-) -> Result<()> {
-    change(&app, &state, |machine| {
-        machine.agy_auto_approve = enabled;
         Ok(())
     })?;
     Ok(())
@@ -1448,8 +1422,16 @@ mod tests {
         assert_eq!(machine.rules("/work/app").highest, Level::SignOff);
         assert!(machine.notify.waiting);
         assert!(!machine.codex_full_access);
-        assert!(!machine.agy_auto_approve);
         assert_eq!(machine.omp, OmpOptions::default());
+    }
+
+    /// agy's saved choice went with agy (TASK-071). A file that still has it
+    /// loads, and what it says about the others is kept.
+    #[test]
+    fn a_machine_file_with_a_key_this_version_does_not_know_loads() {
+        let machine: Machine =
+            serde_json::from_str(r#"{"agyAutoApprove":true,"codexFullAccess":true}"#).unwrap();
+        assert!(machine.codex_full_access);
     }
 
     #[test]
@@ -1468,41 +1450,6 @@ mod tests {
             require_key(Provider::Compatible, "Local", String::new(), true).unwrap(),
             ""
         );
-    }
-
-    #[test]
-    fn agy_auto_approval_is_saved_and_keeps_review_plan_mode() {
-        let machine: Machine = serde_json::from_str(r#"{"agyAutoApprove":true}"#).unwrap();
-        assert_eq!(
-            serde_json::to_value(&machine).unwrap()["agyAutoApprove"],
-            true
-        );
-        let mut definition = adapter_for(AgentProvider::Agy).default_definition("agy".into());
-        agy_access(&mut definition, machine.agy_auto_approve);
-        let command = read_only(
-            AgentProvider::Agy,
-            adapter_for(AgentProvider::Agy).command(
-                &definition,
-                &AgentRunRequest {
-                    workdir: "/tmp/t".into(),
-                    prompt: "ok".into(),
-                    unattended: false,
-                },
-            ),
-        );
-        assert_eq!(
-            command.args,
-            [
-                "--mode",
-                "plan",
-                "--dangerously-skip-permissions",
-                "--print",
-                "ok"
-            ]
-        );
-        let mut other = adapter_for(AgentProvider::Codex).default_definition("codex".into());
-        agy_access(&mut other, true);
-        assert!(other.extra_args.is_empty());
     }
 
     #[test]
@@ -1538,7 +1485,7 @@ mod tests {
                 "read,grep,glob"
             ]
         );
-        let mut other = adapter_for(AgentProvider::Agy).default_definition("agy".into());
+        let mut other = adapter_for(AgentProvider::Cursor).default_definition("cursor".into());
         saved.omp.apply(&mut other);
         assert!(other.extra_args.is_empty());
         let mut unset = adapter_for(AgentProvider::OhMyPi).default_definition("omp".into());
@@ -1574,9 +1521,9 @@ mod tests {
             1
         );
         assert!(command.args.iter().any(|arg| arg == "danger-full-access"));
-        let mut agy = adapter_for(AgentProvider::Agy).default_definition("agy".into());
-        codex_access(&mut agy, true);
-        assert!(agy.extra_args.is_empty());
+        let mut other = adapter_for(AgentProvider::Cursor).default_definition("cursor".into());
+        codex_access(&mut other, true);
+        assert!(other.extra_args.is_empty());
     }
 
     /// A file that is there but does not parse is an error to a change, not
@@ -1752,7 +1699,7 @@ mod tests {
         assert!(!local_test_result(AgentProvider::OhMyPi, Ended::Ok, &[], "test-value", 12).ok);
         assert!(
             !local_test_result(
-                AgentProvider::Agy,
+                AgentProvider::Cursor,
                 Ended::Ok,
                 &["ok".into()],
                 "test-value",
@@ -1778,16 +1725,8 @@ mod tests {
     }
 
     #[test]
-    fn settings_reports_permission_denials_with_the_saved_choice_to_use() {
-        let denied = local_test_result(AgentProvider::Agy, Ended::Ok,
-            &["test-value".into(), "jetski: no output produced — a tool required command permission that headless mode cannot prompt for".into()], "test-value", 12);
-        assert!(!denied.ok);
-        assert!(denied.said.contains("Settings > Agents > agy"));
-    }
-
-    #[test]
-    #[ignore = "requires authenticated Codex and agy; exercises actual Settings handlers"]
-    fn live_settings_tests_use_saved_codex_and_agy_permissions() {
+    #[ignore = "requires authenticated Codex; exercises actual Settings handlers"]
+    fn live_settings_test_uses_saved_codex_permissions() {
         let identifier = format!(
             "dev.spagitty.access-test-{}-{}",
             std::process::id(),
@@ -1812,15 +1751,11 @@ mod tests {
         let _cleanup = Cleanup(settings_path);
         agents_set_codex_full_access(app.handle().clone(), app.state::<AgentsState>(), true)
             .unwrap();
-        agents_set_agy_auto_approve(app.handle().clone(), app.state::<AgentsState>(), true)
-            .unwrap();
-        for id in ["codex", "agy"] {
-            let tested = agents_test_local(app.handle().clone(), id.into()).unwrap();
-            assert!(tested.ok, "{id}: {}", tested.said);
-            println!(
-                "{id} Settings test passed with saved permissions in {} ms",
-                tested.ms
-            );
-        }
+        let tested = agents_test_local(app.handle().clone(), "codex".into()).unwrap();
+        assert!(tested.ok, "codex: {}", tested.said);
+        println!(
+            "codex Settings test passed with saved permissions in {} ms",
+            tested.ms
+        );
     }
 }

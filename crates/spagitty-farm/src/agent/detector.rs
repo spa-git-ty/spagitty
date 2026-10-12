@@ -58,9 +58,6 @@ pub fn search_path() -> Option<std::ffi::OsString> {
     }
     #[cfg(windows)]
     {
-        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            extra.push(PathBuf::from(local).join("agy/bin"));
-        }
         if let Some(roaming) = std::env::var_os("APPDATA") {
             extra.push(PathBuf::from(roaming).join("npm"));
         }

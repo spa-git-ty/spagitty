@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent::adapter::AgentAdapter;
 use crate::agent::adapters::{
-    agy::AgyAdapter, claude::ClaudeAdapter, codex::CodexAdapter, cursor::CursorAdapter,
-    custom::CustomAdapter, pi::PiAdapter,
+    claude::ClaudeAdapter, codex::CodexAdapter, cursor::CursorAdapter, custom::CustomAdapter,
+    pi::PiAdapter,
 };
 use crate::error::{Error, Result};
 use crate::model::{
@@ -42,7 +42,6 @@ pub fn adapter_for(provider: AgentProvider) -> &'static dyn AgentAdapter {
         AgentProvider::Codex => &CodexAdapter,
         AgentProvider::Cursor => &CursorAdapter,
         AgentProvider::OhMyPi => &PiAdapter,
-        AgentProvider::Agy => &AgyAdapter,
         AgentProvider::Custom => &CustomAdapter,
     }
 }
@@ -72,11 +71,30 @@ impl AgentStatus {
 pub struct AgentRegistry {
     /// Keyed by identifier and ordered, so the settings screen is stable
     /// between openings and a diff of the saved file is readable.
+    #[serde(deserialize_with = "readable")]
     definitions: BTreeMap<AgentId, AgentDefinition>,
     /// Not serialised: a fact about the machine, re-derived on load. Persisting
     /// it would mean showing a stale "detected" for an agent uninstalled since.
     #[serde(skip)]
     availability: BTreeMap<AgentId, AgentAvailability>,
+}
+
+/// The saved definitions this version can read.
+///
+/// One that names a provider Spagitty no longer has — agy, removed in
+/// TASK-071 — is left out. Refusing the whole file for it would forget what
+/// was chosen for every other agent.
+fn readable<'de, D>(
+    deserializer: D,
+) -> std::result::Result<BTreeMap<AgentId, AgentDefinition>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let saved = BTreeMap::<AgentId, serde_json::Value>::deserialize(deserializer)?;
+    Ok(saved
+        .into_iter()
+        .filter_map(|(id, value)| Some((id, serde_json::from_value(value).ok()?)))
+        .collect())
 }
 
 impl AgentRegistry {
@@ -315,7 +333,6 @@ mod tests {
             AgentProvider::Codex,
             AgentProvider::Cursor,
             AgentProvider::OhMyPi,
-            AgentProvider::Agy,
             AgentProvider::Custom,
         ] {
             assert_eq!(adapter_for(provider).provider(), provider);
@@ -431,6 +448,19 @@ mod tests {
         let back: AgentRegistry = serde_json::from_str(&json).unwrap();
         assert_eq!(back.statuses().len(), 2);
         assert!(back.usable().is_empty());
+    }
+
+    #[test]
+    fn a_saved_agent_of_a_removed_provider_is_left_out_and_the_rest_kept() {
+        let mut saved = serde_json::to_value(registry()).unwrap();
+        let mut gone = saved["definitions"]["codex"].clone();
+        gone["id"] = "agy".into();
+        gone["provider"] = "agy".into();
+        saved["definitions"]["agy"] = gone;
+        let back: AgentRegistry = serde_json::from_value(saved).unwrap();
+        assert!(back.get(&AgentId::new("agy")).is_none());
+        assert!(back.get(&AgentId::new("claude")).is_some());
+        assert!(back.get(&AgentId::new("codex")).is_some());
     }
 
     #[test]
