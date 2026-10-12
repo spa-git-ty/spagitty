@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { tick } from 'svelte';
 import { click, fire, press, render, type Mounted } from '../../testing/mount';
 import { openRepository, request } from '../../testing/git-fixtures';
 import { control } from '../../testing/repo-store.svelte';
@@ -21,7 +22,9 @@ import { agents } from '$lib/agents/store.svelte';
 import * as agentWork from '$lib/review/agent.svelte';
 import { aFinding, aReview, aSnapshot, aStep } from '../../testing/agent-fixtures';
 import { requests } from '$lib/requests/store.svelte';
+import { reading } from '$lib/reading.svelte';
 import { review } from '$lib/review/store.svelte';
+import { filesView } from '$lib/review/files-view.svelte';
 import type { DiffLine, FileChange, FullFile, PullRequestComment } from '$lib/types';
 import Page from './+page.svelte';
 
@@ -31,7 +34,7 @@ const button = (name: string) =>
 const pill = () => view.get('[aria-label="Review controls"]');
 const files = () => view.get('aside[aria-label="Touched files"]');
 const conversation = () => view.get('aside[aria-label="Conversation"]');
-const focused = () => view.find('.line.focused')?.textContent?.replace(/\s+/g, ' ').trim();
+const focused = () => view.find('.line.ruled')?.textContent?.replace(/\s+/g, ' ').trim();
 
 const PR = request({
 	id: 'PR_214',
@@ -116,6 +119,8 @@ beforeEach(() => {
 	control.reset();
 	openRepository();
 	localStorage.clear();
+	reading.reset();
+	filesView.reset();
 	vi.mocked(api.inTauri).mockReturnValue(true);
 	vi.mocked(api.forgeRepo).mockResolvedValue({
 		kind: 'gitHub',
@@ -170,6 +175,22 @@ it('fetches the pull request and lands on the first file not yet viewed', async 
 	expect(saved.headSha).toBe('h1');
 	expect(saved.files).toBe(2);
 	expect((files().querySelector(`input[aria-label="Viewed types.ts"]`) as HTMLInputElement).checked).toBe(false);
+});
+
+it('says in the header when the pull request conflicts with its base (BUG-063)', async () => {
+	vi.mocked(api.pullRequests).mockResolvedValue([{ ...PR, mergeable: false }]);
+	view = render(Page, {});
+	await vi.waitFor(() => expect(view.all('button.row')).toHaveLength(1));
+	await review.open({ ...PR, mergeable: false });
+	await vi.waitFor(() => expect(view.find('.meta .conflicts')).not.toBeNull());
+
+	expect(view.get('.meta .conflicts').textContent).toBe('Conflicts with main');
+});
+
+it('says nothing of conflicts while the host has not said (BUG-063)', async () => {
+	await openRoom();
+
+	expect(view.find('.meta .conflicts')).toBeNull();
 });
 
 it('shows the changed part with its folds, and opens a fold on asking', async () => {
@@ -235,6 +256,81 @@ it('ticks a file and goes on to the next one not viewed', async () => {
 	await vi.waitFor(() => expect(view.text()).toContain('2 of 2 viewed'));
 });
 
+describe('the file list (FEAT-120)', () => {
+	const tab = () => view.find('button.files-tab');
+
+	it('is put away with its button or the f key, and brought back from an edge tab', async () => {
+		await openRoom();
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+		expect(tab()).toBeNull();
+
+		click(view.get('button[aria-label="Put the files away"]'));
+		expect(view.find('aside[aria-label="Touched files"]')).toBeNull();
+		// The diff is still there, with the room to itself.
+		expect(view.find('section[aria-label="Changes"]')).not.toBeNull();
+		expect(tab()?.textContent).toContain('Files');
+		expect(tab()?.textContent).toContain('2');
+
+		click(tab()!);
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+
+		press(window, 'f');
+		expect(view.find('aside[aria-label="Touched files"]')).toBeNull();
+		press(window, 'f');
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+	});
+
+	it('does not take an f typed into a box', async () => {
+		await openRoom();
+		const box = document.createElement('textarea');
+		document.body.appendChild(box);
+		press(box, 'f');
+		expect(view.find('aside[aria-label="Touched files"]')).not.toBeNull();
+		box.remove();
+	});
+
+	it('is Detailed, as it was, or Compact: a line per file, with the marks as dots', async () => {
+		await openRoom();
+		const rows = () => files().querySelectorAll('li');
+		expect(files().classList.contains('compact')).toBe(false);
+		expect(files().querySelectorAll('.facts').length).toBeGreaterThan(0);
+
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Compact')!);
+		expect(files().classList.contains('compact')).toBe(true);
+		expect(files().querySelectorAll('.facts')).toHaveLength(0);
+		// Both keep the tick, the counts and the selected file.
+		expect(files().querySelector('input[aria-label="Viewed avatars.rs"]')).not.toBeNull();
+		expect(files().querySelector('.counts')?.textContent).toMatch(/\+\d+/);
+		expect(files().querySelectorAll('li.on')).toHaveLength(1);
+		expect(rows()).toHaveLength(2);
+		// What detailed spelled out is small dots, each with its words in a title.
+		for (const dot of files().querySelectorAll('.marks .dot')) expect(dot.getAttribute('title')).toBeTruthy();
+
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Detailed')!);
+		expect(files().classList.contains('compact')).toBe(false);
+		expect(files().querySelectorAll('.facts').length).toBeGreaterThan(0);
+	});
+
+	it('keeps the legend for the pointer in Compact', async () => {
+		await openRoom();
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Compact')!);
+		expect(files().querySelector('.legend.hover .legend-label')?.textContent).toBe('Legend');
+		expect(files().querySelector('.legend-body')?.textContent).toContain('Author');
+	});
+
+	it('remembers both choices across a restart', async () => {
+		await openRoom();
+		click(view.all('button.chip').find((b) => b.textContent?.trim() === 'Compact')!);
+		click(view.get('button[aria-label="Put the files away"]'));
+		const kept = JSON.parse(localStorage.getItem('spagitty.review.files') ?? '{}');
+		expect(kept).toEqual({ hidden: true, size: 'compact' });
+
+		filesView.restart();
+		expect(filesView.hidden).toBe(true);
+		expect(filesView.size).toBe('compact');
+	});
+});
+
 it('says on the pill whether the file is viewed, and offers Finish once all are', async () => {
 	// TASK-053.
 	await openRoom();
@@ -285,10 +381,11 @@ it('draws threads under their lines and lists them, and goes to one on a click',
 	expect(view.all('.part .thread .body').map((b) => b.textContent?.trim())).toContain(
 		'Is anything else still reading memo?'
 	);
-	expect(focused()).toContain('line 2');
+	expect(view.find('.line.focused')?.textContent).toContain('line 2');
 });
 
 it('starts the ruler on the first change and moves it with j and k', async () => {
+	reading.set({ ruler: 'line' });
 	await openRoom();
 	await vi.waitFor(() => expect(focused()).toContain('MEMORY.lock()'));
 	press(window, 'j');
@@ -297,17 +394,27 @@ it('starts the ruler on the first change and moves it with j and k', async () =>
 	press(window, 'k');
 	expect(focused()).toContain('line 14');
 
-	click(view.get('button[aria-label="Focus ruler"]'));
+	reading.set({ ruler: 'off' });
+	await tick();
 	expect(focused()).toBeUndefined();
 });
 
-it('sets code as it was before the reading set on Aa', async () => {
+it('opens with no ruler and plain code, and has neither button on the bar (TASK-059)', async () => {
+	await openRoom();
+	expect(focused()).toBeUndefined();
+	expect(view.get('.screen').getAttribute('style') ?? '').toContain('--code-lh: 1.45');
+	expect(view.find('button[aria-label="Focus ruler"]')).toBeNull();
+	expect(view.find('button[aria-label="Reading font"]')).toBeNull();
+});
+
+it('sets code in the reading set when Settings › Reading turns it on for the room', async () => {
+	reading.set({ reviewRoom: true });
 	await openRoom();
 	const screen = () => view.get('.screen').getAttribute('style') ?? '';
 	expect(screen()).not.toContain('--code-lh');
-	click(button('Aa'));
+	reading.set({ reviewRoom: false });
+	await tick();
 	expect(screen()).toContain('--code-lh: 1.45');
-	expect(button('Aa').getAttribute('aria-pressed')).toBe('false');
 });
 
 it('reads the host’s patch when the pull request cannot be fetched', async () => {
@@ -687,7 +794,7 @@ it('with an agent set up, offers one way in: beside Start review, and beside Che
 	click(button('Assign an agent…'));
 	const popover = view.get('[role="dialog"][aria-label="Assign an agent"]');
 	expect(popover.textContent).toContain('Claude Code');
-	expect(popover.textContent).toContain('Stops after the plan and each file.');
+	expect(popover.textContent).toContain('Stops for you after the plan and after each file.');
 	expect(popover.textContent).toContain('your branch is not touched');
 });
 

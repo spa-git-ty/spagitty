@@ -187,7 +187,7 @@
 		<section class="seal-row">
 			<span class="seal"><Icon name="check" size="2.4em" /></span>
 			<div>
-				<h2>{farm.goal.title} has landed</h2>
+				<h2>{farm.goal.title} is merged</h2>
 				<p class="muted">
 					{landed.length}
 					{landed.length === 1 ? 'task' : 'tasks'} in {elapsed(

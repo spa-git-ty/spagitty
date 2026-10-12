@@ -24,6 +24,7 @@ use super::record::{
     StepState, Store, Target, Tokens,
 };
 use super::rules::RepoRules;
+use crate::execution::narrate::EventKind;
 
 // ── The fake repository ──────────────────────────────────────────────────
 
@@ -375,6 +376,14 @@ fn step_by_step_stops_at_the_plan_each_file_and_the_verdict() {
         .events
         .iter()
         .any(|e| e.contains("not on a line of the diff")));
+    // The record keeps what was sent and says what each line is (FEAT-118).
+    let step = at.steps.last().unwrap();
+    assert!(step.prompt.as_deref().is_some_and(|p| !p.is_empty()));
+    assert!(step
+        .record
+        .iter()
+        .any(|e| e.kind == EventKind::Error && e.text.contains("not on a line of the diff")));
+    assert_eq!(step.record.len(), step.events.len());
     run.send(Control::Continue);
 
     run.until("the second file", |a| a.waiting() && a.steps.len() == 4);
@@ -935,7 +944,7 @@ fn an_unattended_merge_lands_only_with_passing_checks_and_a_branch_it_may_land_i
         ok: true,
         message: String::new(),
     });
-    assert_eq!(run.end().sentence, "Landed in main");
+    assert_eq!(run.end().sentence, "Merged into main");
 
     // No checks configured: the landing is the person's.
     let run = merge(
@@ -1222,6 +1231,8 @@ fn a_resumed_review_skips_what_the_earlier_run_finished() {
         ended_at: Some(1),
         gate: None,
         events: Vec::new(),
+        record: Vec::new(),
+        prompt: None,
         sent: Vec::new(),
         refused: Vec::new(),
         note: None,

@@ -37,7 +37,7 @@ it('resolves in the three columns, and blocks continuation until every file is m
 	await vi.waitFor(() => expect(view.all('article.conflict')).toHaveLength(1));
 
 	expect(view.text()).toContain('shared.txt');
-	expect(view.text()).toContain('Choose what lands here');
+	expect(view.text()).toContain('Choose what goes here');
 	expect(button('Continue').disabled).toBe(true);
 	expect(button('Continue').title).toBe('Resolve every file first');
 	expect(button('Mark resolved').disabled).toBe(true);

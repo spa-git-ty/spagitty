@@ -655,6 +655,15 @@ pub fn farm_merge_task(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
     Ok(())
 }
 
+/// A task's branch was merged in Merger: finish the task (FEAT-117).
+#[tauri::command(async)]
+pub fn farm_task_merged(state: State<'_, FarmState>, id: TaskId) -> Result<()> {
+    let service = state.service()?;
+    service.mark_merged(&id)?;
+    watch_all(&service);
+    Ok(())
+}
+
 /// Send a task to a reviewing agent by hand.
 #[tauri::command(async)]
 pub fn farm_review_task(state: State<'_, FarmState>, id: TaskId) -> Result<()> {

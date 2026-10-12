@@ -28,7 +28,7 @@ use super::level::{self, AtGate, Circumstances, Gate, Level};
 use super::protocol::{Answer, Finding, Plan, PlanItem, Summary, Verdict};
 use super::record::{
     now, Assignment, CheckRun, LastAct, LevelChange, Proposal, ProposalBody, ProposalState, State,
-    Step, StepKind, StepState, Store, Target, Tokens, Who, STEP_EVENTS,
+    Step, StepKind, StepState, Store, Target, Tokens, Who,
 };
 use super::rules::RepoRules;
 use super::{guard, prompt};
@@ -255,6 +255,20 @@ struct Inner {
     last_heard: Instant,
     last_sent: Instant,
     dirty: bool,
+    /// What the sentence said before the run went quiet, to put back when it speaks.
+    before_quiet: Option<String>,
+}
+
+impl Inner {
+    /// The agent said something: it is no longer quiet (FEAT-119).
+    fn heard(&mut self) {
+        self.last_heard = Instant::now();
+        if self.assignment.quiet_since.take().is_some() {
+            if let Some(said) = self.before_quiet.take() {
+                self.assignment.sentence = said;
+            }
+        }
+    }
 }
 
 struct Shared {
@@ -292,7 +306,7 @@ impl Handle {
             // Shown at once, as the person's, wherever the timeline is.
             let line = format!("You · {}", text.trim());
             if let Some(step) = inner.assignment.steps.last_mut() {
-                step.events.push(line);
+                step.say(line);
             }
             self.shared.save_and_send(&mut inner);
         }
@@ -376,6 +390,7 @@ pub fn prepare(setup: Setup) -> (Handle, Engine) {
             last_heard: Instant::now(),
             last_sent: Instant::now(),
             dirty: false,
+            before_quiet: None,
         }),
         wake: Condvar::new(),
         cancel: Arc::new(AtomicBool::new(false)),
@@ -422,6 +437,9 @@ fn watch_quiet(handle: Handle) {
             let minutes = quiet.as_secs() / 60;
             if minutes != said {
                 said = minutes;
+                if inner.assignment.quiet_since.is_none() {
+                    inner.before_quiet = Some(inner.assignment.sentence.clone());
+                }
                 inner.assignment.sentence = format!("No output for {minutes} minutes");
                 inner.assignment.quiet_since = Some(now().saturating_sub(quiet.as_secs()));
                 shared.save_and_send(&mut inner);
@@ -769,6 +787,8 @@ impl Engine {
                 ended_at: None,
                 gate: None,
                 events: Vec::new(),
+                record: Vec::new(),
+                prompt: None,
                 sent: Vec::new(),
                 refused: Vec::new(),
                 note: None,
@@ -802,6 +822,12 @@ impl Engine {
     fn ask(&mut self, step: usize, kind: StepKind, prompt: String) -> Flow<Reply> {
         let mut full = prompt;
         full.push_str(&prompt::notes("", &std::mem::take(&mut self.told)));
+        // What is sent is kept with the step, so the person can read it (FEAT-118).
+        self.update(|a| {
+            if let Some(entry) = a.steps.get_mut(step) {
+                entry.sent_prompt(&full);
+            }
+        });
         let ask = Ask {
             kind,
             prompt: full,
@@ -811,13 +837,11 @@ impl Engine {
         let shared = self.shared.clone();
         let mut hear = |line: &str| {
             let mut inner = shared.inner.lock().expect("assignment lock");
-            inner.last_heard = Instant::now();
+            inner.heard();
             let id = inner.assignment.id.clone();
             shared.store.transcript(&inner.assignment, line);
             if let Some(entry) = inner.assignment.steps.get_mut(step) {
-                if entry.events.len() < STEP_EVENTS {
-                    entry.events.push(line.to_string());
-                }
+                entry.hear(line);
             }
             inner.dirty = true;
             shared.sink.line(&id, line);
@@ -845,8 +869,8 @@ impl Engine {
                     entry.sent = reply.sent.clone();
                 }
                 for path in &refused {
-                    entry.events.push(format!(
-                        "changed {path}, which it was not asked to; not kept"
+                    entry.say(format!(
+                        "· changed {path}, which it was not asked to; not kept"
                     ));
                 }
                 entry.refused = refused.clone();
@@ -1054,7 +1078,7 @@ impl Engine {
                 proposal.why = Some(why.clone());
             }
             if let Some(entry) = a.steps.get_mut(step) {
-                entry.events.push(why);
+                entry.say(why);
             }
             // Asking why costs a step; it does not change where the run was.
             a.state = state;
@@ -1275,8 +1299,8 @@ impl Engine {
                 if !prompt::on_diff(&lines, finding.side, finding.line) {
                     self.update(|a| {
                         if let Some(entry) = a.steps.get_mut(step) {
-                            entry.events.push(format!(
-                                "a finding on line {} is not on a line of the diff; not kept",
+                            entry.say(format!(
+                                "· a finding on line {} is not on a line of the diff; not kept",
                                 finding.line
                             ));
                         }
@@ -1561,7 +1585,7 @@ impl Engine {
                     ..Default::default()
                 },
                 LastAct::Land,
-                ("Landing".into(), format!("Landed in {into}")),
+                ("Merging".into(), format!("Merged into {into}")),
                 (
                     "Complete merge".into(),
                     "Ready for you to complete the merge".into(),
@@ -1725,9 +1749,7 @@ impl Engine {
             let step = self.begin(StepKind::Checks, "Checks".into(), "Checks".into());
             self.update(|a| {
                 if let Some(entry) = a.steps.get_mut(step) {
-                    entry
-                        .events
-                        .push("No checks are configured for this repository.".into());
+                    entry.say("· no checks are configured for this repository");
                 }
             });
             self.finish(step, Some("Checks · none configured".into()));
@@ -1743,15 +1765,13 @@ impl Engine {
             let shared = self.shared.clone();
             let mut hear = |line: &str| {
                 let mut inner = shared.inner.lock().expect("assignment lock");
-                inner.last_heard = Instant::now();
+                inner.heard();
                 let id = inner.assignment.id.clone();
                 if let Some(command) = line.strip_prefix("$ ") {
                     inner.assignment.sentence = format!("Running checks · {command}");
                 }
                 if let Some(entry) = inner.assignment.steps.get_mut(step) {
-                    if entry.events.len() < STEP_EVENTS {
-                        entry.events.push(line.to_string());
-                    }
+                    entry.hear_output(line);
                 }
                 inner.dirty = true;
                 shared.sink.line(&id, line);
@@ -1982,5 +2002,50 @@ fn short_choice(choice: &Choice) -> &'static str {
         Choice::Ab | Choice::Ba => "Both",
         Choice::Pick { .. } => "Pick",
         Choice::Edit { .. } => "Edit",
+    }
+}
+
+#[cfg(test)]
+mod quiet_tests {
+    use super::*;
+
+    fn inner() -> Inner {
+        let assignment: Assignment = serde_json::from_value(serde_json::json!({
+            "id": "review-1", "repo": "/w", "job": "review",
+            "agent": {"id": "claude", "name": "Claude Code", "reach": "local", "provider": "claudeCode"},
+            "level": "stepByStep", "state": "working", "sentence": "Reading avatars.rs", "startedAt": 1,
+            "target": {"kind": "review", "host": "h", "owner": "o", "name": "n", "number": 1, "title": "t", "base": "a", "head": "b"}
+        }))
+        .unwrap();
+        Inner {
+            assignment,
+            controls: VecDeque::new(),
+            last_heard: Instant::now(),
+            last_sent: Instant::now(),
+            dirty: false,
+            before_quiet: None,
+        }
+    }
+
+    #[test]
+    fn an_agent_that_speaks_again_is_no_longer_quiet_and_its_sentence_comes_back() {
+        let mut inner = inner();
+        inner.before_quiet = Some(inner.assignment.sentence.clone());
+        inner.assignment.sentence = "No output for 3 minutes".into();
+        inner.assignment.quiet_since = Some(100);
+
+        inner.heard();
+
+        assert_eq!(inner.assignment.quiet_since, None);
+        assert_eq!(inner.assignment.sentence, "Reading avatars.rs");
+        assert!(inner.before_quiet.is_none());
+    }
+
+    #[test]
+    fn hearing_an_agent_that_was_not_quiet_changes_nothing_else() {
+        let mut inner = inner();
+        inner.heard();
+        assert_eq!(inner.assignment.sentence, "Reading avatars.rs");
+        assert_eq!(inner.assignment.quiet_since, None);
     }
 }

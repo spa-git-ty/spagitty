@@ -39,7 +39,6 @@ import type {
 	Licenses,
 	OpenResult,
 	MergeMethod,
-	Integration,
 	PullMode,
 	PullRequest,
 	PullRequestComment,
@@ -1060,11 +1059,6 @@ export function revert(commit: string): Promise<void> {
 /** Replay `commits` onto the current branch, in the order given (oldest first). */
 export function cherryPick(commits: string[]): Promise<void> {
 	return invoke('cherry_pick', { commits });
-}
-
-/** Merge, fast-forward or rebase `source` into the branch that is checked out. */
-export function integrate(source: string, how: Integration): Promise<void> {
-	return invoke('integrate', { source, how });
 }
 
 /**

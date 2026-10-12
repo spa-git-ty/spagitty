@@ -15,7 +15,18 @@
  */
 
 import * as api from '../api';
-import type { BranchRow, MergerForecast, MergerLandAsk, MergerLanded, MergerResolution, Tag } from '../types';
+import * as farmApi from '../farm/api';
+import { requests } from '../requests/store.svelte';
+import type {
+	BranchRow,
+	MergeMethod,
+	MergerForecast,
+	MergerLandAsk,
+	MergerLanded,
+	MergerResolution,
+	PullRequest,
+	Tag
+} from '../types';
 import {
 	defaultNewName,
 	effectiveStrategy,
@@ -61,6 +72,42 @@ let requested: string | null = null;
 function question(path: string | null, x: string | null, y: string | null): string {
 	return [path ?? '', x ?? '', y ?? '', tips.get(x ?? '') ?? '', tips.get(y ?? '') ?? ''].join('\u0000');
 }
+
+/**
+ * What Merger was opened for, when it was opened for something (FEAT-117).
+ *
+ * Every merge is made here, so the other screens that used to make one open
+ * Merger instead and say what they came for. A pull request is merged through
+ * its host, with the host's methods, and when it conflicts the conflicts are
+ * resolved here first; a Farm task is merged like any two branches, and the
+ * Farm is told when it is done.
+ */
+export type Origin =
+	| {
+			kind: 'pullRequest';
+			pr: PullRequest;
+			/** Set while its conflicts are being resolved here: the branch and what it takes in. */
+			local: { branch: string; target: string } | null;
+	  }
+	| { kind: 'farmTask'; id: string; branch: string; target: string; title: string };
+
+let origin = $state<Origin | null>(null);
+/** The host merge of a pull request. */
+let prMethod = $state<MergeMethod>('merge');
+let prTitle = $state('');
+let prMessage = $state('');
+let prMerging = $state(false);
+let prError = $state<string | null>(null);
+let prMerged = $state(false);
+/** Fetching the pull request's branch to resolve it here. */
+let preparing = $state(false);
+let prepareError = $state<string | null>(null);
+/** Pushing the resolved branch back to the pull request. */
+let pushing = $state(false);
+let pushed = $state(false);
+let pushError = $state<string | null>(null);
+/** The Farm could not be told its task was merged. */
+let farmError = $state<string | null>(null);
 
 /** Where the screen is: the plan, resolving, the commit dialog, or done. */
 export type Phase = 'plan' | 'resolve' | 'commit' | 'done';
@@ -206,6 +253,199 @@ export const merger = {
 	get landed() {
 		return landed;
 	},
+
+	// --- What Merger was opened for (FEAT-117) ---------------------------
+	get origin(): Origin | null {
+		return origin;
+	},
+	get prMethod(): MergeMethod {
+		return prMethod;
+	},
+	get prTitle(): string {
+		return prTitle;
+	},
+	get prMessage(): string {
+		return prMessage;
+	},
+	get prMerging(): boolean {
+		return prMerging;
+	},
+	get prError(): string | null {
+		return prError;
+	},
+	get prMerged(): boolean {
+		return prMerged;
+	},
+	get preparing(): boolean {
+		return preparing;
+	},
+	get prepareError(): string | null {
+		return prepareError;
+	},
+	get pushing(): boolean {
+		return pushing;
+	},
+	get pushed(): boolean {
+		return pushed;
+	},
+	get pushError(): string | null {
+		return pushError;
+	},
+	get farmError(): string | null {
+		return farmError;
+	},
+	setPrMethod(next: MergeMethod) {
+		prMethod = next;
+	},
+	setPrTitle(text: string) {
+		prTitle = text;
+	},
+	setPrMessage(text: string) {
+		prMessage = text;
+	},
+
+	/** Merge this pull request here: through its host, once its conflicts are none. */
+	presentPullRequest(pr: PullRequest) {
+		origin = { kind: 'pullRequest', pr, local: null };
+		prMethod = 'merge';
+		prTitle = '';
+		prMessage = '';
+		prMerging = false;
+		prError = null;
+		prMerged = false;
+		preparing = false;
+		prepareError = null;
+		pushing = false;
+		pushed = false;
+		pushError = null;
+		farmError = null;
+		preset = null;
+		phase = 'plan';
+		landed = null;
+		typedMessage = null;
+		typedName = null;
+	},
+
+	/** Merge this Farm task's branch into where it was meant to go. */
+	presentFarmTask(task: { id: string; branch: string; target: string; title: string }) {
+		this.present({ a: task.target, b: task.branch, into: 'a' });
+		origin = { kind: 'farmTask', ...task };
+		farmError = null;
+	},
+
+	/**
+	 * Ask the host to merge the pull request, with the method chosen. The host
+	 * refuses a pull request that conflicts, and its own sentence is shown.
+	 */
+	async mergePullRequest(): Promise<boolean> {
+		const o = origin;
+		if (!o || o.kind !== 'pullRequest' || prMerging) return false;
+		prMerging = true;
+		prError = null;
+		try {
+			await api.mergePullRequest(
+				o.pr.number,
+				prMethod,
+				prMethod === 'rebase' ? undefined : prTitle.trim() || undefined,
+				prMethod === 'rebase' ? undefined : prMessage.trim() || undefined
+			);
+			prMerged = true;
+			void requests.load();
+			return true;
+		} catch (e) {
+			prError = String(e);
+			return false;
+		} finally {
+			prMerging = false;
+		}
+	},
+
+	/**
+	 * Resolve a conflicting pull request here: fetch its branch, check it out,
+	 * and plan the merge of its target into it like any other two branches.
+	 * Landing writes the resolution on the pull request's own branch; pushing
+	 * it and merging the pull request come after.
+	 */
+	async resolvePullRequestLocally(): Promise<boolean> {
+		const o = origin;
+		if (!o || o.kind !== 'pullRequest' || preparing) return false;
+		const pr = o.pr;
+		preparing = true;
+		prepareError = null;
+		try {
+			const fetched = await api.reviewCheckout(pr.number, pr.targetBranch, pr.headSha);
+			const done = await api.reviewCheckOut(pr.number, fetched.head, pr.sourceBranch, pr.targetBranch);
+			const [rows, tags] = await Promise.all([api.branches(), api.tags().catch(() => [] as Tag[])]);
+			const target =
+				pickablesFrom(rows, tags).find(
+					(option) => option.group === 'remote' && option.name.endsWith('/' + pr.targetBranch)
+				)?.name ?? pr.targetBranch;
+			origin = { kind: 'pullRequest', pr, local: { branch: done.branch, target } };
+			preset = { a: done.branch, b: target, into: 'a' };
+			phase = 'plan';
+			landed = null;
+			typedMessage = null;
+			typedName = null;
+			pushed = false;
+			pushError = null;
+			await this.prime(repoPath, done.branch);
+			return true;
+		} catch (e) {
+			prepareError = String(e);
+			return false;
+		} finally {
+			preparing = false;
+		}
+	},
+
+	/** Push the resolved branch to the pull request's own branch. */
+	async pushPullRequestHead(): Promise<boolean> {
+		const o = origin;
+		if (!o || o.kind !== 'pullRequest' || !o.local || pushing) return false;
+		pushing = true;
+		pushError = null;
+		try {
+			await api.push('', `${o.local.branch}:${o.pr.sourceBranch}`);
+			pushed = true;
+			return true;
+		} catch (e) {
+			pushError = String(e);
+			return false;
+		} finally {
+			pushing = false;
+		}
+	},
+
+	/** Back to the pull request, to merge it through its host now it is resolved. */
+	async backToPullRequest() {
+		const o = origin;
+		if (!o || o.kind !== 'pullRequest') return;
+		origin = { kind: 'pullRequest', pr: o.pr, local: null };
+		phase = 'plan';
+		landed = null;
+		await requests.load();
+		const fresh = requests.all.find((request) => request.number === o.pr.number);
+		if (fresh) origin = { kind: 'pullRequest', pr: fresh, local: null };
+	},
+
+	/** Tell the Farm its task's branch is merged (again, after a failure). */
+	async finishFarmTask(): Promise<boolean> {
+		const o = origin;
+		if (!o || o.kind !== 'farmTask') return false;
+		farmError = null;
+		try {
+			await farmApi.taskMerged(o.id);
+			return true;
+		} catch (e) {
+			farmError = String(e);
+			return false;
+		}
+	},
+
+	/** Leave what Merger was opened for. */
+	leaveOrigin() {
+		origin = null;
+	},
 	/** `Merge branch 'feat' into main`, or `Squash feat into main`. */
 	get defaultMessage(): string {
 		const who = this.roles;
@@ -273,6 +513,7 @@ export const merger = {
 			const result = rebase ? await api.mergerRebaseFinish(ask) : await api.mergerLand(ask);
 			landed = { landed: result, source: who.sourceName, strategy: ask.strategy };
 			phase = 'done';
+			if (origin?.kind === 'farmTask') await this.finishFarmTask();
 			return true;
 		} catch (e) {
 			landError = String(e);
@@ -396,6 +637,7 @@ export const merger = {
 	 * graph's drag of one branch onto another asks for, B coming into A.
 	 */
 	present(next: { a: string; b: string; into: Into }) {
+		origin = null;
 		preset = next;
 		phase = 'plan';
 		landed = null;
@@ -435,6 +677,19 @@ export const merger = {
 		landing = false;
 		landError = null;
 		landed = null;
+		origin = null;
+		prMethod = 'merge';
+		prTitle = '';
+		prMessage = '';
+		prMerging = false;
+		prError = null;
+		prMerged = false;
+		preparing = false;
+		prepareError = null;
+		pushing = false;
+		pushed = false;
+		pushError = null;
+		farmError = null;
 		seq += 1;
 	}
 };

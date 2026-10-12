@@ -30,6 +30,7 @@
 		waitingOn
 	} from '../describe';
 	import { farmStore } from '../store.svelte';
+	import { openInMerger } from '../merge';
 	import * as api from '../api';
 	import type { Autonomy, Task, TaskStatus } from '../types';
 
@@ -114,7 +115,7 @@
 			return runningCheck(task.id, farmStore.activity) ?? 'Checks are running';
 		if (task.status === 'done') {
 			const stats = statsLine(farmStore.details[task.id]?.stats);
-			return `Landed ${relativeTime(task.updatedMs, now)} ago${stats ? ` · ${stats.split(',')[0]}` : ''}`;
+			return `Merged ${relativeTime(task.updatedMs, now)} ago${stats ? ` · ${stats.split(',')[0]}` : ''}`;
 		}
 		const unmet = task.dependsOn.filter((id) => farmStore.byId.get(id)?.status !== 'done');
 		if (unmet.length) return `Waits for ${listIds(unmet)}`;
@@ -160,7 +161,7 @@
 			<AgentBadge agent={agentFor(task)} running={!!run} />
 			<span class="muted line" class:warn={quiet}>
 				{children.length
-					? `${children.filter((t) => t.status === 'done').length}/${children.length} landed`
+					? `${children.filter((t) => t.status === 'done').length}/${children.length} merged`
 					: statusLine(task)}
 			</span>
 			{#if run || task.status === 'verification'}<Loader
@@ -199,10 +200,10 @@
 				<div class="spread">
 					<span
 						><strong class="total">{landed}</strong>
-						<span class="muted">of {leaves.length} landed</span></span
+						<span class="muted">of {leaves.length} merged</span></span
 					>
 				</div>
-				<div class="segments" role="img" aria-label="{landed} of {leaves.length} landed">
+				<div class="segments" role="img" aria-label="{landed} of {leaves.length} merged">
 					{#each segments as id, i (i)}
 						<span
 							class:glow={id === 'working'}
@@ -254,7 +255,7 @@
 										<Btn
 											primary
 											disabled={busy}
-											onclick={() => act('Could not land the task', () => api.mergeTask(task.id))}
+											onclick={() => openInMerger(task)}
 										>
 											{C.landIt}
 										</Btn>

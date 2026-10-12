@@ -117,6 +117,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # AGENTS.md forbids agent, tool and session attribution. The pull
+      # request's own commits and its description are read; history before it
+      # is left as it is. The description goes in through the environment, never
+      # into the script text.
+      - name: No agent attribution in the commits or the description
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          node tools/attribution.mjs commits "$BASE..$HEAD"
+          printf '%s' "$PR_BODY" | node tools/attribution.mjs text -
 
       - name: The project's own license and attribution files are present
         run: |

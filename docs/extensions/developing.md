@@ -44,7 +44,10 @@ problem at once, each with the field it is about.
   Contribution ids are qualified with it, so `hello` in your manifest is
   `com.example.hello/hello` in Spagitty.
 - **`engines`** — `spagitty` and `extensionApi` version requirements in the
-  Cargo dialect (`>=0.9.0, <1.0.0`; a space instead of the comma is accepted).
+  Cargo dialect (`>=0.9.0`; a space instead of the comma is accepted). Give
+  `spagitty` a lower bound only: what breaks an extension is the extension API,
+  and `extensionApi` has its own range (`^1.0.0`) for that. An upper bound on
+  `spagitty` only makes the next release show a false *incompatible*.
 - **`runtime.entrypoints`** — one program per target triple. Listing a target
   claims the package runs there; `ext pack` drops targets it did not build.
 - **`capabilities`** — `required` ones are granted when the user turns the

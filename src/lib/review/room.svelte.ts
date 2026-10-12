@@ -94,8 +94,6 @@ let expanded = $state.raw<Record<string, number[]>>({});
 let focus = $state<string | null>(null);
 /** A row to bring into view once it is drawn: a jump from the Conversation card. */
 let target = $state<string | null>(null);
-let ruler = $state(true);
-let readingSet = $state(true);
 let comments = $state.raw<PullRequestComment[]>([]);
 let commentsError = $state<string | null>(null);
 let panel = $state<Panel>('open');
@@ -236,8 +234,6 @@ export const room = {
 		expanded = {};
 		focus = null;
 		target = null;
-		ruler = reading.current.ruler !== 'off';
-		readingSet = true;
 		comments = [];
 		commentsError = null;
 		panel = 'open';
@@ -552,8 +548,9 @@ export const room = {
 		target = null;
 	},
 
+	/** Settings › Reading decides; off until it is asked for (TASK-059). */
 	get ruler(): boolean {
-		return ruler;
+		return reading.current.ruler !== 'off';
 	},
 
 	/** One line, or the whole chunk: as Settings › Reading says, one line when it says off. */
@@ -561,17 +558,9 @@ export const room = {
 		return reading.current.ruler === 'chunk' ? 'chunk' : 'line';
 	},
 
-	toggleRuler(): void {
-		ruler = !ruler;
-	},
-
-	/** Code and comments in the reading set, or as they were before it. */
+	/** Code and comments in the reading set, or plain: Settings › Reading says. */
 	get readingSet(): boolean {
-		return readingSet;
-	},
-
-	toggleReading(): void {
-		readingSet = !readingSet;
+		return reading.current.reviewRoom;
 	},
 
 	// --- Threads -----------------------------------------------------------

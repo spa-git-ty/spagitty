@@ -199,6 +199,55 @@ Formally specified and indexed as Backlog items under TASK-029:
 - **FEAT-068 — External diff and merge tool launchers:** Tool discovery and launch triggers for external CLI/GUI diff/merge apps.
 - **FEAT-069 — Multi-identity profiles:** Identity profile switching for author names, emails, and signing keys per repository scope.
 - **FEAT-070 — Extended forge integration:** GitLab and Bitbucket API support, in-app PR creation, and issue tracking links.
+
+## After 2.0.1 — the author's report of 2026-10-11
+
+The author reported fifteen problems with 2.0.1 on 2026-10-11, and asked for
+the open and the merged pull requests to be checked. They are recorded as
+Backlog items and are meant to be taken in this order: what is already half
+fixed in an open pull request first, then the small fixes whose cause is known,
+then the words and which screen does what, then the agent card and the review
+room's layout. The audit is read-only and runs beside the rest.
+
+### 16. TASK-062 — finish the three open pull requests
+
+Pull requests #59 and #60 hold the first halves of BUG-070 and BUG-071; #57
+(BUG-063) needs reworking for FEAT-117 before it can be merged.
+
+### 17. BUG-070 and BUG-071 — agents that work
+
+Every local agent gets its instructions and can start in Review and Merger, and
+a Gemini agent from Google AI Studio can be used.
+
+### 18. BUG-066, BUG-067, BUG-068, BUG-069 and TASK-059 — small fixes
+
+Extensions run on 2.x, Review asks with the right account, conflict fixes are
+only conflict fixes, additions are green, and the reading font and ruler are
+off by default.
+
+### 19. TASK-060 then TASK-061 — permission names, then plain words
+
+The permission names need the author's confirmation first. The wording sweep
+follows so the agents' sentences are rewritten once.
+
+### 20. FEAT-116 then FEAT-117 — one screen for each job
+
+Review reviews and Pull requests only shows; then every merge moves to Merger,
+which gains a pull request mode.
+
+### 21. FEAT-118 and FEAT-119 — the agent card
+
+What was sent and what came back, shown properly and hidden by default, and a
+progress you can read.
+
+### 22. FEAT-120 — the review room's file list
+
+Hideable, and compact or detailed.
+
+### Beside the rest: TASK-063 — audit the merged pull requests
+
+Starting with #52 (FEAT-115). Its findings become items of their own.
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

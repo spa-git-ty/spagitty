@@ -151,7 +151,7 @@ async function lastAct(a: Assignment): Promise<void> {
 		await agents.control(a.id, {
 			kind: 'acted',
 			ok: false,
-			message: ours ? 'A conflict was left unresolved, so nothing was landed.' : 'Merger is no longer on this merge.'
+			message: ours ? 'A conflict was left unresolved, so nothing was merged.' : 'Merger is no longer on this merge.'
 		});
 		return;
 	}
@@ -160,9 +160,9 @@ async function lastAct(a: Assignment): Promise<void> {
 	const landed = await resolving.commit();
 	await agents.control(
 		a.id,
-		landed ? { kind: 'acted', ok: true } : { kind: 'acted', ok: false, message: merger.landError ?? 'It did not land.' }
+		landed ? { kind: 'acted', ok: true } : { kind: 'acted', ok: false, message: merger.landError ?? 'It did not merge.' }
 	);
-	if (landed) notice.ok(`${a.agent.name} landed the merge`, `${a.target.kind === 'merge' ? a.target.b : ''} into ${merger.roles?.targetName ?? ''}`);
+	if (landed) notice.ok(`${a.agent.name} made the merge`, `${a.target.kind === 'merge' ? a.target.b : ''} into ${merger.roles?.targetName ?? ''}`);
 }
 
 let unsubscribe: (() => void) | null = null;

@@ -27,7 +27,7 @@
 	});
 
 	const names = $derived({ a: repo.info?.head.branch ?? 'ours', b: 'theirs' });
-	const roles = { a: 'HEAD', b: 'coming in', result: 'what lands' };
+	const roles = { a: 'HEAD', b: 'coming in', result: 'the result' };
 </script>
 
 <div class="screen">

@@ -274,60 +274,22 @@ describe('selecting a pull request', () => {
 	});
 });
 
-describe('reviewing', () => {
-	it('sends the verdict and the comment for the open pull request', async () => {
-		requests.present([request({ number: 77 })]);
-
-		const landed = await requests.review('approve', 'looks right');
-
-		expect(landed).toBe(true);
-		expect(submitReview).toHaveBeenCalledWith(77, 'approve', 'looks right');
-	});
-
-	it('re-reads the list, because the review decision is the host to compute', async () => {
-		requests.present([request()]);
-
-		await requests.review('approve', '');
-
-		// Not patched locally: a guess at the new review state here would be a
-		// second source of truth for the one fact this screen exists to show.
-		expect(pullRequests).toHaveBeenCalledTimes(1);
-	});
-
-	it('keeps the host refusal and says it did not land', async () => {
-		requests.present([request()]);
-		submitReview.mockRejectedValueOnce(new Error('you cannot review your own pull request'));
-
-		const landed = await requests.review('approve', '');
-
-		expect(landed).toBe(false);
-		expect(requests.reviewError).toContain('your own pull request');
-		// The refusal must not be mistaken for the list having failed.
-		expect(requests.error).toBeNull();
-	});
-
-	it('is not left marked in flight after a failure', async () => {
-		requests.present([request()]);
-		submitReview.mockRejectedValueOnce(new Error('nope'));
-
-		await requests.review('comment', 'something');
-
-		expect(requests.reviewing).toBe(false);
-	});
-
-	it('does nothing when no pull request is open', async () => {
-		const landed = await requests.review('approve', '');
-
-		expect(landed).toBe(false);
-		expect(submitReview).not.toHaveBeenCalled();
-	});
-
-	it('does nothing outside Tauri', async () => {
-		vi.mocked(api.inTauri).mockReturnValue(false);
-		requests.present([request()]);
-
-		expect(await requests.review('approve', '')).toBe(false);
-		expect(submitReview).not.toHaveBeenCalled();
+describe('reviewing is not done here (FEAT-116)', () => {
+	it('offers no way to review, comment or answer from the store', () => {
+		const store = requests as unknown as Record<string, unknown>;
+		for (const name of [
+			'review',
+			'reviewing',
+			'reviewError',
+			'draftComments',
+			'addDraftComment',
+			'removeDraftComment',
+			'replyToComment',
+			'resolveComment',
+			'role'
+		]) {
+			expect(store[name], name).toBeUndefined();
+		}
 	});
 });
 
@@ -406,40 +368,6 @@ describe('the panel', () => {
 		view.destroy();
 	});
 
-	it('opens the review form, and will not submit a comment with nothing in it', async () => {
-		const view = await panel();
-
-		click(view.get('.actions button'));
-		flushSync();
-
-		// Comment is the default verdict, and a comment with no comment is what
-		// the host rejects with a 422 that does not name the field.
-		const submit = view
-			.all('button')
-			.find((button) => button.textContent?.includes('Submit review')) as HTMLButtonElement;
-		expect(submit.disabled).toBe(true);
-		expect(view.text()).toContain('needs something written with it');
-		view.destroy();
-	});
-
-	it('lets approve go without a comment, because the host takes it', async () => {
-		const view = await panel();
-		click(view.get('.actions button'));
-		flushSync();
-
-		const approve = view
-			.all('.verdict')
-			.find((button) => button.textContent?.includes('Approve')) as HTMLElement;
-		click(approve);
-		flushSync();
-
-		const submit = view
-			.all('button')
-			.find((button) => button.textContent?.includes('Submit review')) as HTMLButtonElement;
-		expect(submit.disabled).toBe(false);
-		view.destroy();
-	});
-
 	/** Open the review form and press Submit. */
 	async function submitFrom(view: ReturnType<typeof render>) {
 		click(view.get('.actions button'));
@@ -458,48 +386,4 @@ describe('the panel', () => {
 		flushSync();
 	}
 
-	it('asks before it posts, naming the verdict rather than asking if you are sure', async () => {
-		const view = await panel();
-
-		await submitFrom(view);
-
-		expect(confirmDialog).toHaveBeenCalledTimes(1);
-		const asked = confirmDialog.mock.calls[0][0];
-		expect(asked.title).toContain('Comment');
-		expect(asked.title).toContain('#412');
-		expect(asked.title).not.toMatch(/are you sure/i);
-		// It says who sees it and that Spagitty cannot take it back.
-		expect(asked.body).toContain('cannot take it back');
-		view.destroy();
-	});
-
-	it('sends nothing when the confirmation is declined', async () => {
-		confirmDialog.mockResolvedValue(false);
-		const view = await panel();
-
-		await submitFrom(view);
-
-		expect(submitReview).not.toHaveBeenCalled();
-		view.destroy();
-	});
-
-	it('posts the verdict and the comment once confirmed', async () => {
-		const view = await panel();
-
-		await submitFrom(view);
-
-		expect(submitReview).toHaveBeenCalledWith(412, 'comment', 'one note');
-		view.destroy();
-	});
-
-	it('still says plainly that merging is not built', async () => {
-		const view = await panel();
-
-		const merge = view
-			.all('button')
-			.find((button) => button.textContent?.includes('Merge')) as HTMLButtonElement;
-		expect(merge.disabled).toBe(true);
-		expect(merge.title).not.toBe('');
-		view.destroy();
-	});
 });

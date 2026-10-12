@@ -158,7 +158,7 @@ describe('Farm journey', () => {
 					{ kind: 'agentOutput', run: 'R', task: 'T', line: 'hi', atMs: 1 },
 					{ kind: 'mergeCompleted', task: 'T', branch: 'b', ok: true, error: null, atMs: 2 }
 				],
-				'Landed',
+				'Merged',
 				[]
 			)
 		).toHaveLength(1);
@@ -269,7 +269,7 @@ describe('Building, Task and Plan review copy', () => {
 			sampleTask('B', { status: 'waiting', assignedAgent: 'codex', dependsOn: ['A'] }),
 			sampleTask('C', { status: 'verification', implementedBy: 'pi' })
 		];
-		expect(freeLine('codex', tasks)).toBe('takes B when A lands');
+		expect(freeLine('codex', tasks)).toBe('takes B when A is merged');
 		expect(freeLine('pi', tasks)).toBe('its C is in checks');
 		expect(freeLine('pi', tasks, true)).toBe('finished C, its checks are running');
 		expect(freeLine('nobody', tasks)).toBeNull();
@@ -311,7 +311,7 @@ describe('Building, Task and Plan review copy', () => {
 		];
 		expect(worthALook(tasks)).toEqual([
 			'C waits for two tasks, so it starts last.',
-			'A and B both touch src/hosts/; whichever lands second is rebased on the first.'
+			'A and B both touch src/hosts/; whichever is merged second is rebased on the first.'
 		]);
 		expect(
 			worthALook([

@@ -48,6 +48,13 @@ describe('normalise', () => {
 });
 
 describe('reading', () => {
+	it('starts with no ruler and the review room in plain code (TASK-059)', () => {
+		expect(DEFAULTS.ruler).toBe('off');
+		expect(DEFAULTS.reviewRoom).toBe(false);
+		expect(normalise({}).ruler).toBe('off');
+		expect(normalise({ reviewRoom: true }).reviewRoom).toBe(true);
+	});
+
 	it('publishes the defaults as tokens on the first read', () => {
 		expect(token('--code-font')).toBe(codeStack('atkinson-mono'));
 		expect(token('--code-lh')).toBe('1.85');
@@ -153,7 +160,8 @@ describe('ReadingSection', () => {
 			'Whole chunk',
 			'Calm',
 			'Classic',
-			'Highlight changed words'
+			'Highlight changed words',
+			'Use the reading set'
 		]);
 		expect(view.text()).toContain('b d p q and I l 1 all have different shapes');
 		expect(view.text()).toContain('Move it with j and k.');

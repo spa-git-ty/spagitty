@@ -61,10 +61,10 @@ impl Level {
 
     pub fn label(self) -> &'static str {
         match self {
-            Level::Suggest => "Suggest",
-            Level::StepByStep => "Step by step",
-            Level::SignOff => "Sign off",
-            Level::Unattended => "Unattended",
+            Level::Suggest => "Read-only",
+            Level::StepByStep => "Ask every step",
+            Level::SignOff => "Ask before sending or merging",
+            Level::Unattended => "Full access",
         }
     }
 

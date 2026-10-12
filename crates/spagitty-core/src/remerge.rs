@@ -142,6 +142,10 @@ struct Region {
     lines: Vec<u32>,
     first: Vec<String>,
     second: Vec<String>,
+    /// Written for a region that had conflict markers. Lines a merge changed
+    /// away from any conflict are the author's own edit to the merge, not a
+    /// conflict fix (BUG-068).
+    conflicted: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -184,7 +188,13 @@ fn regions(file: &Remerged) -> Vec<Region> {
                 if let Some((region, _)) = open.take() {
                     out.push(region);
                 }
-                open = Some((Region::default(), Side::First));
+                open = Some((
+                    Region {
+                        conflicted: true,
+                        ..Region::default()
+                    },
+                    Side::First,
+                ));
                 marker = true;
             } else if open.is_some() && text.starts_with(">>>>>>>") {
                 closing = open.take().map(|(region, _)| region);
@@ -330,13 +340,20 @@ pub fn conflicts(
             .map(|message| message.summary().to_string())
             .unwrap_or_default();
         let short = short_id(&merge);
+        // The target's side is the parent the target already contains. A merge
+        // of anything else — the pull request's own branch pulled back, or
+        // another feature branch — resolved no conflict with the target, and
+        // its lines are the author's own (BUG-068).
+        let main_is_first = match (
+            is_ancestor(repo, first, target),
+            is_ancestor(repo, second, target),
+        ) {
+            (true, false) => true,
+            (false, true) => false,
+            _ => continue,
+        };
+
         report.merges.push(short.clone());
-
-        // The target's side is the parent the target already contains; when
-        // neither or both do, the second, which is where `git merge main`
-        // puts it.
-        let main_is_first = is_ancestor(repo, first, target) && !is_ancestor(repo, second, target);
-
         let text = shell::remerge_diff(dir, &merge.to_string())?;
         for file in parse(&text) {
             let (adds, _) = added_in(&file.path);
@@ -351,7 +368,7 @@ pub fn conflicts(
                     moved.get(&number).copied()
                 }
             };
-            for region in regions(&file) {
+            for region in regions(&file).into_iter().filter(|r| r.conflicted) {
                 let lines: Vec<u32> = region
                     .lines
                     .iter()
@@ -462,12 +479,15 @@ diff --git a/b.ts b/b.ts
                     lines: vec![4, 5],
                     first: vec!["    let dir = base.join(\"avatars\");".into()],
                     second: vec!["    let dir = base.or_else(xdg);".into()],
+                    conflicted: true,
                 },
-                // Added away from any conflict: a place with no sides.
+                // Added away from any conflict: a place with no sides, and not
+                // a conflict fix.
                 Region {
                     lines: vec![7],
                     first: vec![],
                     second: vec![],
+                    conflicted: false,
                 },
             ]
         );
@@ -627,5 +647,86 @@ diff --git a/b.ts b/b.ts
         let head = save(&fixture, "change");
         let found = conflicts(&fixture.open(), &fixture.at(""), &base, &head, &base).unwrap();
         assert_eq!(found, ConflictFixes::default());
+    }
+
+    /// `feature` changes line 2 of `a.rs`; `main` changes `b.ts`.
+    fn feature_and_main() -> (Fixture, String) {
+        let fixture = Fixture::empty();
+        fixture.write("a.rs", "1\n2\n3\n4\n5\n");
+        fixture.write("b.ts", "x\n");
+        let base = save(&fixture, "base");
+        fixture.git(&["checkout", "-q", "-b", "feature"]);
+        fixture.write("a.rs", "1\nbranch\n3\n4\n5\n");
+        save(&fixture, "feature work");
+        fixture.git(&["checkout", "-q", "main"]);
+        fixture.write("b.ts", "y\n");
+        save(&fixture, "main work");
+        fixture.git(&["checkout", "-q", "feature"]);
+        (fixture, base)
+    }
+
+    #[test]
+    fn a_clean_merge_of_the_target_then_an_ordinary_commit_marks_nothing() {
+        let (fixture, base) = feature_and_main();
+        assert!(try_git(&fixture, &["merge", "-q", "--no-edit", "main"]));
+        fixture.write("a.rs", "1\nbranch\n3\n4\n5\nsix\n");
+        save(&fixture, "an ordinary commit");
+        let found = conflicts(
+            &fixture.open(),
+            &fixture.at(""),
+            &base,
+            &fixture.rev("feature"),
+            &fixture.rev("main"),
+        )
+        .unwrap();
+        assert!(found.fixes.is_empty());
+        assert!(found.files.is_empty());
+    }
+
+    #[test]
+    fn a_change_made_in_the_merge_away_from_any_conflict_is_not_a_conflict_fix() {
+        let (fixture, base) = feature_and_main();
+        assert!(try_git(
+            &fixture,
+            &["merge", "-q", "--no-commit", "--no-ff", "main"]
+        ));
+        fixture.write("a.rs", "1\nbranch\n3\n4\n5\nadded in the merge\n");
+        fixture.git(&["add", "-A"]);
+        fixture.git(&["commit", "-q", "--no-edit"]);
+        let found = conflicts(
+            &fixture.open(),
+            &fixture.at(""),
+            &base,
+            &fixture.rev("feature"),
+            &fixture.rev("main"),
+        )
+        .unwrap();
+        assert!(found.fixes.is_empty(), "{:?}", found.fixes);
+    }
+
+    #[test]
+    fn a_conflict_resolved_merging_something_other_than_the_target_is_not_marked() {
+        let (fixture, base) = feature_and_main();
+        fixture.git(&["checkout", "-q", "-b", "other", &base]);
+        fixture.write("a.rs", "1\nother\n3\n4\n5\n");
+        save(&fixture, "other work");
+        fixture.git(&["checkout", "-q", "feature"]);
+        assert!(
+            !try_git(&fixture, &["merge", "-q", "other"]),
+            "it conflicts"
+        );
+        fixture.write("a.rs", "1\nresolved\n3\n4\n5\n");
+        fixture.git(&["add", "-A"]);
+        fixture.git(&["commit", "-q", "--no-edit"]);
+        let found = conflicts(
+            &fixture.open(),
+            &fixture.at(""),
+            &base,
+            &fixture.rev("feature"),
+            &fixture.rev("main"),
+        )
+        .unwrap();
+        assert!(found.fixes.is_empty(), "{:?}", found.fixes);
+        assert!(found.merges.is_empty());
     }
 }

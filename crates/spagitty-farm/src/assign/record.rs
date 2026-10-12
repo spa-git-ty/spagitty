@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use super::classify::Choice;
 use super::level::{Gate, Job, Level};
 use super::protocol::{Finding, Plan, Summary};
+use crate::execution::narrate::{classify, EventKind, StepEvent};
 
 /// Seconds since the epoch.
 pub fn now() -> u64 {
@@ -190,6 +191,12 @@ pub struct Step {
     /// What the agent read, searched and ran, narrated. Capped.
     #[serde(default)]
     pub events: Vec<String>,
+    /// The same lines, each with what kind it is (FEAT-118). Capped alike.
+    #[serde(default)]
+    pub record: Vec<StepEvent>,
+    /// What Spagitty sent the agent for this step, as it was sent (FEAT-118).
+    #[serde(default)]
+    pub prompt: Option<String>,
     /// Files whose content was sent to a remote agent in this step.
     #[serde(default)]
     pub sent: Vec<String>,
@@ -211,6 +218,51 @@ pub struct Step {
 
 /// How many events a step keeps. The transcript keeps everything.
 pub const STEP_EVENTS: usize = 200;
+
+/// The most of a prompt a step keeps. The prompt carries the diff, and a
+/// record that holds every diff twice is a large file nobody asked for.
+pub const STEP_PROMPT: usize = 60_000;
+
+impl Step {
+    /// One line the agent printed: kept while there is room (FEAT-118).
+    pub fn hear(&mut self, line: &str) {
+        if self.events.len() < STEP_EVENTS {
+            self.events.push(line.to_string());
+            self.record.push(classify(line));
+        }
+    }
+
+    /// One line of a command's output: a result, not the agent's words.
+    pub fn hear_output(&mut self, line: &str) {
+        if self.events.len() < STEP_EVENTS {
+            self.events.push(line.to_string());
+            let mut event = classify(line);
+            if event.kind == EventKind::Reply {
+                event.kind = EventKind::Result;
+            }
+            self.record.push(event);
+        }
+    }
+
+    /// One line Spagitty has to say about the step, whatever room there is.
+    pub fn say(&mut self, line: impl Into<String>) {
+        let line = line.into();
+        self.record.push(classify(&line));
+        self.events.push(line);
+    }
+
+    /// Keep what was sent, cut where it would otherwise be too much.
+    pub fn sent_prompt(&mut self, prompt: &str) {
+        if prompt.chars().count() <= STEP_PROMPT {
+            self.prompt = Some(prompt.to_string());
+        } else {
+            let kept: String = prompt.chars().take(STEP_PROMPT).collect();
+            self.prompt = Some(format!(
+                "{kept}\n… (cut here; the rest is in the transcript)"
+            ));
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -6,11 +6,26 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
+	import StepDetails from './StepDetails.svelte';
 	import { dialog } from '$lib/ui/dialog.svelte';
 	import type { MenuItem } from '$lib/ui/menu';
 	import * as api from './api';
 	import { agents } from './store.svelte';
-	import { LEVELS, above, atGate, choiceWords, grouped, isLive, levelWords, meter, share, stepTime } from './levels';
+	import {
+		LEVELS,
+		above,
+		atGate,
+		choiceWords,
+		grouped,
+		isLive,
+		levelWords,
+		meter,
+		nowLine,
+		quietFor,
+		quietWords,
+		share,
+		stepTime
+	} from './levels';
 	import type { Assignment, Proposal, Step } from './types';
 
 	/**
@@ -43,12 +58,17 @@
 		onhide?: () => void;
 		/** Carry on a stopped or failed run from its last finished step. */
 		onresume?: () => void;
+		/** Show a file the agent read in the diff, where there is one. */
+		onfile?: (path: string) => void;
 	}
 
-	let { assignment, tabs, names, follow, onfollow, ongo, onaccept, onlast, onhide, onresume }: Props = $props();
+	let { assignment, tabs, names, follow, onfollow, ongo, onaccept, onlast, onhide, onresume, onfile }: Props = $props();
 
 	let now = $state(Math.floor(Date.now() / 1000));
-	let open = $state<Record<number, boolean>>({});
+	/** The step Details shows; the current one until another is chosen. */
+	let selected = $state<number | null>(null);
+	/** Everything about a step is hidden until this is opened (FEAT-118). */
+	let details = $state(false);
 	let raw = $state(false);
 	let transcript = $state<string | null>(null);
 	let told = $state('');
@@ -67,11 +87,32 @@
 	const budget = $derived(
 		remote ? (agents.snapshot?.remote.find((r) => r.id === a.agent.id)?.tokensPerRun ?? null) : null
 	);
+	/** How long it has said nothing, once that is long enough to say so (FEAT-119). */
+	const quiet = $derived(quietFor(a, now));
+	const doing = $derived(nowLine(a, now));
 	const tone = $derived(
-		a.state === 'waiting' ? 'waiting' : a.state === 'failed' ? 'failed' : a.state === 'done' ? 'done' : live ? 'working' : 'stopped'
+		a.state === 'waiting'
+			? 'waiting'
+			: a.state === 'failed'
+				? 'failed'
+				: a.state === 'done'
+					? 'done'
+					: a.state === 'paused'
+						? 'paused'
+						: quiet !== null
+							? 'quiet'
+							: live
+								? 'working'
+								: 'stopped'
 	);
 	const steps = $derived(a.steps.filter((s) => s.kind.kind !== 'why'));
 	const lines = $derived(agents.lines(a.id));
+	const shown = $derived(
+		steps.find((s) => s.index === selected) ??
+			steps.findLast((s) => s.state === 'running' || s.state === 'waiting') ??
+			steps.at(-1) ??
+			null
+	);
 
 	function send(control: Parameters<typeof agents.control>[1]) {
 		void agents.control(a.id, control);
@@ -89,7 +130,7 @@
 			label: level.label,
 			note: a.level === level.id ? 'now' : undefined,
 			disabled: above(level.id, highest),
-			reason: above(level.id, highest) ? `Capped at ${levelWords(highest).label} here` : undefined,
+			reason: above(level.id, highest) ? `The most allowed here is ${levelWords(highest).label}` : undefined,
 			run: () => send({ kind: 'level', level: level.id })
 		}))
 	);
@@ -165,8 +206,17 @@
 	</div>
 
 	<p class="sentence {tone}" aria-live="polite">
-		<span class="state"></span>{a.pausing && live ? 'Pausing after this step' : a.sentence}
+		{a.pausing && live ? 'Pausing after this step' : a.sentence}
 	</p>
+	{#if live && doing && a.state === 'working' && quiet === null}
+		<p class="doing note mono" data-testid="doing">{doing}</p>
+	{/if}
+	{#if quiet !== null}
+		<div class="quiet" role="status">
+			<span>Nothing from {a.agent.name} for {quietWords(quiet)}.</span>
+			<Btn title="Stop now. Everything proposed stays." onclick={() => send({ kind: 'stop' })}>Stop</Btn>
+		</div>
+	{/if}
 	<div class="meter">
 		<span class="bar"><span class="fill" style:width="{share(a) * 100}%"></span></span>
 		<span class="note mono">{meter(a, now)}</span>
@@ -189,25 +239,20 @@
 		<VirtualRows items={steps} key={(step) => String(step.index)} estimate={(step) => (step.state === 'waiting' ? 150 : 34)} label="Timeline">
 			{#snippet row(step)}
 				<div class="step {step.state}">
-					<button class="line" onclick={() => (open = { ...open, [step.index]: !open[step.index] })} aria-expanded={!!open[step.index] || step.state === 'running'}>
+<button
+						class="line"
+						onclick={() => {
+							selected = step.index;
+							details = true;
+						}}
+						aria-pressed={details && shown?.index === step.index}
+						title="Show what was sent and what came back"
+					>
 						<span class="icon"><Icon name={icon(step)} size="0.95em" weight={2} /></span>
 						<span class="label">{step.label}</span>
 						<span class="note mono">{stepTime(step, now)}</span>
 					</button>
-					{#if open[step.index] || step.state === 'running'}
-						<ol class="events">
-							{#each (step.state === 'running' ? step.events.slice(-4) : step.events) as event, i (i)}
-								<li class:you={event.startsWith('You · ')}>{event}</li>
-							{/each}
-							{#each step.sent as path (path)}
-								<li class="sent">sent {path}</li>
-							{/each}
-							{#each step.checks as check (check.command)}
-								<li class:failed={!check.passed}>{check.command} · {check.passed ? 'passed' : 'failed'}</li>
-							{/each}
-						</ol>
-					{/if}
-					{#if step.state === 'waiting' && gate && gate.step.index === step.index}
+										{#if step.state === 'waiting' && gate && gate.step.index === step.index}
 						<div class="gate">
 							{#if step.gate === 'plan'}
 								{@const plan = [...a.proposals].reverse().find((p) => p.body.kind === 'plan')}
@@ -228,7 +273,7 @@
 									<Btn onclick={() => redo(step)}>Redo with a note</Btn>
 								</div>
 							{:else if step.gate === 'send' || step.gate === 'land'}
-								<span>{step.gate === 'send' ? 'Ready for you to send.' : 'Ready for you to land.'}</span>
+								<span>{step.gate === 'send' ? 'Ready for you to send.' : 'Ready for you to merge.'}</span>
 								<div class="acts">
 									<Btn primary quiet onclick={() => onlast?.()}>{step.gate === 'send' ? 'Finish review' : 'Complete merge'}</Btn>
 								</div>
@@ -306,12 +351,24 @@
 			<Chip onclick={() => agents.forget(a.id)}>forget</Chip>
 		</div>
 	{/if}
-	<button class="raw-toggle note" aria-expanded={raw} onclick={showRaw}>
-		<Icon name={raw ? 'chevron-down' : 'chevron-right'} size="0.9em" />Raw output
+<button class="raw-toggle note" aria-expanded={details} onclick={() => (details = !details)}>
+		<Icon name={details ? 'chevron-down' : 'chevron-right'} size="0.9em" />Details
 	</button>
-	{#if raw}
-		{#if lastCommand}<pre class="output mono">{lastCommand}</pre>{/if}
-		<pre class="output mono">{(transcript ?? lines.join('\n')) || 'Nothing yet.'}</pre>
+	{#if details}
+		<div class="details">
+			{#if shown}
+				<StepDetails step={shown} {now} {onfile} />
+			{:else}
+				<p class="note">Nothing has happened yet.</p>
+			{/if}
+			<button class="raw-toggle note" aria-expanded={raw} onclick={showRaw}>
+				<Icon name={raw ? 'chevron-down' : 'chevron-right'} size="0.9em" />Raw output
+			</button>
+			{#if raw}
+				{#if lastCommand}<pre class="output mono">{lastCommand}</pre>{/if}
+				<pre class="output mono">{(transcript ?? lines.join('\n')) || 'Nothing yet.'}</pre>
+			{/if}
+		</div>
 	{/if}
 </aside>
 
@@ -361,49 +418,38 @@
 		gap: 8px;
 	}
 
-	.state {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex: none;
-		background: var(--muted);
-	}
-
 	.sentence.waiting {
 		color: var(--accent);
 	}
 
-	.sentence.waiting .state {
-		background: var(--accent);
+	.sentence.quiet {
+		color: var(--warn);
 	}
 
-	.sentence.working .state {
-		background: var(--agent);
-		animation: breathe 1.6s var(--ease) infinite;
+	.sentence.paused {
+		color: var(--muted);
 	}
 
-	.sentence.done .state {
-		background: var(--ok);
+	.doing {
+		margin: -4px 0 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.quiet {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 6px 10px;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--warn) 14%, transparent);
 	}
 
 	.sentence.failed {
 		color: var(--danger);
-	}
-
-	.sentence.failed .state {
-		background: var(--danger);
-	}
-
-	@keyframes breathe {
-		50% {
-			opacity: 0.35;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.sentence.working .state {
-			animation: none;
-		}
 	}
 
 	.meter {
@@ -494,26 +540,6 @@
 		white-space: nowrap;
 	}
 
-	.events {
-		list-style: none;
-		margin: 0 0 4px 26px;
-		padding: 0;
-		font-size: var(--fs-secondary);
-		color: var(--muted);
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		overflow-wrap: anywhere;
-	}
-
-	.events .you {
-		color: var(--ink);
-	}
-
-	.events .failed {
-		color: var(--danger);
-	}
-
 	.gate,
 	.ended {
 		margin: 6px 0;
@@ -583,5 +609,19 @@
 		font-size: var(--fs-mono);
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+
+	.line[aria-pressed='true'] {
+		background: color-mix(in srgb, var(--ink) 7%, transparent);
+	}
+
+	/* Everything about a step, once it is asked for (FEAT-118). */
+	.details {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		min-height: 0;
+		overflow: auto;
+		padding-top: 4px;
 	}
 </style>

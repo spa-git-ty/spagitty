@@ -210,6 +210,9 @@ pub fn run() {
             // its header.
             agents::agents_snapshot,
             agents::agents_set_jobs,
+            agents::agents_set_codex_full_access,
+            agents::agents_set_omp_options,
+            agents::agents_set_agy_auto_approve,
             agents::agents_save_custom,
             agents::agents_take_offer,
             agents::agents_save_remote,
@@ -255,6 +258,7 @@ pub fn run() {
             farm::farm_task_detail,
             farm::farm_transcript,
             farm::farm_merge_task,
+            farm::farm_task_merged,
             farm::farm_review_supplemental,
             farm::farm_review_task,
             farm::farm_verify_task,

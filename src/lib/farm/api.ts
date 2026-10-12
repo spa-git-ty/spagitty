@@ -142,8 +142,9 @@ export function transcript(run: string, task: string): Promise<string> {
 	return invoke('farm_transcript', { run, task });
 }
 
-export function mergeTask(id: string): Promise<void> {
-	return invoke('farm_merge_task', { id });
+/** The task's branch was merged in Merger: finish the task (FEAT-117). */
+export function taskMerged(id: string): Promise<void> {
+	return invoke('farm_task_merged', { id });
 }
 
 export function reviewTask(id: string): Promise<void> {

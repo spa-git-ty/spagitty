@@ -75,7 +75,7 @@
 		class="dialog ornament"
 		role="dialog"
 		aria-modal="true"
-		aria-label={done ? 'Merged' : 'Land the merge'}
+		aria-label={done ? 'Merged' : 'Make the merge'}
 		tabindex="-1"
 		onkeydown={keydown}
 	>
@@ -85,12 +85,42 @@
 				<span class="mono tone-{tone}">{done.landed.target}</span> now includes {done.source}
 			</h2>
 			<span class="note">{doneText()}</span>
-			<div class="buttons start">
-				<Btn primary onclick={ongraph}>Open in Graph</Btn>
-				<Btn onclick={() => merger.again()}>Merge another</Btn>
-			</div>
+			{#if merger.origin?.kind === 'farmTask'}
+				{#if merger.farmError}
+					<p class="note error" role="alert">{merger.farmError}</p>
+					<div class="buttons start">
+						<Btn primary onclick={() => merger.finishFarmTask()}>Tell the Farm again</Btn>
+					</div>
+				{:else}
+					<span class="note">The Farm has been told, and the task is finished.</span>
+				{/if}
+			{/if}
+			{#if merger.origin?.kind === 'pullRequest' && merger.origin.local}
+				<span class="note">
+					Push it to update the pull request, then go back to merge the pull request.
+				</span>
+				{#if merger.pushError}<p class="note error" role="alert">{merger.pushError}</p>{/if}
+				<div class="buttons start">
+					<Btn
+						primary={!merger.pushed}
+						busy={merger.pushing}
+						disabled={merger.pushed}
+						onclick={() => merger.pushPullRequestHead()}
+					>
+						{merger.pushed ? 'Pushed' : `Push ${merger.origin.local.branch}`}
+					</Btn>
+					<Btn primary={merger.pushed} onclick={() => merger.backToPullRequest()}>
+						Back to the pull request
+					</Btn>
+				</div>
+			{:else}
+				<div class="buttons start">
+					<Btn primary onclick={ongraph}>Open in Graph</Btn>
+					<Btn onclick={() => merger.again()}>Merge another</Btn>
+				</div>
+			{/if}
 		{:else if who}
-			<h2 class="title">Ready to land on <span class="mono tone-{tone}">{who.targetName}</span></h2>
+			<h2 class="title">Ready to merge into <span class="mono tone-{tone}">{who.targetName}</span></h2>
 			{#if rows.length > 0}
 				<ul class="rows">
 					{#each rows as row (row.where)}

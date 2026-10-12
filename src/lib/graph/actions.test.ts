@@ -14,7 +14,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Integration, ResetMode, StashAction } from '$lib/types';
+import type { ResetMode, StashAction } from '$lib/types';
 
 /** The options object every action hands to the dialog, as far as tests care. */
 interface Asked {
@@ -98,7 +98,6 @@ const api = vi.hoisted(() => ({
 	reset: vi.fn(() => Promise.resolve()),
 	revert: vi.fn(() => Promise.resolve()),
 	cherryPick: vi.fn(() => Promise.resolve()),
-	integrate: vi.fn(() => Promise.resolve()),
 	rebaseOnto: vi.fn(() => Promise.resolve()),
 	checkout: vi.fn(() => Promise.resolve()),
 	checkoutDetached: vi.fn(() => Promise.resolve()),
@@ -369,60 +368,6 @@ describe('checkoutCommit', () => {
 		confirm.mockResolvedValueOnce(false);
 		await actions.checkoutCommit('a1b2c3d4', 'a1b2c3d');
 		expect(api.checkoutDetached).not.toHaveBeenCalled();
-	});
-});
-
-describe('integrate', () => {
-	it('has wording for every integration it offers', () => {
-		expect(actions.INTEGRATIONS.map((entry) => entry.how)).toEqual([
-			'merge',
-			'mergeNoFastForward',
-			'fastForward',
-			'rebase'
-		]);
-	});
-
-	it('does nothing for an integration it does not know', async () => {
-		await actions.integrate('feature/x', 'main', 'nonsense' as Integration);
-
-		expect(confirm).not.toHaveBeenCalled();
-		expect(api.integrate).not.toHaveBeenCalled();
-	});
-
-	it('always asks before a rebase, even with the warning off', async () => {
-		confirmHistoryRewrite = false;
-
-		await actions.integrate('feature/x', 'main', 'rebase');
-
-		expect(confirm).toHaveBeenCalledTimes(1);
-		expect(lastConfirmation().danger).toBe(true);
-		expect(api.integrate).toHaveBeenCalledWith('feature/x', 'rebase');
-	});
-
-	it.each<Integration>(['merge', 'mergeNoFastForward', 'fastForward'])(
-		'asks before %s while the warning is on',
-		async (how) => {
-			await actions.integrate('feature/x', 'main', how);
-
-			expect(confirm).toHaveBeenCalledTimes(1);
-			expect(lastConfirmation().danger).toBe(false);
-			expect(api.integrate).toHaveBeenCalledWith('feature/x', how);
-		}
-	);
-
-	it('goes straight ahead on a merge with the warning off', async () => {
-		confirmHistoryRewrite = false;
-
-		await actions.integrate('feature/x', 'main', 'merge');
-
-		expect(confirm).not.toHaveBeenCalled();
-		expect(api.integrate).toHaveBeenCalledWith('feature/x', 'merge');
-	});
-
-	it('integrates nothing when declined', async () => {
-		confirm.mockResolvedValueOnce(false);
-		await actions.integrate('feature/x', 'main', 'merge');
-		expect(api.integrate).not.toHaveBeenCalled();
 	});
 });
 

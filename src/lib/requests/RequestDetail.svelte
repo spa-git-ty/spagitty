@@ -5,12 +5,12 @@
 	import { relativeTime } from '$lib/format';
 	import DiffPane from '$lib/diff/DiffPane.svelte';
 	import { CHECK_LABELS, REVIEW_LABELS, requests } from '$lib/requests/store.svelte';
+	import { goto } from '$app/navigation';
+	import { merger } from '$lib/merger/store.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import { dialog } from '$lib/ui/dialog.svelte';
-	import { notice } from '$lib/ui/notice.svelte';
-	import type { FileDiff, ReviewVerdict } from '$lib/types';
+	import type { FileDiff } from '$lib/types';
 
 	/**
 	 * The open pull request: what it is, what it changes, and what you have to
@@ -35,6 +35,13 @@
 		untrack(() => requests.loadFiles());
 	});
 
+	/** Every merge is made in Merger (FEAT-117). */
+	function openInMerger() {
+		if (!request) return;
+		merger.presentPullRequest(request);
+		void goto('/merge');
+	}
+
 	/** What each file's status is called, in the words the Diff screen uses. */
 	const STATUS_LABELS: Record<FileDiff['status'], string> = {
 		added: 'added',
@@ -43,55 +50,6 @@
 		renamed: 'renamed',
 		untracked: 'untracked'
 	};
-
-	/** The three things a reviewer can say, in the order they escalate. */
-	const VERDICTS: { value: ReviewVerdict; label: string; hint: string }[] = [
-		{ value: 'comment', label: 'Comment', hint: 'Leave a note without a verdict' },
-		{ value: 'approve', label: 'Approve', hint: 'Say it is good to merge' },
-		{
-			value: 'requestChanges',
-			label: 'Request changes',
-			hint: 'Say what has to change before it merges'
-		}
-	];
-
-	let verdict = $state<ReviewVerdict>('comment');
-	let comment = $state('');
-	let reviewOpen = $state(false);
-
-	/** Approving is the one verdict a host takes without a comment. */
-	const needsComment = $derived(verdict !== 'approve');
-	const canSubmit = $derived(
-		!requests.reviewing && (!needsComment || comment.trim().length > 0)
-	);
-
-	/**
-	 * Submit, once the reader has confirmed it.
-	 *
-	 * A review is outward-facing and cannot be taken back from here: everybody
-	 * watching the pull request sees it the moment it lands. That is what the
-	 * confirmation is for, and it names the verdict rather than asking "are you
-	 * sure" about an action the reader would have to remember.
-	 */
-	async function submit() {
-		const open = request;
-		if (!open) return;
-
-		const said = VERDICTS.find((entry) => entry.value === verdict)?.label ?? verdict;
-		const agreed = await dialog.confirm({
-			title: `${said} #${open.number}?`,
-			body: `This is posted to ${open.authorName} and everybody watching the pull request, and Spagitty cannot take it back.`,
-			confirmLabel: said,
-			danger: verdict === 'requestChanges'
-		});
-		if (!agreed) return;
-
-		if (await requests.review(verdict, comment)) {
-			notice.ok(`${said} sent for #${open.number}.`);
-			comment = '';
-			reviewOpen = false;
-		}
-	}
 </script>
 
 <section class="detail">
@@ -190,59 +148,7 @@
 		</section>
 
 		<footer class="actions">
-			{#if reviewOpen}
-				<div class="review">
-					<div class="verdicts" role="radiogroup" aria-label="What to say">
-						{#each VERDICTS as entry (entry.value)}
-							<button
-								class="verdict"
-								class:at={verdict === entry.value}
-								role="radio"
-								aria-checked={verdict === entry.value}
-								title={entry.hint}
-								onclick={() => (verdict = entry.value)}
-							>
-								{entry.label}
-							</button>
-						{/each}
-					</div>
-
-					<textarea
-						class="comment"
-						rows="3"
-						bind:value={comment}
-						placeholder={needsComment
-							? 'What has to change, or what you wanted to say'
-							: 'Anything to add (optional)'}
-						aria-label="Review comment"
-					></textarea>
-
-					{#if requests.reviewError}
-						<p class="note error">{requests.reviewError}</p>
-					{/if}
-
-					<div class="row">
-						<Btn primary disabled={!canSubmit} onclick={submit}>
-							{requests.reviewing ? 'Sending…' : 'Submit review'}
-						</Btn>
-						<Btn disabled={requests.reviewing} onclick={() => (reviewOpen = false)}>
-							Cancel
-						</Btn>
-					</div>
-					{#if needsComment && comment.trim().length === 0}
-						<p class="note">
-							{verdict === 'requestChanges' ? 'Requesting changes' : 'A comment'} needs
-							something written with it.
-						</p>
-					{/if}
-				</div>
-			{:else}
-				<Btn onclick={() => (reviewOpen = true)}>
-					<Icon name="check" size="1em" />
-					Review
-				</Btn>
-				<Btn disabled title="Merging is not built yet">Merge</Btn>
-			{/if}
+			<Btn onclick={openInMerger} title="Merge this pull request in Merger">Open in Merger</Btn>
 		</footer>
 	{/if}
 </section>
@@ -366,54 +272,11 @@
 		border-top: 1px solid var(--soft);
 	}
 
+
 	.actions {
 		display: flex;
 		gap: 6px;
-		margin-top: auto;
-		padding-top: 6px;
-	}
-
-	.review {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		width: 100%;
-	}
-
-	.verdicts {
-		display: flex;
-		gap: 4px;
-		flex-wrap: wrap;
-	}
-
-	.verdict {
-		padding: 3px 8px;
-		border-radius: var(--r-button);
-		border: 1px solid var(--soft);
-		font-size: var(--fs-secondary);
-		transition:
-			background var(--t-fast) var(--ease),
-			border-color var(--t-fast) var(--ease);
-	}
-
-	.verdict:hover {
-		background: var(--hover);
-	}
-
-	.verdict.at {
-		background: var(--accent-soft);
-		border-color: var(--accent);
-	}
-
-	.comment {
-		width: 100%;
-		resize: vertical;
-		font: inherit;
-		font-size: var(--fs-secondary);
-	}
-
-	.row {
-		display: flex;
-		gap: 6px;
+		flex: none;
+		padding-top: 4px;
 	}
 </style>

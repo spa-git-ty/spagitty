@@ -34,7 +34,7 @@ import { delight } from '$lib/delight/store.svelte';
 import { cherryPicked, merged, recovered, switchedBranch } from '$lib/delight/watch';
 import { dialog } from '../ui/dialog.svelte';
 import { notice } from '../ui/notice.svelte';
-import type { Integration, PullMode, ResetMode, StashAction } from '../types';
+import type { PullMode, ResetMode, StashAction } from '../types';
 
 /** Re-read HEAD, the counts and the walk. */
 async function refresh(): Promise<void> {
@@ -295,63 +295,6 @@ export async function checkoutBranch(name: string): Promise<void> {
 
 	switchedBranch();
 	if (wasDetached) recovered('detached');
-}
-
-/** What each way of integrating one branch into another does, for the menu. */
-export const INTEGRATIONS: { how: Integration; label: string; body: (s: string, t: string) => string }[] =
-	[
-		{
-			how: 'merge',
-			label: 'Merge',
-			body: (source, target) =>
-				`${source} is merged into ${target}. Git fast-forwards if it can, and writes a merge commit if it cannot.`
-		},
-		{
-			how: 'mergeNoFastForward',
-			label: 'Merge, always commit',
-			body: (source, target) =>
-				`${source} is merged into ${target} with a merge commit, even where a fast-forward was possible. The branch stays visible in the graph.`
-		},
-		{
-			how: 'fastForward',
-			label: 'Fast-forward',
-			body: (source, target) =>
-				`${target} moves up to ${source}. No commit is written, and git refuses rather than merging if it cannot.`
-		},
-		{
-			how: 'rebase',
-			label: 'Rebase',
-			body: (source, target) =>
-				`${target} is replayed on top of ${source}. Its commits are rewritten, so anything already pushed will need a force push.`
-		}
-	];
-
-export async function integrate(source: string, target: string, how: Integration): Promise<void> {
-	const entry = INTEGRATIONS.find((candidate) => candidate.how === how);
-	if (!entry) return;
-
-	const rewrites = how === 'rebase';
-	if (rewrites || warnsOnRewrite()) {
-		const agreed = await dialog.confirm({
-			title: `${entry.label} ${source} into ${target}`,
-			body: entry.body(source, target),
-			confirmLabel: entry.label,
-			danger: rewrites
-		});
-		if (!agreed) return;
-	}
-
-	const done = await perform(
-		`${entry.label}d ${source} into ${target}`,
-		`Could not ${entry.label.toLowerCase()}`,
-		() => api.integrate(source, how)
-	);
-	if (!done) return;
-
-	// A rebase integration is a rebase, not a merge. Counting it as one would
-	// let Octopus be earned without ever folding two histories together.
-	if (how === 'rebase') delight.record({ kind: 'rebase', commits: 0, conflicts: 0, interactive: false });
-	else merged(how === 'fastForward');
 }
 
 export async function renameBranch(name: string): Promise<void> {

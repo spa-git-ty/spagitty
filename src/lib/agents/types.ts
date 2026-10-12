@@ -78,7 +78,15 @@ export interface RepoRules {
 	markComments: boolean;
 }
 
+export interface OmpOptions {
+	model: string;
+	profile: string;
+}
+
 export interface AgentsSnapshot {
+	codexFullAccess: boolean;
+	agyAutoApprove: boolean;
+	omp: OmpOptions;
 	local: LocalAgent[];
 	remote: RemoteAgent[];
 	defaults: Defaults;
@@ -180,6 +188,16 @@ export interface Tokens {
 	output: number;
 }
 
+/** What one line of a step's record is, as the stream was read (FEAT-118). */
+export type EventKind = 'sent' | 'command' | 'tool' | 'read' | 'reply' | 'result' | 'error';
+
+export interface StepEvent {
+	kind: EventKind;
+	text: string;
+	/** The file it is about, for a read or an edit. */
+	path?: string;
+}
+
 export interface Step {
 	index: number;
 	kind: StepKind;
@@ -189,6 +207,10 @@ export interface Step {
 	endedAt: number | null;
 	gate: Gate | null;
 	events: string[];
+	/** The same lines, each with its kind. */
+	record: StepEvent[];
+	/** What Spagitty sent the agent for this step, as it was sent. */
+	prompt: string | null;
 	sent: string[];
 	refused: string[];
 	note: string | null;

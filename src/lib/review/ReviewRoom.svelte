@@ -17,6 +17,7 @@
 	import { review } from './store.svelte';
 	import { sendable } from './agent-drafts';
 	import Chip from '$lib/ui/Chip.svelte';
+	import { filesView } from './files-view.svelte';
 	import AgentCard from '$lib/agents/AgentCard.svelte';
 	import AssignPopover from '$lib/agents/AssignPopover.svelte';
 	import { agents } from '$lib/agents/store.svelte';
@@ -69,6 +70,15 @@
 		} catch {
 			// A private window: the choice lasts the session.
 		}
+	}
+
+	/** `f` puts the files away and brings them back, like the conversation's tab. */
+	function onkeydown(event: KeyboardEvent) {
+		const target = event.target as HTMLElement | null;
+		if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+		if (event.metaKey || event.ctrlKey || event.altKey || event.key !== 'f') return;
+		event.preventDefault();
+		filesView.toggleHidden();
 	}
 
 	const openThreads = $derived(room.threads.filter((thread) => !thread.resolved).length);
@@ -168,6 +178,8 @@
 	});
 </script>
 
+<svelte:window {onkeydown} />
+
 {#snippet sideTabs()}
 	<div class="side-tabs" role="tablist" aria-label="Side card">
 		<Chip active={side === 'conversation'} onclick={() => (side = 'conversation')}>Conversation {openThreads}</Chip>
@@ -224,12 +236,24 @@
 				<span>·</span>
 				<span class="checks {pr.checks}">{CHECK_LABELS[pr.checks]}</span>
 			{/if}
+			{#if pr.mergeable === false}
+				<span>·</span>
+				<span class="conflicts">Conflicts with {pr.targetBranch}</span>
+			{/if}
 			{#if host}<span>·</span><span>{host}</span>{/if}
 		</div>
 
 		<div class="body">
-			<RoomFiles {assignment} />
-			<Splitter panel="roomFiles" label="Resize the files" />
+			{#if filesView.hidden}
+				<button class="files-tab" onclick={() => filesView.setHidden(false)} title="Show the files (f)">
+					<Icon name="chevron-right" size="0.95em" weight={2.2} />
+					<span class="tab-label">Files</span>
+					{#if total - viewed > 0}<span class="tab-count">{total - viewed}</span>{/if}
+				</button>
+			{:else}
+				<RoomFiles {assignment} />
+				<Splitter panel="roomFiles" label="Resize the files" />
+			{/if}
 			<section class="diff" aria-label="Changes">
 				{#if room.fallback}
 					<p class="fallback note" title={room.fallback}>
@@ -268,6 +292,7 @@
 							follow={following}
 							onfollow={(on) => (following = on)}
 							ongo={goTo}
+							onfile={(path) => room.select(path)}
 							onaccept={(proposals) => agentWork.acceptAll(assignment, proposals)}
 							onlast={() => (finishing = true)}
 							onhide={() => setConversationHidden(true)}
@@ -313,7 +338,8 @@
 	}
 
 	/* The put-away Conversation card, as a tab down the room's right edge. */
-	.conversation-tab {
+	.conversation-tab,
+	.files-tab {
 		flex: none;
 		width: 30px;
 		margin: 0 0 10px 6px;
@@ -328,7 +354,8 @@
 		color: var(--muted);
 	}
 
-	.conversation-tab:hover {
+	.conversation-tab:hover,
+	.files-tab:hover {
 		color: var(--ink);
 		background: var(--hover);
 	}
@@ -452,7 +479,8 @@
 		color: var(--ok);
 	}
 
-	.checks.failing {
+	.checks.failing,
+	.conflicts {
 		color: var(--danger);
 	}
 
@@ -486,5 +514,9 @@
 		padding: 6px 12px;
 		border-radius: var(--r-panel);
 		background: color-mix(in srgb, var(--warn) 12%, transparent);
+	}
+
+	.files-tab {
+		margin: 0 6px 10px 0;
 	}
 </style>

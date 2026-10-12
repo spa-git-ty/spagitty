@@ -75,8 +75,8 @@ it('opens on the first file, in three columns, with every way out', async () => 
 	expect(view.text()).toContain('Merging feat/tab-drag into main · merge commit');
 	expect(view.text()).toContain('0 of 4 resolved');
 	const heads = view.all('.column-head').map((head) => text(head));
-	expect(heads).toEqual(['Amain· lands here', 'Result· lands in main', 'comes in ·feat/tab-dragB']);
-	expect(text(cards()[0])).toContain('Choose what lands here');
+	expect(heads).toEqual(['Amain· merged into', 'Result· goes to main', 'comes in ·feat/tab-dragB']);
+	expect(text(cards()[0])).toContain('Choose what goes here');
 	expect(text(cards()[0])).toContain('from e41c0b7 · fix(chrome): hidden repositories leave the tab row');
 	for (const label of ['Take main', 'Take feat/tab-drag', 'Both, main first', 'Both, feat/tab-drag first', 'Pick lines from each side', 'Edit the result by hand']) {
 		expect(labelled(label)).toBeDefined();
@@ -144,7 +144,7 @@ it('shows the base, steps through the pill, and lands every choice', async () =>
 	await vi.waitFor(() => expect(api.setMergerState).toHaveBeenCalled(), { timeout: 2000 });
 
 	click(button('Complete merge'));
-	await vi.waitFor(() => expect(view.text()).toContain('Ready to land on main'));
+	await vi.waitFor(() => expect(view.text()).toContain('Ready to merge into main'));
 	expect(view.text()).toContain('Conflict 4 · CHANGELOG.md:3');
 	expect(view.text()).toContain('Both, main first');
 	click(button('Create merge commit'));
@@ -236,8 +236,8 @@ it('with an agent set up, offers one way in beside Resolve 4 conflicts', async (
 	await vi.waitFor(() => expect(button('Resolve 4 conflicts')).toBeDefined());
 	click(button('Assign an agent…'));
 	const popover = view.get('[role="dialog"][aria-label="Assign an agent"]');
-	expect(popover.textContent).toContain('Stops at each conflict and at the checks.');
-	expect(popover.textContent).toContain('Resolve, check and land');
+	expect(popover.textContent).toContain('Stops for you at each conflict and at the checks.');
+	expect(popover.textContent).toContain('Resolve, check and merge');
 });
 
 it('applies what the agent chose, badged as its own, and waits on what it is unsure of', async () => {
@@ -295,8 +295,8 @@ it('the commit says who chose each conflict, and credits the agent', async () =>
 	await vi.waitFor(() => expect(button('Complete merge').disabled).toBe(false));
 
 	click(button('Complete merge'));
-	await vi.waitFor(() => expect(view.text()).toContain('Ready to land on main'));
-	expect(view.text()).toContain('Codex, applied at Sign off');
+	await vi.waitFor(() => expect(view.text()).toContain('Ready to merge into main'));
+	expect(view.text()).toContain('Codex, applied before you merged');
 	expect(view.text()).toContain('Codex, accepted by you');
 	click(button('Create merge commit'));
 	await vi.waitFor(() => expect(api.mergerLand).toHaveBeenCalled());

@@ -61,6 +61,7 @@
 				<span class="tag mono">{pr.repository}</span>
 			{/if}
 			<span class="tag mono">{pr.sourceBranch}</span>
+			{#if chips.base}<span class="tag danger">{chips.base}</span>{/if}
 			{#if chips.reviewed}
 				<span class="tag" class:on={pushedSince(pr)}>{chips.reviewed}</span>
 			{/if}
@@ -167,6 +168,13 @@
 		border-color: color-mix(in srgb, var(--accent) 62%, transparent);
 		color: var(--accent);
 		background-color: color-mix(in srgb, var(--accent) 14%, var(--surface));
+	}
+
+	/* The host cannot merge it: the same red as failing checks. */
+	.tag.danger {
+		color: var(--danger);
+		border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+		background-color: color-mix(in srgb, var(--danger) 11%, transparent);
 	}
 
 	/* A conflict fix is the sky lane's colour everywhere it appears. */

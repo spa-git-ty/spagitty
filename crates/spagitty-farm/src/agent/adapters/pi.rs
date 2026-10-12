@@ -2,24 +2,12 @@
 
 //! Oh My Pi.
 //!
-//! # Why this one takes its prompt on standard input
-//!
-//! The other three published a documented non-interactive flag before this was
-//! written; this one is driven the way any well-behaved Unix program can be
-//! driven — the prompt on standard input, the transcript on standard output.
-//! That is the lowest common denominator, it needs no knowledge of a flag set
-//! that may change, and it is the mode that keeps working if the command line
-//! is reorganised.
-//!
-//! The cost is that a provider which *would* have accepted a prompt argument
-//! now gets a pipe. That is a fair trade for not guessing at flags, and a user
-//! who knows better can add them: `extra_args` is appended here as it is
-//! everywhere, and the input mode is a field on the definition rather than a
-//! constant, so switching this agent to `CliPrompt` is a settings change.
+//! `omp --print` runs one turn and exits. Existing stdin definitions stay
+//! compatible; the prompt can also be passed as a positional argument.
 
 use std::path::PathBuf;
 
-use crate::agent::adapter::{AgentAdapter, AgentCommand, AgentRunRequest};
+use crate::agent::adapter::{prompt_needs_stdin, AgentAdapter, AgentCommand, AgentRunRequest};
 use crate::model::{
     AgentCapability, AgentDefinition, AgentId, AgentInputMode, AgentProvider, AgentRole,
     AgentTraits,
@@ -33,7 +21,7 @@ impl AgentAdapter for PiAdapter {
     }
 
     fn executables(&self) -> &'static [&'static str] {
-        &["pi", "ohmypi"]
+        &["omp", "pi", "ohmypi"]
     }
 
     fn default_definition(&self, executable: PathBuf) -> AgentDefinition {
@@ -44,6 +32,7 @@ impl AgentAdapter for PiAdapter {
             executable,
             capabilities: [
                 AgentCapability::Coding,
+                AgentCapability::Review,
                 AgentCapability::Research,
                 AgentCapability::Documentation,
             ]
@@ -67,8 +56,13 @@ impl AgentAdapter for PiAdapter {
         // The definition decides, not this function: a user who has switched
         // the input mode gets what they asked for rather than what this
         // provider shipped with.
-        let on_stdin = definition.input_mode == AgentInputMode::Stdin;
-        let mut args = definition.extra_args.clone();
+        let on_stdin = definition.input_mode == AgentInputMode::Stdin
+            || prompt_needs_stdin(&definition.executable, &request.prompt);
+        let mut args = vec!["--print".into()];
+        if request.unattended {
+            args.push("--auto-approve".into());
+        }
+        args.extend(definition.extra_args.clone());
         if !on_stdin {
             args.push(request.prompt.clone());
         }
@@ -101,7 +95,7 @@ mod tests {
     fn the_prompt_goes_down_the_pipe_by_default() {
         let command = PiAdapter.command(&definition(), &request());
         assert_eq!(command.stdin.as_deref(), Some("Write the docs"));
-        assert!(command.args.is_empty());
+        assert_eq!(command.args, ["--print", "--auto-approve"]);
     }
 
     #[test]
@@ -114,7 +108,23 @@ mod tests {
     }
 
     #[test]
-    fn both_names_are_searched() {
-        assert_eq!(PiAdapter.executables(), &["pi", "ohmypi"]);
+    fn omp_is_preferred_to_legacy_names() {
+        assert_eq!(PiAdapter.executables(), &["omp", "pi", "ohmypi"]);
+        assert!(definition().capabilities.contains(&AgentCapability::Review));
+    }
+
+    #[test]
+    fn a_windows_shim_gets_a_many_line_prompt_on_stdin() {
+        let def = PiAdapter.default_definition("C:/npm/omp.cmd".into());
+        let req = AgentRunRequest {
+            workdir: "/tmp".into(),
+            prompt: "one\ntwo".into(),
+            unattended: false,
+        };
+        let out = PiAdapter.command(&def, &req);
+        assert_eq!(
+            out.stdin.is_some(),
+            cfg!(windows) || def.input_mode == AgentInputMode::Stdin
+        );
     }
 }

@@ -83,7 +83,7 @@ it('continues once the stop is resolved, then finishes from the dialog', async (
 	await vi.waitFor(() => expect(button('Continue').disabled).toBe(false));
 	click(button('Continue'));
 
-	await vi.waitFor(() => expect(view.text()).toContain('Ready to land on main'));
+	await vi.waitFor(() => expect(view.text()).toContain('Ready to merge into main'));
 	const [, sent] = vi.mocked(api.mergerRebaseContinue).mock.calls[0];
 	expect(sent).toEqual([{ path: 'src/lib/metrics.ts', text: 'export const metrics = {\n\trailWidth: 62,\n\ttabHeight: 30,\n\ttabGap: 4,\n\tpaneRadius: 18,\n};\n' }]);
 	expect(view.text()).toContain('Each replayed commit keeps its own message.');

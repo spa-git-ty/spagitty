@@ -224,7 +224,7 @@
 			{/each}
 			{#if editing}
 				<div class="edit">
-					<label class="note small mine-note" for="edit-{file.path}-{region.index}">Edit freely. This text is what lands.</label>
+					<label class="note small mine-note" for="edit-{file.path}-{region.index}">Edit freely. This text is what is kept.</label>
 					<textarea
 						id="edit-{file.path}-{region.index}"
 						spellcheck="false"
@@ -235,7 +235,7 @@
 				</div>
 			{:else if !lines}
 				<div class="choose">
-					<span class="choose-title">Choose what lands here</span>
+					<span class="choose-title">Choose what goes here</span>
 					<span class="note small">{placeholder(region, names)}</span>
 				</div>
 			{:else if lines.length === 0}

@@ -12,7 +12,7 @@
  * is what makes an unhandled case a type error rather than a blank cell.
  */
 
-export type AgentProvider = 'claudeCode' | 'codex' | 'cursor' | 'ohMyPi' | 'custom';
+export type AgentProvider = 'claudeCode' | 'codex' | 'cursor' | 'ohMyPi' | 'agy' | 'custom';
 
 export type AgentCapability =
 	| 'planning'

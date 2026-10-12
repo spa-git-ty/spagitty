@@ -4,6 +4,7 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import { agentRead, readingNow } from '$lib/agents/levels';
 	import type { Assignment } from '$lib/agents/types';
+	import { filesView } from './files-view.svelte';
 	import { room } from './room.svelte';
 
 	/**
@@ -47,15 +48,25 @@
 	const here = $derived(assignment ? readingNow(assignment) : null);
 	const read = $derived(assignment ? agentRead(assignment) : new Set<string>());
 	const agentName = $derived(assignment?.agent.name ?? 'Agent');
+	const compact = $derived(filesView.size === 'compact');
 </script>
 
-<aside class="files" aria-label="Touched files">
+<aside class="files" class:compact aria-label="Touched files">
+	<div class="bar">
+		<div class="sizes" role="radiogroup" aria-label="How the files are listed">
+			<Chip active={!compact} title="A file's name with what is known about it" onclick={() => filesView.setSize('detailed')}>Detailed</Chip>
+			<Chip active={compact} title="One line per file" onclick={() => filesView.setSize('compact')}>Compact</Chip>
+		</div>
+		<button class="hide" title="Put the files away (f)" aria-label="Put the files away" onclick={() => filesView.setHidden(true)}>
+			<Icon name="chevron-left" size="0.95em" weight={2.2} />
+		</button>
+	</div>
 	{#if local}
 		<div class="filters">
 			<Chip active={room.filter === 'all'} onclick={() => room.setFilter('all')}>All {room.files.length}</Chip>
 			<Chip active={room.filter === 'author'} onclick={() => room.setFilter('author')}>Author {authors}</Chip>
 			<Chip active={room.filter === 'conflict'} onclick={() => room.setFilter('conflict')}
-				>Conflict fixes {fixes}</Chip
+				>{compact ? 'Fixes' : 'Conflict fixes'} {fixes}</Chip
 			>
 			{#if findings > 0 || room.filter === 'agent'}
 				<Chip active={room.filter === 'agent'} onclick={() => room.setFilter('agent')}>
@@ -68,6 +79,9 @@
 		{#each room.visible as file (file.path)}
 			{@const viewed = room.isViewed(file.path)}
 			{@const threads = room.openThreadsOn(file.path)}
+			{@const author = local && room.isAuthors(file.path)}
+			{@const fix = room.hasFix(file.path)}
+			{@const readByAgent = read.has(file.path) && !waiting.get(file.path)}
 			<li class:on={room.layout === 'one' && room.selected === file.path}>
 				<input
 					type="checkbox"
@@ -77,14 +91,26 @@
 				/>
 				<button class="pick" title={file.path} onclick={() => room.select(file.path)}>
 					<span class="name mono" class:viewed>{name(file.path)}</span>
-					<span class="facts">
-						<span class="mono"><span class="add">+{file.added}</span> <span class="del">−{file.removed}</span></span>
-						{#if local && room.isAuthors(file.path)}<span class="by"><span class="dot author"></span>author</span>{/if}
-						{#if room.hasFix(file.path)}<span class="fix"><span class="dot"></span>conflict fix</span>{/if}
-						{#if threads > 0}<span class="threads">{threads} {threads === 1 ? 'thread' : 'threads'}</span>{/if}
-						{#if read.has(file.path) && !waiting.get(file.path)}<span class="read" title="{agentName} read this file. Viewed is yours to tick.">agent read</span>{/if}
-					</span>
+					{#if compact}
+						<span class="counts mono"><span class="add">+{file.added}</span> <span class="del">−{file.removed}</span></span>
+					{:else}
+						<span class="facts">
+							<span class="mono"><span class="add">+{file.added}</span> <span class="del">−{file.removed}</span></span>
+							{#if author}<span class="by"><span class="dot author"></span>author</span>{/if}
+							{#if fix}<span class="fix"><span class="dot"></span>conflict fix</span>{/if}
+							{#if threads > 0}<span class="threads">{threads} {threads === 1 ? 'thread' : 'threads'}</span>{/if}
+							{#if readByAgent}<span class="read" title="{agentName} read this file. Viewed is yours to tick.">agent read</span>{/if}
+						</span>
+					{/if}
 				</button>
+				{#if compact}
+					<span class="marks">
+						{#if author}<span class="dot author" title="The author's own commits"></span>{/if}
+						{#if fix}<span class="dot" title="Written while fixing a merge conflict"></span>{/if}
+						{#if threads > 0}<span class="dot thread" title="{threads} {threads === 1 ? 'thread' : 'threads'}"></span>{/if}
+						{#if readByAgent}<span class="dot read-dot" title="{agentName} read this file"></span>{/if}
+					</span>
+				{/if}
 				{#if waiting.get(file.path)}
 					<span class="found" title="{agentName}’s findings waiting for you">
 						<Icon name="agent" size="0.9em" weight={2} />{waiting.get(file.path)}
@@ -100,8 +126,10 @@
 			</li>
 		{/each}
 	</ul>
-	{#if local}
-		<div class="legend note">
+		{#if local}
+<div class="legend note" class:hover={compact}>
+			{#if compact}<button type="button" class="legend-label">Legend</button>{/if}
+			<div class="legend-body">
 			<span><span class="dot author"></span>Author's own commits</span>
 			<span><span class="dot"></span>Written while fixing a merge conflict</span>
 			{#if assignment}
@@ -112,13 +140,13 @@
 			{:else if room.conflicts?.truncated}
 				<span>Only the newest 20 merges were looked at.</span>
 			{/if}
+			</div>
 		</div>
 	{/if}
 </aside>
 
 <style>
-	/* The agent's marks (2.0): its colour and its hexagon, kept apart from
-	   the viewed tick, which only a person sets. */
+	/* Findings keep the agent's colour and hexagon beside the viewed tick. */
 	.found,
 	.agent-mark,
 	.agent-legend {
@@ -272,7 +300,7 @@
 		font-size: var(--fs-mono);
 	}
 
-	.legend > span {
+	.legend-body > span {
 		display: flex;
 		align-items: center;
 		gap: 6px;
@@ -280,5 +308,118 @@
 
 	.error {
 		color: var(--danger);
+	}
+
+	.bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px;
+		padding: 2px 8px 8px;
+	}
+
+	.sizes {
+		display: flex;
+		gap: 6px;
+	}
+
+	.hide {
+		display: grid;
+		place-items: center;
+		width: 26px;
+		height: 26px;
+		border-radius: 8px;
+		color: var(--muted);
+	}
+
+	.hide:hover {
+		color: var(--ink);
+		background: var(--hover);
+	}
+
+	/* Compact: a line per file, with what is known as small dots. */
+	.compact li {
+		gap: 8px;
+		padding: 3px 10px;
+	}
+
+	.compact .pick {
+		flex-direction: row;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 8px;
+	}
+
+	.compact .name {
+		font-weight: 500;
+	}
+
+	.counts {
+		flex: none;
+		font-size: var(--fs-mono);
+		color: var(--muted);
+	}
+
+	.marks {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		flex: none;
+	}
+
+	.dot.thread {
+		background: var(--accent);
+	}
+
+	.dot.read-dot {
+		background: transparent;
+		border: 2px solid var(--agent);
+		box-sizing: border-box;
+	}
+
+	.compact .filters {
+		padding-bottom: 6px;
+	}
+
+	/* In compact the legend waits for the pointer. */
+	.legend.hover {
+		position: relative;
+		padding: 6px 10px;
+		cursor: default;
+	}
+
+	.legend.hover .legend-body {
+		display: none;
+		position: absolute;
+		left: 8px;
+		bottom: calc(100% + 4px);
+		z-index: 3;
+		flex-direction: column;
+		gap: 5px;
+		padding: 10px 12px;
+		border-radius: var(--r-floating);
+		background: var(--surface-2);
+		border: 1px solid var(--pane-edge);
+		box-shadow: var(--shadow-1);
+		min-width: 220px;
+	}
+
+	.legend.hover:hover .legend-body,
+	.legend.hover:focus .legend-body,
+	.legend.hover:focus-within .legend-body {
+		display: flex;
+	}
+
+	.legend-body {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	.legend-label {
+		font: inherit;
+		color: var(--muted);
+		text-decoration: underline dotted;
+		text-underline-offset: 3px;
 	}
 </style>

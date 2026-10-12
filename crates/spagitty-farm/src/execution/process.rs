@@ -209,8 +209,9 @@ impl Drop for Session {
 /// See [`crate::execution::narrate`] for why that translation happens here and
 /// not in the interface.
 ///
-/// The environment is the one Spagitty was started with, minus nothing and plus
-/// two: `SPAGITTY_FARM` so an agent can tell it is being run by a farm, and
+/// The environment is the one Spagitty was started with, with standard CLI
+/// install directories appended to PATH and two additions: `SPAGITTY_FARM`
+/// so an agent can tell it is being run by a farm, and
 /// `GIT_TERMINAL_PROMPT=0` so a git operation the agent performs cannot block
 /// on a credential prompt no terminal will answer. Secrets are never added —
 /// the plan says never to inject them, and an agent that needs credentials
@@ -223,9 +224,11 @@ pub fn start(
     narrator: Box<dyn Narrator>,
 ) -> Result<Session> {
     let mut process = Command::new(&command.program);
+    process.args(&command.args).current_dir(workdir);
+    if let Some(path) = crate::agent::detector::search_path() {
+        process.env("PATH", path);
+    }
     process
-        .args(&command.args)
-        .current_dir(workdir)
         .env("SPAGITTY_FARM", "1")
         .env("GIT_TERMINAL_PROMPT", "0")
         .stdout(Stdio::piped())

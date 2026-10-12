@@ -7,8 +7,6 @@
 	import { relativeTime } from '$lib/format';
 	import { requests } from '$lib/requests/store.svelte';
 	import type { DiffLine, FileDiff, PullRequestComment } from '$lib/types';
-	import Btn from '$lib/ui/Btn.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
 
 	interface Props {
 		file: FileDiff | null;
@@ -32,14 +30,6 @@
 		return colours;
 	});
 
-	/** Line currently having an active composer open: `${side}:${lineNum}`. */
-	let activeComposer = $state<string | null>(null);
-	let composerText = $state('');
-
-	/** Replies in progress: commentId -> text */
-	let replyTexts = $state<Record<number, string>>({});
-	let replySubmitting = $state<Record<number, boolean>>({});
-
 	function sign(line: DiffLine): string {
 		if (line.origin === 'added') return '+';
 		if (line.origin === 'removed') return '−';
@@ -59,59 +49,13 @@
 		return null;
 	}
 
-	function getDraftComment(line: DiffLine) {
-		const key = lineKey(line);
-		if (!key || !path) return null;
-		return (
-			requests.draftComments.find(
-				(c) => c.path === path && c.line === key.num && c.side === key.side
-			) ?? null
-		);
-	}
-
+	/** The comments already on a line: read here, answered in Review (FEAT-116). */
 	function getPublishedComments(line: DiffLine): PullRequestComment[] {
 		const key = lineKey(line);
 		if (!key || !path) return [];
 		return requests.comments.filter(
 			(c) => c.path === path && c.line === key.num && c.side === key.side
 		);
-	}
-
-	function openComposer(line: DiffLine) {
-		const key = lineKey(line);
-		if (!key) return;
-		activeComposer = `${key.side}:${key.num}`;
-		const draft = getDraftComment(line);
-		composerText = draft ? draft.body : '';
-	}
-
-	function closeComposer() {
-		activeComposer = null;
-		composerText = '';
-	}
-
-	function saveDraft(line: DiffLine) {
-		const key = lineKey(line);
-		if (!key || !path || !composerText.trim()) return;
-		requests.addDraftComment(path, key.num, key.side, composerText);
-		closeComposer();
-	}
-
-	function removeDraft(line: DiffLine) {
-		const key = lineKey(line);
-		if (!key || !path) return;
-		requests.removeDraftComment(path, key.num, key.side);
-	}
-
-	async function submitReply(commentId: number) {
-		const text = replyTexts[commentId];
-		if (!text || !text.trim()) return;
-		replySubmitting[commentId] = true;
-		const ok = await requests.replyToComment(commentId, text.trim());
-		replySubmitting[commentId] = false;
-		if (ok) {
-			replyTexts[commentId] = '';
-		}
 	}
 </script>
 
@@ -138,11 +82,8 @@
 			<section class="hunk">
 				<div class="hunk-head mono">{hunk.header}</div>
 				{#each hunk.lines as line, row (row)}
-					{@const key = lineKey(line)}
-					{@const composerId = key ? `${key.side}:${key.num}` : ''}
-					{@const draft = getDraftComment(line)}
 					{@const published = getPublishedComments(line)}
-					{@const hasComments = draft !== null || published.length > 0 || activeComposer === composerId}
+					{@const hasComments = published.length > 0}
 
 					<div class="line-row {line.origin}" class:has-comments={hasComments}>
 						<div class="line-content">
@@ -150,14 +91,6 @@
 							<span class="num">{line.new ?? ''}</span>
 							<span class="sign">{sign(line)}</span>
 							{@render code(line)}
-
-							<button
-								class="comment-trigger"
-								title="Add inline review comment"
-								onclick={() => openComposer(line)}
-							>
-								<Icon name="plus" size="0.9em" />
-							</button>
 						</div>
 
 						{#if hasComments}
@@ -172,68 +105,8 @@
 											{/if}
 										</div>
 										<div class="comment-body">{comment.body}</div>
-
-										{#if requests.role === 'developer' && !comment.resolved}
-											<div class="developer-actions">
-												<button
-													class="resolve-btn"
-													onclick={() => requests.resolveComment(comment.id)}
-												>
-													Mark as resolved
-												</button>
-											</div>
-										{/if}
-
-										<!-- Reply box for developer or reviewer -->
-										<div class="reply-section">
-											<input
-												type="text"
-												class="reply-input"
-												placeholder="Reply to this thread…"
-												bind:value={replyTexts[comment.id]}
-												onkeydown={(e) => {
-													if (e.key === 'Enter') submitReply(comment.id);
-												}}
-											/>
-											<Btn
-												disabled={!replyTexts[comment.id]?.trim() || replySubmitting[comment.id]}
-												onclick={() => submitReply(comment.id)}
-											>
-												Reply
-											</Btn>
-										</div>
 									</div>
 								{/each}
-
-								{#if draft}
-									<div class="comment-card draft">
-										<div class="comment-header">
-											<span class="author-badge mono">Pending Review Draft</span>
-											<button class="delete-draft-btn" onclick={() => removeDraft(line)}>
-												Delete
-											</button>
-										</div>
-										<div class="comment-body">{draft.body}</div>
-									</div>
-								{/if}
-
-								{#if activeComposer === composerId}
-									<div class="composer-card">
-										<div class="composer-title note">Add inline review comment (Line {key?.num})</div>
-										<textarea
-											class="composer-input"
-											rows="3"
-											placeholder="Leave a comment or change request on this line…"
-											bind:value={composerText}
-										></textarea>
-										<div class="composer-actions">
-											<Btn primary disabled={!composerText.trim()} onclick={() => saveDraft(line)}>
-												Add to review
-											</Btn>
-											<Btn onclick={closeComposer}>Cancel</Btn>
-										</div>
-									</div>
-								{/if}
 							</div>
 						{/if}
 					</div>
@@ -255,26 +128,12 @@
 							{#if row.left}
 								<span class="num">{row.left.old ?? ''}</span>
 								{@render code(row.left)}
-								<button
-									class="comment-trigger"
-									title="Add inline review comment"
-									onclick={() => row.left && openComposer(row.left)}
-								>
-									<Icon name="plus" size="0.9em" />
-								</button>
 							{/if}
 						</div>
 						<div class="side {row.right?.origin ?? 'blank'}">
 							{#if row.right}
 								<span class="num">{row.right.new ?? ''}</span>
 								{@render code(row.right)}
-								<button
-									class="comment-trigger"
-									title="Add inline review comment"
-									onclick={() => row.right && openComposer(row.right)}
-								>
-									<Icon name="plus" size="0.9em" />
-								</button>
 							{/if}
 						</div>
 					</div>
@@ -331,37 +190,6 @@
 		align-items: center;
 		min-width: 100%;
 		position: relative;
-	}
-
-	.line-content:hover .comment-trigger {
-		opacity: 1;
-		pointer-events: auto;
-	}
-
-	.comment-trigger {
-		position: absolute;
-		left: 4px;
-		top: 2px;
-		width: 18px;
-		height: 18px;
-		border-radius: 3px;
-		border: 1px solid var(--line);
-		background: var(--surface);
-		color: var(--ink);
-		display: grid;
-		place-items: center;
-		opacity: 0;
-		pointer-events: none;
-		cursor: pointer;
-		z-index: 3;
-		padding: 0;
-		box-shadow: none;
-	}
-
-	.comment-trigger:hover {
-		background: var(--accent);
-		color: var(--on-accent);
-		border-color: var(--accent);
 	}
 
 	.num {
@@ -421,11 +249,6 @@
 		min-width: 0;
 	}
 
-	.side:hover .comment-trigger {
-		opacity: 1;
-		pointer-events: auto;
-	}
-
 	.side .text {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
@@ -445,22 +268,6 @@
 	}
 
 	.comment-card,
-	.composer-card {
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: var(--r-panel);
-		padding: 8px 10px;
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		box-shadow: none;
-	}
-
-	.comment-card.draft {
-		border-color: var(--accent);
-		background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-	}
-
 	.comment-card.resolved {
 		opacity: 0.75;
 		background: var(--hover);
@@ -485,79 +292,10 @@
 		font-weight: 500;
 	}
 
-	.delete-draft-btn {
-		background: none;
-		border: none;
-		color: var(--danger);
-		font-size: var(--fs-secondary);
-		cursor: pointer;
-		padding: 0;
-	}
-
-	.delete-draft-btn:hover {
-		text-decoration: underline;
-	}
-
 	.comment-body {
 		font-size: var(--fs-ui);
 		white-space: pre-wrap;
 		color: var(--ink);
 	}
 
-	.developer-actions {
-		display: flex;
-		gap: 6px;
-		margin-top: 2px;
-	}
-
-	.resolve-btn {
-		background: transparent;
-		border: 1px solid var(--ok);
-		color: var(--ok);
-		border-radius: var(--r-button);
-		padding: 2px 8px;
-		font-size: var(--fs-secondary);
-		cursor: pointer;
-	}
-
-	.resolve-btn:hover {
-		background: var(--ok);
-		color: var(--on-accent);
-	}
-
-	.reply-section {
-		display: flex;
-		gap: 6px;
-		margin-top: 4px;
-	}
-
-	.reply-input {
-		flex: 1;
-		padding: 4px 8px;
-		font: inherit;
-		font-size: var(--fs-secondary);
-		background: var(--bg);
-		border: 1px solid var(--line);
-		border-radius: var(--r-field);
-		color: var(--ink);
-	}
-
-	.composer-input {
-		width: 100%;
-		padding: 6px 8px;
-		font: inherit;
-		font-size: var(--fs-ui);
-		background: var(--bg);
-		border: 1px solid var(--line);
-		border-radius: var(--r-field);
-		color: var(--ink);
-		resize: vertical;
-		box-sizing: border-box;
-	}
-
-	.composer-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 6px;
-	}
 </style>

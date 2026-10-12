@@ -1938,6 +1938,63 @@ impl FarmService {
         self.merge_checked(id, false)
     }
 
+    /// A task whose branch was merged in Merger is done (FEAT-117).
+    ///
+    /// Merger makes every merge a person asks for; the farm only has to learn
+    /// that it happened. So this checks rather than trusts: the task's commit
+    /// has to be in the branch it was meant for now, and only then is the task
+    /// finished and its worktree removed, as a merge made here would have done.
+    pub fn mark_merged(&self, id: &TaskId) -> Result<()> {
+        let merge_guard = self.merge_lock.lock().expect("merge lock");
+        let (task, provider) = {
+            let state = self.state.lock().expect("farm lock");
+            let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
+            let task = farm.task(id).ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+            if task.status == TaskStatus::Done {
+                return Ok(());
+            }
+            (task.clone(), self.provider_of(task))
+        };
+        let branch = task
+            .branch
+            .clone()
+            .ok_or_else(|| Error::Refused("This task has no branch.".into()))?;
+        let workdir = task
+            .worktree
+            .as_deref()
+            .map(Path::new)
+            .ok_or_else(|| Error::Refused("This task has no worktree.".into()))?;
+        let commit = evidence::clean_commit(workdir)?;
+        let destination = match &task.merge_target {
+            Some(target) => target.clone(),
+            None => evidence::branch(&self.repo)?,
+        };
+        if !shell::is_ancestor(&self.repo, &commit, &destination)? {
+            return Err(Error::Refused(format!(
+                "{branch} is not in {destination} yet, so the task is not merged."
+            )));
+        }
+        self.emit(FarmEvent::MergeCompleted {
+            task: id.clone(),
+            branch,
+            ok: true,
+            error: None,
+            sha: shell::commit_id(&self.repo, &destination).ok(),
+        });
+        self.set_status(id, TaskStatus::Done, None)?;
+        let _ = workspace::remove(&self.repo, id, provider, false);
+        self.emit(FarmEvent::WorkspaceChanged {
+            task: id.clone(),
+            path: workspace::worktree_path(&self.repo, id)
+                .to_string_lossy()
+                .into_owned(),
+            created: false,
+        });
+        drop(merge_guard);
+        self.tick();
+        Ok(())
+    }
+
     fn merge_checked(&self, id: &TaskId, automatic: bool) -> Result<()> {
         let merge_guard = self.merge_lock.lock().expect("merge lock");
         let (task, provider) = {

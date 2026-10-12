@@ -40,7 +40,7 @@ describe('what the card says', () => {
 	it('names the agent, its level, the one sentence and the meter', () => {
 		const view = mount(aReview());
 		expect(view.text()).toContain('Claude Code');
-		expect(view.text()).toContain('Step');
+		expect(view.text()).toContain('Ask every step');
 		expect(view.get('.sentence').className).toContain('waiting');
 		expect(view.text()).toContain('Waiting for you: 2 findings on avatars.rs');
 		expect(view.text()).toMatch(/0 \/ 4 · \d+:\d\d/);
@@ -104,14 +104,14 @@ describe('the controls', () => {
 
 	it('offers the levels in a menu, the ones above the repository’s highest disabled with why', () => {
 		const view = mount(aReview({ state: 'working' }));
-		click(view.all('button').find((b) => text(b).startsWith('Step'))!);
+		click(view.all('button').find((b) => text(b).startsWith('Ask every step'))!);
 		const menu = document.querySelector('[role="menu"]')!;
 		const items = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-		expect(items.map(text).join(' | ')).toContain('Unattended');
-		const unattended = items.find((i) => text(i).includes('Unattended')) as HTMLButtonElement;
+		expect(items.map(text).join(' | ')).toContain('Full access');
+		const unattended = items.find((i) => text(i).includes('Full access')) as HTMLButtonElement;
 		expect(unattended.disabled).toBe(true);
-		expect(text(unattended)).toContain('Capped at Sign off here');
-		click(items.find((i) => text(i).includes('Sign off'))!);
+		expect(text(unattended)).toContain('The most allowed here is Ask before sending or merging');
+		click(items.find((i) => text(i).includes('Ask before sending or merging'))!);
 		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'level', level: 'signOff' });
 	});
 
@@ -122,11 +122,155 @@ describe('the controls', () => {
 		expect(onfollow).toHaveBeenCalledWith(true);
 	});
 
+	it('shows nothing of what was sent or said until Details is opened (FEAT-118)', () => {
+		const view = mount(
+			aReview({
+				steps: [
+					aStep({
+						prompt: 'Review avatars.rs and say what is wrong.',
+						record: [{ kind: 'reply', text: 'The cache path is wrong.' }]
+					})
+				]
+			})
+		);
+		expect(view.text()).not.toContain('Review avatars.rs and say what is wrong.');
+		expect(view.text()).not.toContain('The cache path is wrong.');
+		expect(view.find('.step-details')).toBeNull();
+	});
+
+	it('shows, for a step, what was sent and what came back, each labelled as what it is', () => {
+		const onfile = vi.fn();
+		const view = mount(
+			aReview({
+				steps: [
+					aStep({
+						index: 1,
+						label: 'avatars.rs · 2 findings',
+						prompt: 'Review avatars.rs and say what is wrong.',
+						record: [
+							{ kind: 'sent', text: 'You · look at the tests too' },
+							{ kind: 'reply', text: 'The cache path is **wrong**.' },
+							{ kind: 'reply', text: 'See the test.' },
+							{ kind: 'read', text: 'src/avatars.rs', path: 'src/avatars.rs' },
+							{ kind: 'command', text: 'cargo test' },
+							{ kind: 'error', text: 'failed: permission denied' }
+						]
+					})
+				]
+			}),
+			{ onfile }
+		);
+		click(button(view, 'Details'));
+
+		const details = view.get('.step-details');
+		expect(text(details)).toContain('avatars.rs · 2 findings');
+		expect(text(details)).toContain('What Spagitty asked');
+		expect(text(details.querySelector('.sent pre'))).toBe('Review avatars.rs and say what is wrong.');
+		// Adjacent reply lines are one reply, drawn as Markdown.
+		expect(details.querySelectorAll('.block.reply')).toHaveLength(1);
+		expect(details.querySelector('.block.reply strong')?.textContent).toBe('wrong');
+		expect(text(details.querySelector('.block.command pre'))).toBe('$ cargo test');
+		expect(text(details.querySelector('.block.error'))).toContain('permission denied');
+		const labels = [...details.querySelectorAll('.block > .kind')].map((el) => text(el));
+		expect(labels).toEqual(expect.arrayContaining(['You', 'Agent', 'Read', 'Command', 'Error']));
+		// A file it read is a link into the diff.
+		click(details.querySelector<HTMLElement>('.block.read button')!);
+		expect(onfile).toHaveBeenCalledWith('src/avatars.rs');
+	});
+
+	it('opens on the step that was clicked, not the current one', () => {
+		const view = mount(
+			aReview({
+				steps: [
+					aStep({ index: 0, label: 'Read the pull request', prompt: 'first' }),
+					aStep({ index: 1, label: 'avatars.rs', state: 'running', endedAt: null, prompt: 'second' })
+				]
+			})
+		);
+		click(button(view, 'Details'));
+		expect(text(view.get('.step-details .label'))).toBe('avatars.rs');
+		click(view.all('button.line').find((b) => text(b).includes('Read the pull request'))!);
+		expect(text(view.get('.step-details .label'))).toBe('Read the pull request');
+	});
+
 	it('shows the raw output, and the command that started the run', async () => {
 		const view = mount(aReview({ steps: [aStep({ command: 'claude -p --permission-mode plan …' })] }));
-		click(view.get('.raw-toggle'));
+		click(button(view, 'Details'));
+		click(view.all('.raw-toggle').find((b) => text(b) === 'Raw output')!);
 		await vi.waitFor(() => expect(view.text()).toContain('the whole transcript'));
 		expect(view.text()).toContain('claude -p --permission-mode plan …');
+	});
+});
+
+describe('how far through it is (FEAT-119)', () => {
+	const NOW = Math.floor(Date.now() / 1000);
+	const at = (state: Assignment['state'], extra: Partial<Assignment> = {}) =>
+		aReview({ state, startedAt: NOW - 90, endedAt: null, ...extra });
+
+	it('says which step it is on and for how long, while it works', () => {
+		const view = mount(
+			at('working', {
+				planned: 0,
+				sentence: 'Reading the pull request',
+				steps: [aStep({ index: 0, label: 'Read the pull request · 4 files', state: 'running', startedAt: NOW - 42, endedAt: null })]
+			})
+		);
+		expect(text(view.get('[data-testid="doing"]'))).toMatch(/^Read the pull request · 4 files · \d+:\d\d$/);
+		view.destroy();
+	});
+
+	it('counts the steps when there are no files or conflicts to count yet', () => {
+		const view = mount(
+			at('working', {
+				planned: 0,
+				steps: [aStep({ index: 0, state: 'done' }), aStep({ index: 1, state: 'running', endedAt: null })]
+			})
+		);
+		// Nothing says how many there will be, so it says how many are done.
+		expect(view.get('.meter .mono').textContent).not.toMatch(/ \/ /);
+		view.destroy();
+	});
+
+	it('counts the files once the plan has said how many', () => {
+		const view = mount(at('working', { planned: 7 }));
+		expect(text(view.get('.meter'))).toMatch(/\/ 4 · /);
+		view.destroy();
+	});
+
+	it('has no pulsing dot', () => {
+		const view = mount(at('working'));
+		expect(view.find('.sentence .state')).toBeNull();
+		view.destroy();
+	});
+
+	it('says plainly that an agent has gone quiet, and offers to stop it', () => {
+		const view = mount(at('working', { quietSince: Math.floor(Date.now() / 1000) - 5 * 60 }));
+		expect(view.get('.sentence').className).toContain('quiet');
+		expect(view.get('.quiet[role="status"]').textContent).toMatch(/Nothing from Claude Code for 5 min/);
+		expect(view.find('[data-testid="doing"]')).toBeNull();
+		click(view.all('.quiet[role="status"] button').find((b) => text(b) === 'Stop')!);
+		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'stop' });
+		view.destroy();
+	});
+
+	it('does not call a short silence quiet', () => {
+		const view = mount(at('working', { quietSince: Math.floor(Date.now() / 1000) - 30 }));
+		expect(view.find('.quiet[role="status"]')).toBeNull();
+		view.destroy();
+	});
+
+	it.each<[Assignment['state'], string]>([
+		['starting', 'working'],
+		['working', 'working'],
+		['waiting', 'waiting'],
+		['paused', 'paused'],
+		['stopped', 'stopped'],
+		['failed', 'failed'],
+		['done', 'done']
+	])('draws a run that is %s as %s', (state, tone) => {
+		const view = mount(aReview({ state }));
+		expect(view.get('.sentence').className).toContain(tone);
+		view.destroy();
 	});
 });
 
@@ -173,7 +317,7 @@ describe('the gates', () => {
 		expect(api.control).toHaveBeenCalledWith('review-1', { kind: 'continue' });
 	});
 
-	it('the last act at Sign off is the person’s, filled in', () => {
+	it('the last act at Ask before sending or merging is the person’s, filled in', () => {
 		const onlast = vi.fn();
 		const view = mount(
 			aReview({ steps: [aStep({ kind: { kind: 'last' }, label: 'Finish review', state: 'waiting', gate: 'send', endedAt: null })], proposals: [] }),

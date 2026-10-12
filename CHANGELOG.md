@@ -14,9 +14,53 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- Settings detects the `agy` CLI and runs it in print mode for Review, Merger
+  and Farm. Codex has a saved **Full Access** option in Settings → Agents for
+  machines where its sandbox cannot start; sandboxed access remains the default.
+- Oh My Pi's model and profile can be saved in Settings → Agents and are used
+  by Test, Review and Merger, including fresh background launches.
+- agy has a saved **Auto-approve tools** choice in Settings → Agents for
+  headless Test, Review and Merger runs. Its configured permission rules remain
+  the default; a headless permission denial stops the assignment with guidance.
+- CI refuses a pull request whose commits or description name an agent, a tool or a session as an author (`Co-Authored-By:` for an agent, `Claude-Session:`, *Generated with* lines). A person as co-author is allowed; history already on `main` is not read.
+
 ### Fixed
 
+- A remote agent whose API key is missing is stopped with that reason, in Settings *Test* and when a Review or Merger assignment starts, instead of being sent without one and told "Bad request". An OpenAI-compatible endpoint, which may be open, is not stopped.
 - CI and release builds stop waiting for a stalled Rust cache download: each segment has a two-minute limit and each cache step has a five-minute limit, after which Cargo compiles dependencies and the required checks still run.
+- A Gemini agent from Google AI Studio no longer gets "Bad request". Gemini 3 and thinking models sign each tool call and refuse the next turn unless the signature comes back, so Spagitty now sends back each signature on the part that carried it. Also fixed: Gemini's `default_api:` tool-name prefix, a tool that takes nothing, an empty turn in the history, a reply cut off while thinking, an error that arrives wrapped in a list, and *Test* running out of output allowance on a thinking model.
+- Codex's Settings test can run in a temporary directory, and assignments
+  explicitly use their scratch worktree. Headless runs use current CLI flags.
+  A Windows sandbox startup failure stops a review step with its error instead
+  of allowing an empty review to count as completed.
+- Oh My Pi is detected as `omp`, uses print mode, and can find Bun when it was
+  installed through npm. Detection and execution also include standard user
+  installation directories that may be absent from a desktop app's PATH.
+- Settings' local-agent test reads a temporary file to verify repository access.
+  Configuration and permission errors fail the test even when the CLI exits zero.
+  Test waits for access choices to save, and changing a choice clears its old result.
+- A file the agent finishes reviewing is marked viewed against the version it
+  read. Failed, unfinished and stale steps do not tick files; manually unticking
+  a completed file is preserved when its assignment is synced again.
+- Command-line agents that Windows starts through a `.cmd` shim (npm installs of Codex, Oh My Pi and others) get their whole instructions. Windows cannot pass a line break as an argument, so Spagitty now sends the instructions on standard input to those agents. Settings *Test* uses a two-line instruction, so it checks the same path.
+- Extensions run on Spagitty 2 again. Every extension, the bundled CodeRabbit one included, was shown as needing Spagitty below 2.0.0. The bundled, example and template manifests no longer name an upper limit, and a test fails if a manifest we ship does not admit the version we ship.
+- Review no longer takes *you* from the first account you connected when the repository is on another host, and a refused token says which account was refused. A refusal on the first read is asked once more before Review tells you to fix your accounts.
+- Review marks a file *conflict fix* only for lines that were written to resolve a conflict with the target branch. An ordinary commit, a change made in a merge away from any conflict, and a merge of some other branch are no longer shown as conflict fixes.
+- Added lines are green and removed lines red, whatever is on top. The focus ruler and the lines being commented on are laid over the line instead of replacing its colour, markup tags and type names are no longer the red of a removal, the comment button is neutral, and the green and red tints are stronger.
+- A pull request that conflicts with its base is marked as such: in Review's inbox, preview and room, and in Pull requests' list and workspace. Merger offers to resolve it.
+
+### Changed
+
+- The review room opens in plain code with no focus ruler, and the *Aa* and ruler buttons are gone from its bar. Settings › Reading turns the ruler on, and a new *Use the reading set* choice there turns the reading font on for the review room.
+- Agent permissions have names that say what the agent may do: *Read-only*, *Ask every step*, *Ask before sending or merging* and *Full access*. A repository's limit is its *Maximum permission*. Your saved choices are unchanged.
+- The words *land* and *landed* are gone from what you read. Merging says *merge*, *merged* and *goes to*, in Merger, Farm, the agent popover and the conflict resolver, and the commit dialog says *Ready to merge into*.
+- Pull requests shows pull requests and Review reviews them. The *Review* and *Reply in Review* buttons, draft comments, the *Publish Review* dialog, the verdict choices and the Reviewer/Developer view switch are gone from Pull requests; everything they did is in Review.
+- Every merge is made in Merger. Pull requests, the Graph and Farm open Merger instead of merging themselves. Merger merges a pull request through its host with a merge commit, a squash or a rebase, and a pull request that conflicts is resolved there, pushed and then merged. A Farm task merged in Merger finishes in the Farm.
+- An agent's work is shown properly. The card shows the step list and the current sentence, and *Details* opens what Spagitty sent for a step and what came back, each part labelled: replies as formatted text, commands and tool input as code, files it read as links into the diff, results and errors apart. None of it shows until you ask.
+- An agent's progress can be read. The card says which step the agent is on and for how long, counts steps until the plan says how many files there are, and says plainly when the agent has been quiet for three minutes, with a *Stop* beside it. The pulsing dot is gone.
+- The review room's file list can be put away (the button, or the *f* key; an edge tab brings it back) and listed in two sizes: *Detailed* as before, or *Compact*, a line per file with the marks as dots. Both choices are remembered.
 
 ## [2.0.1] - 2026-10-11
 

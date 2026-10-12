@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use crate::agent::adapter::{AgentAdapter, AgentCommand, AgentRunRequest};
+use crate::agent::adapter::{prompt_needs_stdin, AgentAdapter, AgentCommand, AgentRunRequest};
 use crate::model::{
     AgentCapability, AgentDefinition, AgentId, AgentInputMode, AgentProvider, AgentRole,
     AgentTraits,
@@ -62,12 +62,15 @@ impl AgentAdapter for CursorAdapter {
             args.push("--force".into());
         }
         args.extend(definition.extra_args.iter().cloned());
-        args.push(request.prompt.clone());
+        let on_stdin = prompt_needs_stdin(&definition.executable, &request.prompt);
+        if !on_stdin {
+            args.push(request.prompt.clone());
+        }
 
         AgentCommand {
             program: definition.executable.clone(),
             args,
-            stdin: None,
+            stdin: on_stdin.then(|| request.prompt.clone()),
         }
     }
 }

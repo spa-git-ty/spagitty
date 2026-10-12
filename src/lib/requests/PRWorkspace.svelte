@@ -7,12 +7,10 @@
 	import {
 		CHECK_LABELS,
 		REVIEW_LABELS,
-		requests,
-		type UserReviewRole
+		requests
 	} from '$lib/requests/store.svelte';
-	import type { MergeMethod, ReviewVerdict } from '$lib/types';
 	import { goto } from '$app/navigation';
-	import { review } from '$lib/review/store.svelte';
+	import { merger } from '$lib/merger/store.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -25,7 +23,6 @@
 	const files = $derived(requests.files);
 	const commits = $derived(requests.commits);
 	const comments = $derived(requests.comments);
-	const draftComments = $derived(requests.draftComments);
 	/** Not every host has a draft pull request, so it gets no toggle there (FEAT-071). */
 	const canDraft = $derived(requests.canDraft);
 	const openPath = $derived(requests.openPath);
@@ -38,19 +35,6 @@
 
 	/** Diff view preference: unified vs split. */
 	let diffView = $state<DiffView>('unified');
-
-	/** Role override for viewing/testing. */
-	let roleOverride = $state<UserReviewRole | null>(null);
-	const activeRole = $derived(roleOverride ?? requests.role);
-
-	/** Review submission modal state. */
-	let reviewModalOpen = $state(false);
-	let reviewVerdict = $state<ReviewVerdict>('comment');
-	let reviewSummary = $state('');
-
-	const isAuthor = $derived(
-		Boolean(requests.currentUser && request && requests.currentUser === request.authorName)
-	);
 
 	const unresolvedCount = $derived(comments.filter((c) => !c.resolved).length);
 	const resolvedCount = $derived(comments.filter((c) => c.resolved).length);
@@ -67,55 +51,18 @@
 		requests.selectPath(path);
 	}
 
-	/**
-	 * Review this pull request in the review room (FEAT-105): where comments
-	 * are written on any line or range, threads answered and resolved, and the
-	 * review finished with a verdict. The room is built for answering a pull
-	 * request; this screen reads, merges and closes it.
+/**
+	 * Every merge is made in Merger (FEAT-117): this opens it on the pull
+	 * request, which it merges through the host with the host's methods.
 	 */
-	let openingReview = $state(false);
-	async function openInReview() {
-		if (!request || openingReview) return;
-		openingReview = true;
-		try {
-			if (await review.open(request)) await goto('/review');
-			else notice.failed('The review could not be opened', review.notHere ?? undefined);
-		} catch (e) {
-			notice.failed('The review could not be opened', e);
-		} finally {
-			openingReview = false;
-		}
+	function openInMerger() {
+		if (!request) return;
+		merger.presentPullRequest(request);
+		void goto('/merge');
 	}
 
-	async function handlePublishReview() {
-		const ok = await requests.review(reviewVerdict, reviewSummary);
-		if (ok) {
-			reviewModalOpen = false;
-			reviewSummary = '';
-		}
-	}
-
-	/** Merge modal state (FEAT-071). */
-	let mergeModalOpen = $state(false);
-	let mergeMethod = $state<MergeMethod>('merge');
-	let mergeTitle = $state('');
-	let mergeMessage = $state('');
-
-	/** Close confirmation state (FEAT-071). */
+		/** Close confirmation state (FEAT-071). */
 	let closeConfirmOpen = $state(false);
-
-	async function handleMerge() {
-		const title = mergeTitle.trim() || undefined;
-		const message = mergeMessage.trim() || undefined;
-		const merged = requests.open;
-		const ok = await requests.merge(mergeMethod, title, message);
-		if (ok) {
-			if (merged) notice.ok(`#${merged.number} merged`, merged.title);
-			mergeModalOpen = false;
-			mergeTitle = '';
-			mergeMessage = '';
-		}
-	}
 
 	async function handleClose() {
 		const closed = requests.open;
@@ -142,7 +89,7 @@
 </script>
 
 {#if request}
-	<div class="pr-workspace" data-role={activeRole}>
+	<div class="pr-workspace">
 		<!-- Workspace Header -->
 		<header class="workspace-head">
 			<div class="head-left">
@@ -173,20 +120,16 @@
 					{#if request.draft}
 						<Chip>draft</Chip>
 					{/if}
+
+					{#if request.mergeable === false}
+						<Chip active title="The host cannot merge it into {request.targetBranch} as it stands. Open it in Merger to resolve the conflicts.">conflicts</Chip>
+					{/if}
 				</div>
 			</div>
 
 		<div class="head-right">
 			<div class="pr-actions">
 				<ContributedActions context="pullRequest" />
-				<Btn
-					primary
-					busy={openingReview}
-					onclick={openInReview}
-					title="Comment, reply and finish a review"
-				>
-					<Icon name="review" size="1em" />Review
-				</Btn>
 				{#if canDraft}
 					<Btn
 						onclick={handleToggleDraft}
@@ -203,15 +146,9 @@
 					</Btn>
 				{/if}
 
-			<Btn
-				onclick={() => (mergeModalOpen = true)}
-				disabled={requests.merging}
-				title="Merge this pull request"
-			>
-				Merge
-			</Btn>
+<Btn onclick={openInMerger} title="Merge this pull request in Merger">Open in Merger</Btn>
 
-				<Btn
+								<Btn
 					onclick={() => (closeConfirmOpen = true)}
 					disabled={requests.closing}
 					title="Close this pull request without merging"
@@ -220,16 +157,6 @@
 				</Btn>
 			</div>
 
-			<div class="role-badge-container">
-				<span class="role-label note">Mode:</span>
-				<button
-					class="role-toggle-btn mono"
-					title="Click to toggle reviewer / developer preview mode"
-					onclick={() => (roleOverride = activeRole === 'reviewer' ? 'developer' : 'reviewer')}
-				>
-					{activeRole === 'reviewer' ? 'Reviewer View' : 'Developer View'}
-				</button>
-			</div>
 		</div>
 		</header>
 
@@ -426,261 +353,18 @@
 			</main>
 		</div>
 
-		<!-- Bottom Footer -->
+		<!-- What is said about it, read here and answered in Review (FEAT-116). -->
 		<footer class="workspace-footer">
-			{#if activeRole === 'reviewer'}
-				<!-- Reviewer View Footer -->
-				<div class="footer-left">
-					<span class="footer-stat">
-						<strong>{draftComments.length}</strong> pending review drafts
-					</span>
-					<span class="footer-separator">·</span>
-					<span class="footer-stat">
-						<strong>{comments.length}</strong> published comments
-					</span>
-				</div>
-
-				<div class="footer-right">
-					{#if requests.reviewError}
-						<span class="review-error error note">{requests.reviewError}</span>
-					{/if}
-					<Btn
-						primary
-						disabled={requests.reviewing}
-						onclick={() => (reviewModalOpen = true)}
-					>
-						Publish Review ({draftComments.length})
-					</Btn>
-				</div>
-			{:else}
-				<!-- Developer View Footer -->
-				<div class="footer-left">
-					<span class="footer-stat" class:attention={unresolvedCount > 0}>
-						<strong>{unresolvedCount}</strong> unresolved requests
-					</span>
-					<span class="footer-separator">·</span>
-					<span class="footer-stat">
-						<strong>{resolvedCount}</strong> resolved
-					</span>
-				</div>
-
-				<div class="footer-right">
-					<span class="developer-status note">
-						{unresolvedCount === 0 ? '✓ All review comments addressed' : 'Reply or resolve comments to notify reviewer'}
-					</span>
-					<Btn primary busy={openingReview} onclick={openInReview}>Reply in Review</Btn>
-				</div>
-			{/if}
+			<div class="footer-left">
+				<span class="footer-stat" class:attention={unresolvedCount > 0}>
+					<strong>{unresolvedCount}</strong> unresolved comments
+				</span>
+				<span class="footer-separator">·</span>
+				<span class="footer-stat">
+					<strong>{resolvedCount}</strong> resolved
+				</span>
+			</div>
 		</footer>
-
-		<!-- Review Submission Modal -->
-		{#if reviewModalOpen}
-			<div
-				class="modal-backdrop"
-				onclick={() => (reviewModalOpen = false)}
-				onkeydown={(e) => {
-					if (e.key === 'Escape') reviewModalOpen = false;
-				}}
-				role="presentation"
-			>
-				<div
-					class="review-modal"
-					onclick={(e) => e.stopPropagation()}
-					onkeydown={(e) => e.stopPropagation()}
-					role="dialog"
-					aria-modal="true"
-					tabindex="-1"
-				>
-					<h2 class="modal-title">Publish Pull Request Review</h2>
-
-					<div class="verdict-options">
-						{#if isAuthor}
-							<div class="author-review-note note">
-								As the author of this pull request, you can submit comments. Approvals and change requests are reserved for reviewers.
-							</div>
-						{/if}
-
-						{#if !isAuthor}
-							<label class="verdict-option" class:selected={reviewVerdict === 'approve'}>
-								<input
-									type="radio"
-									name="verdict"
-									value="approve"
-									checked={reviewVerdict === 'approve'}
-									onchange={() => (reviewVerdict = 'approve')}
-								/>
-								<div class="verdict-info">
-									<strong>Approve</strong>
-									<span class="note">Submit feedback and approve merging.</span>
-								</div>
-							</label>
-
-							<label class="verdict-option" class:selected={reviewVerdict === 'requestChanges'}>
-								<input
-									type="radio"
-									name="verdict"
-									value="requestChanges"
-									checked={reviewVerdict === 'requestChanges'}
-									onchange={() => (reviewVerdict = 'requestChanges')}
-								/>
-								<div class="verdict-info">
-									<strong>Request Changes</strong>
-									<span class="note">Submit feedback that must be addressed before merging.</span>
-								</div>
-							</label>
-						{/if}
-
-						<label class="verdict-option" class:selected={reviewVerdict === 'comment'}>
-							<input
-								type="radio"
-								name="verdict"
-								value="comment"
-								checked={reviewVerdict === 'comment'}
-								onchange={() => (reviewVerdict = 'comment')}
-							/>
-							<div class="verdict-info">
-								<strong>Comment</strong>
-								<span class="note">Submit general feedback without approval.</span>
-							</div>
-						</label>
-					</div>
-
-					<div class="modal-field">
-						<label for="review-summary" class="field-label">Overall review notes (optional):</label>
-						<textarea
-							id="review-summary"
-							class="summary-textarea"
-							rows="4"
-							placeholder="Leave summary remarks on this pull request…"
-							bind:value={reviewSummary}
-						></textarea>
-					</div>
-
-					{#if requests.reviewError}
-						<div class="modal-error note error">
-							{requests.reviewError}
-						</div>
-					{/if}
-
-					{#if draftComments.length > 0}
-						<div class="drafts-preview note">
-							Includes <strong>{draftComments.length}</strong> inline line comment(s).
-						</div>
-					{/if}
-
-					<div class="modal-actions">
-						<Btn onclick={() => (reviewModalOpen = false)}>Cancel</Btn>
-						<Btn primary disabled={requests.reviewing} onclick={handlePublishReview}>
-							{requests.reviewing ? 'Submitting…' : 'Submit Review'}
-						</Btn>
-					</div>
-				</div>
-			</div>
-		{/if}
-
-	<!-- Merge Modal (FEAT-071) -->
-	{#if mergeModalOpen}
-		<div
-			class="modal-backdrop"
-			onclick={() => (mergeModalOpen = false)}
-			onkeydown={(e) => {
-				if (e.key === 'Escape') mergeModalOpen = false;
-			}}
-			role="presentation"
-		>
-			<div
-				class="review-modal"
-				onclick={(e) => e.stopPropagation()}
-				onkeydown={(e) => e.stopPropagation()}
-				role="dialog"
-				aria-modal="true"
-				tabindex="-1"
-			>
-				<h2 class="modal-title">Merge Pull Request #{request.number}</h2>
-
-				<div class="verdict-options">
-					<label class="verdict-option" class:selected={mergeMethod === 'merge'}>
-						<input
-							type="radio"
-							name="merge-method"
-							value="merge"
-							checked={mergeMethod === 'merge'}
-							onchange={() => (mergeMethod = 'merge')}
-						/>
-						<div class="verdict-info">
-							<strong>Create a merge commit</strong>
-							<span class="note">All commits will be added with a merge commit.</span>
-						</div>
-					</label>
-
-					<label class="verdict-option" class:selected={mergeMethod === 'squash'}>
-						<input
-							type="radio"
-							name="merge-method"
-							value="squash"
-							checked={mergeMethod === 'squash'}
-							onchange={() => (mergeMethod = 'squash')}
-						/>
-						<div class="verdict-info">
-							<strong>Squash and merge</strong>
-							<span class="note">Commits will be squashed into one commit.</span>
-						</div>
-					</label>
-
-					<label class="verdict-option" class:selected={mergeMethod === 'rebase'}>
-						<input
-							type="radio"
-							name="merge-method"
-							value="rebase"
-							checked={mergeMethod === 'rebase'}
-							onchange={() => (mergeMethod = 'rebase')}
-						/>
-						<div class="verdict-info">
-							<strong>Rebase and merge</strong>
-							<span class="note">Commits will be rebased onto the base branch.</span>
-						</div>
-					</label>
-				</div>
-
-				{#if mergeMethod !== 'rebase'}
-					<div class="modal-field">
-						<label for="merge-title" class="field-label">Commit title (optional):</label>
-						<input
-							id="merge-title"
-							class="summary-input"
-							type="text"
-							placeholder="Merge pull request #{request.number}"
-							bind:value={mergeTitle}
-						/>
-					</div>
-
-					<div class="modal-field">
-						<label for="merge-message" class="field-label">Commit message (optional):</label>
-						<textarea
-							id="merge-message"
-							class="summary-textarea"
-							rows="3"
-							placeholder="Add extra details…"
-							bind:value={mergeMessage}
-						></textarea>
-					</div>
-				{/if}
-
-				{#if requests.mergeError}
-					<div class="modal-error note error">
-						{requests.mergeError}
-					</div>
-				{/if}
-
-				<div class="modal-actions">
-					<Btn onclick={() => (mergeModalOpen = false)}>Cancel</Btn>
-					<Btn primary disabled={requests.merging} onclick={handleMerge}>
-						{requests.merging ? 'Merging…' : 'Confirm Merge'}
-					</Btn>
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Close Confirmation Modal (FEAT-071) -->
 	{#if closeConfirmOpen}
@@ -811,26 +495,6 @@
 	.meta-author,
 	.meta-time {
 		white-space: nowrap;
-	}
-
-	.role-badge-container {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-
-	.role-toggle-btn {
-		background: var(--panel);
-		border: 1px solid var(--line);
-		border-radius: var(--r-button);
-		color: var(--accent);
-		padding: 3px 8px;
-		font-size: var(--fs-secondary);
-		cursor: pointer;
-	}
-
-	.role-toggle-btn:hover {
-		background: var(--hover);
 	}
 
 	/* Workspace Body */
@@ -1186,16 +850,6 @@
 		color: var(--muted);
 	}
 
-	.footer-right {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.review-error {
-		color: var(--danger);
-	}
-
 	/* Modal Dialog */
 	.modal-backdrop {
 		position: fixed;
@@ -1275,14 +929,6 @@
 		color: var(--ink);
 		box-sizing: border-box;
 		resize: vertical;
-	}
-
-	.author-review-note {
-		padding: 8px 10px;
-		background: color-mix(in srgb, var(--accent) 8%, var(--bg));
-		border-left: 3px solid var(--accent);
-		border-radius: var(--r-panel);
-		font-size: var(--fs-secondary);
 	}
 
 	.modal-error {

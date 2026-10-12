@@ -66,9 +66,9 @@ describe('the Assign popover', () => {
 
 	it('does not offer a level above the repository’s highest', () => {
 		const view = render(AssignPopover, { job: 'review' as const, onassign: vi.fn(), oncancel: vi.fn() });
-		const unattended = view.all('button').find((b) => text(b) === 'Unattended') as HTMLButtonElement;
+		const unattended = view.all('button').find((b) => text(b) === 'Full access') as HTMLButtonElement;
 		expect(unattended.disabled).toBe(true);
-		expect(unattended.title).toBe('Capped at Sign off here');
+		expect(unattended.title).toBe('The most allowed here is Ask before sending or merging');
 	});
 
 	it('says what leaves the machine for a remote agent', () => {
@@ -80,9 +80,9 @@ describe('the Assign popover', () => {
 	it('hands over landing only at a level that can land', () => {
 		const onassign = vi.fn();
 		const view = render(AssignPopover, { job: 'merge' as const, onassign, oncancel: vi.fn() });
-		const land = () => view.all('button').find((b) => text(b) === 'Resolve, check and land') as HTMLButtonElement;
+		const land = () => view.all('button').find((b) => text(b) === 'Resolve, check and merge') as HTMLButtonElement;
 		expect(land().disabled).toBe(true);
-		click(view.all('button').find((b) => text(b) === 'Sign off')!);
+		click(view.all('button').find((b) => text(b) === 'Ask at the end')!);
 		expect(land().disabled).toBe(false);
 		click(land());
 		const note = view.get('input[aria-label="Note for the agent"]') as HTMLInputElement;

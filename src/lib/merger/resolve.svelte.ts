@@ -115,11 +115,11 @@ export function restoreAuthors(saved: unknown, against: ResolverFile[]): Record<
 	return out;
 }
 
-/** `you`, `Codex, accepted by you`, `Codex, unattended`. */
+/** `you`, `Codex, accepted by you`, `Codex, full access`. */
 export function whoChose(by: Author | null): string {
 	if (!by) return 'you';
 	if (by.decided === 'person') return `${by.agent}, accepted by you`;
-	return by.unattended ? `${by.agent}, unattended` : `${by.agent}, applied at Sign off`;
+	return by.unattended ? `${by.agent}, full access` : `${by.agent}, applied before you merged`;
 }
 
 function valid(choice: unknown, region: ResolverFile['regions'][number]): choice is Choice {

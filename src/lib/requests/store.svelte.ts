@@ -15,19 +15,14 @@
 
 import * as api from '../api';
 import type {
-	DraftComment,
 	FileDiff,
 	ForgeRepo,
-	MergeMethod,
 	PullRequest,
 	PullRequestComment,
-	PullRequestCommit,
-	ReviewVerdict
+	PullRequestCommit
 } from '../types';
 
 export type WorkspaceViewMode = 'list' | 'workspace';
-export type UserReviewRole = 'reviewer' | 'developer';
-
 let list = $state<PullRequest[]>([]);
 let connected = $state(false);
 let error = $state<string | null>(null);
@@ -61,60 +56,27 @@ let selectedCommitSha = $state<string | null>(null);
 let commitFilesCache = $state<Record<string, FileDiff[]>>({});
 let commitFilesLoading = $state(false);
 
-/** Inline comments and local drafts. */
+/** The comments on the open pull request, read here and answered in Review (FEAT-116). */
 let comments = $state<PullRequestComment[]>([]);
 let commentsFor = $state<number | null>(null);
 let commentsLoading = $state(false);
 let commentsError = $state<string | null>(null);
-let draftComments = $state<DraftComment[]>([]);
 
 /** Guards a slow file read landing after the reader has moved on. */
 let fileSeq = 0;
 
-/** In flight, or the host's refusal of the last attempt. */
-let reviewing = $state(false);
-let reviewError = $state<string | null>(null);
-
-/** In flight state for merge/close/draft (FEAT-071). */
-let merging = $state(false);
-let mergeError = $state<string | null>(null);
+/** In flight state for close/draft (FEAT-071). Merging is Merger's (FEAT-117). */
 let closing = $state(false);
 let closeError = $state<string | null>(null);
 let togglingDraft = $state(false);
 let draftError = $state<string | null>(null);
 
-function getDraftStorageKey(prNumber: number): string {
-	const slug = repo ? `${repo.owner}/${repo.name}` : 'global';
-	return `spagitty.drafts.${slug}.${prNumber}`;
-}
+/** How long to wait before asking again after a refusal. Tests set it to 0. */
+export const retryRefusal = { afterMs: 700 };
 
-function persistDrafts(prNumber: number, drafts: DraftComment[]): void {
-	if (typeof localStorage === 'undefined') return;
-	try {
-		const key = getDraftStorageKey(prNumber);
-		if (drafts.length === 0) {
-			localStorage.removeItem(key);
-		} else {
-			localStorage.setItem(key, JSON.stringify(drafts));
-		}
-	} catch {
-		// Storage unavailable; drafts kept in memory
-	}
-}
-
-function restoreDrafts(prNumber: number): DraftComment[] {
-	if (typeof localStorage === 'undefined') return [];
-	try {
-		const key = getDraftStorageKey(prNumber);
-		const stored = localStorage.getItem(key);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			if (Array.isArray(parsed)) return parsed;
-		}
-	} catch {
-		// Storage unavailable or unreadable
-	}
-	return [];
+/** The host's refusal of the sign-in, or the keychain not giving it up. */
+function refusal(error: unknown): boolean {
+	return /refused|keychain/i.test(String(error));
 }
 
 export const requests = {
@@ -212,15 +174,6 @@ export const requests = {
 		return list.find((request) => request.id === openId) ?? null;
 	},
 
-	/** Active role for the open PR: author is developer, others are reviewer. */
-	get role(): UserReviewRole {
-		const pr = this.open;
-		if (pr && currentUser && pr.authorName.toLowerCase() === currentUser.toLowerCase()) {
-			return 'developer';
-		}
-		return 'reviewer';
-	},
-
 	/** The files of the open pull request. Empty until they are read. */
 	get files(): FileDiff[] {
 		return files;
@@ -262,9 +215,6 @@ export const requests = {
 	get commentsError(): string | null {
 		return commentsError;
 	},
-	get draftComments(): DraftComment[] {
-		return draftComments;
-	},
 
 	/** Currently displayed file diff list based on active scope (all files vs commit). */
 	get currentFiles(): FileDiff[] {
@@ -281,18 +231,6 @@ export const requests = {
 	/** The open file's diff, or null when none is selected. */
 	get openFile(): FileDiff | null {
 		return this.currentFiles.find((file) => file.path === openPath) ?? null;
-	},
-	get reviewing(): boolean {
-		return reviewing;
-	},
-	get reviewError(): string | null {
-		return reviewError;
-	},
-	get merging(): boolean {
-		return merging;
-	},
-	get mergeError(): string | null {
-		return mergeError;
 	},
 	get closing(): boolean {
 		return closing;
@@ -313,23 +251,12 @@ export const requests = {
 		this.clearFiles();
 	},
 
-	/** Restore local drafts for the open PR from storage. */
-	loadDrafts(): void {
-		const pr = this.open;
-		if (pr) {
-			draftComments = restoreDrafts(pr.number);
-		} else {
-			draftComments = [];
-		}
-	},
-
 	/** Open dedicated PR workspace. */
 	openWorkspace(id?: string): void {
 		if (id) {
 			this.select(id);
 		}
 		viewMode = 'workspace';
-		this.loadDrafts();
 		this.loadWorkspaceData();
 	},
 
@@ -376,47 +303,6 @@ export const requests = {
 		} finally {
 			commitFilesLoading = false;
 		}
-	},
-
-	/** Add or update a draft inline comment. */
-	addDraftComment(path: string, line: number, side: string, body: string): void {
-		if (!body.trim()) return;
-		const pr = this.open;
-		draftComments = [
-			...draftComments.filter((c) => !(c.path === path && c.line === line && c.side === side)),
-			{ path, line, side, body: body.trim() }
-		];
-		if (pr) persistDrafts(pr.number, draftComments);
-	},
-
-	/** Remove a draft inline comment. */
-	removeDraftComment(path: string, line: number, side: string): void {
-		const pr = this.open;
-		draftComments = draftComments.filter(
-			(c) => !(c.path === path && c.line === line && c.side === side)
-		);
-		if (pr) persistDrafts(pr.number, draftComments);
-	},
-
-	/** Reply to an existing comment. */
-	async replyToComment(commentId: number, body: string): Promise<boolean> {
-		const pr = this.open;
-		if (!pr || !body.trim() || !api.inTauri()) return false;
-		try {
-			const reply = await api.replyComment(pr.number, commentId, body.trim());
-			comments = [...comments, reply];
-			void this.loadComments(true);
-			return true;
-		} catch {
-			return false;
-		}
-	},
-
-	/** Mark a comment thread resolved locally. */
-	resolveComment(commentId: number): void {
-		comments = comments.map((c) =>
-			c.id === commentId || c.inReplyTo === commentId ? { ...c, resolved: true } : c
-		);
 	},
 
 	/** Put a file list on the screen. */
@@ -533,62 +419,9 @@ export const requests = {
 		commentsFor = null;
 		commentsError = null;
 		commentsLoading = false;
-		this.loadDrafts();
 		selectedCommitSha = null;
 		commitFilesCache = {};
 		openPath = null;
-		reviewError = null;
-	},
-
-	/** Leave a review on the open pull request. */
-	async review(verdict: ReviewVerdict, comment: string): Promise<boolean> {
-		if (!api.inTauri()) return false;
-
-		const request = this.open;
-		if (request === null) return false;
-
-		reviewing = true;
-		reviewError = null;
-		try {
-			if (draftComments.length > 0) {
-				await api.submitReview(request.number, verdict, comment, draftComments);
-			} else {
-				await api.submitReview(request.number, verdict, comment);
-			}
-			draftComments = [];
-			persistDrafts(request.number, []);
-			await Promise.all([this.load(), this.loadComments(true)]);
-			return true;
-		} catch (e) {
-			reviewError = String(e);
-			return false;
-		} finally {
-			reviewing = false;
-		}
-	},
-
-	/** Merge the open pull request (FEAT-071). */
-	async merge(
-		method: MergeMethod,
-		commitTitle?: string,
-		commitMessage?: string
-	): Promise<boolean> {
-		if (!api.inTauri()) return false;
-		const request = this.open;
-		if (request === null) return false;
-
-		merging = true;
-		mergeError = null;
-		try {
-			await api.mergePullRequest(request.number, method, commitTitle, commitMessage);
-			await this.load();
-			return true;
-		} catch (e) {
-			mergeError = String(e);
-			return false;
-		} finally {
-			merging = false;
-		}
 	},
 
 	/** Close / reject the open pull request without merging (FEAT-071). */
@@ -678,16 +511,29 @@ export const requests = {
 
 			if (typeof api.forgeAccounts === 'function') {
 				try {
+					// The account for this repository's host, not the first one
+					// connected: with two accounts "you" would be someone else on
+					// the other host (BUG-067).
 					const accounts = await api.forgeAccounts();
-					if (accounts && accounts.length > 0) {
-						currentUser = accounts[0].user;
-					}
+					currentUser =
+						accounts?.find((account) => account.host === where.host)?.user ?? accounts?.[0]?.user ?? null;
 				} catch {
 					// accounts not loaded
 				}
 			}
 
-			const found = await api.pullRequests();
+			let found: PullRequest[];
+			try {
+				found = await api.pullRequests();
+			} catch (first) {
+				// A sign-in refused on the very first read, and accepted on the next
+				// with nothing changed, is not a bad sign-in (BUG-067). Ask once more
+				// before telling the reader to go and fix their account.
+				if (!refusal(first)) throw first;
+				await new Promise((resolve) => setTimeout(resolve, retryRefusal.afterMs));
+				if (mine !== seq) return;
+				found = await api.pullRequests();
+			}
 			if (mine !== seq) return;
 			this.present(found);
 		} catch (e) {
