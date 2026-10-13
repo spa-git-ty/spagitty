@@ -463,13 +463,27 @@ fn anything_on_stdout_that_is_not_the_protocol_stops_the_worker() {
     // The handshake may complete before the bad line is read; whichever way,
     // the worker ends up stopped and failed.
     let _ = h.host.run_command(ID, "slow", &h.invocation());
+    // When the bad line arrives during activation the worker is failed
+    // twice over: first by the start that was waiting for an answer, which
+    // says what it saw ("the extension is not running"), and a moment later
+    // by the reader, which says why. The cause is what is kept, so the cause
+    // is what is waited for: reading at the first `Failed` reads the echo.
+    let reason = || {
+        h.host
+            .list(Some(h.repo.path()))
+            .extensions
+            .remove(0)
+            .state_reason
+            .unwrap_or_default()
+    };
     let deadline = Instant::now() + Duration::from_secs(5);
-    while h.state() != State::Failed && Instant::now() < deadline {
+    while !(h.state() == State::Failed && reason().contains("protocol"))
+        && Instant::now() < deadline
+    {
         std::thread::sleep(Duration::from_millis(20));
     }
     assert_eq!(h.state(), State::Failed);
-    let view = h.host.list(Some(h.repo.path())).extensions.remove(0);
-    let reason = view.state_reason.unwrap();
+    let reason = reason();
     assert!(reason.contains("protocol"), "{reason}");
 }
 
