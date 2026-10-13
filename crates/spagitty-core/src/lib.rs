@@ -37,6 +37,7 @@ pub mod highlight;
 pub mod hooks;
 pub mod identity;
 pub mod ignore;
+pub mod investigate;
 pub mod merger;
 pub mod models;
 pub mod ops;

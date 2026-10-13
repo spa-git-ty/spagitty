@@ -26,7 +26,7 @@ defect.
 | 1L | Clone | modal | no | Built | FEAT-012 |
 | 1M | Reflog | `/reflog` | yes | Built | FEAT-050 |
 | 1N | Tags | `/tags` | yes | Built | FEAT-051 |
-| 1O | File history | `/history` | no | Built | FEAT-063 |
+| 1O | Investigate | `/investigate` | yes | Built | FEAT-132 (was File history, FEAT-063) |
 | 1P | Badges | `/badges` | yes | Built | FEAT-072 |
 | 1Q | Farm | `/farm` | yes | Built | FEAT-073 |
 | 1R | Review | `/review` | yes | Built | FEAT-087 |
@@ -93,7 +93,7 @@ Persistent across every screen, built with FEAT-001.
   Rail order is the screens roughly as they are worked through — Farm, then
   Graph, Working copy, Conflicts (while there is something to resolve), Files, Merger,
   Branches, Pull requests, Review — then the tools, always shown since TASK-056:
-  Rebase, Log, Stash, Tags, Reflog, Badges (with the delight layer on) and All
+  Rebase, Investigate, Log, Stash, Tags, Reflog, Badges (with the delight layer on) and All
   repositories; then Settings. Log follows Rebase because it is where you go to
   look something up rather than a step in that sequence. Stash, Tags and Reflog
   are rows of their own again, as the author asked; Branches still names all
@@ -792,13 +792,52 @@ it.
 the existing design rather than needing a rule: the list is written by opening a
 repository, and the clone offers to open only what succeeded.
 
-## 1O — File history
+## 1O — Investigate
 
-A dedicated view for inspecting a single file's commit evolution and line attribution (FEAT-063).
+**Built.** `src/routes/investigate/+page.svelte`, `src/lib/investigate/`,
+`crates/spagitty-core/src/investigate.rs` (FEAT-132). It was File history
+(FEAT-063), off the rail and about one file; `/history` now comes here with
+the path it was given.
 
-**The commit timeline follows renames.** `history::file_commits` walks commits touching the selected path via `git log --follow`, displaying author name, time, summary, and short hash.
+The life of a file, a folder, a branch or a line: when it was born and by
+whom, how it grew, when it was renamed, moved or rewritten, and who owns it
+today. The target is in the address — `?kind=line&path=…&line=…&rev=…` — so
+Files' *Investigate line* and a bookmark arrive the same way.
 
-**Interactive line attribution.** The right pane renders line-by-line blame metadata (author name, commit SHA, timestamp) alongside file content. Hovering a commit in the timeline or blame gutter highlights every line introduced by that commit.
+**A life is a list of entries, newest first, read a page at a time.** The
+first page is on screen before the second is asked for. At 5,000 entries the
+reading stops and *Load more* reads on. A life is kept by its target and by
+where HEAD is, so going back to one costs nothing and a new commit reads it
+again.
+
+**Where the entries come from.** A file's are `git log --follow --raw
+--numstat`; a folder's are the same log on a pathspec; a line's are `git log
+-L`; a branch's are the commits since it left the default branch, with where
+it landed and the rebases and resets its reflog records. A file's size after
+each commit is counted from the object, not summed.
+
+**A rewrite** is a commit that removed at least half the file's lines as they
+were before it: `REWRITE_SHARE`, a named constant. A new name in the same
+folder is *renamed*, and the same file in another folder is *moved*.
+
+**A branch's fork is not its merge base.** A branch that has had the default
+branch merged into it, or has landed, shares a late commit with it. The fork
+is the commit the branch's oldest own commit was made on, where "own" is on
+its first-parent line and not in the other branch.
+
+**The life card** is a line of facts, the size over time with a marker on
+each born, renamed, moved and rewrite, and a row of ticks for each author,
+agents in `--agent`. `chart.ts` works out where everything goes, as
+arithmetic, and the component draws it.
+
+**The selected event** says what share of the file it changed, how many of
+the lines it wrote today's blame still gives it, and who owns the file today
+— one `blame::compact` for the whole life, not one for each event — and
+shows its largest hunk. *Open file at <sha>* reads it in Files as that commit
+left it, *Compare with today* shows that version against the file now, in
+place, and *Show in Graph* selects the commit.
+
+Like Files, it is given a revision and answers from git's objects.
 
 ## 1P — Badges
 

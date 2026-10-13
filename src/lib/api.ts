@@ -33,8 +33,12 @@ import type {
 	FileDiff,
 	IdentityProfile,
 	Identity,
-	FileHistoryEntry,
+	BranchFacts,
 	CompactBlame,
+	Hunk,
+	LifeAsk,
+	LifePage,
+	LifeToday,
 	FilesEntry,
 	FilesFound,
 	FilesRead,
@@ -312,11 +316,6 @@ export function blame(path: string, revision: string): Promise<Blame> {
 	return invoke('blame', { path, revision });
 }
 
-/** Read commit history for a single file path (FEAT-063). */
-export function fileHistory(path: string, limit = 100): Promise<FileHistoryEntry[]> {
-	return invoke('file_history', { path, limit });
-}
-
 // --- Files (FEAT-131): git's objects at a revision, read and never written ---
 
 /** The commit a branch, tag or commit means. An empty revision is HEAD. */
@@ -366,6 +365,42 @@ export function filesBefore(
 	previousPath: string | null
 ): Promise<string | null> {
 	return invoke('files_before', { commit, path, line, previous, previousPath });
+}
+
+// --- Investigate (FEAT-132): the life of a file, a folder, a branch or a line ---
+
+/** A page of a life, newest first. */
+export function investigateLife(ask: LifeAsk): Promise<LifePage> {
+	return invoke('investigate_life', { ask });
+}
+
+/** Who owns `path` at `rev` today, and what survives of each commit. */
+export function investigateToday(path: string, rev: string): Promise<LifeToday> {
+	return invoke('investigate_today', { path, rev });
+}
+
+/** The largest hunk of what `commit` did to `path`. Null when it changed no line. */
+export function investigateHunk(
+	commit: string,
+	path: string,
+	oldPath: string | null
+): Promise<Hunk | null> {
+	return invoke('investigate_hunk', { commit, path, oldPath });
+}
+
+/** `path` as `commit` left it, against `todayPath` at `rev`. */
+export function investigateCompare(
+	commit: string,
+	path: string,
+	rev: string,
+	todayPath: string
+): Promise<Hunk[]> {
+	return invoke('investigate_compare', { commit, path, rev, todayPath });
+}
+
+/** A branch against the default branch: its fork, where it landed, ahead and behind. */
+export function investigateBranch(name: string): Promise<BranchFacts> {
+	return invoke('investigate_branch', { name });
 }
 
 /** What is in progress and what is conflicted. Reads only; nothing is written. */

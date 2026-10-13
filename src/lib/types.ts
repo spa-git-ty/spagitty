@@ -780,14 +780,106 @@ export interface CompactBlame {
 	refused: NotBlamable | null;
 }
 
-/** One commit in a file's evolution history (FEAT-063). */
-export interface FileHistoryEntry {
+// --- Investigate (FEAT-132) -----------------------------------------------
+
+/** What a life is the life of. Mirrors `investigate::Target`. */
+export type LifeTarget =
+	| { kind: 'file'; path: string }
+	| { kind: 'folder'; path: string }
+	| { kind: 'branch'; name: string }
+	| { kind: 'line'; path: string; line: number };
+
+/** What happened, in one word. Mirrors `investigate::Kind`. */
+export type LifeKind =
+	| 'born'
+	| 'renamed'
+	| 'moved'
+	| 'rewrite'
+	| 'edit'
+	| 'deleted'
+	| 'added'
+	| 'removed'
+	| 'commit'
+	| 'merge'
+	| 'merged'
+	| 'rebase'
+	| 'reset';
+
+/** One thing in a life. Mirrors `investigate::Entry`. */
+export interface LifeEntry {
 	commit: string;
 	short: string;
 	authorName: string;
 	authorEmail: string;
+	/** Seconds since the unix epoch. */
 	time: number;
 	summary: string;
+	/** The agent a `Co-authored-by` trailer names, by gate 1's rule. */
+	agent: string | null;
+	kind: LifeKind;
+	added: number;
+	removed: number;
+	/** A file or a line: the path at this commit. */
+	path: string | null;
+	/** The path before this commit, when it renamed or moved the file. */
+	oldPath: string | null;
+	/** A file: its lines after this commit. Null for a binary file. */
+	size: number | null;
+	/** A file: the share of its lines, as they were, that this commit removed. */
+	share: number | null;
+	/** A folder: how many files this commit added, removed and renamed. */
+	filesAdded: number;
+	filesRemoved: number;
+	filesRenamed: number;
+	/** A line: its text as this commit left it. */
+	text: string | null;
+	/** Said beside the summary: `old → new`, or what a branch landed in. */
+	note: string | null;
+}
+
+/** A page of a life. Mirrors `investigate::Page`. */
+export interface LifePage {
+	entries: LifeEntry[];
+	/** Nothing older is left to read. */
+	done: boolean;
+}
+
+/** How a life is asked for. Mirrors `investigate::Ask`. */
+export interface LifeAsk {
+	target: LifeTarget;
+	rev: string;
+	follow: boolean;
+	since: number | null;
+	skip: number;
+	limit: number;
+}
+
+/** Who has lines in a file today. Mirrors `investigate::Owner`. */
+export interface LifeOwner {
+	name: string;
+	email: string;
+	agent: boolean;
+	lines: number;
+	/** From 0 to 1. */
+	share: number;
+}
+
+/** A file at a revision, from one blame. Mirrors `investigate::Today`. */
+export interface LifeToday {
+	lines: number;
+	owners: LifeOwner[];
+	/** For each commit that still has lines in the file: how many. */
+	alive: Record<string, number>;
+}
+
+/** A branch against the default branch. Mirrors `investigate::BranchFacts`. */
+export interface BranchFacts {
+	against: string | null;
+	fork: string | null;
+	landed: string | null;
+	ahead: number;
+	behind: number;
+	local: boolean;
 }
 
 // --- Conflicts ------------------------------------------------------------

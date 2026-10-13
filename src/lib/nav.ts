@@ -209,6 +209,16 @@ export const NAV_ITEMS: NavItem[] = [
 	// tools are always on the rail again, and Stash, Tags and Reflog are rows
 	// of their own rather than tabs Branches stands for (reversing TASK-045).
 	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase' },
+	// FEAT-132. File history, which was off the rail and about one file, is
+	// the life of a file, a folder, a branch or a line, and on it.
+	{
+		code: '1O',
+		label: 'Investigate',
+		href: '/investigate',
+		group: 'tools',
+		icon: 'investigate',
+		since: '3.0'
+	},
 	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search' },
 	{ code: '1G', label: 'Stash', href: '/stash', group: 'tools', icon: 'stash' },
 	{ code: '1N', label: 'Tags', href: '/tags', group: 'tools', icon: 'tag' },
@@ -483,8 +493,7 @@ export function railRows(items: NavItem[], context: NavContext): RailRow[] {
 
 /** Screens that exist but are not reachable from the rail. */
 export const OFF_RAIL: Record<string, { code: ScreenCode; label: string }> = {
-	'/diff': { code: '1B', label: 'Diff' },
-	'/history': { code: '1O', label: 'File history' }
+	'/diff': { code: '1B', label: 'Diff' }
 };
 
 /** Routes that are screens but are not reachable from the rail. */

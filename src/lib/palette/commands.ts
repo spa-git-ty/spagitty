@@ -73,7 +73,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.farm.settings', title: 'Go to Farm settings', path: '/farm?pane=settings', keywords: ['farm', 'settings', 'goal', 'policy', 'agents.md'] },
 	{ id: 'go.badges', title: 'Go to Badges', path: '/badges', keywords: ['achievements', 'title', 'agents', 'delight'] },
 	{ id: 'go.repos', title: 'Go to Repositories', path: '/repos', keywords: ['open', 'clone', 'recent'] },
-	{ id: 'go.history', title: 'Go to File history', path: '/history', keywords: ['blame', 'file', 'evolution'] },
+	{ id: 'go.investigate', title: 'Go to Investigate', path: '/investigate', keywords: ['history', 'blame', 'file', 'folder', 'branch', 'line', 'life', 'evolution'] },
 	{ id: 'go.settings', title: 'Go to Settings', path: '/settings', keywords: ['preferences', 'options'] }
 ];
 

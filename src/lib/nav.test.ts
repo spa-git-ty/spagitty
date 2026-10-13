@@ -114,6 +114,8 @@ describe('NAV_ITEMS', () => {
 			// and Reflog are rows of their own, as the author asked (reversing
 			// TASK-045, which had made them tabs of Branches).
 			'/rebase',
+			// FEAT-132. What was File history, on the rail.
+			'/investigate',
 			'/search',
 			'/stash',
 			'/tags',
@@ -124,9 +126,16 @@ describe('NAV_ITEMS', () => {
 		]);
 	});
 
-	it('puts Log immediately after Rebase', () => {
+	/** FEAT-030 put Log after Rebase; FEAT-132 put Investigate between them. */
+	it('puts Investigate after Rebase, and Log after that', () => {
 		const hrefs = NAV_ITEMS.map((item) => item.href);
-		expect(hrefs.indexOf('/search')).toBe(hrefs.indexOf('/rebase') + 1);
+		expect(hrefs.indexOf('/investigate')).toBe(hrefs.indexOf('/rebase') + 1);
+		expect(hrefs.indexOf('/search')).toBe(hrefs.indexOf('/rebase') + 2);
+	});
+
+	it('has no File history off the rail: it is Investigate, and on it (FEAT-132)', () => {
+		expect(OFF_RAIL['/history']).toBeUndefined();
+		expect(NAV_ITEMS.find((item) => item.code === '1O')?.href).toBe('/investigate');
 	});
 
 	it('keeps a divider before Settings, the one row not about this repository', () => {
@@ -219,6 +228,7 @@ describe('isShown', () => {
 			'/requests',
 			'/review',
 			'/rebase',
+			'/investigate',
 			'/search',
 			'/stash',
 			'/tags',

@@ -25,6 +25,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   - Press a line to open a card under it: who wrote it and when, the pull request, the commit's summary, and what the line was before. From there, **Commit** shows it on the Graph and **Blame before this** reads the file as it was before that commit.
   - The keys are for reading: `j` `k`, Ctrl+d and Ctrl+u, `gg` `G`, `/` `?` `n` `N` to search, `]b` `[b` for the next and previous run of blame, `b` to hide it, Enter and Esc for the card, and `y` to copy `path:line@sha`.
   - An image is shown as a picture. A binary file, a Git LFS pointer and a file over 50 MB say what they are and how big. A file over 5 MB is shown without colour.
+- **Investigate**, on the rail, tells the life of a file, a folder, a branch or a line. It replaces File history, and an old link to that screen arrives here.
+  - A **file**: when it was born and by whom, each time it was renamed, moved to another folder or rewritten, and every edit, back past its renames. A rewrite is a commit that removed at least half of the file's lines. **Follow renames** can be switched off.
+  - A **folder**: the commits that added, removed or renamed a file under it, and its biggest edits.
+  - A **branch**: where it left the default branch, its commits, what was merged into it, where it landed, and the rebases and resets its reflog records.
+  - A **line**: every commit that changed it, with the line as each one left it. **Investigate line** in Files opens it.
+  - The card at the top draws the size over time, with a marker on each birth, rename, move and rewrite, and a row of ticks for each author. Agents are in the agent's colour.
+  - Choose an event to see how much of the file it changed, how many of the lines it wrote are still there today, who owns the file today, and its largest change. **Open file at** reads the file in Files as that commit left it, **Compare with today** shows that version against the file now, and **Show in Graph** selects the commit.
+  - A long history arrives a page at a time, newest first. After 5,000 commits, **Load more** reads on. The range can be the last 30 days, 90 days or year.
+
+### Removed
+
+- File history, as a screen of its own. Investigate does what it did.
 
 ## [2.2.2] - 2026-10-12
 

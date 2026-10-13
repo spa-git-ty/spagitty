@@ -1439,6 +1439,140 @@ pub fn worktree_prune(repo: &Path) -> Result<()> {
     Ok(())
 }
 
+// --- Investigate (FEAT-132) -------------------------------------------------
+//
+// Three more reads that go through `git`, for the reason blame does: what they
+// ask is not in `gix`. Following a file across renames (`--follow`) and
+// following one line through history (`-L`) are both things git works out
+// commit by commit with its own rename detection, and a second implementation
+// that disagreed with `git log --follow` about where a file came from would be
+// worse than a slower one that agrees. They are reads: nothing below writes.
+
+/// What starts each commit in [`life_log`] and [`line_log`]'s output, and what
+/// separates its fields. Control characters, so no subject can contain them.
+pub const LIFE_RECORD: char = '\u{1e}';
+pub const LIFE_FIELD: char = '\u{1f}';
+/// What separates one `Co-authored-by` value from the next.
+pub const LIFE_TRAILER: char = '\u{1d}';
+
+/// id, short id, author, address, author time, parents, subject, co-authors.
+const LIFE_FORMAT: &str = "--format=%x1e%H%x1f%h%x1f%an%x1f%ae%x1f%at%x1f%P%x1f%s%x1f%(trailers:key=Co-authored-by,valueonly,separator=%x1d)";
+
+/// What to read a life of, for [`life_log`].
+pub struct LifeLog<'a> {
+    /// A revision, or a range such as `fork..branch`.
+    pub revision: &'a str,
+    /// A file or a folder to keep to. `None` reads every commit.
+    pub path: Option<&'a str>,
+    /// Follow one file across renames. Only meaningful with a file's path.
+    pub follow: bool,
+    pub skip: usize,
+    pub limit: usize,
+    /// Nothing older than this, in seconds since the epoch.
+    pub since: Option<i64>,
+}
+
+/// One page of history, with each commit's raw status lines and numstat.
+///
+/// A commit is a record starting with [`LIFE_RECORD`]; after its header line
+/// come `:mode mode id id STATUS\tpath[\tpath]` lines and `added\tremoved\tpath`
+/// lines. Paths are not quoted, so they are read as they are.
+pub fn life_log(repo: &Path, ask: &LifeLog<'_>) -> Result<String> {
+    let skip = format!("--skip={}", ask.skip);
+    let limit = format!("-n{}", ask.limit.max(1));
+    let since = ask.since.map(|at| format!("--since=@{at}"));
+
+    let mut args = vec![
+        "-c",
+        "core.quotepath=off",
+        "log",
+        LIFE_FORMAT,
+        "--raw",
+        "--numstat",
+        "-M",
+        "--no-color",
+        "--no-abbrev",
+        skip.as_str(),
+        limit.as_str(),
+    ];
+    if ask.follow {
+        args.push("--follow");
+    }
+    if let Some(since) = since.as_deref() {
+        args.push(since);
+    }
+    args.push(ask.revision);
+    args.push("--");
+    if let Some(path) = ask.path {
+        args.push(path);
+    }
+    run(repo, &args)
+}
+
+/// Every commit that changed line `line` of `path` as it is at `revision`,
+/// each with the patch for that line (`git log -L`).
+pub fn line_log(
+    repo: &Path,
+    revision: &str,
+    path: &str,
+    line: u32,
+    limit: usize,
+) -> Result<String> {
+    let range = format!("-L{line},{line}:{path}");
+    let limit = format!("-n{}", limit.max(1));
+    run(
+        repo,
+        &[
+            "-c",
+            "core.quotepath=off",
+            "log",
+            LIFE_FORMAT,
+            "--no-color",
+            limit.as_str(),
+            range.as_str(),
+            revision,
+        ],
+    )
+}
+
+/// How many commits `b` has that `a` lacks, and `a` that `b` lacks: ahead and
+/// behind, as `(ahead, behind)` of `b` against `a`.
+pub fn ahead_behind(repo: &Path, a: &str, b: &str) -> Result<(u32, u32)> {
+    let range = format!("{a}...{b}");
+    let out = run(repo, &["rev-list", "--left-right", "--count", &range, "--"])?;
+    let mut counts = out
+        .split_whitespace()
+        .map(|n| n.parse::<u32>().unwrap_or(0));
+    let behind = counts.next().unwrap_or(0);
+    let ahead = counts.next().unwrap_or(0);
+    Ok((ahead, behind))
+}
+
+/// The commits `tip` has on its own first-parent line that `base` lacks,
+/// newest first: a branch's own commits, without what was merged into it.
+pub fn own_commits(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>> {
+    let range = format!("{base}..{tip}");
+    let out = run(repo, &["rev-list", "--first-parent", &range, "--"])?;
+    Ok(out.lines().map(|id| id.trim().to_string()).collect())
+}
+
+/// The commit on `onto`'s first-parent line that first contained `tip`: where
+/// a merged branch landed. `None` when `tip` is not in `onto`, or is its tip.
+pub fn landing(repo: &Path, tip: &str, onto: &str) -> Result<Option<String>> {
+    let range = format!("{tip}..{onto}");
+    let out = run(
+        repo,
+        &[
+            "rev-list",
+            "--ancestry-path",
+            "--first-parent",
+            &range,
+            "--",
+        ],
+    )?;
+    Ok(out.lines().last().map(|id| id.trim().to_string()))
+}
+
 /// Read commit history touching a single path, following renames (FEAT-063).
 pub fn file_history(repo: &Path, path: &str, limit: usize) -> Result<String> {
     let limit_str = format!("-{}", limit.max(1));

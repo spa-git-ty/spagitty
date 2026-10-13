@@ -24,7 +24,7 @@
 	 * editor.
 	 *
 	 * Another screen opens a file here with `/files?path=…&rev=…&line=…`, at
-	 * the revision that screen was showing.
+	 * the revision that screen was showing, or a folder with `?dir=…&rev=…`.
 	 */
 	const info = $derived(repo.info);
 
@@ -48,7 +48,20 @@
 	$effect(() => {
 		const asked = page.url.searchParams;
 		const path = asked.get('path');
-		if (!path || !info) return;
+		const dir = asked.get('dir');
+		if (!info) return;
+		// A folder asked for at a revision: the tree, opened there.
+		if (!path && dir !== null) {
+			const at = asked.get('rev');
+			untrack(() => {
+				void files
+					.enter(info.path, info.head.branch ?? null)
+					.then(() => (at ? files.setRevision(at) : undefined))
+					.then(() => reveal(dir));
+			});
+			return;
+		}
+		if (!path) return;
 		const rev = asked.get('rev') ?? undefined;
 		const line = Number(asked.get('line'));
 		untrack(() => {

@@ -21,6 +21,7 @@ use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
 use spagitty_core::graph::{GraphOrder, ROW_PITCH};
 use spagitty_core::highlight;
 use spagitty_core::identity::{self, Identity, Key, Scope};
+use spagitty_core::investigate;
 use spagitty_core::merger;
 use spagitty_core::ops::{self, Integration, ResetMode, StashAction};
 use spagitty_core::pull;
@@ -1032,18 +1033,6 @@ pub fn blame(state: State<'_, AppState>, path: String, revision: String) -> Resu
     })
 }
 
-/// Read commit history for a single file path (FEAT-063).
-#[tauri::command(async)]
-pub fn file_history(
-    state: State<'_, AppState>,
-    path: String,
-    limit: usize,
-) -> Result<Vec<blame::FileHistoryEntry>> {
-    state.with_session("file_history", |session| {
-        blame::history(&session.repo.to_thread_local(), &path, limit)
-    })
-}
-
 // --- Files (FEAT-131) ---------------------------------------------------
 //
 // Every command below takes a revision and reads git's objects at it. None of
@@ -1142,6 +1131,74 @@ pub fn files_before(
     let repo = files_repo(&state, "files_before")?;
     let from = previous.as_deref().zip(previous_path.as_deref());
     files::before(&repo, &commit, &path, line, from)
+}
+
+// --- Investigate (FEAT-132) ---------------------------------------------
+//
+// Reads, like Files', and like Files' none holds the session lock while it
+// works: a page of `git log --follow` on a long history takes long enough to
+// be noticed.
+
+/// A page of the life of a file, a folder, a branch or a line.
+#[tauri::command(async)]
+pub fn investigate_life(
+    state: State<'_, AppState>,
+    ask: investigate::Ask,
+) -> Result<investigate::Page> {
+    investigate::life(&files_repo(&state, "investigate_life")?, &ask)
+}
+
+/// Who owns `path` at `rev` today, and what survives of each commit.
+#[tauri::command(async)]
+pub fn investigate_today(
+    state: State<'_, AppState>,
+    path: String,
+    rev: String,
+) -> Result<investigate::Today> {
+    investigate::today(&files_repo(&state, "investigate_today")?, &path, &rev)
+}
+
+/// The largest hunk of what `commit` did to `path`.
+#[tauri::command(async)]
+pub fn investigate_hunk(
+    state: State<'_, AppState>,
+    commit: String,
+    path: String,
+    old_path: Option<String>,
+) -> Result<Option<diff::Hunk>> {
+    investigate::largest_hunk(
+        &files_repo(&state, "investigate_hunk")?,
+        &commit,
+        &path,
+        old_path.as_deref(),
+    )
+}
+
+/// `path` as `commit` left it, against `today_path` at `rev`.
+#[tauri::command(async)]
+pub fn investigate_compare(
+    state: State<'_, AppState>,
+    commit: String,
+    path: String,
+    rev: String,
+    today_path: String,
+) -> Result<Vec<diff::Hunk>> {
+    investigate::compare(
+        &files_repo(&state, "investigate_compare")?,
+        &commit,
+        &path,
+        &rev,
+        &today_path,
+    )
+}
+
+/// A branch against the default branch: its fork, where it landed, ahead and behind.
+#[tauri::command(async)]
+pub fn investigate_branch(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<investigate::BranchFacts> {
+    investigate::branch_facts(&files_repo(&state, "investigate_branch")?, &name)
 }
 
 /// What operation is in progress, and every conflicted path.
