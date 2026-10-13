@@ -45,6 +45,9 @@
 	import { reading } from '$lib/reading.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import { settings } from '$lib/settings/store.svelte';
+	import { isMac } from '$lib/platform';
+	import { isToggle, kept, pressedOf } from '$lib/terminal/keys';
+	import { terminal } from '$lib/terminal/store.svelte';
 	import DialogHost from '$lib/ui/DialogHost.svelte';
 	import { watchScrolling } from '$lib/ui/scrolling';
 	import HookRunWindow from '$lib/hooks/HookRunWindow.svelte';
@@ -245,6 +248,28 @@
 	afterNavigate(() => timing.settle('navigate'));
 
 	function shortcut(event: KeyboardEvent) {
+		// The terminal's keys (FEAT-130). While it has the focus every key is
+		// the shell's except the two it keeps, so nothing below fires for one
+		// typed there; and `Ctrl+\`` opens it from anywhere else.
+		const pressed = pressedOf(event);
+		const typing = (event.target as Element | null)?.closest?.('.xterm') != null;
+		if (typing) {
+			const what = kept(pressed, isMac());
+			if (what === 'palette') {
+				event.preventDefault();
+				palette.toggle();
+			} else if (what === 'leave') {
+				event.preventDefault();
+				void goto(terminal.from);
+			}
+			return;
+		}
+		if (isToggle(pressed, isMac())) {
+			event.preventDefault();
+			void goto(terminal.toggle(page.url.pathname + page.url.search));
+			return;
+		}
+
 		if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
 
 		switch (event.key) {

@@ -135,6 +135,9 @@ jobs:
       - run: bun run tauri build ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
         shell: bash
         env:
+          # A release ships the terminal's multiplexer or does not ship (FEAT-130):
+          # without this, a download that failed would be a warning.
+          SPAGITTY_MULTIPLEXER_REQUIRED: 1
           # What the update check compares itself against. Without it an alpha
           # reports itself as a development build and can never say a newer
           # release exists — which is what every alpha did until TASK-037.

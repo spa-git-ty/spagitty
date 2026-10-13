@@ -31,6 +31,7 @@ defect.
 | 1Q | Farm | `/farm` | yes | Built | FEAT-073 |
 | 1R | Review | `/review` | yes | Built | FEAT-087 |
 | 1S | Merger | `/merge` | yes | Built | FEAT-100 |
+| 1T | Terminal | `/terminal` | yes | Built | FEAT-130 |
 | 1U | Files | `/files` | yes | Built | FEAT-131 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
@@ -1039,6 +1040,77 @@ of N* — with Continue, Skip this commit and Abort; git's ours and theirs are
 put back as A and B. Once every commit is replayed, Finish the rebase in the
 commit dialog moves the receiving branch and removes the worktree. Neither
 branch moves before then.
+
+## 1T — Terminal
+
+**Built.** `src/routes/terminal/+page.svelte`, `src/lib/terminal/`,
+`src-tauri/src/terminal.rs`, `crates/spagitty-process/src/pty.rs` and
+`mux.rs` (FEAT-130).
+
+A real terminal on the rail, after Conflicts, so nobody leaves Spagitty for
+one. `Ctrl+`` (`⌘`` on macOS) opens it from any screen and goes back to the
+one you were on.
+
+**The pieces.** A PTY from `portable-pty` (ConPTY on Windows, openpty
+elsewhere) runs the program. Its output crosses to the screen on a Tauri
+channel as raw bytes, is gathered for a frame (`batch.ts`) and written to
+xterm.js once, which is what lets a million lines go by without the window
+stopping. xterm.js draws with WebGL and falls back to its own renderer where
+that is refused. Scrollback is 10,000 lines.
+
+**A multiplexer when one can run.** tmux, or psmux on Windows, on a socket of
+Spagitty's own (`-L spagitty`), beside whatever tmux the person runs and never
+touching it. One session for each repository, named for its folder, attached
+with `new-session -A -s <name> -c <path>`. What is in the PTY is the *client*:
+*Detach*, closing the screen's terminal and closing Spagitty all end the
+client, and the session carries on. Nothing the screen can ask kills a
+session. `mux::choose` is the rule for which binary, a pure function: on macOS
+and Linux the system tmux when it is 3.2 or later and otherwise the one
+Spagitty ships; on Windows the psmux that shipped, and otherwise one on the
+`PATH`. The pill in the header names it and says *bundled* when it is
+Spagitty's; its hover gives the path and version.
+
+**None, and nothing said.** Where no multiplexer can run, or it is switched
+off in Settings › Behaviour, each tab is a plain shell, the Sessions panel and
+the pill are not drawn, and no text on the screen mentions one. A terminal
+that works is not missing anything.
+
+**The shell** is the one in Settings › Behaviour, and otherwise the
+platform's own: `$SHELL` on macOS and Linux; `pwsh`, then Windows PowerShell,
+then `cmd` on Windows.
+
+**The Sessions panel** lists the sessions on the socket with their windows and
+whether anyone is attached, the windows of the one shown, and *Follow
+repository*. Followed, opening another repository switches to its session and
+makes it if it is not there. The lists are read again every two seconds while
+the screen is shown, because a `tmux new-window` typed in the terminal changes
+them.
+
+**A terminal outlives the screen.** The emulators and their elements are kept
+in the store, not in the component. Leaving takes the element out of the page;
+the program runs on, its output is still written, and coming back puts the
+same element back.
+
+**Links are checked, never guessed.** A hex word of 7 to 40 characters and a
+`path:line[:col]` are found on a line (`links.ts`), and the repository is
+asked which are real (`files::known`): a word that resolves to a commit, a
+path that is a file at `HEAD`. Only those are underlined. A commit opens on
+the Graph and a place in a file opens in Files. What the repository said is
+kept, so a screen of `git log` is asked about once.
+
+**Keys** are in `keys.ts`, one table read by the emulator and by the layout.
+With the focus in the terminal every key is the shell's, except
+`Ctrl+Shift+P` for the palette, `Ctrl+Shift+`` to leave, and `Ctrl+Shift+C`
+and `Ctrl+Shift+V` to copy and paste (`⌘C` and `⌘V` on macOS).
+
+**What ships.** `tools/multiplexer.ts` runs before Tauri reads its resources.
+It downloads one pinned asset for the target, from the project that makes it,
+and refuses a file whose SHA-256 is not the one written beside it: psmux on
+Windows, and the tmux project's own static build on macOS and Linux, with
+their licence texts. A release build sets `SPAGITTY_MULTIPLEXER_REQUIRED`, so
+a download that failed stops the build. `NOTICE` lists both.
+
+**Not here.** Farm sessions in the panel are FEAT-135.
 
 ## 1U — Files
 

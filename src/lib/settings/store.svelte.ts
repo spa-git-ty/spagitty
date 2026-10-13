@@ -94,7 +94,9 @@ const DEFAULTS: Settings = {
 	notifyReviewRequests: true,
 	notifyChecks: true,
 	notifyEveryMinutes: 2,
-	rail: RAIL_DEFAULT
+	rail: RAIL_DEFAULT,
+	terminalShell: '',
+	terminalMultiplexer: true
 };
 
 function isSection(value: string): value is Section {

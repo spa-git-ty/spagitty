@@ -398,6 +398,56 @@ pub fn find(repo: &gix::Repository, rev: &str, query: &str, limit: usize) -> Res
     })
 }
 
+/// Which of what a terminal printed is real (FEAT-130).
+///
+/// A hex word is a commit when it resolves to one in this repository, and a
+/// path is a file when it is one at `HEAD`. The Terminal screen underlines
+/// only what comes back from here: a link is checked, never guessed.
+///
+/// Returns the words that are commits, each with the full id it means, and
+/// the paths that are files.
+pub fn known(
+    repo: &gix::Repository,
+    words: &[String],
+    paths: &[String],
+) -> (Vec<(String, String)>, Vec<String>) {
+    let commits = words
+        .iter()
+        .filter(|word| {
+            (7..=40).contains(&word.len()) && word.bytes().all(|b| b.is_ascii_hexdigit())
+        })
+        .filter_map(|word| {
+            let id = repo
+                .rev_parse_single(word.as_str())
+                .ok()?
+                .object()
+                .ok()?
+                .try_into_commit()
+                .ok()?
+                .id;
+            Some((word.clone(), id.to_string()))
+        })
+        .collect();
+
+    let tree = tree_at(repo, "HEAD").ok();
+    let files = paths
+        .iter()
+        .filter(|path| {
+            let path = path.trim_start_matches("./");
+            !path.is_empty()
+                && tree.as_ref().is_some_and(|tree| {
+                    tree.lookup_entry_by_path(std::path::Path::new(path))
+                        .ok()
+                        .flatten()
+                        .is_some_and(|entry| entry.mode().is_blob_or_symlink())
+                })
+        })
+        .cloned()
+        .collect();
+
+    (commits, files)
+}
+
 fn bytes_at(repo: &gix::Repository, commit: &str, path: &str) -> Result<Option<Vec<u8>>> {
     let tree = tree_at(repo, commit)?;
     let entry = tree
@@ -842,6 +892,54 @@ mod tests {
             before(&repo, &first, "a.rs", 1, None).expect("before"),
             None
         );
+    }
+
+    /// The terminal underlines only what is real (FEAT-130).
+    #[test]
+    fn a_hex_word_is_a_commit_only_when_it_resolves_and_a_path_only_when_it_is_a_file() {
+        let fixture = a_tree();
+        let head = fixture.head();
+        let repo = fixture.open();
+        let own = |items: &[&str]| {
+            items
+                .iter()
+                .map(|item| item.to_string())
+                .collect::<Vec<_>>()
+        };
+
+        let (commits, files) = known(
+            &repo,
+            &own(&[&head[..7], &head, "deadbee", "abc", "nothexx", &head[..6]]),
+            &own(&[
+                "src/lib.rs",
+                "./README.md",
+                "src",
+                "nope.rs",
+                "",
+                "src/deep/avatars.rs",
+            ]),
+        );
+
+        assert_eq!(
+            commits,
+            [
+                (head[..7].to_string(), head.clone()),
+                (head.clone(), head.clone())
+            ]
+        );
+        // A folder is not a file, and neither is a path that is not there.
+        assert_eq!(files, ["src/lib.rs", "./README.md", "src/deep/avatars.rs"]);
+    }
+
+    #[test]
+    fn a_hex_word_that_names_a_blob_is_not_a_commit() {
+        let fixture = a_tree();
+        let blob = fixture.rev("HEAD:README.md");
+        let repo = fixture.open();
+
+        let (commits, _) = known(&repo, &[blob[..10].to_string()], &[]);
+
+        assert!(commits.is_empty());
     }
 
     #[test]

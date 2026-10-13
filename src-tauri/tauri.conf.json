@@ -4,9 +4,9 @@
   "version": "2.2.2",
   "identifier": "dev.spagitty.app",
   "build": {
-    "beforeDevCommand": "bun tools/extensions/bundle.ts --debug && bun run dev",
+    "beforeDevCommand": "bun tools/extensions/bundle.ts --debug && bun tools/multiplexer.ts && bun run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun tools/extensions/bundle.ts && bun run build",
+    "beforeBuildCommand": "bun tools/extensions/bundle.ts && bun tools/multiplexer.ts && bun run build",
     "frontendDist": "../build"
   },
   "app": {
@@ -48,7 +48,8 @@
       }
     },
     "resources": {
-      "../extensions/coderabbit/bundle/spagitty.coderabbit/": "extensions/spagitty.coderabbit/"
+      "../extensions/coderabbit/bundle/spagitty.coderabbit/": "extensions/spagitty.coderabbit/",
+      "../multiplexer/bundle/": "multiplexer/"
     }
   }
 }

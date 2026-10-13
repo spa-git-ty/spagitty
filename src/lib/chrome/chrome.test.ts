@@ -1267,7 +1267,8 @@ describe('NavRail', () => {
 			'Farm',
 			'Graph',
 			'Working copy',
-			// FEAT-131.
+			// FEAT-130 and FEAT-131.
+			'Terminal',
 			'Files',
 			'Merger',
 			'Branches',

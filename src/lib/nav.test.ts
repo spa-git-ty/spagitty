@@ -102,6 +102,8 @@ describe('NAV_ITEMS', () => {
 			'/',
 			'/changes',
 			'/conflicts',
+			// FEAT-130. A terminal, after where conflicts are settled.
+			'/terminal',
 			// FEAT-131. Reading any file at any revision.
 			'/files',
 			// FEAT-100. Where a merge starts, beside where one that stopped is finished.
@@ -222,6 +224,7 @@ describe('isShown', () => {
 			'/farm',
 			'/',
 			'/changes',
+			'/terminal',
 			'/files',
 			'/merge',
 			'/branches',

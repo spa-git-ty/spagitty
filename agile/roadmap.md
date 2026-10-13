@@ -324,7 +324,7 @@ The life of a file, a folder, a branch or a line. It replaces File history.
 
 ### 39. FEAT-130 — Terminal
 
-A PTY and xterm.js, with tmux or psmux shipped where the system has none. The CI bundling is the long part. Farm sessions may follow as their own item.
+A PTY and xterm.js, with tmux or psmux shipped where the system has none. The CI bundling is the long part. Farm sessions are their own item, FEAT-135, and are not in 3.0.0.
 
 ### 40. FEAT-133 — Recipes
 

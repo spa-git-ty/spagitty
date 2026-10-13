@@ -1201,6 +1201,31 @@ pub fn investigate_branch(
     investigate::branch_facts(&files_repo(&state, "investigate_branch")?, &name)
 }
 
+/// What a terminal's link would open (FEAT-130).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalLinks {
+    /// Each hex word that is a commit here, with the full id it means.
+    pub commits: Vec<(String, String)>,
+    /// Each path that is a file at `HEAD`.
+    pub paths: Vec<String>,
+}
+
+/// Which of the hex words and paths a terminal printed are real. With no
+/// repository open, none are: nothing is underlined on a guess.
+#[tauri::command(async)]
+pub fn terminal_links(
+    state: State<'_, AppState>,
+    words: Vec<String>,
+    paths: Vec<String>,
+) -> TerminalLinks {
+    let (commits, paths) = match files_repo(&state, "terminal_links") {
+        Ok(repo) => files::known(&repo, &words, &paths),
+        Err(_) => (Vec::new(), Vec::new()),
+    };
+    TerminalLinks { commits, paths }
+}
+
 /// What operation is in progress, and every conflicted path.
 ///
 /// Reads only. Taking a side, editing the merged result and marking a file

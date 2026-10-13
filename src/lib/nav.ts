@@ -189,6 +189,8 @@ export const NAV_ITEMS: NavItem[] = [
 		icon: 'conflict',
 		shows: 'conflicts'
 	},
+	// FEAT-130. A real terminal, so nobody leaves Spagitty for one.
+	{ code: '1T', label: 'Terminal', href: '/terminal', group: 'work', icon: 'terminal', since: '3.0' },
 	// FEAT-131. Any file at any revision, read and never written.
 	{ code: '1U', label: 'Files', href: '/files', group: 'work', icon: 'files', since: '3.0' },
 	// FEAT-100. Merging two branches, seen first. Always on the rail: it is

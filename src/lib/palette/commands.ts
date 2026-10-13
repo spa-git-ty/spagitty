@@ -60,6 +60,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.search', title: 'Go to Search', path: '/search', keywords: ['find', 'grep'] },
 	{ id: 'go.requests', title: 'Go to Pull requests', path: '/requests', keywords: ['pr', 'review'] },
 	{ id: 'go.conflicts', title: 'Go to Conflicts', path: '/conflicts', keywords: ['merge'] },
+	{ id: 'go.terminal', title: 'Go to Terminal', path: '/terminal', keywords: ['shell', 'tmux', 'psmux', 'console', 'command line'] },
 	{ id: 'go.files', title: 'Go to Files', path: '/files', keywords: ['tree', 'browse', 'read', 'blame', 'source'] },
 	// FEAT-134: a screen can be taken off the rail, so the palette has to reach
 	// every one of them. These four had only ever been reached from the rail.

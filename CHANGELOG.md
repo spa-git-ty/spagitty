@@ -25,6 +25,15 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   - Press a line to open a card under it: who wrote it and when, the pull request, the commit's summary, and what the line was before. From there, **Commit** shows it on the Graph and **Blame before this** reads the file as it was before that commit.
   - The keys are for reading: `j` `k`, Ctrl+d and Ctrl+u, `gg` `G`, `/` `?` `n` `N` to search, `]b` `[b` for the next and previous run of blame, `b` to hide it, Enter and Esc for the card, and `y` to copy `path:line@sha`.
   - An image is shown as a picture. A binary file, a Git LFS pointer and a file over 50 MB say what they are and how big. A file over 5 MB is shown without colour.
+- **Terminal**, a new screen on the rail, is a real terminal, so you do not leave Spagitty for one. `Ctrl+`` (`⌘`` on macOS) opens it from any screen and takes you back.
+  - It runs your shell: `$SHELL` on macOS and Linux; PowerShell 7, then Windows PowerShell, then `cmd` on Windows. **Settings → Behaviour** chooses another.
+  - The shell runs inside tmux, or psmux on Windows, on a socket of Spagitty's own, so your own tmux server is not touched and your `~/.tmux.conf` still applies. Each repository has its own session. Closing Spagitty detaches from a session and never ends it.
+  - On macOS and Linux the system tmux is used when it is 3.2 or later. Otherwise Spagitty uses the one it ships. The pill in the header says which, and its hover gives the path and version.
+  - The **Sessions** panel lists the sessions and the windows of the one shown, with **Split right**, **Split down** and **Detach** in the header. **Follow repository** switches to a repository's session when you open that repository.
+  - Where no multiplexer can run, or it is switched off in Settings, each tab is a plain terminal.
+  - A commit id in the output opens on the Graph, and a `path:line` opens in Files. Each is underlined only once the repository has confirmed it is a commit, or a file at HEAD.
+  - While the terminal has the focus every key goes to the shell, except Ctrl+Shift+P for the palette, Ctrl+Shift+` to leave, and Ctrl+Shift+C and Ctrl+Shift+V to copy and paste (⌘C and ⌘V on macOS).
+  - A terminal keeps running when you go to another screen, and what it printed is there when you come back. It keeps 10,000 lines of scrollback.
 - **Investigate**, on the rail, tells the life of a file, a folder, a branch or a line. It replaces File history, and an old link to that screen arrives here.
   - A **file**: when it was born and by whom, each time it was renamed, moved to another folder or rewritten, and every edit, back past its renames. A rewrite is a commit that removed at least half of the file's lines. **Follow renames** can be switched off.
   - A **folder**: the commits that added, removed or renamed a file under it, and its biggest edits.

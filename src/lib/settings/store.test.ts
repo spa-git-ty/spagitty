@@ -61,7 +61,9 @@ fetchAvatars: false,
 			notifyReviewRequests: true,
 			notifyChecks: true,
 			notifyEveryMinutes: 2,
-			rail: { hidden: [], order: [], where: 'more' }
+			rail: { hidden: [], order: [], where: 'more' },
+			terminalShell: '',
+			terminalMultiplexer: true
 };
 
 const LIST: Licenses = {
@@ -413,7 +415,9 @@ describe('checking for a newer Spagitty', () => {
 			notifyReviewRequests: true,
 			notifyChecks: true,
 			notifyEveryMinutes: 2,
-			rail: { hidden: [], order: [], where: 'more' }
+			rail: { hidden: [], order: [], where: 'more' },
+			terminalShell: '',
+			terminalMultiplexer: true
 		});
 		await settings.load();
 		checkUpdate.mockResolvedValueOnce(RELEASED);

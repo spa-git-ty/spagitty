@@ -25,6 +25,8 @@ serde_json = { workspace = true }
 spagitty-core = { workspace = true }
 spagitty-farm = { workspace = true }
 spagitty-extensions = { workspace = true }
+# The Terminal screen's PTY and multiplexer rules (FEAT-130).
+spagitty-process = { workspace = true }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 # Pull request notifications in the operating system's notification centre

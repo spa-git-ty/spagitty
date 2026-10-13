@@ -81,7 +81,9 @@ export type IconName =
 	| 'more'
 	| 'files'
 	| 'investigate'
-	| 'recipes';
+	| 'recipes'
+	| 'split-right'
+	| 'split-down';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -213,6 +215,9 @@ export const ICONS: Record<IconName, string[]> = {
 	],
 	// The Log's glass with a clock in it: looking into what happened over time.
 	investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z', 'M15.5 15.5 21 21', 'M10.5 7.5v3l2 1.5'],
+	// A pane cut in two, by the line the cut draws (FEAT-130).
+	'split-right': ['M4 5h16v14H4z', 'M12 5v14'],
+	'split-down': ['M4 5h16v14H4z', 'M4 12h16'],
 	// Three blocks, stacked: a recipe is steps in order.
 	recipes: ['M4 4h10v5H4z', 'M4 9.5h14v5H4z', 'M4 15h8v5H4z'],
 	check: ['M5 12.5 10 17.5 19 7'],

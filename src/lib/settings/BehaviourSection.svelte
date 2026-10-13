@@ -63,8 +63,32 @@
 			label: 'Prune deleted remote branches when fetching',
 			what: 'Deletes remote-tracking refs for branches the remote no longer has. Your own local branches are untouched.',
 			pending: null
+		},
+		{
+			key: 'terminalMultiplexer',
+			// FEAT-130. On, because it is what keeps a session alive when
+			// Spagitty closes. The label says what is used; the hover says
+			// what turning it off gives instead.
+			label: 'Run the terminal inside tmux, or psmux on Windows',
+			what: 'Keeps a session for each repository on a socket of Spagitty\'s own, alive when Spagitty closes. Off runs a plain terminal in each tab. Where no multiplexer can run, a plain terminal is used either way.',
+			pending: null
 		}
 	];
+
+	/**
+	 * The shell a terminal runs (FEAT-130). Empty is the platform's own:
+	 * `$SHELL`, or PowerShell on Windows. Stored when the field is left, not
+	 * with every letter: half a path is not a shell.
+	 */
+	let shell = $state(settings.settings.terminalShell);
+	$effect(() => {
+		shell = settings.settings.terminalShell;
+	});
+
+	function saveShell() {
+		const next = shell.trim();
+		if (next !== settings.settings.terminalShell) void settings.choose('terminalShell', next);
+	}
 </script>
 
 <section class="section">
@@ -94,6 +118,24 @@
 			</div>
 		</div>
 	{/each}
+
+	<label class="row field">
+		<span title="The program a new terminal runs. Empty uses your own shell: $SHELL, or PowerShell on Windows.">
+			Terminal shell
+		</span>
+		<input
+			class="mono"
+			type="text"
+			placeholder="your own shell"
+			spellcheck="false"
+			autocomplete="off"
+			bind:value={shell}
+			onblur={saveShell}
+			onkeydown={(event) => {
+				if (event.key === 'Enter') saveShell();
+			}}
+		/>
+	</label>
 </section>
 
 <style>
@@ -118,5 +160,16 @@
 
 	.text {
 		min-width: 0;
+	}
+
+	.field {
+		align-items: center;
+		gap: 10px;
+	}
+
+	.field input {
+		flex: 1;
+		min-width: 0;
+		max-width: 320px;
 	}
 </style>

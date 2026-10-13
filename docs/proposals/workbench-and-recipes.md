@@ -360,6 +360,8 @@ Asked and answered on 2026-10-13.
 5. **Farm sessions in the terminal** come later, as their own item. The terminal and the multiplexer are in 3.0.
 6. **Recipes in the repository**: no. Recipes stay personal, in application data.
 
+Added by the author later the same day, about Recipes: the agent's help is a switch. When it is on, the agent helps make the recipe. When it is off, plain-text input is disabled and the run is pure git commands in bash. FEAT-133 records the words and how they are read.
+
 ## 15. Non-scope
 
 - **Editing anything in Files**, an *Open in editor* button, or language-server features.

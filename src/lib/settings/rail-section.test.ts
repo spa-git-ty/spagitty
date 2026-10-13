@@ -52,7 +52,9 @@ function stored(rail: Partial<RailSettings> = {}): Settings {
 		notifyReviewRequests: true,
 		notifyChecks: true,
 		notifyEveryMinutes: 2,
-		rail: { ...RAIL_DEFAULT, ...rail }
+		rail: { ...RAIL_DEFAULT, ...rail },
+		terminalShell: '',
+		terminalMultiplexer: true
 	};
 }
 

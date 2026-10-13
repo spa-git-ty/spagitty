@@ -185,6 +185,14 @@ pub struct Settings {
     /// What is pinned, hidden and reordered on the rail (FEAT-134).
     #[serde(deserialize_with = "lenient")]
     pub rail: Rail,
+    /// The shell a terminal runs (FEAT-130). Empty is the platform's own:
+    /// `$SHELL`, or PowerShell on Windows.
+    #[serde(deserialize_with = "lenient")]
+    pub terminal_shell: String,
+    /// Run the terminal inside tmux, or psmux on Windows, when one can run.
+    /// On, because that is what keeps a session alive when Spagitty closes.
+    /// Off is a plain terminal for each tab.
+    pub terminal_multiplexer: bool,
 }
 
 /// How often the screen offers to look, in minutes. The first is the floor:
@@ -245,6 +253,9 @@ impl Default for Settings {
             notify_every_minutes: NOTIFY_EVERY_DEFAULT,
             // Every screen pinned, as TASK-056 left the rail.
             rail: Rail::default(),
+            // The platform's own shell, inside a multiplexer when one can run.
+            terminal_shell: String::new(),
+            terminal_multiplexer: true,
         }
     }
 }
@@ -405,6 +416,8 @@ mod tests {
                 order: vec!["1Q".to_string(), "1C".to_string(), "1A".to_string()],
                 place: RailWhere::Palette,
             },
+            terminal_shell: "/usr/bin/fish".to_string(),
+            terminal_multiplexer: false,
         };
         let text = serde_json::to_string_pretty(&written).expect("serialising");
 
@@ -487,6 +500,22 @@ mod tests {
             settings.rail.hidden,
             vec!["9Z".to_string(), "1G".to_string()]
         );
+    }
+
+    #[test]
+    fn a_terminal_runs_the_platforms_shell_in_a_multiplexer_until_told_otherwise() {
+        let settings = Settings::default();
+
+        assert_eq!(settings.terminal_shell, "");
+        assert!(settings.terminal_multiplexer);
+        // A file from before the terminal keeps what it carries and gains these.
+        let older = parse(r#"{"showGitCommands": true}"#);
+        assert!(older.terminal_multiplexer);
+        assert!(older.show_git_commands);
+        // A shell that is not text costs only the shell.
+        let odd = parse(r#"{"terminalShell": 7, "terminalMultiplexer": false}"#);
+        assert_eq!(odd.terminal_shell, "");
+        assert!(!odd.terminal_multiplexer);
     }
 
     #[test]

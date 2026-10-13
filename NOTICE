@@ -44,6 +44,31 @@ file.
 All are compatible with distribution inside a GPL-3.0-or-later work.
 
 
+BUNDLED PROGRAMS
+----------------
+
+The Terminal screen runs the shell inside a terminal multiplexer when one can
+be run. A build of Spagitty carries one for its platform, in the `multiplexer`
+folder of its resources, with that program's licence texts beside it. These are
+separate programs that Spagitty starts; none of their code is linked into it.
+They are downloaded at build time by `tools/multiplexer.ts`, each from the
+project that makes it, at a pinned version, and checked against a SHA-256.
+
+  tmux 3.7c               ISC          macOS and Linux
+    the tmux project's own static build (github.com/tmux/tmux-builds), which
+    is linked against:
+      libevent            BSD-3-Clause
+      ncurses             MIT-style (X11)
+      utf8proc            MIT
+      musl                MIT          Linux only
+
+  psmux 3.3.8             MIT          Windows
+    github.com/psmux/psmux
+
+On macOS and Linux the bundled tmux is used only when the system has no tmux
+of version 3.2 or later.
+
+
 FONTS
 -----
 

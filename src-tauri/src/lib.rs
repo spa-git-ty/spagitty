@@ -28,6 +28,7 @@ mod review_state;
 mod search_worker;
 mod settings;
 mod supplemental;
+mod terminal;
 #[cfg(test)]
 mod testing;
 mod timing;
@@ -44,6 +45,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .manage(commands::AppState::default())
+        // Terminals belong to the window, not to the repository that is open.
+        .manage(terminal::TerminalState::default())
         .invoke_handler(tauri::generate_handler![
             commands::open_repo,
             commands::close_repo,
@@ -109,6 +112,16 @@ pub fn run() {
             commands::investigate_hunk,
             commands::investigate_compare,
             commands::investigate_branch,
+            commands::terminal_links,
+            terminal::terminal_info,
+            terminal::terminal_open,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_close,
+            terminal::terminal_session_name,
+            terminal::terminal_sessions,
+            terminal::terminal_windows,
+            terminal::terminal_act,
             commands::conflicts,
             commands::conflict_sides,
             commands::conflict_regions,

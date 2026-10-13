@@ -2,7 +2,7 @@
 
 # FEAT-130 — A terminal on the rail, with tmux in it
 
-**Status:** Backlog — recorded 2026-10-12 for 3.0.0; not started.
+**Status:** Done — on `release/3.0.0`, after FEAT-132; unmerged. Covered by Rust tests of a real PTY and of the multiplexer's rules, by mounted tests of the screen with a recording emulator, and looked at in the built frontend in headless Chrome with a pretend shell. On Windows the commands were also run against the psmux that ships, through a PTY. tmux on macOS and Linux was not run, and the screen has not been looked at in the running application.
 **Branch:** `feature/FEAT-130-a-terminal-on-the-rail`.
 **Screens:** 1T (Terminal, new, at `/terminal`), chrome (a rail row), 1K (Settings › Behaviour: shell and multiplexer).
 **Raised by:** the author, 2026-10-12: a full terminal in the left bar so nobody leaves Spagitty for one, supporting tmux and pmux, shipped in where the licence allows.
@@ -36,12 +36,36 @@ Terminal is a real terminal on the rail:
 - **Performance**: output is batched per frame; scrollback is 10,000 lines by default. `yes | head -n 1000000` does not freeze the window, and the rest of the app stays responsive.
 - **Tests**: Rust tests cover spawning, writing, resizing and exit of a PTY, plus the multiplexer detection rules. Component tests cover the screen with a fake PTY channel.
 
-## Second part (may be its own item)
+## Second part: its own item
 
-- **Farm sessions**: the farm may run a local agent inside `tmux -L spagitty` as `farm/<task>`. Such sessions are listed with the agent's mark and state, and attach read-only. This needs the author's answer to the spec's question 5.
+- **Farm sessions** are [FEAT-135](FEAT-135-farm-sessions-in-the-terminal.md). The author answered the spec's question 5 on 2026-10-13: they come later.
 
 ## Not in this item
 
 - **A terminal inside other screens** (a drawer).
 - **Sessions shared with another machine.**
 - **The agent typing into the person's terminal.**
+
+## What was built
+
+- **`crates/spagitty-process/src/pty.rs`**: a PTY on `portable-pty`, with `spawn`, `write`, `resize` and `kill`. One thread reads and one waits for the exit. Dropping the handle ends its program.
+- **`crates/spagitty-process/src/mux.rs`**: the multiplexer's rules as pure functions. `parse_version` reads what tmux and psmux print, `choose` decides which binary, `session_name` names a session, and `attach_args` and `action_args` are the only commands sent. All of them go to `-L spagitty`.
+- **`src-tauri/src/terminal.rs`**: nine commands. `terminal_open` sends output down a Tauri channel as raw bytes and announces the exit as an event. The terminals are the window's, not the repository's.
+- **`files::known`** in the core, behind `terminal_links`: which hex words are commits and which paths are files at `HEAD`.
+- **The screen** is `src/routes/terminal/+page.svelte` with `src/lib/terminal/`: the store, `batch.ts`, `keys.ts`, `links.ts`, `xterm.ts` behind the `Emulator` interface, and the Sessions panel.
+- **`tools/multiplexer.ts`** downloads the pinned asset for the target and checks its SHA-256: psmux 3.3.8 on Windows, and tmux 3.7c from `tmux/tmux-builds` on macOS and Linux, with the licence texts. It runs from `beforeBuildCommand` and `beforeDevCommand`. The three release workflows set `SPAGITTY_MULTIPLEXER_REQUIRED`.
+- **Settings › Behaviour** has the multiplexer's switch and the shell.
+
+## Differences from the spec and the artboard
+
+- **A resource, not a sidecar.** The spec says Tauri `externalBin`. The multiplexer is a folder in the application's resources, the way the official extension is, because a sidecar must exist for every target at every build, and a plain `cargo` build has none.
+- **Downloaded, never built.** The tmux project publishes its own static builds, so nothing is compiled in CI.
+- **No `THIRD-PARTY-LICENSES.md`.** The criteria name a file this repository does not have. The bundled programs are in `NOTICE`, their licence texts ship beside the binaries, and the linked dependencies are in the generated list Settings shows.
+- **Tabs are sessions.** The spec has a tab for each window of a session. A tab here is a session on the socket, and the windows are in the panel, because one client is attached for each session and its windows are tmux's to draw.
+- **Splits are tmux's.** *Split right* and *Split down* ask the multiplexer, which draws the panes inside the one terminal. With no multiplexer there are no splits.
+- **Windows uses the psmux that shipped** before one on the `PATH`. The system-first rule is for tmux on macOS and Linux, where the author's answer 4 applies.
+- **Farm sessions** are not in the panel. See FEAT-135.
+
+## What was found on the way
+
+- **A terminal could fail to start.** On Windows, ConPTY asks where the cursor is before it runs anything, and waits for the answer. The question comes down the channel, which can be ahead of the reply that carries the terminal's id, and an answer with no id to send it to was dropped. What a terminal sends before it has an id is now held, and sent in order once it has one.

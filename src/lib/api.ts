@@ -7,7 +7,7 @@
  * types from `./types`, so a command rename is a one-file change.
  */
 
-import { invoke as call, type InvokeArgs } from '@tauri-apps/api/core';
+import { Channel, invoke as call, type InvokeArgs } from '@tauri-apps/api/core';
 import { timing } from './timing.svelte';
 import type { DesktopTheme } from './omarchy';
 import type {
@@ -39,6 +39,11 @@ import type {
 	LifeAsk,
 	LifePage,
 	LifeToday,
+	TerminalAsk,
+	TerminalInfo,
+	TerminalLinks,
+	TerminalSession,
+	TerminalWindow,
 	FilesEntry,
 	FilesFound,
 	FilesRead,
@@ -401,6 +406,67 @@ export function investigateCompare(
 /** A branch against the default branch: its fork, where it landed, ahead and behind. */
 export function investigateBranch(name: string): Promise<BranchFacts> {
 	return invoke('investigate_branch', { name });
+}
+
+// --- Terminal (FEAT-130) ----------------------------------------------------
+
+/** The event a terminal's exit is announced with, carrying its id and code. */
+export const TERMINAL_EXIT_EVENT = 'terminal-exit';
+
+/** Which multiplexer is in use, and which shell a terminal runs. */
+export function terminalInfo(): Promise<TerminalInfo> {
+	return invoke('terminal_info');
+}
+
+/**
+ * Open a terminal: the multiplexer's client attached to `session`, or with no
+ * session a plain shell. Its output arrives on `output` as raw bytes, never
+ * as JSON, and the answer is the id its keystrokes are sent to.
+ */
+export function terminalOpen(
+	ask: { session: string | null; cwd: string; cols: number; rows: number },
+	output: (bytes: Uint8Array) => void
+): Promise<number> {
+	const channel = new Channel<ArrayBuffer | number[]>();
+	channel.onmessage = (message) => {
+		output(message instanceof ArrayBuffer ? new Uint8Array(message) : Uint8Array.from(message));
+	};
+	return invoke('terminal_open', { ask, output: channel });
+}
+
+export function terminalWrite(id: number, data: string): Promise<void> {
+	return invoke('terminal_write', { id, data });
+}
+
+export function terminalResize(id: number, cols: number, rows: number): Promise<void> {
+	return invoke('terminal_resize', { id, cols, rows });
+}
+
+/** Close a terminal. With a multiplexer the session carries on. */
+export function terminalClose(id: number): Promise<void> {
+	return invoke('terminal_close', { id });
+}
+
+/** The session a repository's terminal attaches to: its folder's name. */
+export function terminalSessionName(path: string): Promise<string> {
+	return invoke('terminal_session_name', { path });
+}
+
+export function terminalSessions(): Promise<TerminalSession[]> {
+	return invoke('terminal_sessions');
+}
+
+export function terminalWindows(session: string): Promise<TerminalWindow[]> {
+	return invoke('terminal_windows', { session });
+}
+
+export function terminalAct(session: string, action: TerminalAsk): Promise<void> {
+	return invoke('terminal_act', { session, action });
+}
+
+/** Which of the hex words and paths a terminal printed are real. */
+export function terminalLinks(words: string[], paths: string[]): Promise<TerminalLinks> {
+	return invoke('terminal_links', { words, paths });
 }
 
 /** What is in progress and what is conflicted. Reads only; nothing is written. */

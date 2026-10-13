@@ -1402,6 +1402,60 @@ export interface Settings {
 	notifyEveryMinutes: number;
 	/** What is pinned, hidden and reordered on the rail (FEAT-134). */
 	rail: import('./nav').RailSettings;
+	/** The shell a terminal runs (FEAT-130). Empty is the platform's own. */
+	terminalShell: string;
+	/** Run the terminal inside tmux, or psmux on Windows, when one can run. */
+	terminalMultiplexer: boolean;
+}
+
+// --- Terminal (FEAT-130) ---------------------------------------------------
+
+/** The multiplexer in use. Mirrors `terminal::MuxInfo`. */
+export interface TerminalMux {
+	/** `tmux` or `psmux`. */
+	name: string;
+	version: string;
+	path: string;
+	/** True when it is the one Spagitty ships. */
+	bundled: boolean;
+}
+
+/** Mirrors `terminal::TerminalInfo`. */
+export interface TerminalInfo {
+	/** Null when no multiplexer can run, or it is turned off: every tab is a plain terminal. */
+	mux: TerminalMux | null;
+	/** The program a new terminal runs. */
+	shell: string;
+}
+
+/** A session on Spagitty's socket. Mirrors `terminal::SessionInfo`. */
+export interface TerminalSession {
+	name: string;
+	windows: number;
+	attached: boolean;
+}
+
+/** One window of a session. Mirrors `terminal::WindowInfo`. */
+export interface TerminalWindow {
+	index: number;
+	name: string;
+	active: boolean;
+}
+
+/** Something asked of a session. Mirrors `terminal::Ask`. */
+export type TerminalAsk =
+	| { kind: 'newWindow'; cwd: string }
+	| { kind: 'selectWindow'; index: number }
+	| { kind: 'splitRight' }
+	| { kind: 'splitDown' }
+	| { kind: 'detach' };
+
+/** Which of what a terminal printed is real. Mirrors `commands::TerminalLinks`. */
+export interface TerminalLinks {
+	/** Each hex word that is a commit here, with the full id it means. */
+	commits: [string, string][];
+	/** Each path that is a file at HEAD. */
+	paths: string[];
 }
 
 /** Where a watched pull request stands (FEAT-114). Mirrors `watch::WatchState`. */

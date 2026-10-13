@@ -41,6 +41,18 @@ Spagitty validates the stack, writes the agent's brief, saves a restore point, a
 - **Look**: neutral block cards with a small muted square per group, and no bright fills (the author's direction).
 - **Tests**: Rust tests for every validator rule, brief generation, restore and undo on a scratch repository, and each level's stops. Component tests for the builder's keys and live validation.
 
+## The author's note of 2026-10-13
+
+Sent while FEAT-130 was being finished, in these words: "recpies should be created include help from the agent ( if toggeled on ) if not , plain text input is disabled , the run is pure git commands with bash".
+
+Read as, and to be confirmed in this item's plan before the code:
+
+- **A switch for the agent's help**, on the recipe.
+- **On**: the agent helps when the recipe is made, and the plain-text fields are there to be written in.
+- **Off**: the plain-text fields are disabled, no agent is called, and the run is the blocks' git commands and nothing else, run in bash.
+
+This goes further than the acceptance criteria above, which have an agent in every recipe. Where the two disagree, this note is the later word.
+
 ## Not in this item
 
 - **Blocks outside the catalogue**, loops, and conditions beyond the three guards.
