@@ -178,16 +178,56 @@ pub fn spawn<R: Runtime>(
 struct Output {
     last: Option<String>,
     failures: Vec<String>,
+    /// What the remote said that was neither progress nor an error of its
+    /// own: a hook's words, when a hook refused the push.
+    remote: Vec<String>,
 }
+
+/// How many of the remote's lines are kept. A hook can print a page.
+const REMOTE_LINES: usize = 12;
 
 impl Output {
     fn error(&self) -> Option<String> {
         if self.failures.is_empty() {
-            self.last.clone()
-        } else {
-            Some(self.failures.join("\n"))
+            return self.last.clone();
         }
+        // `! [remote rejected] main -> main (pre-receive hook declined)` says
+        // that the remote refused and not why. The why is what its hook
+        // printed before it, and it is the only part a person can act on.
+        let refused_there = self
+            .failures
+            .iter()
+            .any(|line| line.contains("[remote rejected]"));
+        let said: &[String] = if refused_there { &self.remote } else { &[] };
+        let said = &said[said.len().saturating_sub(REMOTE_LINES)..];
+        Some(
+            said.iter()
+                .chain(&self.failures)
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
     }
+}
+
+/// The phases git's own progress on the remote is reported under. A line of
+/// one of these is the transfer, not something anybody wrote for a person.
+const REMOTE_PROGRESS: &[&str] = &[
+    "Enumerating objects",
+    "Counting objects",
+    "Compressing objects",
+    "Receiving objects",
+    "Writing objects",
+    "Resolving deltas",
+    "Checking connectivity",
+    "Updating files",
+];
+
+/// Whether a line the remote sent is git's progress and not a message.
+fn is_remote_progress(step: &Progress) -> bool {
+    step.percent.is_some()
+        || REMOTE_PROGRESS.contains(&step.phase.as_str())
+        || step.line.starts_with("Total ")
 }
 
 /// Forward git's progress until it stops talking, keeping its error lines.
@@ -213,6 +253,8 @@ fn report<R: Runtime>(
         let text = String::from_utf8_lossy(line).into_owned();
         line.clear();
 
+        // `clone::progress` takes the prefix off, so it is looked for first.
+        let from_remote = text.trim_start().starts_with("remote:");
         let Some(step) = clone::progress(&text) else {
             return;
         };
@@ -221,6 +263,8 @@ fn report<R: Runtime>(
             || step.line.starts_with("! [")
         {
             output.failures.push(step.line.clone());
+        } else if from_remote && !step.line.starts_with("hint:") && !is_remote_progress(&step) {
+            output.remote.push(step.line.clone());
         }
         output.last = Some(step.line.clone());
         if clone::is_new_step(last.as_ref(), &step) {
@@ -277,6 +321,71 @@ mod tests {
         assert_eq!(steps[1]["percent"], 100);
         assert_eq!(steps[0]["token"], 81);
         assert_eq!(steps[0]["operation"], "push");
+    }
+
+    /// A hook that refuses a push says why, and git passes it on. Without
+    /// it the refusal says only that a hook declined.
+    #[test]
+    fn a_push_a_hook_refused_keeps_what_the_hook_said() {
+        let app = testing::app();
+        let output = report(
+            app.handle(),
+            85,
+            Operation::Push,
+            &b"Writing objects: 100% (3/3), 280 bytes | 280.00 KiB/s, done.\n\
+              Total 3 (delta 0), reused 0 (delta 0), pack-reused 0\n\
+              remote: Resolving deltas: 100% (1/1), done.\n\
+              remote: Commit subject must include a ticket ID\n\
+              remote: See https://wiki.example/commits\n\
+              remote: \n\
+              To example.com:team/repo.git\n \
+              ! [remote rejected] main -> main (pre-receive hook declined)\n\
+              error: failed to push some refs to 'example.com:team/repo.git'\n"[..],
+        );
+
+        assert_eq!(
+            output.error().as_deref(),
+            Some(
+                "Commit subject must include a ticket ID\n\
+                 See https://wiki.example/commits\n\
+                 ! [remote rejected] main -> main (pre-receive hook declined)\n\
+                 error: failed to push some refs to 'example.com:team/repo.git'"
+            )
+        );
+    }
+
+    /// What the remote said is the reason only when the remote refused. A
+    /// push git itself refuses keeps git's own lines and nothing else.
+    #[test]
+    fn what_the_remote_said_is_not_added_to_a_refusal_that_was_not_its_own() {
+        let app = testing::app();
+        let output = report(
+            app.handle(),
+            86,
+            Operation::Push,
+            &b"remote: Welcome to the forge\n\
+              remote: Counting objects: 5, done.\n\
+              remote: hint: nothing to see\n \
+              ! [rejected] main -> main (non-fast-forward)\n\
+              error: failed to push some refs\n"[..],
+        );
+
+        assert_eq!(
+            output.error().as_deref(),
+            Some("! [rejected] main -> main (non-fast-forward)\nerror: failed to push some refs")
+        );
+        // A hook that prints a page is kept to its last lines.
+        let mut long = String::new();
+        for n in 0..40 {
+            long.push_str(&format!("remote: line {n}\n"));
+        }
+        long.push_str(" ! [remote rejected] main -> main (pre-receive hook declined)\n");
+        let said = report(app.handle(), 87, Operation::Push, long.as_bytes())
+            .error()
+            .expect("an error");
+        assert_eq!(said.lines().count(), REMOTE_LINES + 1);
+        assert!(said.starts_with("line 28\n"));
+        assert!(said.ends_with("(pre-receive hook declined)"));
     }
 
     #[test]

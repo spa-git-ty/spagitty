@@ -18,7 +18,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Fixed
 
-- **Push** publishes a new branch without asking for an upstream first, and sets it to track the branch on `origin` or the repository's first remote. A branch that already tracks another branch is pushed there. Fetch and push show Git's progress and actual error messages, including the rejection reason when Git follows it with hints.
+- **Push** publishes a new branch without asking for an upstream first, and sets it to track the branch on `origin` or the repository's first remote. A branch that already tracks another branch is pushed there. Fetch and push show Git's progress and actual error messages, including the rejection reason when Git follows it with hints. A push that a hook on the remote refused shows what the hook said.
 - In Settings → You, saving the global or repository Git name and email keeps the saved values visible. Saving one field preserves the other field's unsaved edit, and the configuration is read again from disk so the saved value does not revert to the one from when the repository was opened.
 
 ### Downloads

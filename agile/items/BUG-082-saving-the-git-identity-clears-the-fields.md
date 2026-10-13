@@ -27,3 +27,9 @@ The identity command discovers a fresh repository handle before reading its conf
 The new command test reproduces a stale global response with a repository kept open, using an isolated configuration directory. Store tests reproduce the loss of the other draft in both scopes. Mounted component tests verify that both fields remain visible after saving in sequence.
 
 See [automated checks](../testing/BUG-082-automated.md) and [sweep](../testing/BUG-082-sweep.md).
+
+## What the review of #70 found
+
+CodeRabbit, 2026-10-12, answered on 2026-10-14. It was checked against the code and was right.
+
+- **A saved field could go back to its old value.** While a field was being written, switching the scope away and back refilled it with the old stored value. The save then found the field was not what it had submitted, took that for an edit and left it: the old value stood as an unsaved change beside a new stored one. What the person typed is now kept apart from what a refill put there, so only typing is an edit to keep.

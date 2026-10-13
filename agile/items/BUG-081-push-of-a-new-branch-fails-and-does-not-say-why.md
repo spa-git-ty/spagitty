@@ -27,3 +27,9 @@ Detached HEAD remains a Git refusal. No force push or dependency is added.
 ## Validation
 
 See [automated checks](../testing/BUG-081-automated.md) and [sweep](../testing/BUG-081-sweep.md). Desktop checks against a real hosting service remain to be run.
+
+## What the review of #70 found
+
+CodeRabbit, 2026-10-12, answered on 2026-10-14. It was checked against the code and was right.
+
+- **A push a hook refused did not say why.** Git's `! [remote rejected] main -> main (pre-receive hook declined)` and `error:` lines were kept, and what the hook itself printed, which git passes on as `remote:` lines, was dropped. That is the only part a person can act on. When the remote refused, the last twelve lines it said are now shown before git's own, without git's progress on the remote and without hints. A refusal that was not the remote's is as it was.

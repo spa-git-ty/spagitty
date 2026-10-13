@@ -139,9 +139,18 @@ function storedValue(key: IdentityKey): string {
 	return (scope === 'local' ? value.local : value.global) ?? '';
 }
 
+/**
+ * Which fields the person has typed in since they were last filled from
+ * what is stored. Kept apart from the drafts' values: a draft can differ
+ * from what was submitted because the person typed, or because the scope was
+ * switched and the field refilled, and only the first is an edit to keep.
+ */
+let edited: Record<IdentityKey, boolean> = { name: false, email: false };
+
 /** Put both fields back to what the chosen scope holds. */
 function resetDrafts(): void {
 	drafts = { name: storedValue('name'), email: storedValue('email') };
+	edited = { name: false, email: false };
 }
 
 export const settings = {
@@ -257,6 +266,7 @@ export const settings = {
 
 	setDraft(key: IdentityKey, value: string): void {
 		drafts = { ...drafts, [key]: value };
+		edited[key] = true;
 	},
 
 	/** Everything the screen shows, read in parallel so one failure is one section. */
@@ -309,11 +319,16 @@ export const settings = {
 		writeError = null;
 		const savingScope = scope;
 		const submitted = drafts[key];
+		// What is in the field is what is being written: from here, only
+		// typing makes it an edit again.
+		edited[key] = false;
 		try {
 			identity = await api.setIdentity(savingScope, key, submitted);
 			// Saving one field must keep the other field's unsaved edit (BUG-082).
 			// An edit made while git was writing belongs to the next save too.
-			if (scope === savingScope && drafts[key] === submitted) {
+			// A field the scope chip refilled meanwhile is not an edit: switched
+			// away and back, it holds the old value and must show the new one.
+			if (scope === savingScope && !edited[key]) {
 				drafts = { ...drafts, [key]: storedValue(key) };
 			}
 		} catch (e) {
@@ -476,6 +491,7 @@ export const settings = {
 		checking = false;
 		scope = 'global';
 		drafts = { name: '', email: '' };
+		edited = { name: false, email: false };
 		stored = DEFAULTS;
 		licenses = null;
 		about = null;
