@@ -1418,6 +1418,22 @@ const ASK_TIMEOUT: Duration = Duration::from_secs(180);
 /// How much room a model is given to answer one question.
 const ASK_TOKENS: u32 = 2_000;
 
+/// How many tokens one question may use: [`ASK_TOKENS`], or what is left of
+/// the agent's day when that is less. `None` when nothing is left.
+///
+/// `spent` counts for `spent_day` only: on any other day nothing is spent yet.
+fn ask_allowance(per_day: Option<u64>, spent: u64, spent_day: u64, today: u64) -> Option<u32> {
+    let Some(per_day) = per_day else {
+        return Some(ASK_TOKENS);
+    };
+    let spent = if spent_day == today { spent } else { 0 };
+    let left = per_day.saturating_sub(spent);
+    if left == 0 {
+        return None;
+    }
+    Some(left.min(u64::from(ASK_TOKENS)) as u32)
+}
+
 /// The agents a recipe may ask in `repo`, by id: the repository's rules
 /// allow them, and they can be reached — a command-line agent that runs, or a
 /// model that is on this machine or whose provider the repository's code may
@@ -1497,12 +1513,21 @@ pub(crate) fn ask<R: Runtime>(
             .unwrap_or_default();
         let key = require_key(remote.provider, &remote.name, key, true)
             .map_err(|failure| failure.message)?;
+        // The day's limit set in Settings holds for a question as it does for
+        // an assignment: nothing is sent once it is used up.
+        let allowance = ask_allowance(
+            remote.tokens_per_day,
+            remote.spent,
+            remote.spent_day,
+            days_now(),
+        )
+        .ok_or_else(|| format!("{} has used its tokens for today.", remote.name))?;
         let turn = models::complete(
             &remote.endpoint(key),
             system,
             &[models::Message::user(prompt)],
             &[],
-            ASK_TOKENS,
+            allowance,
         )
         .map_err(|error| error.to_string())?;
         if let Some(state) = app.try_state::<AgentsState>() {
@@ -1594,6 +1619,34 @@ pub(crate) fn ask<R: Runtime>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The limit in Settings is a limit on a recipe's questions too.
+    #[test]
+    fn a_question_is_held_to_what_is_left_of_the_agents_day() {
+        let today = 20_000;
+
+        // No limit set: a question's own allowance.
+        assert_eq!(
+            ask_allowance(None, 9_000_000, today, today),
+            Some(ASK_TOKENS)
+        );
+        // Plenty left: the same.
+        assert_eq!(
+            ask_allowance(Some(100_000), 1_000, today, today),
+            Some(ASK_TOKENS)
+        );
+        // Less left than a question would take: what is left.
+        assert_eq!(ask_allowance(Some(10_000), 9_500, today, today), Some(500));
+        // Used up, or over: nothing is sent.
+        assert_eq!(ask_allowance(Some(10_000), 10_000, today, today), None);
+        assert_eq!(ask_allowance(Some(10_000), 12_000, today, today), None);
+        assert_eq!(ask_allowance(Some(0), 0, today, today), None);
+        // What was spent on another day is not today's.
+        assert_eq!(
+            ask_allowance(Some(10_000), 10_000, today - 1, today),
+            Some(ASK_TOKENS)
+        );
+    }
 
     #[test]
     fn a_machine_file_from_nothing_is_the_safe_one() {

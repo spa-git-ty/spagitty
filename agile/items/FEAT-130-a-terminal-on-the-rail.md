@@ -17,7 +17,7 @@ Terminal is a real terminal on the rail:
 
 ## Acceptance criteria
 
-- **A rail row** in Repository, after Conflicts, with code 1T. `Ctrl+``/`Cmd+`` opens Terminal from anywhere and goes back from it.
+- **A rail row** in Repository, after Conflicts, with code 1T. ``Ctrl+` ``/``Cmd+` `` opens Terminal from anywhere and goes back from it.
 - **The shell**:
   - A tab runs the shell from Settings: `$SHELL` by default on macOS and Linux; `pwsh`, then Windows PowerShell, then `cmd` on Windows.
   - Resize, colours, the alternate screen, mouse reporting and Unicode behave as in a native terminal. `vim`, `htop` and `less` work.
@@ -32,7 +32,7 @@ Terminal is a real terminal on the rail:
 - **Links**:
   - A hex word of 7 to 40 characters is underlined only if it resolves in this repository, and opens it on the Graph.
   - A `path:line` is underlined only if it exists at HEAD, and opens it in Files.
-- **Keys**: while the terminal has focus, every key goes to the shell except `Ctrl+Shift+P` (palette) and `Ctrl+Shift+`` (leave).
+- **Keys**: while the terminal has focus, every key goes to the shell except `Ctrl+Shift+P` (palette) and ``Ctrl+Shift+` `` (leave).
 - **Performance**: output is batched per frame; scrollback is 10,000 lines by default. `yes | head -n 1000000` does not freeze the window, and the rest of the app stays responsive.
 - **Tests**: Rust tests cover spawning, writing, resizing and exit of a PTY, plus the multiplexer detection rules. Component tests cover the screen with a fake PTY channel.
 
@@ -69,3 +69,12 @@ Terminal is a real terminal on the rail:
 ## What was found on the way
 
 - **A terminal could fail to start.** On Windows, ConPTY asks where the cursor is before it runs anything, and waits for the answer. The question comes down the channel, which can be ahead of the reply that carries the terminal's id, and an answer with no id to send it to was dropped. What a terminal sends before it has an id is now held, and sent in order once it has one.
+
+## What the review of #71 found
+
+CodeRabbit, 2026-10-13. Each was checked against the code, and each was right.
+
+- **Two repositories with one folder name shared a session.** `/work/api` and `/personal/api` were both `api`, and `new-session -A` joins a session that is there and ignores the folder it was given: the second repository's terminal was a shell in the first. A session's name is now the folder's name and six letters made from its whole path.
+- **Started from inside tmux, no terminal started.** Spagitty then has `TMUX` set, and a client that finds it set refuses to attach. `TMUX` and `TMUX_PANE` are taken out of every terminal's environment.
+- **A paste could stop the window.** `terminal_write` ran on the window's thread and waited for the terminal to take the bytes, which it does not when its program is not reading. A terminal now has a thread that writes, in order, from a queue.
+- **A test asked about a Windows path on every platform.** It is asked on Windows.

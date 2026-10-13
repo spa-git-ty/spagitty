@@ -66,3 +66,10 @@ It covers four targets: file, folder, branch and line.
 - ***Follow renames*** is a chip, like the switches in Files, and is offered for a file only.
 - **A marker** is also drawn where a file was deleted and where a branch landed.
 - **The range** is all time, the last year, the last 90 days or the last 30 days.
+
+## What the review of #71 found
+
+CodeRabbit, 2026-10-13. Both were checked against the code, and both were right.
+
+- **A range gave a false birth.** With *The last 90 days* chosen, the oldest commit in the range was marked as where a folder or the default branch was born, and a branch's fork was listed though it was older than the range. A birth is now claimed only when the range goes back to it: one more commit is asked for with the range taken off, and when there is one, nothing in the range is a birth. The screen then says *before this range*, as it already did for a file.
+- **The address put back a target the person had left.** The repository's facts are a new object after every refresh, and the address was applied again each time. It is applied when it changes and when another repository is opened.

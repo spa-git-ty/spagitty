@@ -93,3 +93,11 @@ This goes further than the acceptance criteria above, which have an agent in eve
 - **The restore point keeps the working tree as a tree made through an index of its own**, not as a `git stash create` commit, which leaves untracked files out.
 - **The run view has no *only allowed commands · 0 blocked* line.** Spagitty runs the commands, so there is nothing to block.
 - **The JSON form has `agentHelp`.**
+
+## What the review of #71 found
+
+CodeRabbit, 2026-10-13. Each was checked against the code, and each was right.
+
+- **A question to an agent ignored its tokens for the day.** An assignment is refused when a model's daily limit is used up; a recipe's question was not. It is now held to what is left, and refused when nothing is.
+- **Asking about a run waited for the step that was running.** A step holds the run, and a check can take twenty minutes. The screen is now given what it was last sent.
+- **The agent's menu showed a model that had been refused.** When the person does not agree to send anything to a model, the menu goes back to the agent in use.

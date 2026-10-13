@@ -497,8 +497,16 @@ fn folder_life(
         .collect();
 
     // The first commit that added a file under it is where it was born, and
-    // it is the oldest entry there is once nothing older is left.
-    if done && skip + entries.len() > 0 {
+    // it is the oldest entry there is once nothing older is left. A range
+    // ends where the range does, which may be long after the beginning.
+    let whole = since.is_none()
+        || !goes_further_back(
+            repo,
+            rev,
+            (!folder.is_empty()).then_some(folder),
+            skip + entries.len(),
+        );
+    if done && whole && skip + entries.len() > 0 {
         if let Some(oldest) = entries.last_mut() {
             oldest.kind = Kind::Born;
         }
@@ -725,7 +733,12 @@ fn branch_life(
         // which is already the oldest entry there is.
         match &facts.fork {
             Some(fork) => {
-                if let Some(commit) = logged_commit(repo, fork) {
+                // Where it forked is its birth only when that is in the
+                // range asked for: an entry older than the range is not
+                // part of it.
+                if let Some(commit) =
+                    logged_commit(repo, fork).filter(|commit| since.is_none_or_older(commit.time))
+                {
                     entries.push(Entry {
                         note: facts
                             .against
@@ -736,12 +749,19 @@ fn branch_life(
                 }
             }
             None => {
-                if let Some(root) = entries
-                    .iter_mut()
-                    .rev()
-                    .find(|entry| matches!(entry.kind, Kind::Commit | Kind::Merge))
-                {
-                    root.kind = Kind::Born;
+                // The oldest commit read is the root only when the range
+                // goes back to it.
+                let whole = since.is_none()
+                    || range.is_empty()
+                    || !goes_further_back(repo, &range, None, skip + logged.len());
+                if whole {
+                    if let Some(root) = entries
+                        .iter_mut()
+                        .rev()
+                        .find(|entry| matches!(entry.kind, Kind::Commit | Kind::Merge))
+                    {
+                        root.kind = Kind::Born;
+                    }
                 }
             }
         }
@@ -793,6 +813,32 @@ fn reflog_events(repo: &gix::Repository, name: &str, since: Option<i64>) -> Vec<
             })
         })
         .collect()
+}
+
+/// Whether history goes on past the `read` commits a read with a range gave.
+///
+/// One more commit is asked for with the range taken off. When there is one,
+/// what was read stops where the range does and not at the beginning, so
+/// nothing in it is a birth. When git cannot be asked, no birth is claimed.
+fn goes_further_back(
+    repo: &gix::Repository,
+    revision: &str,
+    path: Option<&str>,
+    read: usize,
+) -> bool {
+    shell::life_log(
+        dir(repo),
+        &LifeLog {
+            revision,
+            path,
+            follow: false,
+            skip: read,
+            limit: 1,
+            since: None,
+        },
+    )
+    .map(|out| !parse_log(&out).is_empty())
+    .unwrap_or(true)
 }
 
 /// `since`, read as "is this time inside the range".
@@ -1384,6 +1430,63 @@ mod tests {
         .expect("life");
         assert!(end.done);
         assert!(end.entries.is_empty());
+    }
+
+    /// A range that begins after a thing was born has no birth in it: the
+    /// oldest commit in the range is only the oldest in the range.
+    #[test]
+    fn a_range_that_begins_after_the_birth_has_no_birth_in_it() {
+        let after = |day: u64| Some((T0 + day * DAY - DAY / 2) as i64);
+
+        // A folder with a commit a day, from day 0 to day 3.
+        let fixture = Fixture::empty();
+        for n in 0..4 {
+            fixture.write(&format!("docs/{n}.md"), "x\n");
+            save(&fixture, &format!("Add {n}"), n);
+        }
+        let repo = fixture.open();
+        let folder = |since| Ask {
+            since,
+            ..ask(Target::Folder {
+                path: "docs".to_string(),
+            })
+        };
+        let late = life(&repo, &folder(after(2))).expect("life");
+        assert!(late.done);
+        assert_eq!(kinds(&late), [Kind::Added, Kind::Added]);
+        // A range that reaches the first commit still finds the birth.
+        let all = life(&repo, &folder(after(0))).expect("life");
+        assert_eq!(
+            kinds(&all),
+            [Kind::Added, Kind::Added, Kind::Added, Kind::Born]
+        );
+
+        // A branch that left main on day 1, with commits on days 2 and 3.
+        let fixture = forked();
+        let repo = fixture.open();
+        let feature = |since| Ask {
+            since,
+            ..branch("feature")
+        };
+        let late = life(&repo, &feature(after(3))).expect("life");
+        assert_eq!(late.entries.len(), 1);
+        assert_eq!(late.entries[0].summary, "C2");
+        assert_eq!(late.entries[0].kind, Kind::Commit);
+        // The fork is in a range that goes back to it.
+        let all = life(&repo, &feature(after(1))).expect("life");
+        assert_eq!(kinds(&all), [Kind::Commit, Kind::Commit, Kind::Born]);
+
+        // The default branch, born at its root on day 0.
+        let main = |since| Ask {
+            since,
+            ..branch("main")
+        };
+        let late = life(&repo, &main(after(4))).expect("life");
+        assert_eq!(late.entries.len(), 1);
+        assert_eq!(late.entries[0].summary, "D");
+        assert_eq!(late.entries[0].kind, Kind::Commit);
+        let all = life(&repo, &main(after(0))).expect("life");
+        assert_eq!(all.entries.last().map(|entry| entry.kind), Some(Kind::Born));
     }
 
     /// main: A — B — D

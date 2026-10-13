@@ -428,6 +428,33 @@ describe('choosing what to investigate', () => {
 		expect(life.mock.calls.at(-1)?.[0].target).toEqual({ kind: 'folder', path: 'core' });
 	});
 
+	/** The repository is read again after any commit, and that is not a new address. */
+	it('keeps the target the person chose when the repository is read again', async () => {
+		await at('?kind=file&path=core/avatars.rs');
+		click(view!.all('[role="radio"]')[1]);
+		await settle();
+		expect(investigate.target).toEqual({ kind: 'folder', path: 'core' });
+		life.mockClear();
+
+		// The same repository, as a refresh hands it over: a new object.
+		control.setInfo({ ...info(), lastFetched: 1_800_000_000 });
+		await settle();
+
+		expect(investigate.target).toEqual({ kind: 'folder', path: 'core' });
+		expect(life.mock.calls.every((call) => call[0].target.kind === 'folder')).toBe(true);
+	});
+
+	it('applies the address again for another repository', async () => {
+		await at('?kind=file&path=core/avatars.rs');
+		click(view!.all('[role="radio"]')[1]);
+		await settle();
+
+		control.setInfo({ ...info(), path: '/repos/another', name: 'another' });
+		await settle();
+
+		expect(investigate.target).toEqual({ kind: 'file', path: 'core/avatars.rs' });
+	});
+
 	it('waits for a path when there is none to go by', async () => {
 		await at('?kind=branch&name=main');
 		life.mockClear();

@@ -39,6 +39,10 @@ pub struct PtySpec {
     pub cwd: Option<PathBuf>,
     /// Set in the program's environment, over what this process has.
     pub env: Vec<(String, String)>,
+    /// Taken out of the program's environment, though this process has them.
+    /// `TMUX`, for one: a multiplexer started with it set believes it is
+    /// inside another and refuses to attach.
+    pub env_remove: Vec<String>,
     pub cols: u16,
     pub rows: u16,
 }
@@ -55,7 +59,8 @@ fn size(cols: u16, rows: u16) -> PtySize {
 /// A running program and the terminal it is in.
 pub struct Pty {
     master: Mutex<Box<dyn MasterPty + Send>>,
-    writer: Mutex<Box<dyn Write + Send>>,
+    /// The queue the writing thread takes from.
+    writer: Mutex<std::sync::mpsc::Sender<Vec<u8>>>,
     killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
     /// Set once the program has exited, so a late kill is not an error.
     exited: Arc<Mutex<bool>>,
@@ -93,6 +98,9 @@ impl Pty {
         for (key, value) in &spec.env {
             command.env(key, value);
         }
+        for key in &spec.env_remove {
+            command.env_remove(key);
+        }
 
         let mut child = pair.slave.spawn_command(command).map_err(other)?;
         // The program has its end now. Keeping ours open would keep the
@@ -118,6 +126,28 @@ impl Pty {
                 let _ = done.send(());
             })?;
 
+        // What is typed is written on a thread of its own, in the order it
+        // was typed. A write to a terminal waits when the program is not
+        // reading: a paste into `sleep 60` fills what the terminal will hold.
+        // Whoever called `write` must not wait with it, because that is the
+        // window's own thread. The thread ends when the terminal is dropped,
+        // which drops the queue, or when the program's end has closed.
+        let (queue, queued) = std::sync::mpsc::channel::<Vec<u8>>();
+        std::thread::Builder::new()
+            .name("spagitty-pty-write".into())
+            .spawn(move || {
+                let mut writer = writer;
+                for bytes in queued {
+                    if writer
+                        .write_all(&bytes)
+                        .and_then(|()| writer.flush())
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })?;
+
         let flag = exited.clone();
         std::thread::Builder::new()
             .name("spagitty-pty-wait".into())
@@ -134,17 +164,24 @@ impl Pty {
 
         Ok(Pty {
             master: Mutex::new(pair.master),
-            writer: Mutex::new(writer),
+            writer: Mutex::new(queue),
             killer: Mutex::new(killer),
             exited,
         })
     }
 
     /// Send keystrokes — or anything else — to the program.
+    ///
+    /// Returns at once: the bytes are queued, and written in order by the
+    /// terminal's own thread. An error means the terminal has closed.
     pub fn write(&self, bytes: &[u8]) -> std::io::Result<()> {
-        let mut writer = self.writer.lock().unwrap_or_else(|p| p.into_inner());
-        writer.write_all(bytes)?;
-        writer.flush()
+        self.writer
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .send(bytes.to_vec())
+            .map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::BrokenPipe, "the terminal has closed")
+            })
     }
 
     /// Tell the program its terminal is now this big.
@@ -202,6 +239,7 @@ mod tests {
             args: args.into_iter().map(str::to_string).collect(),
             cwd: None,
             env: Vec::new(),
+            env_remove: Vec::new(),
             cols: 80,
             rows: 24,
         }
@@ -381,6 +419,53 @@ mod tests {
             .expect("a name")
             .to_string();
         running.until(&name);
+    }
+
+    /// `TMUX` is the one this is for: a multiplexer that finds it set
+    /// believes it is inside another.
+    #[test]
+    fn what_is_taken_out_of_its_environment_is_not_there() {
+        let mut spec = shell();
+        spec.env = vec![("SPAGITTY_PTY_GONE".into(), "here".into())];
+        spec.env_remove = vec!["SPAGITTY_PTY_GONE".into()];
+        let mut running = start(&spec);
+
+        // What is typed is echoed, so the answer is spelt in a way the
+        // question is not.
+        if cfg!(windows) {
+            running.line("if not defined SPAGITTY_PTY_GONE echo gone-y^es");
+        } else {
+            running.line("echo \"gone-${SPAGITTY_PTY_GONE:-yes}\"");
+        }
+        running.until("gone-yes");
+    }
+
+    /// A paste into a program that is not reading must not hold the caller:
+    /// the caller is the window's own thread.
+    #[test]
+    fn a_write_does_not_wait_for_a_program_that_is_not_reading() {
+        let (program, args): (&str, Vec<&str>) = if cfg!(windows) {
+            ("cmd.exe", vec!["/D", "/C", "ping -n 8 127.0.0.1 >nul"])
+        } else {
+            ("/bin/sh", vec!["-c", "sleep 6"])
+        };
+        let spec = PtySpec {
+            program: program.to_string(),
+            args: args.into_iter().map(str::to_string).collect(),
+            ..shell()
+        };
+        let running = start(&spec);
+        let pasted = vec![b'x'; 2 * 1024 * 1024];
+
+        let began = std::time::Instant::now();
+        running.pty.write(&pasted).expect("queued");
+        running.pty.write(b"more").expect("queued");
+
+        assert!(
+            began.elapsed() < Duration::from_secs(2),
+            "writing waited {:?} for a program that was not reading",
+            began.elapsed()
+        );
     }
 
     #[test]

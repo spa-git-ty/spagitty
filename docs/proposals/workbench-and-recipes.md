@@ -78,8 +78,8 @@ The order in `NAV_ITEMS`: Farm · Graph, Working copy, Conflicts, **Terminal**, 
 
 ### 5.4 Keys
 
-- **Opening**: `Ctrl+`` (`Cmd+`` on macOS) opens Terminal from anywhere and focuses it; from Terminal it goes back to the screen before.
-- **While the terminal has focus**, every key goes to the shell except `Ctrl+Shift+P` (the palette) and `Ctrl+Shift+`` (leave the terminal). The app's other shortcuts do not fire.
+- **Opening**: ``Ctrl+` `` (``Cmd+` `` on macOS) opens Terminal from anywhere and focuses it; from Terminal it goes back to the screen before.
+- **While the terminal has focus**, every key goes to the shell except `Ctrl+Shift+P` (the palette) and ``Ctrl+Shift+` `` (leave the terminal). The app's other shortcuts do not fire.
 - **Copy and paste**: copy on select is off by default; `Ctrl+Shift+C/V` on Windows and Linux, `Cmd+C/V` on macOS.
 
 ## 6. Files (FEAT-131)

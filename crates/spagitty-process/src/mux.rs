@@ -215,13 +215,49 @@ pub fn detect(bundled_dir: Option<&Path>) -> Option<Mux> {
     choose(system, bundled, windows)
 }
 
+/// FNV-1a over `bytes`: small, and the same on every machine and every run.
+fn fnv(bytes: &[u8]) -> u32 {
+    let mut hash: u32 = 0x811c_9dc5;
+    for byte in bytes {
+        hash ^= u32::from(*byte);
+        hash = hash.wrapping_mul(0x0100_0193);
+    }
+    hash
+}
+
 /// A session's name for a repository: its folder's name, without the
-/// characters tmux keeps for itself.
+/// characters tmux keeps for itself, and six letters made from its whole
+/// path.
 ///
 /// tmux reads `.` and `:` in a target as separators — `session:window.pane` —
 /// so a folder called `my.app` would name a pane. Both become `_`, which is
 /// what tmux itself does when asked to make such a session.
+///
+/// The letters are what keeps `/work/api` and `/personal/api` apart. A
+/// session is attached to with `new-session -A`, which joins one that is
+/// there and ignores the folder it was given. With the folder's name alone,
+/// the second repository's terminal would be a shell in the first, and a
+/// command typed there would run on the wrong repository.
+///
+/// With no repository there is no path, and the name is `spagitty`.
 pub fn session_name(repository: &Path) -> String {
+    if repository.as_os_str().is_empty() {
+        return "spagitty".to_string();
+    }
+    // One spelling for one folder where the file system does not tell them
+    // apart.
+    let whole = repository.to_string_lossy();
+    let whole = if cfg!(windows) {
+        whole.replace('\\', "/").to_lowercase()
+    } else {
+        whole.into_owned()
+    };
+    let mark = fnv(whole.trim_end_matches('/').as_bytes()) & 0x00ff_ffff;
+    format!("{}-{mark:06x}", readable(repository))
+}
+
+/// The part of a session's name a person reads: the folder's.
+fn readable(repository: &Path) -> String {
     let folder = repository
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -548,20 +584,71 @@ mod tests {
 
     #[test]
     fn a_session_is_named_for_the_repositorys_folder() {
-        assert_eq!(
-            session_name(Path::new("/home/ada/Projects/spagitty")),
-            "spagitty"
-        );
+        /// The name without its six letters, and that it has them.
+        fn folder_of(path: &str) -> String {
+            let name = session_name(Path::new(path));
+            let (folder, mark) = name.rsplit_once('-').expect("a mark");
+            assert_eq!(mark.len(), 6, "{name}");
+            assert!(mark.bytes().all(|b| b.is_ascii_hexdigit()), "{name}");
+            folder.to_string()
+        }
+
+        assert_eq!(folder_of("/home/ada/Projects/spagitty"), "spagitty");
         // A Windows path is one only on Windows: elsewhere a backslash is a
         // letter in a name, not what separates two.
         #[cfg(windows)]
-        assert_eq!(session_name(Path::new("C:\\Users\\ada\\quiblo")), "quiblo");
+        assert_eq!(folder_of("C:\\Users\\ada\\quiblo"), "quiblo");
         // tmux reads `.` and `:` as separators in a target.
-        assert_eq!(session_name(Path::new("/srv/my.app")), "my_app");
-        assert_eq!(session_name(Path::new("/srv/a:b")), "a_b");
-        assert_eq!(session_name(Path::new("/srv/core banking")), "core banking");
-        assert_eq!(session_name(Path::new("/")), "spagitty");
+        assert_eq!(folder_of("/srv/my.app"), "my_app");
+        assert_eq!(folder_of("/srv/a:b"), "a_b");
+        assert_eq!(folder_of("/srv/core banking"), "core banking");
+        assert_eq!(folder_of("/"), "spagitty");
+        // No repository has no path, and nothing to tell apart.
         assert_eq!(session_name(Path::new("")), "spagitty");
+        // Nothing in a name is one of tmux's separators.
+        for path in ["/srv/my.app", "/srv/a:b", "/home/ada/Projects/spagitty"] {
+            let name = session_name(Path::new(path));
+            assert!(!name.contains('.') && !name.contains(':'), "{name}");
+        }
+    }
+
+    /// `new-session -A` joins a session that is there and ignores the folder
+    /// it was given, so a name two repositories share is a shell in the wrong
+    /// one.
+    #[test]
+    fn two_repositories_with_one_folder_name_have_sessions_of_their_own() {
+        let work = session_name(Path::new("/work/api"));
+        let personal = session_name(Path::new("/personal/api"));
+
+        assert_ne!(work, personal);
+        assert!(work.starts_with("api-") && personal.starts_with("api-"));
+        // The same repository is the same session, every time it is asked.
+        assert_eq!(work, session_name(Path::new("/work/api")));
+        assert_eq!(work, session_name(Path::new("/work/api/")));
+        // And the same on every machine and in every run: the name is kept
+        // by a server that outlives the application. These are FNV-1a's own
+        // published values.
+        assert_eq!(fnv(b""), 0x811c_9dc5);
+        assert_eq!(fnv(b"a"), 0xe40c_292c);
+    }
+
+    /// On Windows a path is written with either slash, and it is one folder.
+    #[cfg(windows)]
+    #[test]
+    fn on_windows_a_path_written_with_either_slash_is_one_session() {
+        assert_eq!(
+            session_name(Path::new("C:\\Users\\Ada\\Quiblo")),
+            session_name(Path::new("C:/Users/Ada/Quiblo"))
+        );
+        // The six letters do not depend on the case it was typed in. The
+        // folder's own name is kept as it is spelt.
+        let spelt = session_name(Path::new("C:\\Users\\Ada\\Quiblo"));
+        let lower = session_name(Path::new("c:\\users\\ada\\quiblo"));
+        assert_eq!(
+            spelt.rsplit_once('-').map(|n| n.1),
+            lower.rsplit_once('-').map(|n| n.1)
+        );
+        assert!(spelt.starts_with("Quiblo-"));
     }
 
     /// The item: `new-session -A -s <name> -c <path>`, on Spagitty's own socket.
@@ -727,6 +814,7 @@ mod tests {
                 args: attach_args(&session, &here, None),
                 cwd: Some(here.clone()),
                 env: Vec::new(),
+                env_remove: Vec::new(),
                 cols: 100,
                 rows: 30,
             },
@@ -784,6 +872,7 @@ mod tests {
                 args: attach_args(&session, &here, None),
                 cwd: Some(here),
                 env: Vec::new(),
+                env_remove: Vec::new(),
                 cols: 100,
                 rows: 30,
             },

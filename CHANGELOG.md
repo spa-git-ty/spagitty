@@ -27,7 +27,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   - Press a line to open a card under it: who wrote it and when, the pull request, the commit's summary, and what the line was before. From there, **Commit** shows it on the Graph and **Blame before this** reads the file as it was before that commit.
   - The keys are for reading: `j` `k`, Ctrl+d and Ctrl+u, `gg` `G`, `/` `?` `n` `N` to search, `]b` `[b` for the next and previous run of blame, `b` to hide it, Enter and Esc for the card, and `y` to copy `path:line@sha`.
   - An image is shown as a picture. A binary file, a Git LFS pointer and a file over 50 MB say what they are and how big. A file over 5 MB is shown without colour.
-- **Terminal**, a new screen on the rail, is a real terminal, so you do not leave Spagitty for one. `Ctrl+`` (`⌘`` on macOS) opens it from any screen and takes you back.
+- **Terminal**, a new screen on the rail, is a real terminal, so you do not leave Spagitty for one. ``Ctrl+` `` (``⌘` `` on macOS) opens it from any screen and takes you back.
   - It runs your shell: `$SHELL` on macOS and Linux; PowerShell 7, then Windows PowerShell, then `cmd` on Windows. **Settings → Behaviour** chooses another.
   - The shell runs inside tmux, or psmux on Windows, on a socket of Spagitty's own, so your own tmux server is not touched and your `~/.tmux.conf` still applies. Each repository has its own session. Closing Spagitty detaches from a session and never ends it.
   - On macOS and Linux the system tmux is used when it is 3.2 or later. Otherwise Spagitty uses the one it ships. The pill in the header says which, and its hover gives the path and version.

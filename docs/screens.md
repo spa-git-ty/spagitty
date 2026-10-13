@@ -1049,7 +1049,7 @@ branch moves before then.
 `mux.rs` (FEAT-130).
 
 A real terminal on the rail, after Conflicts, so nobody leaves Spagitty for
-one. `Ctrl+`` (`⌘`` on macOS) opens it from any screen and goes back to the
+one. ``Ctrl+` `` (``⌘` `` on macOS) opens it from any screen and goes back to the
 one you were on.
 
 **The pieces.** A PTY from `portable-pty` (ConPTY on Windows, openpty
@@ -1061,7 +1061,9 @@ that is refused. Scrollback is 10,000 lines.
 
 **A multiplexer when one can run.** tmux, or psmux on Windows, on a socket of
 Spagitty's own (`-L spagitty`), beside whatever tmux the person runs and never
-touching it. One session for each repository, named for its folder, attached
+touching it. One session for each repository, named for its folder with six letters made
+from its whole path, so two repositories with one folder name never share a
+session, attached
 with `new-session -A -s <name> -c <path>`. What is in the PTY is the *client*:
 *Detach*, closing the screen's terminal and closing Spagitty all end the
 client, and the session carries on. Nothing the screen can ask kills a
@@ -1101,7 +1103,7 @@ kept, so a screen of `git log` is asked about once.
 
 **Keys** are in `keys.ts`, one table read by the emulator and by the layout.
 With the focus in the terminal every key is the shell's, except
-`Ctrl+Shift+P` for the palette, `Ctrl+Shift+`` to leave, and `Ctrl+Shift+C`
+`Ctrl+Shift+P` for the palette, ``Ctrl+Shift+` `` to leave, and `Ctrl+Shift+C`
 and `Ctrl+Shift+V` to copy and paste (`⌘C` and `⌘V` on macOS).
 
 **What ships.** `tools/multiplexer.ts` runs before Tauri reads its resources.

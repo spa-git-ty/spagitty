@@ -44,7 +44,14 @@
 				<select
 					aria-label="Agent"
 					value={draft.agent ?? ''}
-					onchange={(event) => recipes.setAgent(event.currentTarget.value || null)}
+					onchange={async (event) => {
+						// A model the person does not agree to send anything to is not
+						// chosen, and the draft is as it was. Nothing changed, so
+						// nothing would put the select back: it is put back here.
+						const select = event.currentTarget;
+						await recipes.setAgent(select.value || null);
+						select.value = recipes.draft?.agent ?? '';
+					}}
 				>
 					<option value="">Choose an agent</option>
 					{#each recipes.helpers as each (each.id)}

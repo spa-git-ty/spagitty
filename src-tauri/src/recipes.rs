@@ -65,6 +65,10 @@ struct Live {
     stop: Arc<AtomicBool>,
     /// A step is running right now.
     working: AtomicBool,
+    /// What the screen was last sent. `run` is held for as long as a step
+    /// takes, and a check can take twenty minutes: a screen that asks what
+    /// the run is doing is given this, and does not wait for the step.
+    last: Mutex<Option<RunView>>,
 }
 
 #[derive(Default)]
@@ -562,8 +566,14 @@ fn publish<R: Runtime>(app: &AppHandle<R>, live: &Live) -> RunView {
         let _ = keep_record(&folder, &run);
     }
     let view = view(live, &run);
+    remember(live, &view);
     let _ = app.emit(EVENT, &view);
     view
+}
+
+/// Keep `view` as what the screen was last sent.
+fn remember(live: &Live, view: &RunView) {
+    *live.last.lock().unwrap_or_else(|p| p.into_inner()) = Some(view.clone());
 }
 
 fn host_for<R: Runtime>(app: &AppHandle<R>, live: &Arc<Live>, run: &Run) -> AppHost<R> {
@@ -598,7 +608,9 @@ fn drive<R: Runtime>(app: AppHandle<R>, live: Arc<Live>, woken: Receiver<()>) {
             let mut run = live.run.lock().unwrap_or_else(|p| p.into_inner());
             let mut host = host_for(&app, &live, &run);
             live.working.store(true, Ordering::SeqCst);
-            let _ = app.emit(EVENT, view(&live, &run));
+            let starting = view(&live, &run);
+            remember(&live, &starting);
+            let _ = app.emit(EVENT, &starting);
             let more = run.tick(&live.repo, &mut host);
             live.working.store(false, Ordering::SeqCst);
             (more, run.is_over())
@@ -677,6 +689,7 @@ pub fn recipe_run_start<R: Runtime>(
         wake: Mutex::new(wake),
         stop: Arc::new(AtomicBool::new(false)),
         working: AtomicBool::new(false),
+        last: Mutex::new(None),
     });
     recipes
         .live
@@ -796,8 +809,12 @@ pub fn recipe_run_current<R: Runtime>(
         .open_path("recipe_run_current")
         .map_err(|e| e.to_string())?;
     if let Some(live) = live_for(&recipes, &repo) {
-        let run = live.run.lock().unwrap_or_else(|p| p.into_inner());
-        return Ok(Some(view(&live, &run)));
+        // A step that is running holds the run. Whoever asks meanwhile is
+        // told what the screen was last sent, which says a step is running.
+        if let Ok(run) = live.run.try_lock() {
+            return Ok(Some(view(&live, &run)));
+        }
+        return Ok(live.last.lock().unwrap_or_else(|p| p.into_inner()).clone());
     }
     Ok(last_record(&folder(&app, &repo)?).map(|run| RunView {
         repo: key_of(&repo),
@@ -1313,6 +1330,43 @@ mod tests {
         answer(&app, Choice::Continue).expect("go on");
 
         assert_eq!(ends(&app).run.outcome, Some(Outcome::Done));
+    }
+
+    /// A step holds the run for as long as it takes. Asking what the run is
+    /// doing must not wait for the step.
+    #[test]
+    fn asking_about_a_run_does_not_wait_for_the_step_that_is_running() {
+        let fixture = two_branches();
+        let app = app_on(&fixture);
+        start(&app, merge_other(Level::StepByStep)).expect("started");
+        let waiting = waits(&app);
+        let live = live_for(&app.state::<RecipesState>(), fixture.path()).expect("a run");
+
+        // The run is held, as a step holds it.
+        let held = live.run.lock().expect("the run");
+        let (answered, answer) = std::sync::mpsc::channel();
+        let handle = app.handle().clone();
+        std::thread::spawn(move || {
+            let seen = recipe_run_current(
+                handle.clone(),
+                handle.state::<AppState>(),
+                handle.state::<RecipesState>(),
+            );
+            let _ = answered.send(seen);
+        });
+        let seen = answer
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("an answer while the run was held")
+            .expect("the run")
+            .expect("what was last sent");
+        drop(held);
+
+        assert_eq!(seen.run.id, waiting.run.id);
+        assert!(seen.live);
+        assert_eq!(
+            seen.run.stop.as_ref().map(|stop| stop.kind),
+            Some(StopKind::Approve)
+        );
     }
 
     #[test]

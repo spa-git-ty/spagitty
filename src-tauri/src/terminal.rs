@@ -124,6 +124,17 @@ fn shell_for(chosen: &str) -> String {
     }
 }
 
+/// What a terminal does not take from Spagitty's own environment.
+///
+/// Started from a shell inside tmux, Spagitty has `TMUX` and `TMUX_PANE`. A
+/// multiplexer's client that finds `TMUX` set refuses to attach ("sessions
+/// should be nested with care"), on any socket, so every terminal would
+/// print that line and exit. A plain shell that kept them would take itself
+/// for a pane of that other tmux, which it is not.
+fn not_inherited() -> Vec<String> {
+    vec!["TMUX".to_string(), "TMUX_PANE".to_string()]
+}
+
 /// What to run for a new terminal.
 ///
 /// With a multiplexer and a session to attach to, its client on Spagitty's
@@ -148,6 +159,7 @@ pub fn spec_for(
             ),
             cwd,
             env: Vec::new(),
+            env_remove: not_inherited(),
             cols,
             rows,
         },
@@ -156,6 +168,7 @@ pub fn spec_for(
             args: Vec::new(),
             cwd,
             env: Vec::new(),
+            env_remove: not_inherited(),
             cols,
             rows,
         },
@@ -448,6 +461,28 @@ mod tests {
         assert_eq!((spec.cols, spec.rows), (120, 40));
         // No shell chosen: the multiplexer's own default.
         assert_eq!(spec.args.len(), 8);
+    }
+
+    /// Spagitty started from inside tmux has `TMUX` set, and a client that
+    /// finds it set refuses to attach.
+    #[test]
+    fn no_terminal_inherits_the_tmux_spagitty_was_started_in() {
+        let here = std::env::temp_dir();
+
+        let client = spec_for(
+            Some(&a_mux()),
+            Some("spagitty"),
+            &here,
+            "/bin/zsh",
+            "",
+            80,
+            24,
+        );
+        let plain = spec_for(None, None, &here, "/bin/zsh", "", 80, 24);
+
+        for spec in [client, plain] {
+            assert_eq!(spec.env_remove, ["TMUX", "TMUX_PANE"]);
+        }
     }
 
     #[test]

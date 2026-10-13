@@ -23,7 +23,7 @@ Written on 2026-10-13, before the code.
    - With a multiplexer: one attached client for the repository's session, tabs that are its windows, the Sessions panel, *Split right*, *Split down* and *Detach*. Without one: a plain PTY for each tab, and no panel.
    - *Follow repository* attaches the open repository's session when the repository changes.
    - A link provider finds hex words and `path:line[:col]` on a line, asks which are real, and underlines only those.
-6. **Keys.** `Ctrl+`` opens Terminal from anywhere and goes back from it. With the terminal focused every key is the shell's except `Ctrl+Shift+P` and `Ctrl+Shift+``; `Ctrl+Shift+C` and `V` copy and paste.
+6. **Keys.** ``Ctrl+` `` opens Terminal from anywhere and goes back from it. With the terminal focused every key is the shell's except `Ctrl+Shift+P` and ``Ctrl+Shift+` ``; `Ctrl+Shift+C` and `V` copy and paste.
 7. **Settings › Behaviour** gains the shell, and whether a multiplexer is used.
 
 ## Dependencies

@@ -586,6 +586,22 @@ describe('the agent’s help', () => {
 		expect((view!.get('.stack .toggle') as HTMLButtonElement).disabled).toBe(true);
 	});
 
+	it('keeps showing the agent in use when a model is refused', async () => {
+		confirm.mockResolvedValue(false);
+		await show();
+		click(view!.get('.panel .row button'));
+		const agent = labelled<HTMLSelectElement>('Agent')!;
+		expect(agent.value).toBe('claude');
+
+		choose(agent, 'sonnet');
+		await settle(0);
+
+		expect(confirm.mock.calls[0][0].title).toBe('Send to Anthropic?');
+		expect(recipes.draft?.agent).toBe('claude');
+		// The select says what is true, not what was refused.
+		expect(labelled<HTMLSelectElement>('Agent')!.value).toBe('claude');
+	});
+
 	it('says there is no agent to help when none is set up', async () => {
 		agentState.snapshot = { ...agentsSnapshot(), local: [], remote: [] };
 		await show();

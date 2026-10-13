@@ -62,12 +62,26 @@
 		untrack(() => investigate.setHead(id));
 	});
 
-	/** A target asked for in the address, or the branch that is checked out. */
+	/**
+	 * A target asked for in the address, or the branch that is checked out.
+	 *
+	 * The address is applied when it changes and when another repository is
+	 * opened, and not again. The repository's `info` is a new object after
+	 * every refresh, which the watcher makes after any commit, and applying
+	 * the address each time would put back the target it named over one the
+	 * person has since chosen on the page.
+	 */
+	let appliedAddress: string | null = null;
+	let appliedRepository: string | null = null;
 	$effect(() => {
 		const asked = page.url.searchParams;
 		const here = info;
 		if (!here) return;
 		untrack(() => {
+			const address = asked.toString();
+			if (address === appliedAddress && here.path === appliedRepository && investigate.target) return;
+			appliedAddress = address;
+			appliedRepository = here.path;
 			const wanted = asked.get('kind') as Kind | null;
 			const path = asked.get('path');
 			const rev = asked.get('rev') ?? '';
