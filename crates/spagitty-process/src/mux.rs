@@ -552,6 +552,9 @@ mod tests {
             session_name(Path::new("/home/ada/Projects/spagitty")),
             "spagitty"
         );
+        // A Windows path is one only on Windows: elsewhere a backslash is a
+        // letter in a name, not what separates two.
+        #[cfg(windows)]
         assert_eq!(session_name(Path::new("C:\\Users\\ada\\quiblo")), "quiblo");
         // tmux reads `.` and `:` as separators in a target.
         assert_eq!(session_name(Path::new("/srv/my.app")), "my_app");
