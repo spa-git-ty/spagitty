@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-13
+
 ### Added
 
 - **Settings → Rail** chooses what is on the left bar. Every screen has a row there, in its group, and is pinned or hidden. Hidden screens go under a **More** button at the end of Tools, or to the palette only; the palette reaches every screen whatever is chosen. Rows are put in another order by dragging, or with Alt and the arrow keys, within their group. Farm and Settings are always on the rail, and Conflicts and Badges keep the rules they had. The screen you are on is always shown while you are on it. Nothing is hidden until you hide it, and **Reset** puts everything back.
@@ -57,6 +59,21 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Removed
 
 - File history, as a screen of its own. Investigate does what it did.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.2.2. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
+- Each download now carries a terminal multiplexer for the Terminal screen:
+  psmux on Windows, and tmux on macOS and Linux. They are separate programs
+  that Spagitty runs, under their own licences, listed in `NOTICE`.
 
 ## [2.2.2] - 2026-10-12
 
