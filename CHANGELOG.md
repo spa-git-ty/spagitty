@@ -34,6 +34,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
   - A commit id in the output opens on the Graph, and a `path:line` opens in Files. Each is underlined only once the repository has confirmed it is a commit, or a file at HEAD.
   - While the terminal has the focus every key goes to the shell, except Ctrl+Shift+P for the palette, Ctrl+Shift+` to leave, and Ctrl+Shift+C and Ctrl+Shift+V to copy and paste (⌘C and ⌘V on macOS).
   - A terminal keeps running when you go to another screen, and what it printed is there when you come back. It keeps 10,000 lines of scrollback.
+- **Recipes**, a new screen on the rail, runs a list of git steps you build from blocks: stash, pull, merge, pop, commit, push.
+  - There are eighteen blocks in six groups. Press a block or its key to add it. Its branch, remote and other choices are picked from lists, and its git command is shown beside it.
+  - No block forces a push, deletes an unmerged branch or resets hard, and none can be added.
+  - Spagitty checks the list with every change and says, under the block, what is wrong: a pop with no stash above it, a push that would need force, a branch that does not exist. **Run** is disabled until nothing is wrong.
+  - **Run** saves a restore point, then Spagitty runs each command itself, one step at a time. **Undo the whole run** puts HEAD, the branches, the working tree with its untracked files, the index and the stashes back as they were. It cannot take back a push.
+  - The level sets where a run stops: before every step, before a push or a branch being deleted, or not at all. **Read-only** runs nothing. A conflict, a command that fails, a failed check and a rejected push always stop it.
+  - A conflict in a merge can be opened in Merger, and any other in Conflicts. The run goes on when it is settled.
+  - **Agent help** is a switch on each recipe, off unless you turn it on. On, you write what you want in a sentence and the agent proposes the blocks, for you to read and change before anything runs. It also writes a commit message you leave to it, and explains a step that failed. It never runs a command. Off, no agent is called.
+  - **Copy as script** copies the steps as a shell script. **Export** and **Import** move a recipe as JSON.
+  - Recipes are kept on this machine, for each repository. Nothing is added to the repository.
+- **Reflog** lists the restore points recipes made, each with **undo to here** and **drop**. The newest 20 are kept, for 7 days.
 - **Investigate**, on the rail, tells the life of a file, a folder, a branch or a line. It replaces File history, and an old link to that screen arrives here.
   - A **file**: when it was born and by whom, each time it was renamed, moved to another folder or rewritten, and every edit, back past its renames. A rewrite is a commit that removed at least half of the file's lines. **Follow renames** can be switched off.
   - A **folder**: the commits that added, removed or renamed a file under it, and its biggest edits.

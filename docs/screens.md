@@ -33,6 +33,7 @@ defect.
 | 1S | Merger | `/merge` | yes | Built | FEAT-100 |
 | 1T | Terminal | `/terminal` | yes | Built | FEAT-130 |
 | 1U | Files | `/files` | yes | Built | FEAT-131 |
+| 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -1172,3 +1173,65 @@ is shown. Another screen opens a file here with
 
 The revision, the tabs, the open folders and the two switches are kept per
 repository in `localStorage`.
+
+## 1V — Recipes
+
+**Built.** `src/routes/recipes/+page.svelte`, `src/lib/recipes/`,
+`src-tauri/src/recipes.rs`, `crates/spagitty-core/src/recipes/` (FEAT-133).
+
+Git steps in blocks: an ordered stack from a closed catalogue of eighteen,
+each with a few parameters chosen from lists, run by Spagitty a step at a
+time.
+
+**The catalogue is closed, and that is the safety.** A step is an enum
+(`recipes::Step`). There is no variant for a force push, `branch -D` or
+`reset --hard`, so no recipe can hold one, whether it was built by hand,
+proposed by an agent or imported from a file. A command is a list of
+arguments and never a line for a shell. The screen's list of blocks is
+`catalogue.ts`, and a Rust test fails when it and the core's come apart.
+
+**The validator** is `validate.rs`: one pure function of the recipe and a
+`World`, which is what is true of the repository. It walks the steps keeping
+what they would leave behind (the branch checked out, the branches made, the
+stashes pushed, whether pushed commits were rewritten) and its findings are
+shown under the block they are about. It runs after every edit and again at
+*Run*, against the repository as it is then. An error stops a run; a warning
+does not.
+
+**The agent's help is a switch**, off by default (the author, 2026-10-13).
+On, the person writes a sentence and the agent proposes the blocks
+(`propose.rs`), which arrive in the builder to be read and edited: its answer
+is parsed into the same enum, so a block it invents is refused. During a run
+it writes a message a step leaves to it and explains a failure. It runs no
+command, and a command-line agent is started in an empty directory of its
+own, never in the working copy. Off, the sentence, the note and *agent
+writes* are disabled and nothing asks an agent for anything.
+
+**A run** (`run.rs`) is stepped: `tick` runs one step or stops, `answer`
+takes the person's choice. The level stops it before a step: every step at
+*Ask every step*, a push and a branch being deleted at *Ask before pushing*,
+nothing at *Full access*; *Read-only* runs nothing. These stop it at any
+level: *Stop and ask me*, a conflict, a non-zero exit, a failed check, a
+rejected push, and a tree that is not clean at *Stop unless clean*. A merge's
+conflict can be taken to Merger and any other to Conflicts. The run is on a
+thread in the backend and sends the whole run when it changes and each line
+as it is printed. While a step runs it holds the activity lanes.
+
+**The restore point** (`restore.rs`) is written before the first step under
+`refs/spagitty/restore/<id>/`: where `HEAD` was, the tip of every branch the
+recipe names, each stash, the index as a tree, and the working tree as a
+tree with its untracked files, made through an index of its own. *Undo the
+whole run* ends an operation left in progress and puts them back. It never
+deletes a file git did not know about, and it cannot take back a push. The
+newest twenty are kept, none longer than seven days, and Reflog lists them.
+
+**The brief** (`brief.rs`) is `recipes.md`, compiled in with its version, and
+then this recipe in the spec's form. The person sees it as it is sent. With
+the help off there is none, and the panel shows the commands as a script.
+
+**Kept** in the data directory, per repository: the recipes, and each run's
+record. Nothing is written under `.spagitty/` in the repository.
+
+**Keys** are in `keys.ts`: a block's letter adds it, `j` `k` walk the stack,
+Alt with the arrows reorders, Delete removes, Ctrl+Enter runs, Ctrl+Z takes
+an edit back. None fires while a field has the focus.

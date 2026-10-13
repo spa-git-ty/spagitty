@@ -6,6 +6,7 @@
 	import * as api from '$lib/api';
 	import { relativeTime } from '$lib/format';
 	import { branchHere, checkoutHere, resetHere } from '$lib/reflog/actions';
+	import RestorePoints from '$lib/recipes/RestorePoints.svelte';
 	import { reflog } from '$lib/reflog/store.svelte';
 	import { repo } from '$lib/repo.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
@@ -88,6 +89,9 @@
 			{/each}
 		</div>
 	{/if}
+
+	<!-- What a recipe wrote down before it ran (FEAT-133). Nothing until one has. -->
+	<RestorePoints />
 
 	<div class="body">
 		{#if repo.info === null}

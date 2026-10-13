@@ -1410,6 +1410,187 @@ pub fn shutdown<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+// ── One question (FEAT-133) ──────────────────────────────────────────────
+
+/// How long an agent has to answer one question.
+const ASK_TIMEOUT: Duration = Duration::from_secs(180);
+
+/// How much room a model is given to answer one question.
+const ASK_TOKENS: u32 = 2_000;
+
+/// The agents a recipe may ask in `repo`, by id: the repository's rules
+/// allow them, and they can be reached — a command-line agent that runs, or a
+/// model that is on this machine or whose provider the repository's code may
+/// go to.
+pub(crate) fn askable<R: Runtime>(app: &AppHandle<R>, repo: &str) -> Vec<String> {
+    let machine = load(app);
+    let rules = machine.rules(repo);
+    let mut ids: Vec<String> = locals(&machine)
+        .into_iter()
+        .filter(|view| matches!(view.availability, AgentAvailability::Available { .. }))
+        .map(|view| view.id)
+        .collect();
+    ids.extend(
+        machine
+            .remote
+            .iter()
+            .filter(|remote| remote.is_local() || rules.consented(remote.slug()))
+            .map(|remote| remote.id.clone()),
+    );
+    ids.retain(|id| rules.allows(id));
+    ids
+}
+
+/// An agent's name, as Settings shows it.
+pub(crate) fn name_of<R: Runtime>(app: &AppHandle<R>, id: &str) -> Option<String> {
+    let machine = load(app);
+    machine
+        .remote
+        .iter()
+        .find(|remote| remote.id == id)
+        .map(|remote| remote.name.clone())
+        .or_else(|| {
+            locals(&machine)
+                .into_iter()
+                .find(|view| view.id == id)
+                .map(|view| view.name)
+        })
+}
+
+/// The highest level `repo` allows an agent, and the branches nothing may be
+/// landed into unattended.
+pub(crate) fn rules_of<R: Runtime>(app: &AppHandle<R>, repo: &str) -> RepoRules {
+    load(app).rules(repo)
+}
+
+/// Ask an agent one thing and return what it said (FEAT-133).
+///
+/// Not an assignment: no steps, no gates and nothing proposed. A recipe asks
+/// for a stack of blocks, for one line of a commit message, or for what went
+/// wrong, and reads the answer itself.
+///
+/// A command-line agent is run in an empty directory of its own, in its
+/// read-only mode, and is given everything it needs in the prompt. It is
+/// never started in the person's working copy, where a recipe is acting.
+pub(crate) fn ask<R: Runtime>(
+    app: &AppHandle<R>,
+    repo: &str,
+    id: &str,
+    system: &str,
+    prompt: &str,
+) -> std::result::Result<String, String> {
+    let machine = load(app);
+    let rules = machine.rules(repo);
+    if !rules.allows(id) {
+        return Err("This repository does not allow that agent.".into());
+    }
+
+    if let Some(remote) = machine.remote.iter().find(|remote| remote.id == id) {
+        if !remote.is_local() && !rules.consented(remote.slug()) {
+            return Err(format!(
+                "This repository has not agreed to send anything to {}.",
+                remote.provider.label()
+            ));
+        }
+        let key = keychain::read(KEY_HOST, &remote.id)
+            .map_err(|error| error.to_string())?
+            .unwrap_or_default();
+        let key = require_key(remote.provider, &remote.name, key, true)
+            .map_err(|failure| failure.message)?;
+        let turn = models::complete(
+            &remote.endpoint(key),
+            system,
+            &[models::Message::user(prompt)],
+            &[],
+            ASK_TOKENS,
+        )
+        .map_err(|error| error.to_string())?;
+        if let Some(state) = app.try_state::<AgentsState>() {
+            let spent = turn.input_tokens + turn.output_tokens;
+            let _ = change(app, &state, |machine| {
+                if let Some(remote) = machine.remote.iter_mut().find(|r| r.id == id) {
+                    let today = days_now();
+                    if remote.spent_day != today {
+                        remote.spent_day = today;
+                        remote.spent = 0;
+                    }
+                    remote.spent += spent;
+                }
+                Ok(())
+            });
+        }
+        return Ok(turn.text());
+    }
+
+    let view = locals(&machine)
+        .into_iter()
+        .find(|view| view.id == id)
+        .ok_or_else(|| "There is no such agent.".to_string())?;
+    match &view.availability {
+        AgentAvailability::Available { .. } => {}
+        AgentAvailability::Broken { reason, .. } => {
+            return Err(format!("{} does not run: {reason}", view.name));
+        }
+        AgentAvailability::Missing => return Err(format!("{} is not installed.", view.name)),
+    }
+    let dir = tempfile_dir().map_err(|failure| failure.message)?;
+    let adapter = adapter_for(view.provider);
+    let request = AgentRunRequest {
+        workdir: dir.clone(),
+        prompt: format!("{system}\n\n{prompt}"),
+        unattended: false,
+    };
+    let command = read_only(view.provider, adapter.command(&view.definition, &request));
+    let collected = Arc::new(Collected::default());
+    let ran = (|| {
+        let transcript =
+            TranscriptWriter::create(&dir.join("ask.log")).map_err(|e| e.to_string())?;
+        let session = process::start(
+            &command,
+            &dir,
+            transcript,
+            collected.clone(),
+            adapter.narrator(),
+        )
+        .map_err(|e| e.to_string())?;
+        let cancel = session.cancellation();
+        let over = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let watched = over.clone();
+        std::thread::spawn(move || {
+            let deadline = Instant::now() + ASK_TIMEOUT;
+            while Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(200));
+                if watched.load(std::sync::atomic::Ordering::SeqCst) || cancel.was_cancelled() {
+                    return;
+                }
+            }
+            cancel.cancel();
+        });
+        let ended = session.wait();
+        over.store(true, std::sync::atomic::Ordering::SeqCst);
+        Ok::<Ended, String>(ended)
+    })();
+    let _ = std::fs::remove_dir_all(&dir);
+    let said = collected.lines().join("\n");
+    if let Some(why) = launch_failure(view.provider, &said) {
+        return Err(why);
+    }
+    match ran? {
+        Ended::Ok => Ok(said),
+        Ended::Cancelled => Err(format!(
+            "{} did not answer in {} seconds.",
+            view.name,
+            ASK_TIMEOUT.as_secs()
+        )),
+        Ended::Failed { code, message } => Err(if said.trim().is_empty() {
+            code.map(|code| format!("{} exited with {code}.", view.name))
+                .unwrap_or(message)
+        } else {
+            said.lines().last().unwrap_or_default().to_string()
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

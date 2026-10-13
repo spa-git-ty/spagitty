@@ -1274,6 +1274,8 @@ describe('NavRail', () => {
 			'Branches',
 			'Pull requests',
 			'Review',
+			// FEAT-133.
+			'Recipes',
 			'Rebase',
 			// FEAT-132.
 			'Investigate',

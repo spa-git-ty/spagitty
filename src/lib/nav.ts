@@ -207,6 +207,8 @@ export const NAV_ITEMS: NavItem[] = [
 	{ code: '1H', label: 'Pull requests', href: '/requests', group: 'work', icon: 'request' },
 	// FEAT-087. Reading a pull request, after browsing them.
 	{ code: '1R', label: 'Review', href: '/review', group: 'work', icon: 'review' },
+	// FEAT-133. Git steps in blocks, run a step at a time.
+	{ code: '1V', label: 'Recipes', href: '/recipes', group: 'work', icon: 'recipes', since: '3.0' },
 	// TASK-056: the author wanted these back where they can be seen, so the
 	// tools are always on the rail again, and Stash, Tags and Reflog are rows
 	// of their own rather than tabs Branches stands for (reversing TASK-045).

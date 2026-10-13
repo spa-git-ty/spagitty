@@ -43,6 +43,7 @@ pub mod models;
 pub mod ops;
 pub mod pull;
 pub mod rebase;
+pub mod recipes;
 pub mod record;
 pub mod reflog;
 pub mod refs;

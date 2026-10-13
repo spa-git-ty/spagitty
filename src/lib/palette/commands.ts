@@ -66,6 +66,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	// every one of them. These four had only ever been reached from the rail.
 	{ id: 'go.merge', title: 'Go to Merger', path: '/merge', keywords: ['merge', 'branches', 'combine'] },
 	{ id: 'go.review', title: 'Go to Review', path: '/review', keywords: ['pr', 'pull request', 'read'] },
+	{ id: 'go.recipes', title: 'Go to Recipes', path: '/recipes', keywords: ['blocks', 'steps', 'script', 'automate', 'workflow'] },
 	{ id: 'go.tags', title: 'Go to Tags', path: '/tags', keywords: ['refs', 'release'] },
 	{ id: 'go.reflog', title: 'Go to Reflog', path: '/reflog', keywords: ['undo', 'recover', 'lost'] },
 	{ id: 'go.rebase', title: 'Go to Interactive rebase', path: '/rebase', keywords: ['reorder', 'squash'] },

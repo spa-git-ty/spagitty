@@ -2206,6 +2206,131 @@ pub fn last_touch(repo: &Path, range: &str, path: &str) -> Result<String> {
     )
 }
 
+/// What a command printed and how it ended, whichever way that was.
+///
+/// Every other function here turns a non-zero exit into an error, because its
+/// caller asked for one thing and either has it or does not. A recipe's step
+/// (FEAT-133) is different: the exit is what the run decides on, and the
+/// output is shown to the person as it was, on success as on failure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ran {
+    /// `None` when a signal ended it.
+    pub code: Option<i32>,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+impl Ran {
+    pub fn ok(&self) -> bool {
+        self.code == Some(0)
+    }
+
+    /// Both streams, the way a terminal would have shown them.
+    pub fn output(&self) -> String {
+        let mut all = self.stdout.trim_end().to_string();
+        let err = self.stderr.trim_end();
+        if !err.is_empty() {
+            if !all.is_empty() {
+                all.push('\n');
+            }
+            all.push_str(err);
+        }
+        all
+    }
+}
+
+/// Run `git` in `repo` and say how it ended, without making an error of a
+/// non-zero exit (FEAT-133). Recorded like every other spawn.
+///
+/// `env` is added to the command's environment and `input` is written to its
+/// stdin. The only error is git not starting at all.
+pub fn ran_with(
+    repo: &Path,
+    args: &[&str],
+    env: &[(&str, &OsStr)],
+    input: Option<&str>,
+) -> Result<Ran> {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
+    let started = Instant::now();
+    let mut command = command(repo, args);
+    // No editor ever opens: a rebase or a merge that wants a message takes
+    // the one git wrote.
+    command
+        .env("GIT_EDITOR", "true")
+        .env("GIT_SEQUENCE_EDITOR", "true")
+        .envs(env.iter().copied())
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let spawned = command.spawn().and_then(|mut child| {
+        if let Some(input) = input {
+            // Dropped at the end of the block, closing stdin.
+            let mut stdin = child.stdin.take().expect("piped stdin");
+            stdin.write_all(input.as_bytes())?;
+        }
+        child.wait_with_output()
+    });
+    let elapsed = started.elapsed().as_millis() as u64;
+    let output = match spawned {
+        Ok(output) => output,
+        Err(error) => {
+            record::push(
+                args,
+                Outcome::Failed {
+                    code: None,
+                    stderr: error.to_string(),
+                },
+                elapsed,
+            );
+            return Err(error.into());
+        }
+    };
+    let ran = Ran {
+        code: output.status.code(),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    };
+    record::push(
+        args,
+        if ran.ok() {
+            Outcome::Ok
+        } else {
+            Outcome::Failed {
+                code: ran.code,
+                stderr: ran.stderr.trim().to_string(),
+            }
+        },
+        elapsed,
+    );
+    Ok(ran)
+}
+
+/// [`ran_with`] and nothing added.
+pub fn ran(repo: &Path, args: &[&str]) -> Result<Ran> {
+    ran_with(repo, args, &[], None)
+}
+
+/// [`ran`], with a non-zero exit made the error it is everywhere else here.
+pub fn ran_ok(repo: &Path, args: &[&str]) -> Result<String> {
+    let ran = ran(repo, args)?;
+    if ran.ok() {
+        Ok(ran.stdout)
+    } else {
+        Err(Error::Git {
+            command: args.join(" "),
+            stderr: ran.stderr.trim().to_string(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

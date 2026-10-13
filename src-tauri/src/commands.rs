@@ -184,6 +184,12 @@ impl AppState {
         f(session)
     }
 
+    /// Where the open repository is, for work that takes longer than the
+    /// session should be held for: a recipe's run (FEAT-133).
+    pub(crate) fn open_path(&self, command: &'static str) -> Result<PathBuf> {
+        self.with_session(command, |session| Ok(session.path.clone()))
+    }
+
     /// A new ticket, which is now the latest. See [`AppState::opened`].
     fn ticket(&self) -> u64 {
         self.opened.fetch_add(1, Ordering::SeqCst) + 1

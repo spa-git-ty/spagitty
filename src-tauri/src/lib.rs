@@ -24,6 +24,7 @@ mod platform;
 mod profiles;
 mod rebase_worker;
 mod recents;
+mod recipes;
 mod review_state;
 mod search_worker;
 mod settings;
@@ -122,6 +123,21 @@ pub fn run() {
             terminal::terminal_sessions,
             terminal::terminal_windows,
             terminal::terminal_act,
+            recipes::recipes_list,
+            recipes::recipes_save,
+            recipes::recipes_delete,
+            recipes::recipes_import,
+            recipes::recipes_check,
+            recipes::recipes_propose,
+            recipes::recipe_run_start,
+            recipes::recipe_run_answer,
+            recipes::recipe_run_stop,
+            recipes::recipe_run_undo,
+            recipes::recipe_run_current,
+            recipes::recipe_run_close,
+            recipes::restore_points,
+            recipes::restore_point_undo,
+            recipes::restore_point_drop,
             commands::conflicts,
             commands::conflict_sides,
             commands::conflict_regions,
@@ -342,6 +358,9 @@ pub fn run() {
 
             // Agents' assignments. Nothing runs until one is assigned.
             agents::manage(app.handle());
+
+            // Recipes' runs. Nothing runs until one is run.
+            recipes::manage(app.handle());
             Ok(())
         })
         .build(tauri::generate_context!())

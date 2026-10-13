@@ -328,7 +328,7 @@ A PTY and xterm.js, with tmux or psmux shipped where the system has none. The CI
 
 ### 40. FEAT-133 — Recipes
 
-The proposal's question 1 was answered on 2026-10-13: Spagitty runs the git commands, and the agent is called for judgment.
+The proposal's question 1 was answered on 2026-10-13: Spagitty runs the git commands, and the agent is called for judgment. A note from the author the same day makes the agent's help a switch on each recipe: on, it proposes the blocks; off, no agent is called.
 
 ## Deliberately not on this list
 

@@ -360,7 +360,12 @@ Asked and answered on 2026-10-13.
 5. **Farm sessions in the terminal** come later, as their own item. The terminal and the multiplexer are in 3.0.
 6. **Recipes in the repository**: no. Recipes stay personal, in application data.
 
-Added by the author later the same day, about Recipes: the agent's help is a switch. When it is on, the agent helps make the recipe. When it is off, plain-text input is disabled and the run is pure git commands in bash. FEAT-133 records the words and how they are read.
+Added by the author later the same day, about Recipes:
+
+7. **The agent's help is a switch** on the recipe. On, the person writes a sentence and the agent proposes the blocks, which the person reviews and edits before anything runs. Off, the sentence, the note and *agent writes* are disabled, no agent is called, and the run is the blocks' git commands and nothing else. A commit message and a new branch's name can be typed either way.
+8. **Spagitty runs each command itself, a step at a time**, with the agent on or off. *Copy as script* gives the same steps as a bash script.
+
+FEAT-133 records the author's words.
 
 ## 15. Non-scope
 

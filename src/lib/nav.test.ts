@@ -112,6 +112,8 @@ describe('NAV_ITEMS', () => {
 			'/requests',
 			// FEAT-087. Reading a pull request comes after browsing them.
 			'/review',
+			// FEAT-133. Git steps in blocks.
+			'/recipes',
 			// TASK-056. The tools are always on the rail again, and Stash, Tags
 			// and Reflog are rows of their own, as the author asked (reversing
 			// TASK-045, which had made them tabs of Branches).
@@ -230,6 +232,7 @@ describe('isShown', () => {
 			'/branches',
 			'/requests',
 			'/review',
+			'/recipes',
 			'/rebase',
 			'/investigate',
 			'/search',
