@@ -186,7 +186,7 @@ rather than an audit.
 | [FEAT-131](items/FEAT-131-files-any-revision-read-never-written.md) | Files: any revision, read and never written | 1U | Backlog |
 | [FEAT-132](items/FEAT-132-investigate-the-life-of-a-file-folder-branch-or-line.md) | Investigate: the life of a file, a folder, a branch or a line | 1O | Backlog |
 | [FEAT-133](items/FEAT-133-recipes-git-steps-in-blocks-run-with-an-agent.md) | Recipes: git steps in blocks, run with an agent | 1V | Backlog |
-| [FEAT-134](items/FEAT-134-pin-or-hide-what-is-on-the-rail.md) | Pin or hide what is on the rail | 1K | Backlog |
+| [FEAT-134](items/FEAT-134-pin-or-hide-what-is-on-the-rail.md) | Pin or hide what is on the rail | 1K | Done |
 
 ## Bugs
 

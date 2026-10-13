@@ -71,6 +71,37 @@ pub enum SoundLevel {
     Full,
 }
 
+/// Where the screens a person hid go (FEAT-134).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RailWhere {
+    /// Under the rail's More button.
+    #[default]
+    More,
+    /// Nowhere on the rail. The palette lists every screen whatever is chosen.
+    Palette,
+}
+
+/// What a person pinned, hid and reordered on the rail (FEAT-134).
+///
+/// Screens are named by their codes — `1E`, `1G` — as strings rather than as
+/// an enum: which codes exist is the frontend's `NAV_ITEMS`, and a file written
+/// by a newer build that names a screen this one has not got must keep the
+/// rest of the list. The rail ignores a code it does not know.
+///
+/// The default is everything pinned, in the built-in order (TASK-056).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Rail {
+    /// The screens taken off the rail.
+    pub hidden: Vec<String>,
+    /// Every screen in the order chosen. Empty means the built-in order.
+    pub order: Vec<String>,
+    /// Where the hidden ones go.
+    #[serde(rename = "where", deserialize_with = "lenient")]
+    pub place: RailWhere,
+}
+
 /// Read a value that has a default, falling back rather than failing.
 ///
 /// A hand-edited `"personality": "loud"` must cost the personality, not every
@@ -91,7 +122,7 @@ where
 /// Every field is optional on the way in and written in full on the way out, so
 /// a settings file from an older build gains new keys at their defaults instead
 /// of being rejected.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     /// Ask the project whether there is a newer Spagitty, at startup.
@@ -151,6 +182,9 @@ pub struct Settings {
     /// Minutes between looks. Clamped to [`NOTIFY_EVERY`] on the way in.
     #[serde(deserialize_with = "lenient_minutes")]
     pub notify_every_minutes: u32,
+    /// What is pinned, hidden and reordered on the rail (FEAT-134).
+    #[serde(deserialize_with = "lenient")]
+    pub rail: Rail,
 }
 
 /// How often the screen offers to look, in minutes. The first is the floor:
@@ -209,6 +243,8 @@ impl Default for Settings {
             notify_review_requests: true,
             notify_checks: true,
             notify_every_minutes: NOTIFY_EVERY_DEFAULT,
+            // Every screen pinned, as TASK-056 left the rail.
+            rail: Rail::default(),
         }
     }
 }
@@ -364,6 +400,11 @@ mod tests {
             notify_review_requests: false,
             notify_checks: true,
             notify_every_minutes: 5,
+            rail: Rail {
+                hidden: vec!["1E".to_string(), "1G".to_string()],
+                order: vec!["1Q".to_string(), "1C".to_string(), "1A".to_string()],
+                place: RailWhere::Palette,
+            },
         };
         let text = serde_json::to_string_pretty(&written).expect("serialising");
 
@@ -392,6 +433,59 @@ mod tests {
         assert_eq!(
             parse(r#"{"notifyEveryMinutes": 15}"#).notify_every_minutes,
             15
+        );
+    }
+
+    #[test]
+    fn every_screen_is_pinned_until_somebody_hides_one() {
+        // TASK-056 put every tool back on the rail; FEAT-134 lets a person take
+        // some off, and changes nothing for anybody who has not.
+        let rail = Settings::default().rail;
+
+        assert!(rail.hidden.is_empty());
+        assert!(rail.order.is_empty());
+        assert_eq!(rail.place, RailWhere::More);
+    }
+
+    #[test]
+    fn the_rail_is_stored_under_the_names_the_screen_uses() {
+        let text = serde_json::to_string(&Settings {
+            rail: Rail {
+                hidden: vec!["1G".to_string()],
+                order: Vec::new(),
+                place: RailWhere::Palette,
+            },
+            ..Settings::default()
+        })
+        .expect("serialising");
+
+        assert!(
+            text.contains(r#""rail":{"hidden":["1G"],"order":[],"where":"palette"}"#),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_rail_this_build_cannot_read_costs_only_the_rail() {
+        // A hand-edited `"rail": "short"`, or a place this build has not got,
+        // must not undo an unrelated toggle.
+        let settings = parse(r#"{"rail": "short", "showGitCommands": true}"#);
+        assert_eq!(settings.rail, Rail::default());
+        assert!(settings.show_git_commands);
+
+        let settings = parse(r#"{"rail": {"hidden": ["1G"], "where": "drawer"}}"#);
+        assert_eq!(settings.rail.hidden, vec!["1G".to_string()]);
+        assert_eq!(settings.rail.place, RailWhere::More);
+    }
+
+    #[test]
+    fn a_screen_this_build_does_not_know_stays_in_the_list() {
+        // Going back a version must not rewrite what a newer one stored.
+        let settings = parse(r#"{"rail": {"hidden": ["9Z", "1G"]}}"#);
+
+        assert_eq!(
+            settings.rail.hidden,
+            vec!["9Z".to_string(), "1G".to_string()]
         );
     }
 

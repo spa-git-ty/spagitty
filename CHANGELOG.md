@@ -14,6 +14,11 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Settings → Rail** chooses what is on the left bar. Every screen has a row there, in its group, and is pinned or hidden. Hidden screens go under a **More** button at the end of Tools, or to the palette only; the palette reaches every screen whatever is chosen. Rows are put in another order by dragging, or with Alt and the arrow keys, within their group. Farm and Settings are always on the rail, and Conflicts and Badges keep the rules they had. The screen you are on is always shown while you are on it. Nothing is hidden until you hide it, and **Reset** puts everything back.
+- The palette goes to Merger, Review, Tags and Reflog, which it could not reach before.
+
 ## [2.2.2] - 2026-10-12
 
 ### Added

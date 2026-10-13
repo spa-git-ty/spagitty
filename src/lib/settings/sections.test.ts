@@ -103,7 +103,8 @@ fetchAvatars: false,
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' }
 	});
 	licenses.mockResolvedValue(LIST);
 	about.mockResolvedValue({ version: '0.1.0', commit: 'abc1234', license: 'GPL-3.0-or-later' });
@@ -258,7 +259,8 @@ describe('BehaviourSection', () => {
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' }
 		});
 		mounted.destroy();
 	});
@@ -278,7 +280,8 @@ describe('BehaviourSection', () => {
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' }
 		});
 		await settings.load();
 		const mounted = render(BehaviourSection, {});

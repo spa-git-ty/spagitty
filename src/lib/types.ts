@@ -1226,6 +1226,8 @@ export interface Settings {
 	notifyChecks: boolean;
 	/** Minutes between looks: 1, 2, 5 or 15. */
 	notifyEveryMinutes: number;
+	/** What is pinned, hidden and reordered on the rail (FEAT-134). */
+	rail: import('./nav').RailSettings;
 }
 
 /** Where a watched pull request stands (FEAT-114). Mirrors `watch::WatchState`. */

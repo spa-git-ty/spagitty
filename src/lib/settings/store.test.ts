@@ -21,7 +21,8 @@ vi.mock('$lib/api', () => ({
 }));
 
 import * as api from '$lib/api';
-import { settings } from './store.svelte';
+import type { ScreenCode } from '$lib/nav';
+import { SECTIONS, settings } from './store.svelte';
 
 const identity = vi.mocked(api.identity);
 const setIdentity = vi.mocked(api.setIdentity);
@@ -59,7 +60,8 @@ fetchAvatars: false,
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' }
 };
 
 const LIST: Licenses = {
@@ -267,6 +269,57 @@ describe('behaviour toggles', () => {
 	});
 });
 
+/** What is on the rail is stored with the toggles, not in the repository (FEAT-134). */
+describe('the rail', () => {
+	const CHOSEN = {
+		hidden: ['1E', '1G'] as ScreenCode[],
+		order: ['1Q', '1C', '1A'] as ScreenCode[],
+		where: 'palette' as const
+	};
+
+	it('is everything pinned before anything is stored', () => {
+		expect(settings.rail).toEqual({ hidden: [], order: [], where: 'more' });
+	});
+
+	it('reads back what was stored', async () => {
+		settingsCall.mockResolvedValue({ ...STORED, rail: CHOSEN });
+
+		await settings.load();
+
+		expect(settings.rail).toEqual(CHOSEN);
+		expect(settings.settings.rail).toEqual(CHOSEN);
+	});
+
+	it('stores a choice with the rest of the settings, and shows it at once', async () => {
+		await settings.load();
+
+		await settings.choose('rail', CHOSEN);
+
+		expect(setSettings).toHaveBeenCalledWith({ ...STORED, rail: CHOSEN });
+		expect(settings.rail).toEqual(CHOSEN);
+	});
+
+	it('puts the rail back when the write fails', async () => {
+		await settings.load();
+		setSettings.mockRejectedValueOnce('there is no configuration directory to write to');
+
+		await settings.choose('rail', CHOSEN);
+
+		expect(settings.rail).toEqual(STORED.rail);
+		expect(settings.writeError).toContain('no configuration directory');
+	});
+
+	/** A backend older than the key answers without it, and the rail must still draw. */
+	it('is the default when the stored settings do not carry one', async () => {
+		const { rail: _, ...older } = STORED;
+		settingsCall.mockResolvedValue(older as Settings);
+
+		await settings.load();
+
+		expect(settings.rail).toEqual({ hidden: [], order: [], where: 'more' });
+	});
+});
+
 describe('sections', () => {
 	it('opens on You', () => {
 		expect(settings.section).toBe('you');
@@ -293,6 +346,14 @@ describe('sections', () => {
 		settings.showFromHash('appearance');
 
 		expect(settings.section).toBe('appearance');
+	});
+
+	it('lands on Rail from /settings#rail, the chip after Appearance (FEAT-134)', () => {
+		settings.showFromHash('#rail');
+
+		expect(settings.section).toBe('rail');
+		const ids = SECTIONS.map((section) => section.id);
+		expect(ids.indexOf('rail')).toBe(ids.indexOf('appearance') + 1);
 	});
 
 	/**
@@ -351,7 +412,8 @@ describe('checking for a newer Spagitty', () => {
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' }
 		});
 		await settings.load();
 		checkUpdate.mockResolvedValueOnce(RELEASED);

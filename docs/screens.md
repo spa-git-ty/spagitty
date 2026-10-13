@@ -98,6 +98,11 @@ Persistent across every screen, built with FEAT-001.
   are rows of their own again, as the author asked; Branches still names all
   four in its segmented control.
 
+  Since FEAT-134 a person can take a screen off the rail, in Settings → Rail,
+  and reorder the rows of a group. What they hid is under a **More** button at
+  the end of Tools, or in the palette only. The screen that is open is always
+  on the rail while it is open, hidden or not.
+
 ## The window itself
 
 The window is undecorated and **transparent**, so everything a person reads as
@@ -610,7 +615,7 @@ and never the directory.
 **Built.** `src/routes/settings/+page.svelte`, `src/lib/settings/`.
 
 Sections behind a chip index — You, Remotes, External Tools, Behaviour,
-Personality, God mode, Appearance, License — because these are read rarely and
+Personality, God mode, Appearance, Rail, License — because these are read rarely and
 changed rarely, and one route that says which part of itself is showing is
 easier to link to than eight rail entries. The section is in the URL fragment,
 so `/settings#accounts` lands where the Pull requests screen points.
@@ -630,6 +635,14 @@ the version, the build, the project's licence and its dependencies' licences, so
 the name described nothing it contained. `#advanced` is still accepted as a
 fragment and selects the renamed section, because a link written before the
 rename doing nothing at all is worse than one that is merely out of date.
+
+**Rail** (FEAT-134) chooses what is on the nav rail. Every screen has a row, in
+its group, and is pinned or hidden; hidden screens go under the rail's More
+button or to the palette only, and the rows of a group can be reordered. Farm
+and Settings read *Always*, and Conflicts and Badges show the rule they keep.
+The section's preview is `NavRail` itself, drawn from the choice. It is stored
+as `rail: { hidden, order, where }` in Spagitty's settings, never in the
+repository, and the default is everything pinned (TASK-056).
 
 **Nothing here needs an open repository.** With none, the identity falls back to
 the global scope alone and every other section is unaffected. **God mode** is

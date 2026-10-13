@@ -328,7 +328,7 @@ A PTY and xterm.js, with tmux or psmux shipped where the system has none. The CI
 
 ### 40. FEAT-133 — Recipes
 
-Waits on the proposal's question 1: who runs the git commands.
+The proposal's question 1 was answered on 2026-10-13: Spagitty runs the git commands, and the agent is called for judgment.
 
 ## Deliberately not on this list
 

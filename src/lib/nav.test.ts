@@ -3,14 +3,24 @@
 import { describe, expect, it } from 'vitest';
 import {
 	DIFF_ROUTE,
+	hiddenItems,
+	inOrder,
 	isActive,
+	isHidden,
 	isItemActive,
 	isShown,
+	moveBy,
+	moveOnto,
 	NAV_ITEMS,
 	navRows,
 	OFF_RAIL,
+	RAIL_DEFAULT,
+	railChoice,
+	railRows,
 	REF_SCREENS,
-	type NavContext
+	type NavContext,
+	type RailSettings,
+	type ScreenCode
 } from './nav';
 
 describe('isActive', () => {
@@ -248,5 +258,223 @@ describe('isItemActive', () => {
 	it('does not put Branches where you are anywhere else', () => {
 		expect(isItemActive(branches, '/')).toBe(false);
 		expect(isItemActive(branches, '/requests')).toBe(false);
+	});
+});
+
+/**
+ * Pin or hide what is on the rail (FEAT-134).
+ *
+ * 3.0 adds four rows to a rail TASK-056 had already filled. Which of them a
+ * person never touches is something only they know, so each screen can be
+ * taken off the rail, and the rows of a group put in another order. Nothing
+ * changes for anybody who has not chosen.
+ */
+describe('the rail a person chose', () => {
+	const quiet: NavContext = { pathname: '/', conflicts: 0, delight: false };
+	const rail = (overrides: Partial<RailSettings> = {}): RailSettings => ({
+		...RAIL_DEFAULT,
+		...overrides
+	});
+	const hrefs = (context: NavContext) => navRows(NAV_ITEMS, context).map((row) => row.item.href);
+	const code = (href: string): ScreenCode => NAV_ITEMS.find((item) => item.href === href)!.code;
+
+	it('is every screen pinned, in the built-in order, until somebody chooses otherwise', () => {
+		expect(RAIL_DEFAULT).toEqual({ hidden: [], order: [], where: 'more' });
+		expect(hrefs({ ...quiet, rail: rail() })).toEqual(hrefs(quiet));
+		expect(
+			railRows(NAV_ITEMS, { ...quiet, rail: rail() }).every((row) => row.kind === 'screen')
+		).toBe(true);
+	});
+
+	describe('hiding', () => {
+		const chosen = rail({ hidden: [code('/rebase'), code('/stash')] });
+
+		it('takes a hidden screen off the rail and leaves the rest where they were', () => {
+			const shown = hrefs({ ...quiet, rail: chosen });
+
+			expect(shown).not.toContain('/rebase');
+			expect(shown).not.toContain('/stash');
+			expect(shown).toEqual(hrefs(quiet).filter((href) => href !== '/rebase' && href !== '/stash'));
+		});
+
+		/** "Where am I" always has an answer: the rule `open` rows already had. */
+		it('keeps the screen you are on, hidden or not, for as long as you are on it', () => {
+			expect(hrefs({ ...quiet, pathname: '/stash', rail: chosen })).toContain('/stash');
+			expect(hrefs({ ...quiet, pathname: '/tags', rail: chosen })).not.toContain('/stash');
+		});
+
+		/** Settings has to stay reachable to undo a hide, and the farm is the product. */
+		it('cannot hide Farm or Settings, whatever the stored list says', () => {
+			const all = rail({ hidden: NAV_ITEMS.map((item) => item.code) });
+			const shown = hrefs({ ...quiet, rail: all });
+
+			expect(shown).toContain('/farm');
+			expect(shown).toContain('/settings');
+			for (const href of ['/farm', '/settings']) {
+				const item = NAV_ITEMS.find((candidate) => candidate.href === href)!;
+				expect(railChoice(item)).toBe('always');
+				expect(isHidden(item, all)).toBe(false);
+			}
+		});
+
+		it('leaves Conflicts and Badges to the rules they already keep', () => {
+			const conflicts = NAV_ITEMS.find((item) => item.href === '/conflicts')!;
+			const badges = NAV_ITEMS.find((item) => item.href === '/badges')!;
+			const all = rail({ hidden: NAV_ITEMS.map((item) => item.code) });
+
+			expect(railChoice(conflicts)).toBe('rule');
+			expect(railChoice(badges)).toBe('rule');
+			// Hidden in the list, and still there the moment there is a conflict.
+			expect(isShown(conflicts, { ...quiet, conflicts: 2, rail: all })).toBe(true);
+			expect(isShown(conflicts, { ...quiet, rail: all })).toBe(false);
+		});
+
+		it('offers the choice on every other row', () => {
+			const free = NAV_ITEMS.filter((item) => railChoice(item) === 'free').map((item) => item.href);
+
+			expect(free).toEqual(
+				NAV_ITEMS.map((item) => item.href).filter(
+					(href) => !['/farm', '/settings', '/conflicts', '/badges'].includes(href)
+				)
+			);
+		});
+
+		it('ignores a code this build has no screen for', () => {
+			const odd = rail({ hidden: ['9Z' as ScreenCode], order: ['9Z' as ScreenCode] });
+
+			expect(hrefs({ ...quiet, rail: odd })).toEqual(hrefs(quiet));
+		});
+	});
+
+	describe('the More row', () => {
+		const chosen = rail({ hidden: [code('/rebase'), code('/stash'), code('/repos')] });
+		const more = (context: NavContext) =>
+			railRows(NAV_ITEMS, context).find((row) => row.kind === 'more');
+
+		it('is not there with nothing hidden', () => {
+			expect(more({ ...quiet, rail: rail() })).toBeUndefined();
+			expect(more(quiet)).toBeUndefined();
+		});
+
+		it('holds the hidden screens, in rail order', () => {
+			const row = more({ ...quiet, rail: chosen });
+
+			expect(row?.kind === 'more' && row.items.map((item) => item.href)).toEqual([
+				'/rebase',
+				'/stash',
+				'/repos'
+			]);
+		});
+
+		it('sits at the end of Tools, immediately before Settings', () => {
+			const rows = railRows(NAV_ITEMS, { ...quiet, rail: chosen });
+			const at = rows.findIndex((row) => row.kind === 'more');
+			const before = rows[at - 1];
+			const after = rows[at + 1];
+
+			expect(before.kind === 'screen' && before.item.group).toBe('tools');
+			expect(after.kind === 'screen' && after.item.href).toBe('/settings');
+			expect(rows[at].startsGroup).toBe(false);
+		});
+
+		it('starts the group itself when every tool is hidden', () => {
+			const tools = NAV_ITEMS.filter((item) => item.group === 'tools').map((item) => item.code);
+			const rows = railRows(NAV_ITEMS, { ...quiet, rail: rail({ hidden: tools }) });
+			const at = rows.findIndex((row) => row.kind === 'more');
+
+			expect(rows[at].startsGroup).toBe(true);
+			expect(rows[at + 1].kind === 'screen' && rows[at + 1].startsGroup).toBe(true);
+		});
+
+		it('goes when hidden screens are for the palette only', () => {
+			const palette = rail({ ...chosen, where: 'palette' });
+
+			expect(more({ ...quiet, rail: palette })).toBeUndefined();
+			// Hidden all the same.
+			expect(hrefs({ ...quiet, rail: palette })).not.toContain('/rebase');
+		});
+
+		/** A menu whose contents change with where you are is one nobody can learn. */
+		it('still lists the hidden screen that is open', () => {
+			const here: NavContext = { ...quiet, pathname: '/stash', rail: chosen };
+
+			expect(hiddenItems(NAV_ITEMS, here).map((item) => item.href)).toContain('/stash');
+			expect(hrefs(here)).toContain('/stash');
+		});
+
+		it('never offers Badges while the delight layer is off', () => {
+			const all = rail({ hidden: NAV_ITEMS.map((item) => item.code) });
+
+			expect(
+				hiddenItems(NAV_ITEMS, { ...quiet, rail: all }).map((item) => item.href)
+			).not.toContain('/badges');
+		});
+	});
+
+	describe('reordering', () => {
+		const groupOf = (href: string) => NAV_ITEMS.find((item) => item.href === href)!.group;
+		const arranged = (order: ScreenCode[]) => inOrder(NAV_ITEMS, order).map((item) => item.href);
+
+		it('moves a row down and up within its group', () => {
+			const down = moveBy(code('/rebase'), 1, []);
+			expect(arranged(down).indexOf('/rebase')).toBe(arranged([]).indexOf('/rebase') + 1);
+
+			// And back: the built-in order is stored as nothing at all, so Reset
+			// and "moved it back by hand" are the same state.
+			expect(moveBy(code('/rebase'), -1, down)).toEqual([]);
+		});
+
+		it('refuses a move that would leave the group', () => {
+			const firstTool = NAV_ITEMS.find((item) => item.group === 'tools')!;
+			const lastWork = NAV_ITEMS.filter((item) => item.group === 'work').at(-1)!;
+
+			expect(moveBy(firstTool.code, -1, [])).toEqual([]);
+			expect(moveBy(lastWork.code, 1, [])).toEqual([]);
+			expect(moveBy(code('/farm'), 1, [])).toEqual([]);
+			expect(moveBy(code('/settings'), -1, [])).toEqual([]);
+		});
+
+		it('drops a row onto another of its own group, and not onto another group', () => {
+			const order = moveOnto(code('/reflog'), code('/rebase'), []);
+			const tools = arranged(order).filter((href) => groupOf(href) === 'tools');
+
+			expect(tools[0]).toBe('/reflog');
+			expect(tools[1]).toBe('/rebase');
+			expect(moveOnto(code('/reflog'), code('/changes'), [])).toEqual([]);
+		});
+
+		it('keeps every group one run, in the same place, whatever the order says', () => {
+			// A stored order that interleaves the groups, as a hand-edit might.
+			const scrambled = [...NAV_ITEMS].reverse().map((item) => item.code);
+			const groups = inOrder(NAV_ITEMS, scrambled).map((item) => item.group);
+
+			expect(groups.filter((group, index) => group !== groups[index - 1])).toEqual([
+				'farm',
+				'work',
+				'tools',
+				'app'
+			]);
+			expect(inOrder(NAV_ITEMS, scrambled)).toHaveLength(NAV_ITEMS.length);
+		});
+
+		/** A screen a later build adds arrives where it was designed to be. */
+		it('puts a screen the order does not name after the row it follows', () => {
+			const order = moveBy(code('/rebase'), 1, []);
+			const without = order.filter((other) => other !== code('/stash'));
+			const built = NAV_ITEMS.map((item) => item.href);
+			const before = built[built.indexOf('/stash') - 1];
+			const now = arranged(without);
+
+			expect(now).toHaveLength(NAV_ITEMS.length);
+			expect(now.indexOf('/stash')).toBe(now.indexOf(before) + 1);
+		});
+
+		it('draws the rail in the chosen order', () => {
+			const order = moveOnto(code('/reflog'), code('/rebase'), []);
+			const shown = hrefs({ ...quiet, rail: rail({ order }) });
+
+			expect(shown.indexOf('/reflog')).toBeLessThan(shown.indexOf('/rebase'));
+			expect([...shown].sort()).toEqual([...hrefs(quiet)].sort());
+		});
 	});
 });

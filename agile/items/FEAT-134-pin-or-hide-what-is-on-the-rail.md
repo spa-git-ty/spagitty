@@ -2,7 +2,7 @@
 
 # FEAT-134 — Pin or hide what is on the rail
 
-**Status:** Backlog — recorded 2026-10-12 for 3.0.0; not started. First of the 3.0 items.
+**Status:** Done — on `release/3.0.0`, the first of the 3.0 items; unmerged. Covered by unit and mounted tests, and looked at in the built frontend in headless Chrome with a stand-in for the backend; not looked at in the running application.
 **Branch:** `feature/FEAT-134-pin-or-hide-what-is-on-the-rail`.
 **Screens:** 1K (Settings › Rail, a new section), chrome (the rail, its More button).
 **Raised by:** the author, 2026-10-12: a settings screen to pin or hide non-essential elements of the left bar.
@@ -35,3 +35,18 @@ Settings gains a **Rail** chip, after Appearance. Each screen is pinned or hidde
 
 - **Hiding rows per repository.**
 - **Moving a row to another group.**
+
+## What was built
+
+- **The model** is in `src/lib/nav.ts`: `RailSettings`, `railChoice` (always, rule or free), `isHidden`, `inOrder`, `moveBy`, `moveOnto`, `hiddenItems` and `railRows`, which adds the More row. `isShown` reads the choice after the open-screen rule, so the screen that is open is always shown.
+- **The rail** (`NavRail.svelte`) draws `railRows`. More opens `Menu` with the hidden screens and their codes. The component takes the choice as a property and has a preview mode, which Settings uses.
+- **The section** is `src/lib/settings/RailSection.svelte`, with its chip after Appearance and its own branch in the route.
+- **Stored** as `rail: { hidden, order, where }` in `settings.json` (`src-tauri/src/settings.rs`). Screens are stored by code. A code this build does not know is kept in the file and ignored by the rail. The built-in order is stored as an empty list.
+- **The palette** gained *Go to* commands for Merger, Review, Tags and Reflog, which it did not have. A test fails if a rail screen has none.
+
+## Differences from the artboard
+
+- ***Open labels on hover*** is drawn as a switch on the artboard. It is not in this item's criteria or in the stored shape, so it was not built. It needs the author's word.
+- **The *3.0* mark** on a new screen's row is drawn in the agent's colour on the artboard. It is built in a muted outline, because the agent's colour means an agent (the handoff's own rule).
+- **Farm and Settings have no grip**, because a group of one row has nothing to reorder.
+- **The counts line** counts what is on the rail whatever happens: Conflicts and Badges are in neither number, as on the artboard.

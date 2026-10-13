@@ -2,7 +2,7 @@
 
 # FEAT-133 — Recipes: git steps in blocks, run with an agent
 
-**Status:** Backlog — recorded 2026-10-12 for 3.0.0; waits on the author's answer to the proposal's question 1.
+**Status:** Backlog — recorded 2026-10-12 for 3.0.0. The author answered the proposal's question 1 on 2026-10-13: Spagitty runs the commands, and the agent is called for judgment. Not started.
 **Branch:** `feature/FEAT-133-recipes-git-steps-in-blocks-run-with-an-agent`.
 **Screens:** 1V (Recipes, new, at `/recipes`), chrome (a rail row), 1S (Merger receives a recipe's conflict), 1M (Reflog lists restore points).
 **Raised by:** the author, 2026-10-12: an area to talk to the selected agent and tell it, with building blocks, what to do with the git history — stash > pull > merge > pop > commit > push — with limited text entry, ready-made blocks covering every structure, and a markdown file Spagitty ships to guide the agent to exactly what the person wanted. The same day: the look must be for professionals and enthusiasts, not a toy.

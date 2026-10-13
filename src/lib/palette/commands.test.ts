@@ -20,6 +20,7 @@ vi.mock('$lib/api', async (importOriginal) => ({
 let toggles = { confirmHistoryRewrite: true, showGitCommands: false };
 
 import { registerCommands } from './commands';
+import { NAV_ITEMS } from '../nav';
 import { agents } from '../agents/store.svelte';
 import { aReview } from '../../testing/agent-fixtures';
 import { settings } from '../settings/store.svelte';
@@ -62,6 +63,22 @@ describe('registerCommands', () => {
 	it('navigates when a Go command runs', async () => {
 		await find('go.settings').run();
 		expect(goto).toHaveBeenCalledWith('/settings');
+	});
+
+	/**
+	 * FEAT-134 lets a person take a screen off the rail, and "Palette only"
+	 * means exactly that: so the palette has to reach every one of them,
+	 * whatever is chosen.
+	 */
+	it('reaches every screen the rail has', async () => {
+		for (const { command } of palette.matches) {
+			if (command.group === 'Go') await command.run();
+		}
+		const reached = new Set(goto.mock.calls.map(([path]) => path));
+
+		expect(NAV_ITEMS.filter((item) => !reached.has(item.href)).map((item) => item.label)).toEqual(
+			[]
+		);
 	});
 
 	it('disables the repository commands with a reason when none is open', () => {

@@ -60,6 +60,12 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.search', title: 'Go to Search', path: '/search', keywords: ['find', 'grep'] },
 	{ id: 'go.requests', title: 'Go to Pull requests', path: '/requests', keywords: ['pr', 'review'] },
 	{ id: 'go.conflicts', title: 'Go to Conflicts', path: '/conflicts', keywords: ['merge'] },
+	// FEAT-134: a screen can be taken off the rail, so the palette has to reach
+	// every one of them. These four had only ever been reached from the rail.
+	{ id: 'go.merge', title: 'Go to Merger', path: '/merge', keywords: ['merge', 'branches', 'combine'] },
+	{ id: 'go.review', title: 'Go to Review', path: '/review', keywords: ['pr', 'pull request', 'read'] },
+	{ id: 'go.tags', title: 'Go to Tags', path: '/tags', keywords: ['refs', 'release'] },
+	{ id: 'go.reflog', title: 'Go to Reflog', path: '/reflog', keywords: ['undo', 'recover', 'lost'] },
 	{ id: 'go.rebase', title: 'Go to Interactive rebase', path: '/rebase', keywords: ['reorder', 'squash'] },
 	{ id: 'go.farm', title: 'Go to Farm', path: '/farm', keywords: ['tasks', 'dag', 'goal'] },
 	{ id: 'go.farm.agents', title: 'Go to Farm agents', path: '/farm?pane=agents', keywords: ['agents', 'installed', 'claude', 'codex', 'cursor', 'farm'] },

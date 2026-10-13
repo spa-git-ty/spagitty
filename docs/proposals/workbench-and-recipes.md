@@ -4,7 +4,7 @@
 
 **Prepared:** 2026-10-12  
 **Target:** 3.0.0  
-**Status:** Proposed. Recorded as five backlog items, FEAT-130 to FEAT-134. The questions in [section 14](#14-open-questions-for-the-author) are the author's to answer; FEAT-133 does not start until question 1 is answered.  
+**Status:** Accepted. Recorded as five backlog items, FEAT-130 to FEAT-134. The author answered the questions in [section 14](#14-the-authors-answers) on 2026-10-13.  
 **Raised by:** the author, 2026-10-12: a full terminal on the rail with tmux and pmux shipped in, so nobody leaves Spagitty for one; a file viewer like Neovim with AstroNvim — mouse-clickable, tree-sitter coloured, any branch, blame on any line, and no editing; an investigator that shows a file's, a folder's or a branch's history from birth; and an area where the person builds what they want done with git out of ready-made blocks — stash, pull, merge, pop, commit, push — with a little text, and a selected agent does it, guided by a brief that Spagitty ships. Then, the same day: a settings screen to pin or hide what is on the rail.  
 **Screens:** 1T (Terminal, new), 1U (Files, new), 1O (Investigate — File history, rebuilt and put on the rail), 1V (Recipes, new), 1K (Settings › Rail, a new section), chrome (the rail).  
 **Designs:** [`design_handoff_workbench/`](../../design_handoff_workbench/), listed in [section 13](#13-designs).
@@ -209,7 +209,7 @@ The validator is `crates/spagitty-core/src/recipes/validate.rs`, one function th
 
 ### 8.4 Running it
 
-This is [question 1](#14-open-questions-for-the-author). The proposal is:
+This was [question 1](#14-the-authors-answers), and the author chose it on 2026-10-13:
 
 - **Spagitty runs every block's command itself**, through the process runner and the activity lanes of FEAT-121, exactly as the toolbar does. Each command is logged in the command log (FEAT-020).
 - **The agent is called only where judgment is needed**:
@@ -218,7 +218,7 @@ This is [question 1](#14-open-questions-for-the-author). The proposal is:
   - a failure, where the agent reads the output and `git status` and explains it, without writing.
 - **The agent never writes in the person's working copy.** Recipes act on the real working copy, unlike 2.0 assignments, which is why the agent is kept away from it.
 
-The alternative the author described, where the agent runs every command, needs the agent in the working copy with a shell. Spagitty could put a `git` shim first on its `PATH` that refuses any command outside the brief's *Allowed* list and logs every call. But an agent with a shell can go around a shim. Choose this way only knowing that.
+The alternative the author first described, where the agent runs every command, needs the agent in the working copy with a shell. Spagitty could put a `git` shim first on its `PATH` that refuses any command outside the brief's *Allowed* list and logs every call. But an agent with a shell can go around a shim. It was not chosen.
 
 **Levels** are the 2.0 four, with the same names:
 
@@ -332,7 +332,7 @@ The author has said the UI is a bottleneck in large repositories (the GPUI quest
 2. **FEAT-131 — Files.** It brings tree-sitter and blame at a revision, which FEAT-132 reuses.
 3. **FEAT-132 — Investigate.** It replaces `/history`.
 4. **FEAT-130 — Terminal.** The bundling work in CI is the long part; farm sessions can follow as their own item.
-5. **FEAT-133 — Recipes**, once [question 1](#14-open-questions-for-the-author) is answered.
+5. **FEAT-133 — Recipes.**
 
 ## 13. Designs
 
@@ -349,14 +349,16 @@ All are in `design_handoff_workbench/source/`, 1440×900 with a dark reference t
 
 **When they disagree:** the spec wins on behaviour and the screens win on layout. Exact sizes and colours come from `metrics.ts` and `app.css`.
 
-## 14. Open questions for the author
+## 14. The author's answers
 
-1. **Who runs a recipe's git commands?** Spagitty, with the agent called for judgment ([8.4](#84-running-it), proposed), or the agent, behind a `git` shim? FEAT-133 waits on this.
-2. **"pmux"** is taken to mean psmux, whose binaries include `pmux`. Is that right?
-3. **Names**: *Recipes*, *Investigate*, *Files*. Keep them, or rename?
-4. **The bundled tmux on macOS and Linux**: should it be used only when there is no system tmux ≥ 3.2 (proposed), or always, for one known version?
-5. **Farm sessions in the terminal** need the farm to run local agents under the multiplexer. Is that in 3.0, or later?
-6. **Recipes in the repository**: stay personal only (proposed), or also allow a committed `.spagitty/recipes/` for a team?
+Asked and answered on 2026-10-13.
+
+1. **Who runs a recipe's git commands?** Spagitty, with the agent called for judgment ([8.4](#84-running-it)). Not the agent behind a `git` shim.
+2. **"pmux"** means psmux, whose binaries include `pmux`.
+3. **Names**: *Recipes*, *Investigate* and *Files* are kept.
+4. **The bundled tmux on macOS and Linux** is used only when there is no system tmux at 3.2 or later.
+5. **Farm sessions in the terminal** come later, as their own item. The terminal and the multiplexer are in 3.0.
+6. **Recipes in the repository**: no. Recipes stay personal, in application data.
 
 ## 15. Non-scope
 

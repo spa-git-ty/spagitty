@@ -77,7 +77,11 @@ export type IconName =
 	| 'upload'
 	| 'person'
 	| 'arrow-right'
-	| 'link';
+	| 'link'
+	| 'more'
+	| 'files'
+	| 'investigate'
+	| 'recipes';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -193,6 +197,24 @@ export const ICONS: Record<IconName, string[]> = {
 	'chevron-up': ['M6 14.5 12 8.5l6 6'],
 	'chevron-down': ['M6 9.5l6 6 6-6'],
 	terminal: ['M4 4h16v16H4z', 'M8 9.5 10.5 12 8 14.5', 'M13 15h3'],
+	// 3.0's rail (FEAT-130 to FEAT-134), as the workbench handoff drew them.
+	// Three dots: what the person took off the rail is under here.
+	more: [
+		'M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+		'M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+		'M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'
+	],
+	// A page with code on it: Files reads, and never writes.
+	files: [
+		'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z',
+		'M14 3v5h5',
+		'M10 12.5l-2 2 2 2',
+		'M14 12.5l2 2-2 2'
+	],
+	// The Log's glass with a clock in it: looking into what happened over time.
+	investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z', 'M15.5 15.5 21 21', 'M10.5 7.5v3l2 1.5'],
+	// Three blocks, stacked: a recipe is steps in order.
+	recipes: ['M4 4h10v5H4z', 'M4 9.5h14v5H4z', 'M4 15h8v5H4z'],
 	check: ['M5 12.5 10 17.5 19 7'],
 	// A ring, and the ring ticked: a file still to read, and one read (TASK-053).
 	circle: ['M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z'],
