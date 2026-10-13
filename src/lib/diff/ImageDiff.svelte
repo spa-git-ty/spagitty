@@ -4,9 +4,14 @@
 
 	interface Props {
 		diff: BinaryDiff;
+		/**
+		 * One picture, with nothing to compare it to (FEAT-131). Files shows an
+		 * image at a revision; there is no before, so there are no modes.
+		 */
+		single?: boolean;
 	}
 
-	let { diff }: Props = $props();
+	let { diff, single = false }: Props = $props();
 
 	type ImageMode = '2-up' | 'swipe' | 'onion';
 	let mode = $state<ImageMode>('2-up');
@@ -35,8 +40,11 @@
 	});
 </script>
 
-<div class="image-diff" aria-label="Image diff visualizer">
+<div class="image-diff" aria-label={single ? 'Image' : 'Image diff visualizer'}>
 	<header class="controls">
+		{#if single}
+			<span></span>
+		{:else}
 		<div class="mode-tabs" role="tablist" aria-label="Comparison mode">
 			<button
 				type="button"
@@ -59,17 +67,30 @@
 				onclick={() => (mode = 'onion')}
 			>Onion Skin</button>
 		</div>
+		{/if}
 
 		<div class="meta-stats">
 			<span class="mime-badge">{diff.mime}</span>
 			<span class="size-badge">
-				{formatBytes(diff.oldSize)} → {formatBytes(diff.newSize)} ({deltaBytes})
+				{#if single}
+					{formatBytes(diff.newSize)}
+				{:else}
+					{formatBytes(diff.oldSize)} → {formatBytes(diff.newSize)} ({deltaBytes})
+				{/if}
 			</span>
 		</div>
 	</header>
 
 	<div class="canvas-area">
-		{#if mode === '2-up'}
+		{#if single}
+			<div class="two-up-layout">
+				<div class="side-frame">
+					<div class="checkerboard frame-box">
+						{#if newSrc}<img src={newSrc} alt={diff.path} class="img-preview" />{/if}
+					</div>
+				</div>
+			</div>
+		{:else if mode === '2-up'}
 			<div class="two-up-layout">
 				<div class="side-frame">
 					<div class="frame-label">Before ({formatBytes(diff.oldSize)})</div>

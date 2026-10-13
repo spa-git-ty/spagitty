@@ -18,6 +18,13 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 - **Settings → Rail** chooses what is on the left bar. Every screen has a row there, in its group, and is pinned or hidden. Hidden screens go under a **More** button at the end of Tools, or to the palette only; the palette reaches every screen whatever is chosen. Rows are put in another order by dragging, or with Alt and the arrow keys, within their group. Farm and Settings are always on the rail, and Conflicts and Badges keep the rules they had. The screen you are on is always shown while you are on it. Nothing is hidden until you hide it, and **Reset** puts everything back.
 - The palette goes to Merger, Review, Tags and Reflog, which it could not reach before.
+- **Files**, a new screen on the rail, shows any file at any branch, tag or commit. It reads what git has stored and never the files on disk, so it cannot change anything.
+  - The tree opens a folder at a time, and **Find a file** looks through every path. Open files are tabs, kept for each repository.
+  - Code is coloured by tree-sitter for Rust, TypeScript, TSX, JavaScript, Svelte, Python, Go, Java, C, C++, C#, JSON, TOML, YAML, Markdown, CSS, HTML, Bash and SQL. Other languages are coloured as they are in Diff.
+  - **Blame** is beside every line: who, the commit's summary and how long ago, once for each run of lines, and a bar that is stronger where a line is newer. Lines from a commit an agent co-authored are in the agent's colour. Press a run to light every line from its commit.
+  - Press a line to open a card under it: who wrote it and when, the pull request, the commit's summary, and what the line was before. From there, **Commit** shows it on the Graph and **Blame before this** reads the file as it was before that commit.
+  - The keys are for reading: `j` `k`, Ctrl+d and Ctrl+u, `gg` `G`, `/` `?` `n` `N` to search, `]b` `[b` for the next and previous run of blame, `b` to hide it, Enter and Esc for the card, and `y` to copy `path:line@sha`.
+  - An image is shown as a picture. A binary file, a Git LFS pointer and a file over 50 MB say what they are and how big. A file over 5 MB is shown without colour.
 
 ## [2.2.2] - 2026-10-12
 

@@ -15,9 +15,11 @@ use spagitty_core::branches::{self, BranchRow};
 use spagitty_core::clone::{self, Plan};
 use spagitty_core::conflicts::{self, ConflictSides, ConflictState};
 use spagitty_core::diff::{self, CommitDetail, CommitDiff, FileDiff, Side};
+use spagitty_core::files;
 use spagitty_core::forge::review::ReviewVerdict;
 use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
 use spagitty_core::graph::{GraphOrder, ROW_PITCH};
+use spagitty_core::highlight;
 use spagitty_core::identity::{self, Identity, Key, Scope};
 use spagitty_core::merger;
 use spagitty_core::ops::{self, Integration, ResetMode, StashAction};
@@ -1040,6 +1042,106 @@ pub fn file_history(
     state.with_session("file_history", |session| {
         blame::history(&session.repo.to_thread_local(), &path, limit)
     })
+}
+
+// --- Files (FEAT-131) ---------------------------------------------------
+//
+// Every command below takes a revision and reads git's objects at it. None of
+// them holds the session lock while it works: colouring a large file or
+// blaming a long one takes long enough to be noticed, and the graph, the
+// toolbar and the watcher all wait on that lock. The repository handle is
+// taken under the lock and the work is done with it after.
+
+/// The open repository, to read from without holding the session.
+fn files_repo(
+    state: &State<'_, AppState>,
+    command: &'static str,
+) -> Result<spagitty_core::gix::Repository> {
+    state.with_session(command, |session| Ok(session.repo.to_thread_local()))
+}
+
+/// The commit a branch, tag or commit means. An empty revision is `HEAD`.
+#[tauri::command(async)]
+pub fn files_resolve(state: State<'_, AppState>, rev: String) -> Result<files::Revision> {
+    files::resolve(&files_repo(&state, "files_resolve")?, &rev)
+}
+
+/// One folder of the repository at `rev`. An empty `dir` is the root.
+#[tauri::command(async)]
+pub fn files_tree(
+    state: State<'_, AppState>,
+    rev: String,
+    dir: String,
+) -> Result<Vec<files::TreeEntry>> {
+    files::tree(&files_repo(&state, "files_tree")?, &rev, &dir)
+}
+
+/// `path` as it is in `rev`: text, an image, binary, a Git LFS pointer, too
+/// large, or not there.
+#[tauri::command(async)]
+pub fn files_read(
+    state: State<'_, AppState>,
+    rev: String,
+    path: String,
+) -> Result<files::FileRead> {
+    files::read(&files_repo(&state, "files_read")?, &rev, &path)
+}
+
+/// How many paths *Find a file* shows. Past this the field says to type more.
+const FILES_FIND_LIMIT: usize = 200;
+
+/// The files of `rev` whose paths hold every word of `query`.
+#[tauri::command(async)]
+pub fn files_find(state: State<'_, AppState>, rev: String, query: String) -> Result<files::Found> {
+    files::find(
+        &files_repo(&state, "files_find")?,
+        &rev,
+        &query,
+        FILES_FIND_LIMIT,
+    )
+}
+
+/// The colour of lines `start..end` of a blob, from tree-sitter.
+#[tauri::command(async)]
+pub fn files_spans(
+    state: State<'_, AppState>,
+    blob: String,
+    grammar: String,
+    start: usize,
+    end: usize,
+) -> Result<Vec<highlight::Line>> {
+    highlight::spans(
+        &files_repo(&state, "files_spans")?,
+        &blob,
+        &grammar,
+        start,
+        end,
+    )
+}
+
+/// Who wrote each line of `path` at `rev`, with each commit said once.
+#[tauri::command(async)]
+pub fn files_blame(
+    state: State<'_, AppState>,
+    rev: String,
+    path: String,
+) -> Result<blame::CompactBlame> {
+    blame::compact(&files_repo(&state, "files_blame")?, &path, &rev)
+}
+
+/// What a line was before `commit` wrote it, for the peek.
+#[tauri::command(async)]
+pub fn files_before(
+    state: State<'_, AppState>,
+    commit: String,
+    path: String,
+    line: u32,
+    previous: Option<String>,
+    previous_path: Option<String>,
+) -> Result<Option<String>> {
+    let repo = files_repo(&state, "files_before")?;
+    let from = previous.as_deref().zip(previous_path.as_deref());
+    files::before(&repo, &commit, &path, line, from)
 }
 
 /// What operation is in progress, and every conflicted path.

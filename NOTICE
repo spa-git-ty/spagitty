@@ -35,6 +35,9 @@ file.
   Tauri 2                 MIT OR Apache-2.0
   serde, serde_json       MIT OR Apache-2.0
   notify                  CC0-1.0 OR Artistic-2.0
+  tree-sitter, its
+    highlighter and the
+    language grammars     MIT
   Svelte / SvelteKit      MIT
   Vite                    MIT
 

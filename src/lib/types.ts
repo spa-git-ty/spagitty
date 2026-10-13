@@ -698,6 +698,88 @@ export interface Blame {
 	refused: NotBlamable | null;
 }
 
+// --- Files (FEAT-131) -----------------------------------------------------
+
+/** A branch, tag or commit, resolved to the commit it means. Mirrors `files::Revision`. */
+export interface FilesRevision {
+	id: string;
+	short: string;
+}
+
+export type FilesEntryKind = 'folder' | 'file' | 'link' | 'submodule';
+
+/** One entry of a folder at a revision. Mirrors `files::TreeEntry`. */
+export interface FilesEntry {
+	name: string;
+	/** From the repository's root, with `/` between the parts. */
+	path: string;
+	kind: FilesEntryKind;
+}
+
+/** What a file is, and its text when it has any. Mirrors `files::Content`. */
+export type FilesContent =
+	| { kind: 'text'; text: string }
+	| { kind: 'image'; mime: string; base64: string }
+	| { kind: 'binary' }
+	/** A Git LFS pointer: the object it stands for, and that object's size. */
+	| { kind: 'lfs'; oid: string; objectSize: number }
+	/** Over 50 MB. Not read at all. */
+	| { kind: 'tooLarge' }
+	/** Nothing at that path in that revision, or a folder or submodule. */
+	| { kind: 'missing' };
+
+/** A file read from git's objects at a revision. Mirrors `files::FileRead`. */
+export interface FilesRead {
+	path: string;
+	/** The commit read from, in full. */
+	revision: string;
+	/** The blob's id, which colour is cached by. Empty when nothing is there. */
+	blob: string;
+	size: number;
+	/** The tree-sitter grammar for this path, when one is compiled in. */
+	grammar: string | null;
+	/** False over 5 MB: shown, and not coloured. */
+	colour: boolean;
+	content: FilesContent;
+}
+
+/** What *Find a file* found. Mirrors `files::Found`. */
+export interface FilesFound {
+	paths: string[];
+	/** More matched than were returned. */
+	more: boolean;
+}
+
+/** One commit a blamed file's lines come from. Mirrors `blame::BlameCommit`. */
+export interface BlameCommit {
+	id: string;
+	short: string;
+	summary: string;
+	authorName: string;
+	authorEmail: string;
+	/** Author time, seconds since the unix epoch. */
+	time: number;
+	/** The agent a `Co-authored-by` trailer names, by gate 1's rule. */
+	agent: string | null;
+	/** The path the lines were written under at this commit. */
+	path: string;
+	/** The commit and path this version was changed from. Null when the commit added the file. */
+	previous: string | null;
+	previousPath: string | null;
+}
+
+/** A whole file's blame, each commit said once. Mirrors `blame::CompactBlame`. */
+export interface CompactBlame {
+	path: string;
+	revision: string;
+	commits: BlameCommit[];
+	/** For each line, in order: an index into `commits`. */
+	lines: number[];
+	/** For each line: its number in the commit that wrote it. */
+	origin: number[];
+	refused: NotBlamable | null;
+}
+
 /** One commit in a file's evolution history (FEAT-063). */
 export interface FileHistoryEntry {
 	commit: string;

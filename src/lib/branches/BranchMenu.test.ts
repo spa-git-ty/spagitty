@@ -399,3 +399,72 @@ describe('picking and closing', () => {
 		expect(onclose).toHaveBeenCalled();
 	});
 });
+
+/**
+ * Files reads at a revision, and a revision need not have a name (FEAT-131).
+ * A control that checks a branch out has no use for this, and does not get it.
+ */
+describe('a commit…', () => {
+	it('is not offered unless the control asks for it', () => {
+		open();
+
+		expect(view.find('.commit')).toBeNull();
+		expect(field().getAttribute('placeholder')).toBe('Find a branch');
+	});
+
+	it('is offered under the names, apart from them', () => {
+		open({ oncommit: vi.fn() });
+
+		const commit = view.get('.commit');
+		expect(commit.textContent?.trim()).toBe('A commit…');
+		expect(commit.closest('[role="listbox"]')).toBeNull();
+		expect(field().getAttribute('placeholder')).toBe('Find a branch, or type a commit');
+		// The arrows move over names, and never onto it.
+		expect(names()).toHaveLength(OPTIONS.length);
+	});
+
+	it('hands over what was typed as the revision, and closes', () => {
+		const oncommit = vi.fn();
+		const { onclose, onpick } = open({ oncommit });
+
+		type('  a3f9c1e ');
+		expect(view.get('.commit').textContent?.replace(/\s+/g, ' ').trim()).toBe('A commit… a3f9c1e');
+		click(view.get('.commit'));
+
+		expect(oncommit).toHaveBeenCalledWith('a3f9c1e');
+		expect(onclose).toHaveBeenCalled();
+		expect(onpick).not.toHaveBeenCalled();
+	});
+
+	it('asks for one to be typed when nothing has been', () => {
+		const oncommit = vi.fn();
+		const { onclose } = open({ oncommit });
+
+		click(view.get('.commit'));
+
+		expect(oncommit).not.toHaveBeenCalled();
+		expect(onclose).not.toHaveBeenCalled();
+	});
+
+	it('takes Enter as a commit when no name matches what was typed', () => {
+		const oncommit = vi.fn();
+		open({ oncommit });
+
+		type('HEAD~3');
+		expect(entries()).toHaveLength(0);
+		press(field(), 'Enter');
+
+		expect(oncommit).toHaveBeenCalledWith('HEAD~3');
+	});
+
+	it('still picks a name with Enter when one matches', () => {
+		const oncommit = vi.fn();
+		const { onpick } = open({ oncommit });
+
+		type('tab-drag');
+		press(field(), 'Enter');
+
+		expect(onpick).toHaveBeenCalledWith('feat/tab-drag');
+		expect(oncommit).not.toHaveBeenCalled();
+	});
+});

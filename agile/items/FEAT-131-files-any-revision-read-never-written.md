@@ -2,7 +2,7 @@
 
 # FEAT-131 — Files: any revision, read and never written
 
-**Status:** Backlog — recorded 2026-10-12 for 3.0.0; not started.
+**Status:** Done — on `release/3.0.0`, after FEAT-134; unmerged. Covered by Rust tests against real repositories and by mounted tests, and looked at in the built frontend in headless Chrome with a stand-in for the backend. The Rust and the screen have not been run together: not looked at in the running application.
 **Branch:** `feature/FEAT-131-files-any-revision-read-never-written`.
 **Screens:** 1U (Files, new, at `/files`), chrome (a rail row).
 **Raised by:** the author, 2026-10-12: a file viewer like Neovim with AstroNvim — mouse-clickable, tree-sitter coloured — where the person can browse any branch and blame any line. No edits: Spagitty is not an editor.
@@ -48,3 +48,43 @@ It reads git objects only.
 - **Editing, saving, or an *Open in editor* button.**
 - **Go-to-definition and any language-server feature.**
 - **Using the Rust highlighter in Diff and Review.** That may follow as a task once this is measured.
+
+## What was built
+
+- **`crates/spagitty-core/src/files.rs`** reads trees and blobs at a revision: `resolve`, `tree`, `read`, `find` and `before`. It holds no path to the working tree, and a test reads its source to keep it so.
+- **`crates/spagitty-core/src/highlight.rs`** is `tree-sitter-highlight` with 19 languages compiled in. A blob is coloured whole, once, and kept by its id (the newest 24). A request is a slice. Colour crosses to the screen as token class and length for each line, never as text.
+- **`blame::compact`** gives each commit once and a commit index for each line, from `git blame --porcelain`. A commit carries the author's address, the commit and path it changed the file from, and the agent its trailer names.
+- **`crates/spagitty-core/src/attribution.rs`** is gate 1's rule for an agent's trailer, in Rust. A test reads `tools/attribution.mjs` and compares the names.
+- **Seven commands**, `files_*`, none of which holds the session lock while it works.
+- **The screen** is `src/routes/files/+page.svelte` with `src/lib/files/`: the store, the tree, the file view and the peek. The file is `VirtualRows`, and the peek is a row of it.
+- **`BranchMenu`** takes `oncommit` and then offers *A commit…*. **`VirtualRows`** takes `onrange`. **`ImageDiff`** takes `single`.
+
+## Measured
+
+- **Languages**: 19 of the proposal's 21. Kotlin and Dockerfile fall back to the frontend's highlighter. The Kotlin crate that builds against tree-sitter 0.27 (`tree-sitter-kotlin-ng`) ships no highlight query, and `tree-sitter-dockerfile` is built for tree-sitter 0.20.
+- **Size**: the release binary on Windows goes from 12.4 MB (the 2.2.2 build of 2026-10-11) to 31.6 MB (`cargo build --release -p spagitty`, 2026-10-13). Four grammars are most of it. As compiled libraries: C# 5.5 MB, C++ 3.7 MB, TypeScript with TSX 3.4 MB and SQL 3.1 MB, against 7.9 MB for the other fourteen together and 2.5 MB for tree-sitter and its highlighter. The spec's list is kept as it is. Whether that cost is accepted, or those four are left to the frontend's highlighter, is the author's to say.
+- **Crates**: `Cargo.lock` goes from 622 packages to 644.
+- **Scrolling**: see the sweep, row 18.
+
+## Dependencies added
+
+All MIT. Each is needed for Files' colour.
+
+| Crate | For |
+| --- | --- |
+| `tree-sitter-highlight` 0.27 (with `tree-sitter`, `tree-sitter-language`) | Reads a grammar's highlight query and gives the spans |
+| `tree-sitter-bash`, `-c`, `-c-sharp`, `-cpp`, `-css`, `-go`, `-html`, `-java`, `-javascript`, `-json`, `-md`, `-python`, `-rust`, `-sequel`, `-svelte-ng`, `-toml-ng`, `-typescript`, `-yaml` | One grammar and its query for each language |
+
+`tree-sitter` 0.27 declares a minimum Rust of 1.90 and the workspace declares 1.77. The gates build with `stable`, so nothing fails. TASK-072 records it.
+
+## Differences from the spec and the artboard
+
+- **The pull request number** is read from the commit's summary, as a host writes it (`(#214)`, or `Merge pull request #214`). The forge is not asked: Spagitty has no call that finds a pull request from a commit.
+- **Wrap** is built. **Minimap** is drawn on the artboard and is in neither the spec nor this item. It was not built.
+- **The breadcrumb** ends at the file. The artboard's last segment is the function the cursor is in, which needs the syntax tree on the screen's side.
+- **Tabs can be closed**, with a button on the tab or the middle mouse button. The artboard draws no way to close one.
+- ***Find a file*** is on the artboard and in neither the spec nor this item. It is built.
+- **The column** in the status line is 1 except where a search has landed. No key moves along a line.
+- **Blame** is refused over 4 MB, the limit FEAT-063 set. Colour stops at 5 MB.
+- **An SVG** is read as text, so its lines can be blamed.
+- ***Investigate line*** goes to `/investigate`, which FEAT-132 builds.

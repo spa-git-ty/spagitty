@@ -34,6 +34,11 @@ import type {
 	IdentityProfile,
 	Identity,
 	FileHistoryEntry,
+	CompactBlame,
+	FilesEntry,
+	FilesFound,
+	FilesRead,
+	FilesRevision,
 	IdentityKey,
 	IdentityScope,
 	Licenses,
@@ -310,6 +315,57 @@ export function blame(path: string, revision: string): Promise<Blame> {
 /** Read commit history for a single file path (FEAT-063). */
 export function fileHistory(path: string, limit = 100): Promise<FileHistoryEntry[]> {
 	return invoke('file_history', { path, limit });
+}
+
+// --- Files (FEAT-131): git's objects at a revision, read and never written ---
+
+/** The commit a branch, tag or commit means. An empty revision is HEAD. */
+export function filesResolve(rev: string): Promise<FilesRevision> {
+	return invoke('files_resolve', { rev });
+}
+
+/** One folder of the repository at `rev`. An empty `dir` is the root. */
+export function filesTree(rev: string, dir: string): Promise<FilesEntry[]> {
+	return invoke('files_tree', { rev, dir });
+}
+
+/** `path` as it is in `rev`. */
+export function filesRead(rev: string, path: string): Promise<FilesRead> {
+	return invoke('files_read', { rev, path });
+}
+
+/** The files of `rev` whose paths hold every word of `query`. */
+export function filesFind(rev: string, query: string): Promise<FilesFound> {
+	return invoke('files_find', { rev, query });
+}
+
+/**
+ * The colour of lines `start..end` of a blob: for each line, pairs of token
+ * class and length in UTF-16 units. Empty for a blob too large to colour.
+ */
+export function filesSpans(
+	blob: string,
+	grammar: string,
+	start: number,
+	end: number
+): Promise<number[][]> {
+	return invoke('files_spans', { blob, grammar, start, end });
+}
+
+/** Who wrote each line of `path` at `rev`, each commit said once. */
+export function filesBlame(rev: string, path: string): Promise<CompactBlame> {
+	return invoke('files_blame', { rev, path });
+}
+
+/** What line `line` of `path` was before `commit` wrote it. Null when it replaced nothing. */
+export function filesBefore(
+	commit: string,
+	path: string,
+	line: number,
+	previous: string | null,
+	previousPath: string | null
+): Promise<string | null> {
+	return invoke('files_before', { commit, path, line, previous, previousPath });
 }
 
 /** What is in progress and what is conflicted. Reads only; nothing is written. */

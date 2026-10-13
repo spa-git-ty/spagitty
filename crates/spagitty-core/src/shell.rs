@@ -725,6 +725,16 @@ pub fn blame(repo: &Path, revision: &str, path: &str) -> Result<String> {
     run(repo, &["blame", "--line-porcelain", revision, "--", path])
 }
 
+/// The same blame, with each commit's headers given once (FEAT-131).
+///
+/// `--porcelain` rather than `--line-porcelain`: Files blames whole files of
+/// twenty thousand lines, and repeating a dozen header lines on every one of
+/// them is ten megabytes of text to say what a few hundred commits said. The
+/// exception that sends blame through `git` at all is the one on [`blame`].
+pub fn blame_porcelain(repo: &Path, revision: &str, path: &str) -> Result<String> {
+    run(repo, &["blame", "--porcelain", revision, "--", path])
+}
+
 // --- History rewriting and moving ------------------------------------------
 //
 // Everything below mutates refs, the index or the working tree, which is the

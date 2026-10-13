@@ -48,6 +48,36 @@ ureq = { version = "3.2.1", default-features = false, features = [
     "json",
 ] }
 
+# Files' colour (FEAT-131): tree-sitter, its highlighter, and one grammar per
+# language, compiled in. All MIT or Apache-2.0.
+#
+# In Rust rather than in the webview because a grammar reads the whole file,
+# and a 20,000-line file should not be parsed on the thread that scrolls it.
+# Each grammar is generated C and adds to the binary; the set is the one the
+# proposal names (docs/proposals/workbench-and-recipes.md §6.2), less two:
+# the Kotlin crate that builds against this tree-sitter ships no highlight
+# query, and the Dockerfile crate is built for tree-sitter 0.20. A language
+# with no grammar here falls back to `src/lib/diff/highlight.ts`.
+tree-sitter-highlight = "0.27"
+tree-sitter-bash = "0.25"
+tree-sitter-c = "0.24"
+tree-sitter-c-sharp = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-css = "0.25"
+tree-sitter-go = "0.25"
+tree-sitter-html = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-javascript = "0.25"
+tree-sitter-json = "0.24"
+tree-sitter-md = "0.5"
+tree-sitter-python = "0.25"
+tree-sitter-rust = "0.24"
+tree-sitter-sequel = "0.3"
+tree-sitter-svelte-ng = "1.0"
+tree-sitter-toml-ng = "0.7"
+tree-sitter-typescript = "0.23"
+tree-sitter-yaml = "0.7"
+
 [features]
 # The repository fixtures, published for the Tauri layer's tests.
 #

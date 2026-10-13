@@ -48,6 +48,10 @@ export type CountKey = keyof RepoCounts;
  * 1S is Merger (FEAT-100): any two branches, and what merging them would do
  * before anything is written. Conflicts (1D) stays for the operations git
  * stopped on by itself.
+ *
+ * 1T, 1U and 1V are 3.0's workbench: Terminal (FEAT-130), Files (FEAT-131)
+ * and Recipes (FEAT-133). 1O, which was File history and off the rail, is
+ * Investigate (FEAT-132) and on it.
  */
 export type ScreenCode =
 	| '1A'
@@ -68,7 +72,10 @@ export type ScreenCode =
 	| '1P'
 	| '1Q'
 	| '1R'
-	| '1S';
+	| '1S'
+	| '1T'
+	| '1U'
+	| '1V';
 
 /**
  * What kind of place a destination is (TASK-041).
@@ -182,6 +189,8 @@ export const NAV_ITEMS: NavItem[] = [
 		icon: 'conflict',
 		shows: 'conflicts'
 	},
+	// FEAT-131. Any file at any revision, read and never written.
+	{ code: '1U', label: 'Files', href: '/files', group: 'work', icon: 'files', since: '3.0' },
 	// FEAT-100. Merging two branches, seen first. Always on the rail: it is
 	// where a merge starts, not something that happens to you.
 	{ code: '1S', label: 'Merger', href: '/merge', group: 'work', icon: 'merge' },

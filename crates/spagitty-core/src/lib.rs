@@ -21,6 +21,7 @@
 //! spawns, and read by the Settings toggle "Show the git command behind each
 //! action".
 
+pub mod attribution;
 pub mod avatars;
 pub mod blame;
 pub mod branches;
@@ -29,8 +30,10 @@ pub mod compare;
 pub mod conflicts;
 pub mod diff;
 pub mod error;
+pub mod files;
 pub mod forge;
 pub mod graph;
+pub mod highlight;
 pub mod hooks;
 pub mod identity;
 pub mod ignore;

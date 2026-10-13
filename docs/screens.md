@@ -31,6 +31,7 @@ defect.
 | 1Q | Farm | `/farm` | yes | Built | FEAT-073 |
 | 1R | Review | `/review` | yes | Built | FEAT-087 |
 | 1S | Merger | `/merge` | yes | Built | FEAT-100 |
+| 1U | Files | `/files` | yes | Built | FEAT-131 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -90,7 +91,7 @@ Persistent across every screen, built with FEAT-001.
   Submodules N" line, now alone.
 
   Rail order is the screens roughly as they are worked through — Farm, then
-  Graph, Working copy, Conflicts (while there is something to resolve), Merger,
+  Graph, Working copy, Conflicts (while there is something to resolve), Files, Merger,
   Branches, Pull requests, Review — then the tools, always shown since TASK-056:
   Rebase, Log, Stash, Tags, Reflog, Badges (with the delight layer on) and All
   repositories; then Settings. Log follows Rebase because it is where you go to
@@ -999,3 +1000,64 @@ of N* — with Continue, Skip this commit and Abort; git's ours and theirs are
 put back as A and B. Once every commit is replayed, Finish the rebase in the
 commit dialog moves the receiving branch and removes the worktree. Neither
 branch moves before then.
+
+## 1U — Files
+
+**Built.** `src/routes/files/+page.svelte`, `src/lib/files/`,
+`crates/spagitty-core/src/files.rs`, `highlight.rs`, `blame.rs` (FEAT-131).
+
+Any file at any branch, tag or commit: a tree, the files opened from it as
+tabs, and one of them read, with blame beside every line.
+
+**It cannot write, and that is structural.** `files.rs` takes a revision and
+reads trees and blobs from the object database. It never asks the repository
+where its working copy is, so there is no flag to forget and nothing to
+disable. A test reads the module's source for a way to the disk, and another
+reads a file after its working copy has been changed and then deleted. A bare
+repository reads the same. *View only* in the header and `VIEW` in the status
+line say so; neither is a mode there is another of. There is no edit button
+and no *Open in editor*.
+
+**What arrives when.** The text is read and drawn at once. Colour is asked
+for a page of lines at a time, when rows are about to be drawn (`VirtualRows`'
+`onrange`), and fills in after. Blame is asked for after the first paint. A
+file of twenty thousand lines costs its text to open and what is in view to
+colour.
+
+**Colour** is tree-sitter, in Rust: `tree-sitter-highlight` with nineteen
+grammars compiled in. A blob is coloured whole, once, and kept by its id — a
+blob never changes, so nothing is ever invalidated. What crosses to the screen
+is, for each line, pairs of token class and length; the classes are the twelve
+`tok-*` the Diff screen already has, so the two screens read the same. A
+language with no grammar here (Kotlin, Dockerfile, and anything else
+`lib/diff/highlight.ts` knows) is read by that highlighter instead, and the
+status line then names the language without *tree-sitter*. Over 5 MB a file is
+shown without colour; over 50 MB it is not opened.
+
+**Blame** is `blame::compact`: each commit once, and for each line an index
+into them. Each run of lines from one commit has one head — portrait, name,
+summary, age — and every line has a bar, stronger the newer the line is among
+the file's own commits. A commit with a `Co-authored-by` trailer naming an
+agent, by the rule gate 1 applies (`attribution.rs`, kept in step with
+`tools/attribution.mjs` by a test), is drawn in `--agent` with the hexagon.
+Pressing a block lights every line from its commit.
+
+**The peek** opens under a pressed line, as a row of the list, never over the
+code: who and when, the pull request the summary names, the summary, the sha,
+and what the line was before — the line that commit's change removed in that
+place. *Commit* selects it on the Graph, *Blame before this* opens the file at
+the commit it was changed from, under the name it had then, and *Investigate
+line* goes to 1O.
+
+**Keys** are in `keys.ts`, a table tested as one: `j` `k`, Ctrl+d Ctrl+u,
+`gg` `G`, `/` `?` `n` `N`, `]b` `[b`, `b`, Enter, Esc, and `y`, which
+copies `path:line@sha`. None types into the file.
+
+**The revision** is chosen from the branch menu (FEAT-122) with its tags and
+*A commit…*, which takes whatever is typed in the menu's field as a revision.
+A tab keeps the revision it was opened at and takes the screen there when it
+is shown. Another screen opens a file here with
+`/files?path=…&rev=…&line=…`.
+
+The revision, the tabs, the open folders and the two switches are kept per
+repository in `localStorage`.
