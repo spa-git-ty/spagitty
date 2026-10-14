@@ -30,6 +30,7 @@
 	{:else if !info}
 		{#if hooks.loading}<Loader label="Reading hooks…" />{:else}<p class="note">No repository is open.</p>{/if}
 	{:else}
+		<a href="/hooks">Open Hooks · runs and builder</a>
 		<div class="switch-row">
 			<button
 				class="switch"

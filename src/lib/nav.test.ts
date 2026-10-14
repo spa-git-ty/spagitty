@@ -126,6 +126,7 @@ describe('NAV_ITEMS', () => {
 			'/reflog',
 			'/badges',
 			'/repos',
+			'/hooks',
 			'/settings'
 		]);
 	});
@@ -177,7 +178,7 @@ describe('grouping', () => {
 
 	it('starts a group exactly at each boundary', () => {
 		const starts = rows.filter((row) => row.startsGroup).map((row) => row.item.href);
-		expect(starts).toEqual(['/farm', '/', '/rebase', '/settings']);
+		expect(starts).toEqual(['/farm', '/', '/rebase', '/hooks', '/settings']);
 	});
 
 	it('heads every group but the first', () => {
@@ -240,6 +241,7 @@ describe('isShown', () => {
 			'/tags',
 			'/reflog',
 			'/repos',
+			'/hooks',
 			'/settings'
 		]);
 	});
@@ -385,14 +387,14 @@ describe('the rail a person chose', () => {
 			]);
 		});
 
-		it('sits at the end of Tools, immediately before Settings', () => {
+		it('sits at the end of Tools, before the new screens and Settings', () => {
 			const rows = railRows(NAV_ITEMS, { ...quiet, rail: chosen });
 			const at = rows.findIndex((row) => row.kind === 'more');
 			const before = rows[at - 1];
 			const after = rows[at + 1];
 
 			expect(before.kind === 'screen' && before.item.group).toBe('tools');
-			expect(after.kind === 'screen' && after.item.href).toBe('/settings');
+			expect(after.kind === 'screen' && after.item.href).toBe('/hooks');
 			expect(rows[at].startsGroup).toBe(false);
 		});
 
@@ -400,9 +402,11 @@ describe('the rail a person chose', () => {
 			const tools = NAV_ITEMS.filter((item) => item.group === 'tools').map((item) => item.code);
 			const rows = railRows(NAV_ITEMS, { ...quiet, rail: rail({ hidden: tools }) });
 			const at = rows.findIndex((row) => row.kind === 'more');
+			const after = rows[at + 1];
 
 			expect(rows[at].startsGroup).toBe(true);
 			expect(rows[at + 1].kind === 'screen' && rows[at + 1].startsGroup).toBe(true);
+			expect(after.kind === 'screen' && after.item.group).toBe('forge');
 		});
 
 		it('goes when hidden screens are for the palette only', () => {
@@ -471,6 +475,7 @@ describe('the rail a person chose', () => {
 				'farm',
 				'work',
 				'tools',
+				'forge',
 				'app'
 			]);
 			expect(inOrder(NAV_ITEMS, scrambled)).toHaveLength(NAV_ITEMS.length);

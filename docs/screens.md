@@ -34,6 +34,7 @@ defect.
 | 1T | Terminal | `/terminal` | yes | Built | FEAT-130 |
 | 1U | Files | `/files` | yes | Built | FEAT-131 |
 | 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
+| 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -62,6 +63,18 @@ not reach and the accounts Settings had no client for, were closed by FEAT-017.
 because it is how the next unbuilt screen says what it will be rather than
 pretending to be it: a half-built screen that looks real is harder to read than
 an honest empty one.
+
+## 1X — Hooks
+
+**Item:** [FEAT-137](../agile/items/FEAT-137-hooks.md). **Routes:** `/hooks` and `/hooks/runs` show Runs; `/hooks/edit` shows the builder.
+
+Runs reads append-only records under the repository's common git directory. A step has a state, time and its own output. The screen tails only the selected log, through the existing repository watcher. A terminal commit writes the same records. Earlier runs, staged files and formatting's restage are shown beside the log. Undo restage restores only saved index entries and refuses a later staging decision.
+
+The builder has the seven catalogue blocks, ordered inside pre-commit, commit-msg and pre-push. Each has its command or rule, timeout and failure choice. Path conditions use git's pathspec engine. Trying a message runs the generated commit-msg script. Dry run runs the generated stage without committing; formatting may change files and restage them when chosen.
+
+Shared definitions use `.spagitty/hooks.toml`. Personal definitions live in application data. Installing is explicit, including after a clone. A manager retains control by default; Import reads its commands without changing its files. Installing imported blocks switches git to a managed directory, preserving the manager's originals.
+
+The new screens form their own group immediately above Settings, with a separator above them, as the author asked on 2026-10-14. The existing shell components keep their appearance.
 
 ## The chrome
 

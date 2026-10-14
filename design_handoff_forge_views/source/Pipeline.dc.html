@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Pipeline preview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--warn:#9a5b00;--ok:#2f7d45;--danger:#b3124a;--lane-1:#c23b22;--lane-4:#6c4fa3;--lane-5:#2f6fb0;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel);--term-bg:#fffaf3}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--warn:#f0b54a;--ok:#7cc68d;--danger:#ff7a85;--lane-1:#f2715a;--lane-4:#a58bd8;--lane-5:#6aa7e0;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000);--term-bg:#110d0c}
+.app{--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+.seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--sunken);border:1px solid var(--pane-edge)}
+.seg a,.seg span{padding:4px 14px;border-radius:999px;font-size:var(--fs-secondary);color:var(--muted);text-decoration:none}
+.seg .on{background:var(--surface-2);color:var(--ink);font-weight:600;box-shadow:var(--shadow-1)}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.rail-item.new::after{content:'';position:absolute;bottom:7px;left:50%;width:14px;margin-left:-7px;height:2px;border-radius:2px;background:var(--agent)}
+.pane{background:var(--surface);border:1px solid var(--pane-edge);border-radius:14px}
+.k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.wf{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:8px;font-family:var(--font-mono);font-size:12.5px;text-align:left}
+.job{position:absolute;width:160px;height:56px;box-sizing:border-box;padding:7px 10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--pane-edge);display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:left;box-shadow:var(--shadow-1)}
+.sel{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;background:var(--sunken);border:1px solid var(--pane-edge);font-family:var(--font-mono);font-size:12.5px}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">payments-api<button aria-label="Close payments-api" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">spagitty</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="16">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px 10px">
+<span style="font-size: 22px">Pipelines</span>
+<nav class="seg" aria-label="Pipelines views"><a class="on" href="Pipeline.dc.html" aria-current="page">Preview</a><a href="PipelineLive.dc.html">Live</a></nav>
+<span class="vr"></span>
+<span style="font-family: var(--font-mono); font-size: 16px">.github/workflows/ci.yml</span>
+<span class="chip" style="color: var(--muted)">working copy · unsaved edits</span>
+<span style="flex: 1"></span>
+<button class="btn">Open in Files</button>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 10px; padding: 0 12px 12px">
+
+<section class="pane" aria-label="Workflow files" style="flex: 1 1 200px; max-width: 210px; display: flex; flex-direction: column; gap: 14px; padding: 14px 10px; overflow: hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span class="k" style="padding: 0 10px 4px">{{g.name}}</span>
+<sc-for list="{{g.files}}" as="f" hint-placeholder-count="3">
+<button class="wf" style="background: {{f.bg}}"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{f.c}}; flex: none" title="{{f.state}}"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis">{{f.n}}</span><span style="color: var(--muted); font-size: 11px">{{f.jobs}}</span></button>
+</sc-for>
+</div>
+</sc-for>
+</section>
+
+<section class="pane" aria-label="Pipeline graph" style="flex: 999 1 560px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--soft)">
+<span class="note" style="font-size: 12.5px">If</span>
+<span class="sel">push ▾</span>
+<span class="note" style="font-size: 12.5px">to</span>
+<span class="sel">main ▾</span>
+<span class="note" style="font-size: 12.5px">with</span>
+<span class="sel">working copy · 7 files ▾</span>
+<span style="flex: 1"></span>
+<div class="seg" role="tablist" aria-label="Layout"><span role="tab" aria-selected="false">Stages</span><span class="on" role="tab" aria-selected="true">Needs</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 18px 14px">
+<div style="display: grid; grid-template-columns: repeat(4, 160px); column-gap: 40px; margin-bottom: 12px">
+<span class="k">Build</span><span class="k">Test</span><span class="k">Package</span><span class="k">Deploy</span>
+</div>
+<div style="position: relative; width: 760px; height: 300px">
+<svg width="760" height="300" viewBox="0 0 760 300" fill="none" aria-hidden="true" style="position: absolute; inset: 0">
+<g stroke="var(--line)" stroke-width="1.6">
+<path d="M160 68 C180 68,180 68,200 68"></path>
+<path d="M160 148 C180 148,180 68,200 68"></path>
+<path d="M160 68 C180 68,180 168,200 168"></path>
+<path d="M160 148 C180 148,180 168,200 168"></path>
+<path d="M360 68 C380 68,380 118,400 118"></path>
+<path d="M360 168 C380 168,380 118,400 118"></path>
+<path d="M360 268 C380 268,380 118,400 118"></path>
+<path d="M560 118 C580 118,580 68,600 68"></path>
+</g>
+<path d="M560 118 C580 118,580 188,600 188" stroke="var(--line)" stroke-width="1.6" stroke-dasharray="4 4"></path>
+</svg>
+<sc-for list="{{jobs}}" as="j" hint-placeholder-count="8">
+<button class="job" style="left: {{j.x}}px; top: {{j.y}}px; opacity: {{j.fade}}; border-style: {{j.bs}}; outline: {{j.ring}}; outline-offset: 2px">
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600"><span aria-hidden="true" style="color: {{j.ic}}; font-size: 12px; width: 12px">{{j.icon}}</span>{{j.n}}</span>
+<span class="mono" style="color: var(--muted); font-size: 11px; padding-left: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{j.sub}}</span>
+</button>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 18px" class="note">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="color: var(--ok)">●</span>runs</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="color: var(--warn)">‖</span>waits for approval</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="color: var(--muted)">–</span>skipped by if / paths</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span class="mono">×2</span>matrix</span>
+</div>
+</div>
+
+<div role="status" style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--soft); background: color-mix(in srgb, var(--warn) 7%, transparent); font-size: 13.5px">
+<span style="color: var(--warn); font-weight: 700">!</span>
+<span class="mono" style="font-size: 12.5px">release.yml:42</span>
+<span>unknown key <span class="mono">need</span> — did you mean <span class="mono">needs</span>?</span>
+<span style="flex: 1"></span>
+<button class="btn">Go to line</button>
+</div>
+</section>
+
+<section class="pane" aria-label="Job integration" style="flex: 1 1 260px; max-width: 285px; display: flex; flex-direction: column; gap: 16px; padding: 16px; overflow: hidden">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 18px; font-weight: 600">integration</span>
+<span class="mono" style="color: var(--muted)">ci.yml:58 · needs build</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--ok) 9%, var(--sunken)); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent)">
+<span style="font-size: 13.5px; font-weight: 600">Runs on this push</span>
+<span class="note" style="font-size: 12.5px"><span class="mono">paths: services/**</span> matched 3 files</span>
+</div>
+<div style="display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; font-size: 13px">
+<span class="note">runner</span><span class="mono">ubuntu-latest</span>
+<span class="note">matrix</span><span class="mono">jdk: [17, 21]</span>
+<span class="note">services</span><span class="mono">postgres:16</span>
+<span class="note">timeout</span><span class="mono">20 min</span>
+<span class="note">secrets</span><span class="mono">DB_PASSWORD</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="k">Steps</span>
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--pane-edge)"><span class="mono" style="color: var(--muted); width: 14px">{{s.i}}</span><span style="flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{s.t}}</span></div>
+</sc-for>
+</div>
+<span style="flex: 1"></span>
+<button class="btn" style="justify-content: center">Run this job locally</button>
+</section>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · 7 changed files</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">feature/partial-refunds<span class="note">▾</span></span>
+<span class="vr"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">612 commits · Tags 31<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v2.8.4</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z'],
+ issues: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ hooks: ['M14 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M14 7.5V15a4.5 4.5 0 0 1-9 0v-2.5','M3 14.5l2-2 2 2'],
+ pipelines: ['M3 5h5v4H3z','M16 3.5h5v4h-5z','M16 16.5h5v4h-5z','M8 7h3a2 2 0 0 1 2 2v8.5a2 2 0 0 0 2 2h1','M13 5.5h3'],
+ releases: ['M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z','M3.5 7.5 12 12l8.5-4.5','M12 12v9'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ more: ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','|','issues','hooks','pipelines','releases','|','investigate','search','more','|','settings'];
+var NEW = { issues: 1, hooks: 1, pipelines: 1, releases: 1 };
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', issues:'Issues', hooks:'Hooks', pipelines:'Pipelines', releases:'Releases', investigate:'Investigate', search:'Log', settings:'Settings', more:'More'};
+var ACTIVE = 'pipelines';
+class Component extends DCLogic {
+ renderVals() {
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: (k === ACTIVE ? 'on ' : '') + (NEW[k] && k !== ACTIVE ? 'new' : '') };
+  });
+  var groups = [
+   { name: 'GitHub Actions', files: [['ci.yml', 'var(--ok)', 'Valid', '8', true], ['release.yml', 'var(--warn)', '1 problem', '5'], ['nightly.yml', 'var(--ok)', 'Valid', '3'], ['codeql.yml', 'var(--ok)', 'Valid', '1']] },
+   { name: 'GitLab CI', files: [['.gitlab-ci.yml', 'var(--ok)', 'Valid', '9'], ['ci/deploy.gitlab-ci.yml', 'var(--ok)', 'Valid', '4']] }
+  ].map(function (g) { return { name: g.name, files: g.files.map(function (f) { return { n: f[0], c: f[1], state: f[2], jobs: f[3], bg: f[4] ? 'color-mix(in srgb, var(--accent) 13%, transparent)' : 'transparent' }; }) }; });
+  var J = [
+   ['build', 'jdk 17', 0, 40, 'run'],
+   ['build', 'jdk 21', 0, 120, 'run'],
+   ['unit', 'mvn test', 200, 40, 'run'],
+   ['integration', 'postgres:16 · ×2', 200, 140, 'run', true],
+   ['lint', 'checkstyle · spotless', 200, 240, 'run'],
+   ['docker', 'ghcr.io/acme/payments', 400, 90, 'run'],
+   ['staging', 'environment: staging', 600, 40, 'gate'],
+   ['production', 'if: tag v*', 600, 160, 'skip']
+  ];
+  var jobs = J.map(function (j) {
+   var st = j[4];
+   return { n: j[0], sub: j[1], x: j[2], y: j[3],
+    icon: st === 'run' ? '●' : st === 'gate' ? '‖' : '–',
+    ic: st === 'run' ? 'var(--ok)' : st === 'gate' ? 'var(--warn)' : 'var(--muted)',
+    fade: st === 'skip' ? 0.5 : 1, bs: st === 'skip' ? 'dashed' : 'solid',
+    ring: j[5] ? '2px solid var(--accent)' : 'none' };
+  });
+  var steps = [['1', 'actions/checkout@v4'], ['2', 'actions/setup-java@v4 · temurin'], ['3', 'cache ~/.m2'], ['4', './mvnw -B verify -Pit'], ['5', 'upload surefire reports']].map(function (s) { return { i: s[0], t: s[1] }; });
+  return { theme: this.props.theme || 'dark', rail: rail, groups: groups, jobs: jobs, steps: steps };
+ }
+}
+</script>
+</body>
+</html>

@@ -491,6 +491,72 @@ pub fn hooks_dir(repo: &Path) -> Result<PathBuf> {
     })
 }
 
+/// Run a generated hook through git, including for a builder's dry run. Git
+/// chooses its shell on Windows exactly as it does for an ordinary commit.
+pub fn hook_run(repo: &Path, dir: &Path, stage: &str, message: Option<&Path>) -> Result<String> {
+    let config = format!("core.hooksPath={}", hook_path(dir));
+    let message = message.map(hook_path);
+    let mut args = vec!["-c", &config, "hook", "run", stage];
+    if let Some(message) = &message {
+        args.extend(["--", message]);
+    }
+    run_streaming(repo, &args, &mut |_| {})
+}
+
+/// Canonical Windows paths carry a verbatim prefix that Git's POSIX hook
+/// runner cannot execute. UNC shares keep their two leading separators.
+pub fn hook_path(path: &Path) -> String {
+    let text = path.to_string_lossy().replace('\\', "/");
+    if let Some(rest) = text.strip_prefix("//?/UNC/") {
+        return format!("//{rest}");
+    }
+    text.strip_prefix("//?/").unwrap_or(&text).to_string()
+}
+
+/// Git's pathspec engine decides which staged files a block would see.
+pub fn hook_matches(repo: &Path, paths: &[String]) -> Result<Vec<String>> {
+    let globs: Vec<_> = paths.iter().map(|p| format!(":(glob){p}")).collect();
+    let args = with_paths(
+        &[
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z",
+            "--diff-filter=ACMR",
+        ],
+        &globs,
+    );
+    Ok(run(repo, &args)?
+        .split('\0')
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+/// Undo only a formatter's index change, and only while it is still there.
+/// The working file is left alone; a later stage decision is never replaced.
+pub fn hook_restore_index(
+    repo: &Path,
+    path: &str,
+    before: &str,
+    after: &str,
+    mode: &str,
+) -> Result<()> {
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
+    let args = ["--literal-pathspecs", "ls-files", "-s", "--", path];
+    let entry = finish(command(repo, &args), &args)?;
+    if entry.split_whitespace().nth(1) == Some(before) {
+        return Ok(());
+    }
+    if entry.split_whitespace().nth(1) != Some(after) {
+        return Err(Error::Stale(path.into()));
+    }
+    let args = ["update-index", "--cacheinfo", mode, before, path];
+    finish(command(repo, &args), &args)?;
+    Ok(())
+}
+
 /// Check out a branch.
 ///
 /// Through `git` so that checkout filters, LFS smudging and post-checkout hooks

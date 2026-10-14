@@ -88,6 +88,13 @@ pub fn watch<R: Runtime>(
     // Linux machine out of inotify watches) leaves `.git` watched, as before.
     if let Some(workdir) = workdir {
         let _ = watcher.watch(workdir, RecursiveMode::Recursive);
+        // Linked worktrees share their hook records in the common directory.
+        if let Ok(hooks) = spagitty_core::hooks::builder::folder(workdir) {
+            let common = hooks.parent().and_then(Path::parent);
+            if let Some(common) = common.filter(|path| canonical(path) != canonical(git_dir)) {
+                let _ = watcher.watch(common, RecursiveMode::Recursive);
+            }
+        }
     }
 
     let git_dir = canonical(git_dir);
@@ -198,6 +205,9 @@ fn debounce<R: Runtime>(
     git_dir: PathBuf,
     workdir: Option<PathBuf>,
 ) {
+    let hook_dir = workdir
+        .as_deref()
+        .and_then(|path| spagitty_core::hooks::builder::folder(path).ok());
     // Opened here, on this thread, the first time a working-tree path needs
     // asking about, and kept: the ignore rules are read from it.
     let mut rules: Option<spagitty_core::ignore::Rules> = None;
@@ -209,19 +219,28 @@ fn debounce<R: Runtime>(
 
         // Block until something happens, then keep collecting until the
         // repository goes quiet again.
+        let mut hooks_changed = false;
         let mut pending = match events.recv_timeout(Duration::from_millis(250)) {
-            Ok(Ok(event)) => classify(&event, &git_dir, &mut candidates),
+            Ok(Ok(event)) => {
+                hooks_changed |= hook_record_changed(&event, hook_dir.as_deref());
+                classify(&event, &git_dir, &mut candidates)
+            }
             Ok(Err(_)) => continue,
             Err(RecvTimeoutError::Timeout) => continue,
             Err(RecvTimeoutError::Disconnected) => return,
         };
 
+        let batch = std::time::Instant::now();
         loop {
             match events.recv_timeout(QUIET_PERIOD) {
                 Ok(Ok(event)) => {
+                    hooks_changed |= hook_record_changed(&event, hook_dir.as_deref());
                     let next = classify(&event, &git_dir, &mut candidates);
                     pending.refs |= next.refs;
                     pending.worktree |= next.worktree;
+                    if hooks_changed && batch.elapsed() >= Duration::from_millis(250) {
+                        break;
+                    }
                 }
                 Ok(Err(_)) => continue,
                 Err(RecvTimeoutError::Timeout) => break,
@@ -243,10 +262,28 @@ fn debounce<R: Runtime>(
         }
         candidates.clear();
 
+        if hooks_changed {
+            let _ = app.emit("hooks-changed", ());
+        }
+
         if !pending.is_empty() {
             let _ = app.emit(CHANGED_EVENT, pending);
         }
     }
+}
+
+/// Reading a log is never a change. Only completed filesystem writes wake
+/// the Hooks screen, without refreshing the graph for every output line.
+fn hook_record_changed(event: &notify::Event, directory: Option<&Path>) -> bool {
+    is_change(&event.kind)
+        && directory.is_some_and(|directory| {
+            event.paths.iter().any(|path| {
+                inside(path, directory).is_some_and(|relative| relative.starts_with("runs"))
+                    && path
+                        .extension()
+                        .is_some_and(|extension| extension == "jsonl" || extension == "log")
+            })
+        })
 }
 
 /// Does this event mean something actually *changed*?
@@ -707,5 +744,22 @@ mod tests {
         let git = Path::new("C:").join("repo").join(".git");
         let event = notify::Event::new(WROTE).add_path(git.join("refs").join("heads").join("main"));
         assert!(super::classify(&event, &git, &mut HashSet::new()).refs);
+    }
+
+    #[test]
+    fn hook_output_wakes_its_screen_but_reads_and_unrelated_files_do_not() {
+        let folder = Path::new("/repo/.git/spagitty/hooks");
+        let wrote = event(WROTE, &["/repo/.git/spagitty/hooks/runs/run-1/check.log"]);
+        assert!(hook_record_changed(&wrote, Some(folder)));
+        assert!(!hook_record_changed(&wrote, None));
+        let read = event(
+            EventKind::Access(notify::event::AccessKind::Read),
+            &["/repo/.git/spagitty/hooks/runs/run-1/check.log"],
+        );
+        assert!(!hook_record_changed(&read, Some(folder)));
+        assert!(!hook_record_changed(
+            &event(WROTE, &["/repo/.git/index"]),
+            Some(folder)
+        ));
     }
 }
