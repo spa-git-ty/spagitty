@@ -90,7 +90,7 @@ begin() {
     fi
     export ROOT SELF RUN_DIR RECORD MESSAGE SUBJECT
     git diff --cached --name-only -z --diff-filter=ACMR > "$RUN_DIR/staged"
-    if [ "$STAGE" = pre-push ]; then cat > "$RUN_DIR/push"; fi
+    if [ "$STAGE" = pre-push ]; then cat > "$RUN_DIR/push"; else : > "$RUN_DIR/push"; fi
     emit "{\"t\":\"run\",\"stage\":$(json "$STAGE"),\"subject\":$(json "$SUBJECT"),\"at\":$(json "$(at)"),\"blocks\":$BLOCKS}"
     if [ "$STAGE" = pre-commit ]; then
         workgit=$(git rev-parse --git-dir)
@@ -102,7 +102,7 @@ begin() {
     ls -1t "$RUNS/"*.jsonl 2>/dev/null | sed -n '51,$p' | while IFS= read -r old; do
         name=$(basename "$old" .jsonl)
         case "$name" in *[!a-zA-Z0-9_-]*|'') continue ;; esac
-        tail -n 1 "$old" | grep -q '"t":"done"' || continue
+        grep -q '"t":"done"' "$old" || continue
         rm -f -- "$old"
         rm -rf -- "$RUNS/$name"
     done
@@ -127,7 +127,7 @@ step() {
             exec timeout --kill-after=2 "$seconds" sh "$SELF" --block "$block"
         fi
         exec sh "$SELF" --block "$block"
-    ) > "$RUN_DIR/$BID.log" 2>&1 &
+    ) < "$RUN_DIR/push" > "$RUN_DIR/$BID.log" 2>&1 &
     running=$!
     (
         elapsed=0

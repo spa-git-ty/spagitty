@@ -25,7 +25,6 @@ Read, draft, publish and manage releases and their attached files beside the rep
 
 - Other hosts, workflow editing, local workflow execution and partial-staging stashes are outside 3.1.
 - The other three screens have their own items.
-
 ## What was built
 
 - **Host operations:** `forge/releases.rs` maps releases, assets, latest state, confirmed mutations, target/tag resolution, completed artifacts and generated commit notes. Binary transfers stay in `forge/http.rs` and never forward a token through a redirect.
