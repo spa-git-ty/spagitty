@@ -41,6 +41,7 @@ pub mod investigate;
 pub mod merger;
 pub mod models;
 pub mod ops;
+pub mod pipelines;
 pub mod pull;
 pub mod rebase;
 pub mod recipes;

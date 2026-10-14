@@ -50,6 +50,65 @@ pub struct Response {
     pub retry_after: Option<String>,
 }
 
+/// Headers needed by paged forge views, without changing existing callers.
+pub struct Conditional {
+    pub response: Response,
+    pub etag: Option<String>,
+    pub more: bool,
+    pub scopes: Option<Vec<String>>,
+}
+
+pub fn get_conditional_json(
+    url: &str,
+    token: &str,
+    host: &str,
+    etag: Option<&str>,
+) -> Result<Conditional> {
+    if !url.starts_with("https://") {
+        return Err(Error::Forge {
+            host: host.into(),
+            detail: "refusing to send a token over an unencrypted connection".into(),
+        });
+    }
+    let mut request = agent()
+        .get(url)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28");
+    if !token.is_empty() {
+        request = request.header("Authorization", &format!("Bearer {token}"));
+    }
+    if let Some(etag) = etag {
+        request = request.header("If-None-Match", etag);
+    }
+    let response = request.call().map_err(|error| Error::ForgeOffline {
+        host: host.into(),
+        detail: error.to_string(),
+    })?;
+    let header = |name: &str| {
+        response
+            .headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string)
+    };
+    let etag = header("etag");
+    let more = header("link")
+        .is_some_and(|links| links.split(',').any(|link| link.contains("rel=\"next\"")))
+        || header("x-next-page").is_some_and(|page| !page.is_empty());
+    let scopes = header("x-oauth-scopes").map(|text| {
+        text.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    });
+    Ok(Conditional {
+        response: read(response),
+        etag,
+        more,
+        scopes,
+    })
+}
+
 /// `GET url` with a bearer token, as JSON.
 ///
 /// An empty `token` sends **no** `Authorization` header at all, for the one
@@ -290,8 +349,12 @@ fn send_json(verb: Verb, url: &str, token: &str, host: &str, body: &str) -> Resu
 }
 
 fn agent() -> ureq::Agent {
+    agent_with_timeout(TIMEOUT)
+}
+
+fn agent_with_timeout(timeout: Duration) -> ureq::Agent {
     ureq::Agent::config_builder()
-        .timeout_global(Some(TIMEOUT))
+        .timeout_global(Some(timeout))
         .timeout_connect(Some(CONNECT_TIMEOUT))
         // See the header: a redirect that changed host would carry the token
         // with it.
@@ -324,6 +387,217 @@ fn agent() -> ureq::Agent {
         )
         .build()
         .new_agent()
+}
+
+/// Binary transfers use the same TLS and redirect policy, with time for large
+/// artifacts. The caller derives destinations from the configured host.
+pub fn upload_file(
+    url: &str,
+    token: &str,
+    host: &str,
+    path: &std::path::Path,
+    put: bool,
+    mut progress: impl FnMut(u64),
+) -> Result<Response> {
+    if !url.starts_with("https://") {
+        return Err(Error::Forge {
+            host: host.into(),
+            detail: "refusing an unencrypted file upload".into(),
+        });
+    }
+    let file = std::fs::File::open(path)?;
+    let total = file.metadata()?.len();
+    if total > 2 * 1024 * 1024 * 1024 {
+        return Err(Error::Forge {
+            host: host.into(),
+            detail: "Release files must be at most 2 GiB.".into(),
+        });
+    }
+    struct Upload<'a, F> {
+        file: std::fs::File,
+        sent: u64,
+        next: u64,
+        progress: &'a mut F,
+    }
+    impl<F: FnMut(u64)> Read for Upload<'_, F> {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            let size = self.file.read(buffer)?;
+            self.sent += size as u64;
+            if self.sent >= self.next || size == 0 {
+                (self.progress)(self.sent);
+                self.next = self.sent + 262144;
+            }
+            Ok(size)
+        }
+    }
+    let mut reader = Upload {
+        file,
+        sent: 0,
+        next: 0,
+        progress: &mut progress,
+    };
+    let agent = agent_with_timeout(Duration::from_secs(1800));
+    let request = if put { agent.put(url) } else { agent.post(url) };
+    let response = request
+        .header("Authorization", &format!("Bearer {token}"))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Length", &total.to_string())
+        .send(ureq::SendBody::from_reader(&mut reader))
+        .map_err(|error| Error::ForgeOffline {
+            host: host.into(),
+            detail: format!(
+                "Upload delivery is uncertain: {error}. Refresh the host before retrying."
+            ),
+        })?;
+    progress(total);
+    Ok(read(response))
+}
+
+/// Follow signed download locations without forwarding the account token.
+/// The host API URL on the first request is constructed by the core caller.
+pub fn download_file(
+    url: &str,
+    token: &str,
+    host: &str,
+    file: &mut std::fs::File,
+    mut progress: impl FnMut(u64, u64),
+) -> Result<()> {
+    use std::io::Write;
+    let mut location = url.to_string();
+    let agent = agent_with_timeout(Duration::from_secs(1800));
+    for hop in 0..=4 {
+        if !location.starts_with("https://") {
+            return Err(Error::Forge {
+                host: host.into(),
+                detail: "refusing an unencrypted artifact download".into(),
+            });
+        }
+        let mut request = agent
+            .get(&location)
+            .header("Accept", "application/octet-stream");
+        if hop == 0 && !token.is_empty() {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        let mut response = request.call().map_err(|error| Error::ForgeOffline {
+            host: host.into(),
+            detail: error.to_string(),
+        })?;
+        let status = response.status().as_u16();
+        if matches!(status, 301 | 302 | 303 | 307 | 308) {
+            location = response
+                .headers()
+                .get("location")
+                .and_then(|header| header.to_str().ok())
+                .filter(|url| url.starts_with("https://"))
+                .ok_or_else(|| Error::Forge {
+                    host: host.into(),
+                    detail: "The artifact redirect has no HTTPS destination.".into(),
+                })?
+                .into();
+            continue;
+        }
+        if !(200..300).contains(&status) {
+            return Err(super::status_error(host, status, "", None));
+        }
+        let total = response
+            .headers()
+            .get("content-length")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.parse::<u64>().ok())
+            .unwrap_or(0);
+        let limit = 2 * 1024 * 1024 * 1024;
+        if total > limit {
+            return Err(Error::Forge {
+                host: host.into(),
+                detail: "The artifact exceeds 2 GiB.".into(),
+            });
+        }
+        let mut reader = response.body_mut().as_reader();
+        let mut buffer = [0u8; 65536];
+        let mut sent = 0;
+        loop {
+            let count = reader.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            }
+            sent += count as u64;
+            if sent > limit {
+                return Err(Error::Forge {
+                    host: host.into(),
+                    detail: "The artifact exceeds 2 GiB.".into(),
+                });
+            }
+            file.write_all(&buffer[..count])?;
+            progress(sent, total);
+        }
+        file.flush()?;
+        return Ok(());
+    }
+    Err(Error::Forge {
+        host: host.into(),
+        detail: "The artifact redirected too many times.".into(),
+    })
+}
+
+/// Logs are bounded text. Signed redirects never receive the account token.
+pub fn get_log(url: &str, token: &str, host: &str, redirects: bool) -> Result<String> {
+    get_text(url, token, host, redirects, "text/plain")
+}
+pub fn get_repository_text(url: &str, token: &str, host: &str) -> Result<String> {
+    get_text(url, token, host, false, "application/vnd.github.raw+json")
+}
+fn get_text(url: &str, token: &str, host: &str, redirects: bool, accept: &str) -> Result<String> {
+    let mut location = url.to_string();
+    for hop in 0..=4 {
+        if !location.starts_with("https://") {
+            return Err(Error::Forge {
+                host: host.into(),
+                detail: "Refusing an unencrypted job log.".into(),
+            });
+        }
+        let mut request = agent().get(&location).header("Accept", accept);
+        if hop == 0 && !token.is_empty() {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        let mut response = request.call().map_err(|e| Error::ForgeOffline {
+            host: host.into(),
+            detail: e.to_string(),
+        })?;
+        let status = response.status().as_u16();
+        if redirects && matches!(status, 301 | 302 | 303 | 307 | 308) {
+            location = response
+                .headers()
+                .get("location")
+                .and_then(|h| h.to_str().ok())
+                .filter(|s| s.starts_with("https://"))
+                .ok_or_else(|| Error::Forge {
+                    host: host.into(),
+                    detail: "The job log has no HTTPS download location.".into(),
+                })?
+                .into();
+            continue;
+        }
+        if !(200..300).contains(&status) {
+            return Err(super::status_error(host, status, "", None));
+        }
+        let mut bytes = Vec::new();
+        response
+            .body_mut()
+            .as_reader()
+            .take(4 * 1024 * 1024 + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > 4 * 1024 * 1024 {
+            bytes.truncate(4 * 1024 * 1024);
+            bytes.extend_from_slice(
+                b"\n[Log exceeds 4 MiB; open the job on its host for the full log.]\n",
+            );
+        }
+        return Ok(String::from_utf8_lossy(&bytes).into_owned());
+    }
+    Err(Error::Forge {
+        host: host.into(),
+        detail: "The job log redirected too many times.".into(),
+    })
 }
 
 fn read(mut response: ureq::http::Response<ureq::Body>) -> Response {
@@ -384,6 +658,30 @@ mod tests {
             Err(Error::Forge { detail, .. }) => assert!(detail.contains("unencrypted")),
             other => panic!("expected a refusal, got {other:?}"),
         }
+        assert!(matches!(
+            get_conditional_json("http://github.com/x", "secret", "github.com", Some("tag")),
+            Err(Error::Forge { .. })
+        ));
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("file");
+        assert!(upload_file(
+            "http://example.org/upload",
+            "secret",
+            "example.org",
+            &path,
+            false,
+            |_| {}
+        )
+        .is_err());
+        let mut file = std::fs::File::create(path).unwrap();
+        assert!(download_file(
+            "http://example.org/download",
+            "secret",
+            "example.org",
+            &mut file,
+            |_, _| {}
+        )
+        .is_err());
     }
 
     #[test]

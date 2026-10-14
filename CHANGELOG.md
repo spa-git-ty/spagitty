@@ -14,7 +14,15 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-10-14
+
 ### Added
+
+- **Pipelines** previews GitHub Actions and GitLab CI from the working copy, with job dependencies, matrices, conditions and configuration problems. Live follows watched branches and requests, shows job steps and logs, and confirms cancellation or re-running failed jobs. Local preview executes nothing; unsupported data stays decided on the host.
+
+- **Releases** reads and drafts GitHub and GitLab releases, generates notes from commits, previews Markdown and manages attached files. Publishing, deleting and uploading ask for confirmation. GitLab drafts and hidden releases stay on this machine. Writing a changelog makes an ordinary commit with hooks before a separately confirmed push and publication.
+
+- **Issues** reads GitHub and GitLab issues beside the code. Filter the list, read comments and events, create an issue, comment or close after confirmation. Start a branch from the default branch or prepare the full issue as a Farm task for review and agent selection.
 
 - **Hooks** shows each step of a hook run with its state, time and output, including commits made in a terminal. Build tests, formatters, message checks and scripts from blocks, try them on staged files, and save them for this clone or share them with the repository.
   - Existing hook managers stay in control until you import and install. Hand-written hooks are never overwritten.
@@ -23,6 +31,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Fixed
 
 - **Hooks** import now treats a command as a formatter only when it receives staged files. Terminal hook runs honour the “keep newest 50” limit and pass pushed refs to imported or scripted blocks on standard input. **Try a message** now tests only commit-message rules.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), each with its terminal multiplexer. The Mac builds
+  are signed ad hoc and are not notarized: on first open macOS says the
+  developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
 
 ## [3.0.1] - 2026-10-14
 

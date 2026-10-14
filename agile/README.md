@@ -188,10 +188,10 @@ rather than an audit.
 | [FEAT-133](items/FEAT-133-recipes-git-steps-in-blocks-run-with-an-agent.md) | Recipes: git steps in blocks, run with an agent | 1V | Done |
 | [FEAT-134](items/FEAT-134-pin-or-hide-what-is-on-the-rail.md) | Pin or hide what is on the rail | 1K | Done |
 | [FEAT-135](items/FEAT-135-farm-sessions-in-the-terminal.md) | Farm sessions in the terminal | 1T, 1A | Backlog |
-| [FEAT-136](items/FEAT-136-issues.md) | Issues beside the code | 1W | Backlog |
+| [FEAT-136](items/FEAT-136-issues.md) | Issues beside the code | 1W | Done |
 | [FEAT-137](items/FEAT-137-hooks.md) | Hooks that run in steps and are built from blocks | 1X | Done |
-| [FEAT-138](items/FEAT-138-pipelines.md) | Preview workflows and follow their runs | 1Y | Backlog |
-| [FEAT-139](items/FEAT-139-releases.md) | Draft and publish releases with their files | 1Z | Backlog |
+| [FEAT-138](items/FEAT-138-pipelines.md) | Preview workflows and follow their runs | 1Y | Done |
+| [FEAT-139](items/FEAT-139-releases.md) | Draft and publish releases with their files | 1Z | Done |
 
 ## Bugs
 

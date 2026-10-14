@@ -34,7 +34,10 @@ defect.
 | 1T | Terminal | `/terminal` | yes | Built | FEAT-130 |
 | 1U | Files | `/files` | yes | Built | FEAT-131 |
 | 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
+| 1W | Issues | `/issues` | yes | Built | FEAT-136 |
 | 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
+| 1Y | Pipelines | `/pipelines/preview`, `/pipelines/live` | yes | Built | FEAT-138 |
+| 1Z | Releases | `/releases` | yes | Built | FEAT-139 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -63,6 +66,28 @@ not reach and the accounts Settings had no client for, were closed by FEAT-017.
 because it is how the next unbuilt screen says what it will be rather than
 pretending to be it: a half-built screen that looks real is harder to read than
 an honest empty one.
+
+## 1Z — Releases
+
+**Item:** [FEAT-139](../agile/items/FEAT-139-releases.md). **Route:** `/releases`.
+
+The list filters all releases, drafts and pre-releases. Show hidden reveals releases hidden on this machine; Hide sends nothing to the host. Each row offers a host link, copy, hide and confirmed deletion. GitHub download counts are shown; GitLab's absent counts remain absent.
+
+The editor accepts the tag, branch or commit target, previous tag and title. Write and Preview share the safe Markdown renderer. Generate from commits uses the Hooks message parser; GitHub notes is a separately confirmed host request. GitLab drafts stay in application data until publication. The explicit Latest and Pre-release options are GitHub features; GitLab's Latest badge follows its latest-release endpoint.
+
+The files column supports the native picker and drop, links, removal, per-file progress and retry. From pipeline reads finished runs on the resolved target, downloads a selected artifact and queues it for confirmed upload. GitLab first uploads a package, then separately confirms linking it to a published release.
+
+Write to CHANGELOG.md requires a clean checked-out target branch and enabled hooks. Commit, push and publish each ask for confirmation. A moved target stops the operation; existing tags are never moved. Deleting the tag is unchecked by default and asks separately after release deletion.
+
+## 1W — Issues
+
+**Item:** [FEAT-136](../agile/items/FEAT-136-issues.md). **Route:** `/issues`.
+
+The separate forge group above Settings starts with Issues. Its header selects a configured hosted remote and accepts state, assignee, label, milestone, sort and text filters. The virtual list shows state, title, labels, author, update date and reply count. Saved pages paint before host revalidation; read, cache and write errors remain separate.
+
+The middle column combines the description, comments and events in date order. The details column shows assignees, labels, milestone progress and reported development links. Markdown uses the application's existing safe renderer. Create, comment and close each ask for confirmation. Known read-only credentials hide writes. Replies sorting is available on GitHub; GitLab does not provide it.
+
+Start branch offers an editable suggestion and uses the tracked default branch. Hand to agent reads every comment page and opens an unready Farm task draft. The person reviews it and picks the agent through the existing Farm flow; the button does not start an agent.
 
 ## 1X — Hooks
 
@@ -1250,3 +1275,13 @@ record. Nothing is written under `.spagitty/` in the repository.
 **Keys** are in `keys.ts`: a block's letter adds it, `j` `k` walk the stack,
 Alt with the arrows reorders, Delete removes, Ctrl+Enter runs, Ctrl+Z takes
 an edit back. None fires while a field has the focus.
+
+## 1Y — Pipelines
+
+**Built.** `src/routes/pipelines/`, `src/lib/pipelines/`, `src-tauri/src/pipelines.rs`, `crates/spagitty-core/src/pipelines/` and `forge/pipelines.rs` (FEAT-138).
+
+Preview reads the working copy's GitHub Actions and GitLab CI files. It resolves concrete local includes, anchors, references, inheritance and matrices, then draws dependencies in Needs or Stages columns. The chosen event, ref and changed files determine runs, approval, skipped or decided-on-host states. Bundled offline schemas and nearest-key hints report problems without executing workflow commands or fetching remote includes.
+
+Jobs retain their source file and line. Open source shows those exact working-copy contents in a read-only panel. Matrices expand; workflows above 200 jobs start as stage summaries. The graph draws only cards and edges around the viewport.
+
+Live reads runs on the default branch, personal watches and own open request branches. The shared forge clock reads active branches every five seconds and quiet branches every sixty, while visible. The run graph reads configuration at the run's actual commit. GitHub step states are available while running; its log follows completion. GitLab partial traces can be read while running. Cancel, re-run failed and GitLab lint each ask for confirmation and send one attempt. Nothing runs locally.

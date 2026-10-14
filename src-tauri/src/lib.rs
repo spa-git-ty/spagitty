@@ -16,16 +16,20 @@ mod desktop;
 mod extensions;
 mod farm;
 mod forge_bridge;
+mod forge_views;
 mod graph_worker;
 mod hooks;
+mod issues;
 mod merger_state;
 mod network_worker;
 mod notifications;
+mod pipelines;
 mod platform;
 mod profiles;
 mod rebase_worker;
 mod recents;
 mod recipes;
+mod releases;
 mod review_state;
 mod search_worker;
 mod settings;
@@ -82,6 +86,35 @@ pub fn run() {
             hooks::hooks_try_message,
             hooks::hooks_stop,
             hooks::hooks_undo_restage,
+            issues::issues_remotes,
+            issues::issues_cached,
+            issues::issues_page,
+            issues::issues_metadata,
+            issues::issues_thread,
+            issues::issues_write,
+            issues::issues_branch,
+            pipelines::pipelines_preview,
+            pipelines::pipelines_source,
+            pipelines::pipelines_preferences,
+            pipelines::pipelines_watches,
+            pipelines::pipelines_cached,
+            pipelines::pipelines_runs,
+            pipelines::pipelines_jobs,
+            pipelines::pipelines_log,
+            pipelines::pipelines_graph,
+            pipelines::pipelines_write,
+            releases::releases_preferences,
+            releases::releases_hide,
+            releases::releases_cached,
+            releases::releases_page,
+            releases::releases_write,
+            releases::releases_notes,
+            releases::releases_target,
+            releases::releases_changelog,
+            releases::releases_push_target,
+            releases::releases_upload,
+            releases::releases_artifacts,
+            releases::releases_download_artifact,
             commands::head_message,
             commands::branches,
             commands::checkout,
