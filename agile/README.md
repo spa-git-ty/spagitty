@@ -268,6 +268,8 @@ rather than an audit.
 | [BUG-078](items/BUG-078-the-attribution-check-refuses-a-person-named-like-an-agent.md) | The attribution check refuses a person whose name an agent shares | — | Fixed |
 | [BUG-079](items/BUG-079-all-resolved-is-drawn-as-a-button.md) | *All resolved* is drawn as a button | 1D, 1S | Fixed |
 | [BUG-080](items/BUG-080-the-review-pill-runs-out-of-a-narrow-diff.md) | The review pill runs out of a narrow diff, over the conversation | 1R, 1D, 1S | Fixed |
+| [BUG-081](items/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why.md) | Push of a new branch fails and does not say why | chrome, 1A | Open |
+| [BUG-082](items/BUG-082-saving-the-git-identity-clears-the-fields.md) | Saving the git identity clears the fields | 1K | Open |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

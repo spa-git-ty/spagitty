@@ -33,6 +33,7 @@ import { graph } from './store.svelte';
 import { repo } from '../repo.svelte';
 import { settings } from '../settings/store.svelte';
 import { deleteBody } from '$lib/branches/actions';
+import { pushPlan, type PushPlan } from '$lib/merger/plan';
 import { network } from '$lib/network/store.svelte';
 import { delight } from '$lib/delight/store.svelte';
 import { cherryPicked, merged, recovered, switchedBranch } from '$lib/delight/watch';
@@ -616,14 +617,46 @@ export async function fetchAll(): Promise<void> {
 	}
 }
 
-/** Push the current branch. Starts a worker, the same as `fetchAll`. */
+/**
+ * Push the current branch. Starts a worker, the same as `fetchAll`.
+ *
+ * The remote and the branch are named (BUG-081). A bare `git push` refuses a
+ * branch that tracks nothing, which is every branch made here until its first
+ * push. Named, the push goes to the branch's upstream, or makes the branch on
+ * `origin` and sets it to track that. A detached HEAD is left to git to refuse.
+ */
 export async function pushCurrent(): Promise<void> {
 	const waiting = activity.blocked('network');
 	if (waiting) {
 		notice.failed('Could not push', waiting);
 		return;
 	}
-	if (!(await network.push())) {
+
+	let remote = '';
+	let refspec = '';
+	const branch = repo.info?.head?.branch ?? null;
+	if (branch) {
+		let plan: PushPlan | null;
+		try {
+			const [rows, remotes] = await Promise.all([api.branches(), api.remotes()]);
+			plan = pushPlan(
+				branch,
+				rows,
+				remotes.map((each) => each.name)
+			);
+		} catch (error) {
+			notice.failed('Could not push', error);
+			return;
+		}
+		if (!plan) {
+			notice.failed('Could not push', 'This repository has no remote to push to');
+			return;
+		}
+		remote = plan.remote;
+		refspec = plan.refspec;
+	}
+
+	if (!(await network.push(remote, refspec))) {
 		if (network.error) notice.failed('Could not push', network.error);
 	}
 }

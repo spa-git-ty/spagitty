@@ -1698,7 +1698,12 @@ pub fn licenses() -> Licenses {
 pub fn identity(state: State<'_, AppState>) -> Result<Identity> {
     let guard = state.lock_session("identity");
     match guard.as_ref() {
-        Some(session) => Ok(identity::read(&session.repo.to_thread_local())),
+        Some(session) => {
+            // The shared handle keeps the config from when the repository was
+            // opened. Read from disk after a save or an external edit (BUG-082).
+            let fresh = repo::open(&session.path)?;
+            Ok(identity::read(&fresh))
+        }
         None => identity::read_global(),
     }
 }
@@ -2868,6 +2873,70 @@ mod tests {
 
         assert_ne!(reordered, opened.token);
         assert!(graph_request(app.state::<AppState>(), opened.token, 5).is_ok());
+    }
+
+    #[test]
+    fn identity_saves_and_reads_use_the_current_configuration_in_both_scopes() {
+        let fixture = Fixture::empty();
+        let app = app();
+        open(&app, fixture.path()).expect("opening the fixture");
+
+        // `app()` puts HOME in a temporary directory, so the global writes
+        // here never reach the configuration of the person running the tests.
+        for scope in [Scope::Global, Scope::Local] {
+            let fields = match scope {
+                Scope::Global => [
+                    (Key::Name, "Grace Hopper"),
+                    (Key::Email, "grace@example.com"),
+                ],
+                Scope::Local => [
+                    (Key::Name, "Margaret Hamilton"),
+                    (Key::Email, "margaret@example.com"),
+                ],
+            };
+            for (key, text) in fields {
+                let saved = set_identity(app.state::<AppState>(), scope, key, text.into())
+                    .expect("saving identity");
+                let reread = identity(app.state::<AppState>()).expect("reading identity");
+                let (saved, reread) = match key {
+                    Key::Name => (saved.name, reread.name),
+                    Key::Email => (saved.email, reread.email),
+                };
+                let (saved_value, reread_value) = match scope {
+                    Scope::Global => (saved.global, reread.global),
+                    Scope::Local => (saved.local, reread.local),
+                };
+                assert_eq!(
+                    saved_value.as_deref(),
+                    Some(text),
+                    "save returned stale config for {scope:?} {key:?}"
+                );
+                assert_eq!(
+                    reread_value.as_deref(),
+                    Some(text),
+                    "read returned stale config for {scope:?} {key:?}"
+                );
+                // Fixture::git gives its subprocess a different HOME. Use the
+                // same isolated home as the command under test for this read.
+                let config = spagitty_core::shell::program("git")
+                    .current_dir(fixture.path())
+                    .args(["config", scope.flag(), "--get", key.key()])
+                    .output()
+                    .expect("reading git config");
+                assert!(config.status.success());
+                assert_eq!(String::from_utf8_lossy(&config.stdout).trim(), text);
+            }
+        }
+
+        let cleared = set_identity(app.state::<AppState>(), Scope::Local, Key::Name, "".into())
+            .expect("clearing the local name");
+        assert_eq!(cleared.name.local, None);
+        assert_eq!(cleared.name.global.as_deref(), Some("Grace Hopper"));
+        assert_eq!(cleared.name.effective.as_deref(), Some("Grace Hopper"));
+        fixture.git(&["config", "--local", "user.name", "Katherine Johnson"]);
+        let edited = identity(app.state::<AppState>()).expect("external config edit");
+        assert_eq!(edited.name.local.as_deref(), Some("Katherine Johnson"));
+        assert_eq!(edited.name.global.as_deref(), Some("Grace Hopper"));
     }
 
     #[test]
