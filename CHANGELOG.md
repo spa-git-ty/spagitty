@@ -16,6 +16,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Added
 
+- **Releases** reads and drafts GitHub and GitLab releases, generates notes from commits, previews Markdown and manages attached files. Publishing, deleting and uploading ask for confirmation. GitLab drafts and hidden releases stay on this machine. Writing a changelog makes an ordinary commit with hooks before a separately confirmed push and publication.
+
 - **Issues** reads GitHub and GitLab issues beside the code. Filter the list, read comments and events, create an issue, comment or close after confirmation. Start a branch from the default branch or prepare the full issue as a Farm task for review and agent selection.
 
 - **Hooks** shows each step of a hook run with its state, time and output, including commits made in a terminal. Build tests, formatters, message checks and scripts from blocks, try them on staged files, and save them for this clone or share them with the repository.

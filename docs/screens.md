@@ -36,6 +36,7 @@ defect.
 | 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
 | 1W | Issues | `/issues` | yes | Built | FEAT-136 |
 | 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
+| 1Z | Releases | `/releases` | yes | Built | FEAT-139 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -64,6 +65,18 @@ not reach and the accounts Settings had no client for, were closed by FEAT-017.
 because it is how the next unbuilt screen says what it will be rather than
 pretending to be it: a half-built screen that looks real is harder to read than
 an honest empty one.
+
+## 1Z — Releases
+
+**Item:** [FEAT-139](../agile/items/FEAT-139-releases.md). **Route:** `/releases`.
+
+The list filters all releases, drafts and pre-releases. Show hidden reveals releases hidden on this machine; Hide sends nothing to the host. Each row offers a host link, copy, hide and confirmed deletion. GitHub download counts are shown; GitLab's absent counts remain absent.
+
+The editor accepts the tag, branch or commit target, previous tag and title. Write and Preview share the safe Markdown renderer. Generate from commits uses the Hooks message parser; GitHub notes is a separately confirmed host request. GitLab drafts stay in application data until publication. The explicit Latest and Pre-release options are GitHub features; GitLab's Latest badge follows its latest-release endpoint.
+
+The files column supports the native picker and drop, links, removal, per-file progress and retry. From pipeline reads finished runs on the resolved target, downloads a selected artifact and queues it for confirmed upload. GitLab first uploads a package, then separately confirms linking it to a published release.
+
+Write to CHANGELOG.md requires a clean checked-out target branch and enabled hooks. Commit, push and publish each ask for confirmation. A moved target stops the operation; existing tags are never moved. Deleting the tag is unchecked by default and asks separately after release deletion.
 
 ## 1W — Issues
 
