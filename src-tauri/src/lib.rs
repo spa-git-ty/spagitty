@@ -16,8 +16,10 @@ mod desktop;
 mod extensions;
 mod farm;
 mod forge_bridge;
+mod forge_views;
 mod graph_worker;
 mod hooks;
+mod issues;
 mod merger_state;
 mod network_worker;
 mod notifications;
@@ -82,6 +84,13 @@ pub fn run() {
             hooks::hooks_try_message,
             hooks::hooks_stop,
             hooks::hooks_undo_restage,
+            issues::issues_remotes,
+            issues::issues_cached,
+            issues::issues_page,
+            issues::issues_metadata,
+            issues::issues_thread,
+            issues::issues_write,
+            issues::issues_branch,
             commands::head_message,
             commands::branches,
             commands::checkout,

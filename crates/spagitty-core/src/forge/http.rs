@@ -50,6 +50,65 @@ pub struct Response {
     pub retry_after: Option<String>,
 }
 
+/// Headers needed by paged forge views, without changing existing callers.
+pub struct Conditional {
+    pub response: Response,
+    pub etag: Option<String>,
+    pub more: bool,
+    pub scopes: Option<Vec<String>>,
+}
+
+pub fn get_conditional_json(
+    url: &str,
+    token: &str,
+    host: &str,
+    etag: Option<&str>,
+) -> Result<Conditional> {
+    if !url.starts_with("https://") {
+        return Err(Error::Forge {
+            host: host.into(),
+            detail: "refusing to send a token over an unencrypted connection".into(),
+        });
+    }
+    let mut request = agent()
+        .get(url)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28");
+    if !token.is_empty() {
+        request = request.header("Authorization", &format!("Bearer {token}"));
+    }
+    if let Some(etag) = etag {
+        request = request.header("If-None-Match", etag);
+    }
+    let response = request.call().map_err(|error| Error::ForgeOffline {
+        host: host.into(),
+        detail: error.to_string(),
+    })?;
+    let header = |name: &str| {
+        response
+            .headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string)
+    };
+    let etag = header("etag");
+    let more = header("link")
+        .is_some_and(|links| links.split(',').any(|link| link.contains("rel=\"next\"")))
+        || header("x-next-page").is_some_and(|page| !page.is_empty());
+    let scopes = header("x-oauth-scopes").map(|text| {
+        text.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    });
+    Ok(Conditional {
+        response: read(response),
+        etag,
+        more,
+        scopes,
+    })
+}
+
 /// `GET url` with a bearer token, as JSON.
 ///
 /// An empty `token` sends **no** `Authorization` header at all, for the one
@@ -384,6 +443,10 @@ mod tests {
             Err(Error::Forge { detail, .. }) => assert!(detail.contains("unencrypted")),
             other => panic!("expected a refusal, got {other:?}"),
         }
+        assert!(matches!(
+            get_conditional_json("http://github.com/x", "secret", "github.com", Some("tag")),
+            Err(Error::Forge { .. })
+        ));
     }
 
     #[test]

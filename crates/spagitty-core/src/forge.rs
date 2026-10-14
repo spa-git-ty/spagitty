@@ -36,6 +36,7 @@ pub mod bitbucket;
 pub mod github;
 pub mod gitlab;
 pub mod http;
+pub mod issues;
 pub mod keychain;
 pub mod review;
 pub mod snapshot;

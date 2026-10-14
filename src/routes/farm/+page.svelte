@@ -25,6 +25,7 @@
 	import Loader from '$lib/ui/Loader.svelte';
 	import { dialog } from '$lib/ui/dialog.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
+	import { issueHandoff } from '$lib/issues/handoff.svelte';
 	import '$lib/farm/farm.css';
 
 	/*
@@ -45,6 +46,7 @@
 	let newGoal = $state(false);
 	let newTitle = $state('');
 	let newDescription = $state('');
+	let issueDraft = $state<TaskDraft | null>(null);
 	/** A finished plan waits on Planning until it is asked for, if the window was away. */
 	let holdPlanning = $state(false);
 	let wasPlanning = false;
@@ -96,7 +98,13 @@
 	// Visiting the screen opens this repository's farm, whatever it holds.
 	$effect(() => {
 		const path = repo.info?.path;
-		if (path) void farmStore.open(path);
+		if (path) void farmStore.open(path).then(() => {
+			if (repo.info?.path !== path) return;
+			const draft = issueHandoff.take(path);
+			if (!draft) return;
+			if (farmStore.farm) { issueDraft = draft; editing = 'new'; }
+			else { newTitle = draft.title; newDescription = draft.description; }
+		});
 		else farmStore.reset();
 		newGoal = false;
 	});
@@ -187,7 +195,7 @@
 		const saved = await act('Could not save the task', () =>
 			target && target !== 'new' ? api.editTask(target.id, draft) : api.addTask(draft)
 		);
-		if (saved) editing = null;
+		if (saved) { editing = null; issueDraft = null; }
 	}
 
 	async function deleteTask() {
@@ -315,14 +323,15 @@
 	</div>
 
 	{#if editing}
-		<FarmSheet title={editing === 'new' ? 'New task' : C.edit} onclose={() => (editing = null)}>
+		<FarmSheet title={editing === 'new' ? 'New task' : C.edit} onclose={() => { editing = null; issueDraft = null; }}>
 			{#key editing === 'new' ? 'new' : editing.id}
 				<TaskEditor
 					task={editing === 'new' ? null : editing}
+					initial={editing === 'new' ? issueDraft : null}
 					candidates={farmStore.tasks.filter((t) => editing === 'new' || t.id !== editing?.id)}
 					{busy}
 					onsave={saveTask}
-					oncancel={() => (editing = null)}
+					oncancel={() => { editing = null; issueDraft = null; }}
 				/>
 			{/key}
 		</FarmSheet>

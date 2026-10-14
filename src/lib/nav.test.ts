@@ -126,6 +126,7 @@ describe('NAV_ITEMS', () => {
 			'/reflog',
 			'/badges',
 			'/repos',
+			'/issues',
 			'/hooks',
 			'/settings'
 		]);
@@ -178,7 +179,7 @@ describe('grouping', () => {
 
 	it('starts a group exactly at each boundary', () => {
 		const starts = rows.filter((row) => row.startsGroup).map((row) => row.item.href);
-		expect(starts).toEqual(['/farm', '/', '/rebase', '/hooks', '/settings']);
+		expect(starts).toEqual(['/farm', '/', '/rebase', '/issues', '/settings']);
 	});
 
 	it('heads every group but the first', () => {
@@ -241,6 +242,7 @@ describe('isShown', () => {
 			'/tags',
 			'/reflog',
 			'/repos',
+			'/issues',
 			'/hooks',
 			'/settings'
 		]);
@@ -394,7 +396,7 @@ describe('the rail a person chose', () => {
 			const after = rows[at + 1];
 
 			expect(before.kind === 'screen' && before.item.group).toBe('tools');
-			expect(after.kind === 'screen' && after.item.href).toBe('/hooks');
+			expect(after.kind === 'screen' && after.item.href).toBe('/issues');
 			expect(rows[at].startsGroup).toBe(false);
 		});
 

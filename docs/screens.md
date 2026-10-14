@@ -34,6 +34,7 @@ defect.
 | 1T | Terminal | `/terminal` | yes | Built | FEAT-130 |
 | 1U | Files | `/files` | yes | Built | FEAT-131 |
 | 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
+| 1W | Issues | `/issues` | yes | Built | FEAT-136 |
 | 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
@@ -63,6 +64,16 @@ not reach and the accounts Settings had no client for, were closed by FEAT-017.
 because it is how the next unbuilt screen says what it will be rather than
 pretending to be it: a half-built screen that looks real is harder to read than
 an honest empty one.
+
+## 1W — Issues
+
+**Item:** [FEAT-136](../agile/items/FEAT-136-issues.md). **Route:** `/issues`.
+
+The separate forge group above Settings starts with Issues. Its header selects a configured hosted remote and accepts state, assignee, label, milestone, sort and text filters. The virtual list shows state, title, labels, author, update date and reply count. Saved pages paint before host revalidation; read, cache and write errors remain separate.
+
+The middle column combines the description, comments and events in date order. The details column shows assignees, labels, milestone progress and reported development links. Markdown uses the application's existing safe renderer. Create, comment and close each ask for confirmation. Known read-only credentials hide writes. Replies sorting is available on GitHub; GitLab does not provide it.
+
+Start branch offers an editable suggestion and uses the tracked default branch. Hand to agent reads every comment page and opens an unready Farm task draft. The person reviews it and picks the agent through the existing Farm flow; the button does not start an agent.
 
 ## 1X — Hooks
 
