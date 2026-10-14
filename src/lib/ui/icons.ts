@@ -82,6 +82,7 @@ export type IconName =
 	| 'files'
 	| 'investigate'
 	| 'recipes'
+	| 'hooks'
 	| 'split-right'
 	| 'split-down';
 
@@ -220,6 +221,8 @@ export const ICONS: Record<IconName, string[]> = {
 	'split-down': ['M4 5h16v14H4z', 'M4 12h16'],
 	// Three blocks, stacked: a recipe is steps in order.
 	recipes: ['M4 4h10v5H4z', 'M4 9.5h14v5H4z', 'M4 15h8v5H4z'],
+	// The Hooks artboard's mark, at the shared stroke weight.
+	hooks: ['M14 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', 'M14 7.5V15a4.5 4.5 0 0 1-9 0v-2.5', 'M3 14.5l2-2 2 2'],
 	check: ['M5 12.5 10 17.5 19 7'],
 	// A ring, and the ring ticked: a file still to read, and one read (TASK-053).
 	circle: ['M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z'],

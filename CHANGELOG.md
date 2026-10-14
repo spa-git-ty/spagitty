@@ -14,6 +14,16 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Hooks** shows each step of a hook run with its state, time and output, including commits made in a terminal. Build tests, formatters, message checks and scripts from blocks, try them on staged files, and save them for this clone or share them with the repository.
+  - Existing hook managers stay in control until you import and install. Hand-written hooks are never overwritten.
+  - Formatting leaves partially staged files alone. A formatter's restage can be undone while the index still contains its result.
+
+### Fixed
+
+- **Hooks** import now treats a command as a formatter only when it receives staged files. Terminal hook runs honour the “keep newest 50” limit and pass pushed refs to imported or scripted blocks on standard input. **Try a message** now tests only commit-message rules.
+
 ## [3.0.1] - 2026-10-14
 
 ### Fixed

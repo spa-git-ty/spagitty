@@ -1284,6 +1284,7 @@ describe('NavRail', () => {
 			'Tags',
 			'Reflog',
 			'All repositories',
+			'Hooks',
 			'Settings'
 		]);
 
@@ -1497,14 +1498,14 @@ describe('NavRail', () => {
 			view.destroy();
 		});
 
-		it('takes the hidden screens off and puts More before Settings', () => {
+		it('takes hidden screens off and keeps More at the end of Tools', () => {
 			repoControl.setInfo(info());
 			const view = render(NavRail, { rail: chosen() });
 
 			const shown = labels(view);
 			expect(shown).not.toContain('Stash');
 			expect(shown).not.toContain('Tags');
-			expect(shown.slice(-2)).toEqual(['More', 'Settings']);
+			expect(shown.slice(-3)).toEqual(['More', 'Hooks', 'Settings']);
 
 			view.destroy();
 		});

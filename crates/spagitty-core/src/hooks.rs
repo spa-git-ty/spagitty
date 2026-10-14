@@ -40,6 +40,11 @@ use serde::Serialize;
 use crate::error::Result;
 use crate::shell;
 
+pub mod blocks;
+pub mod builder;
+pub mod generate;
+pub mod import;
+
 /// The hook names git knows. Anything else in the directory is not a hook.
 const NAMES: &[&str] = &[
     "applypatch-msg",
@@ -184,10 +189,13 @@ pub fn list(repo: &Path) -> Result<Hooks> {
 
     let manager = if husky {
         Manager::Husky
-    } else if hooks.iter().any(|hook| hook.script.contains("lefthook")) {
+    } else if hooks.iter().any(|hook| {
+        !hook.script.lines().any(|line| line == generate::MARK) && hook.script.contains("lefthook")
+    }) {
         Manager::Lefthook
     } else if hooks.iter().any(|hook| {
-        hook.script.contains("pre-commit")
+        !hook.script.lines().any(|line| line == generate::MARK)
+            && hook.script.contains("pre-commit")
             && (hook.script.contains("pre_commit")
                 || hook.script.contains("pre-commit run")
                 || hook.script.contains("INSTALL_PYTHON"))

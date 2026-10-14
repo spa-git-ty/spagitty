@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Hooks editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--warn:#9a5b00;--ok:#2f7d45;--danger:#b3124a;--lane-1:#c23b22;--lane-4:#6c4fa3;--lane-5:#2f6fb0;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel);--term-bg:#fffaf3;--b-fmt:#8a6420;--b-test:#3f6690;--b-msg:#6e4f86;--b-run:#5b6b52}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--warn:#f0b54a;--ok:#7cc68d;--danger:#ff7a85;--lane-1:#f2715a;--lane-4:#a58bd8;--lane-5:#6aa7e0;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000);--term-bg:#110d0c;--b-fmt:#c9a46a;--b-test:#8fb0d4;--b-msg:#b9a3c9;--b-run:#a9b99a}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+input,select{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:var(--line);color:var(--ink);font-weight:600;background:var(--surface-2)}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--sunken);border:1px solid var(--pane-edge)}
+.seg a,.seg span{padding:4px 14px;border-radius:999px;font-size:var(--fs-secondary);color:var(--muted);text-decoration:none}
+.seg .on{background:var(--surface-2);color:var(--ink);font-weight:600;box-shadow:var(--shadow-1)}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.rail-item.new::after{content:'';position:absolute;bottom:7px;left:50%;width:14px;margin-left:-7px;height:2px;border-radius:2px;background:var(--agent)}
+.pane{background:var(--surface);border:1px solid var(--pane-edge);border-radius:14px}
+.dot{width:9px;height:9px;border-radius:3px;flex:none}
+.k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.hk{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:4px 10px;border-radius:9px;border:1px solid var(--pane-edge);background:var(--surface-2);font-size:var(--fs-secondary);font-weight:600;text-align:left}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12.5px;color:var(--muted)}
+.inp{height:34px;box-sizing:border-box;padding:0 10px;border-radius:8px;border:1px solid var(--pane-edge);background:var(--sunken);font-family:var(--font-mono);font-size:12.5px;display:flex;align-items:center;outline:none;width:100%}
+.tog{width:30px;height:18px;border-radius:999px;position:relative;flex:none}
+.tog::after{content:'';position:absolute;top:3px;width:12px;height:12px;border-radius:50%;background:var(--bg)}
+.tog.y{background:var(--ok)}.tog.y::after{right:3px}
+.tog.n{background:var(--soft)}.tog.n::after{left:3px;background:var(--muted)}
+.lib{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:10px;border:1px solid var(--pane-edge);background:var(--surface-2);text-align:left}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">payments-api<button aria-label="Close payments-api" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">spagitty</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="16">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px 10px">
+<span style="font-size: 22px">Hooks</span>
+<nav class="seg" aria-label="Hooks views"><a href="HooksRun.dc.html">Runs</a><a class="on" href="HooksEdit.dc.html" aria-current="page">Hooks</a></nav>
+<span style="flex: 1"></span>
+<span class="chip" style="font-family: var(--font-mono)">.spagitty/hooks.toml</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-secondary)"><span class="tog y" role="switch" aria-checked="true" aria-label="Share with the repository"></span>Share with repo</span>
+<button class="btn">Dry run on staged</button>
+<button class="btn primary">Save &amp; install</button>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 10px; padding: 0 12px 12px">
+
+<section class="pane" aria-label="Installed hooks" style="flex: 1 1 280px; max-width: 320px; display: flex; flex-direction: column; gap: 16px; padding: 14px; overflow: hidden">
+<sc-for list="{{stages}}" as="st" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px"><span class="mono" style="font-size: 13px; font-weight: 600">{{st.name}}</span><span class="note" style="font-size: 12px">{{st.count}}</span><span style="flex: 1"></span><span class="tog {{st.tog}}" role="switch" aria-checked="{{st.on}}" aria-label="Enable {{st.name}}"></span></div>
+<sc-for list="{{st.hooks}}" as="h" hint-placeholder-count="3">
+<button class="hk" onClick="{{h.pick}}" aria-pressed="{{h.sel}}" style="box-shadow: {{h.ring}}; opacity: {{h.fade}}"><span aria-hidden="true" style="color: var(--muted); font-size: 11px; letter-spacing: -1px">⋮⋮</span><span class="dot" style="background: {{h.c}}"></span><span style="flex: 1; min-width: 0">{{h.label}}</span><sc-if value="{{h.cond}}" hint-placeholder-val="{{false}}"><span class="note" style="font-size: 11.5px; font-weight: 400">{{h.cond}}</span></sc-if></button>
+</sc-for>
+</div>
+</sc-for>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: 12px">Order runs top to bottom · drag to reorder</span>
+</section>
+
+<section class="pane" aria-label="Hook settings" style="flex: 999 1 440px; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 18px; padding: 18px 20px; overflow: hidden">
+
+<sc-if value="{{isTests}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px"><span class="dot" style="background: var(--b-test)"></span><span style="font-size: 18px; font-weight: 600">Tests · payments</span><span class="chip">Run tests when paths change</span><span style="flex: 1"></span><button class="btn">Remove</button></div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<div class="field" style="grid-column: span 2"><label for="t-paths">When staged files match</label><input id="t-paths" class="inp" value="services/payments/**, libs/money/**"></div>
+<div class="field" style="grid-column: span 2"><label for="t-cmd">Run</label><input id="t-cmd" class="inp" value="./mvnw -q -pl services/payments -am test"></div>
+<div class="field"><label for="t-dir">In folder</label><input id="t-dir" class="inp" value="."></div>
+<div class="field"><label for="t-to">Timeout</label><input id="t-to" class="inp" value="5 min"></div>
+</div>
+
+<div class="field"><span style="font-size: 12.5px; color: var(--muted)">If it fails</span>
+<div style="display: flex; gap: 6px"><span class="chip on">Block the commit</span><span class="chip">Warn and continue</span></div></div>
+
+<div class="field"><span style="font-size: 12.5px; color: var(--muted)">Skip when</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip on">Only *.md changed</span><span class="chip">WIP commit</span><span class="chip">+ add</span></div></div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 10px; background: var(--sunken); border: 1px solid var(--pane-edge)">
+<span class="k">Against what is staged now</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 14px"><span style="color: var(--ok); font-weight: 700">✓</span>Would run · 3 files match</span>
+<span class="mono" style="color: var(--muted)">services/payments/src/main/java/…/RefundService.java +2</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isMsg}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px"><span class="dot" style="background: var(--b-msg)"></span><span style="font-size: 18px; font-weight: 600">Commit message rules</span><span class="chip">commit-msg</span><span style="flex: 1"></span><button class="btn">Remove</button></div>
+
+<div class="field"><span style="font-size: 12.5px; color: var(--muted)">Style</span>
+<div style="display: flex; gap: 6px"><span class="chip on">Conventional Commits</span><span class="chip">Ticket prefix</span><span class="chip">Custom regex</span></div></div>
+
+<div class="field"><span style="font-size: 12.5px; color: var(--muted)">Allowed types</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip on">feat</span><span class="chip on">fix</span><span class="chip on">refactor</span><span class="chip on">test</span><span class="chip on">docs</span><span class="chip on">chore</span><span class="chip">perf</span><span class="chip">+ add</span></div></div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+<div class="field"><label for="m-sub">Subject max</label><input id="m-sub" class="inp" value="72"></div>
+<div class="field"><label for="m-scope">Scope</label><input id="m-scope" class="inp" value="required"></div>
+<div class="field"><label for="m-ref">Ticket in footer</label><input id="m-ref" class="inp" value="[A-Z]+-\d+"></div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--sunken); border: 1px solid var(--pane-edge)">
+<label for="m-try" class="k">Try a message</label>
+<input id="m-try" class="inp" value="feat(refunds): partial refund endpoint" style="background: var(--term-bg)">
+<div style="display: flex; flex-direction: column; gap: 4px; font-size: 13.5px">
+<span><span style="color: var(--ok); font-weight: 700">✓</span> type · scope · subject 38/72</span>
+<span><span style="color: var(--danger); font-weight: 700">✕</span> no ticket in footer, e.g. <span class="mono">Refs: PAY-118</span></span>
+</div>
+</div>
+</div>
+</sc-if>
+</section>
+
+<section class="pane" aria-label="Add a hook" style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 8px; padding: 14px; overflow: hidden">
+<span class="k" style="margin-bottom: 2px">Add</span>
+<sc-for list="{{library}}" as="b" hint-placeholder-count="7">
+<button class="lib"><span style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px"><span class="dot" style="background: {{b.c}}"></span>{{b.t}}</span><span class="note" style="font-size: 12px">{{b.d}}</span></button>
+</sc-for>
+<span style="flex: 1"></span>
+<button class="btn" style="justify-content: center">Import .pre-commit-config.yaml</button>
+</section>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--warn)"></span>Unsaved hook changes</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">feature/partial-refunds<span class="note">▾</span></span>
+<span class="vr"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">612 commits · Tags 31<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v2.8.4</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z'],
+ issues: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ hooks: ['M14 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M14 7.5V15a4.5 4.5 0 0 1-9 0v-2.5','M3 14.5l2-2 2 2'],
+ pipelines: ['M3 5h5v4H3z','M16 3.5h5v4h-5z','M16 16.5h5v4h-5z','M8 7h3a2 2 0 0 1 2 2v8.5a2 2 0 0 0 2 2h1','M13 5.5h3'],
+ releases: ['M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z','M3.5 7.5 12 12l8.5-4.5','M12 12v9'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ more: ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','|','issues','hooks','pipelines','releases','|','investigate','search','more','|','settings'];
+var NEW = { issues: 1, hooks: 1, pipelines: 1, releases: 1 };
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', issues:'Issues', hooks:'Hooks', pipelines:'Pipelines', releases:'Releases', investigate:'Investigate', search:'Log', settings:'Settings', more:'More'};
+var ACTIVE = 'hooks';
+class Component extends DCLogic {
+ constructor(p) { super(p); this.state = { sel: 'tests' }; }
+ renderVals() {
+  var self = this;
+  var sel = this.state.sel;
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: (k === ACTIVE ? 'on ' : '') + (NEW[k] && k !== ACTIVE ? 'new' : '') };
+  });
+  function hk(id, label, c, cond, off) {
+   var on = id === sel;
+   return { label: label, c: c, cond: cond, sel: on ? 'true' : 'false', ring: on ? '0 0 0 2px var(--accent)' : 'none', fade: off ? 0.5 : 1,
+    pick: function () { if (id === 'tests' || id === 'msg') self.setState({ sel: id }); } };
+  }
+  var stages = [
+   { name: 'pre-commit', count: '5', tog: 'y', on: 'true', hooks: [
+     hk('fmt', 'Format · spotless', 'var(--b-fmt)', '*.java'),
+     hk('lint', 'Lint · checkstyle', 'var(--b-fmt)', '*.java'),
+     hk('tests', 'Tests · payments', 'var(--b-test)', 'on diff'),
+     hk('tests2', 'Tests · checkout', 'var(--b-test)', 'on diff'),
+     hk('secrets', 'Script · scan-secrets.sh', 'var(--b-run)', '')
+   ] },
+   { name: 'commit-msg', count: '1', tog: 'y', on: 'true', hooks: [ hk('msg', 'Commit message rules', 'var(--b-msg)', '') ] },
+   { name: 'pre-push', count: '2', tog: 'n', on: 'false', hooks: [
+     hk('full', 'Tests · all modules', 'var(--b-test)', '', true),
+     hk('nomain', 'Block push to main', 'var(--b-run)', '', true)
+   ] }
+  ];
+  var library = [
+   ['Run tests when paths change', 'Only when the diff touches a module', 'var(--b-test)'],
+   ['Format & lint', 'spotless, prettier, ruff, gofmt…', 'var(--b-fmt)'],
+   ['Commit message rules', 'Conventional, ticket, regex', 'var(--b-msg)'],
+   ['Run a script', 'Any command or file in the repo', 'var(--b-run)'],
+   ['Block secrets', 'Keys and tokens in the diff', 'var(--b-run)'],
+   ['Large files', 'Stop files over a size', 'var(--b-run)'],
+   ['Protect branches', 'No direct commit or push', 'var(--b-run)']
+  ].map(function (b) { return { t: b[0], d: b[1], c: b[2] }; });
+  return { theme: this.props.theme || 'dark', rail: rail, stages: stages, library: library, isTests: sel === 'tests', isMsg: sel === 'msg' };
+ }
+}
+</script>
+</body>
+</html>

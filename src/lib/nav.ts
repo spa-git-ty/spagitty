@@ -75,7 +75,8 @@ export type ScreenCode =
 	| '1S'
 	| '1T'
 	| '1U'
-	| '1V';
+	| '1V'
+	| '1X';
 
 /**
  * What kind of place a destination is (TASK-041).
@@ -103,13 +104,14 @@ export type ScreenCode =
  * a collapsed rail keeps the dividers, which is the same information at the
  * width available.
  */
-export type NavGroup = 'farm' | 'work' | 'tools' | 'app';
+export type NavGroup = 'farm' | 'work' | 'tools' | 'forge' | 'app';
 
 /** What each group is called in the rail. `farm` has none: it is one row. */
 export const GROUP_LABELS: Record<NavGroup, string | null> = {
 	farm: null,
 	work: 'Repository',
 	tools: 'Tools',
+	forge: null,
 	app: 'Spagitty'
 };
 
@@ -243,6 +245,9 @@ export const NAV_ITEMS: NavItem[] = [
 		group: 'tools',
 		icon: 'folder'
 	},
+	// FEAT-137: the new screens have a separator above them, immediately
+	// before Settings.
+	{ code: '1X', label: 'Hooks', href: '/hooks', group: 'forge', icon: 'hooks', since: '3.1' },
 	{
 		code: '1K',
 		label: 'Settings',
@@ -488,8 +493,8 @@ export function railRows(items: NavItem[], context: NavContext): RailRow[] {
 
 	const group = (row: RailRow) => (row.kind === 'screen' ? row.item.group : 'tools');
 	const lastTool = rows.findLastIndex((row) => group(row) === 'tools');
-	const app = rows.findIndex((row) => group(row) === 'app');
-	const at = lastTool !== -1 ? lastTool + 1 : app !== -1 ? app : rows.length;
+	const afterTools = rows.findIndex((row) => group(row) === 'forge' || group(row) === 'app');
+	const at = lastTool !== -1 ? lastTool + 1 : afterTools !== -1 ? afterTools : rows.length;
 
 	rows.splice(at, 0, { kind: 'more', items: under, startsGroup: lastTool === -1 });
 	return rows;

@@ -17,6 +17,7 @@ mod extensions;
 mod farm;
 mod forge_bridge;
 mod graph_worker;
+mod hooks;
 mod merger_state;
 mod network_worker;
 mod notifications;
@@ -70,6 +71,17 @@ pub fn run() {
             commands::commit,
             commands::hooks,
             commands::set_hooks_enabled,
+            hooks::hooks_builder,
+            hooks::hooks_save,
+            hooks::hooks_import,
+            hooks::hooks_matches,
+            hooks::hooks_runs,
+            hooks::hooks_run,
+            hooks::hooks_log,
+            hooks::hooks_dry_run,
+            hooks::hooks_try_message,
+            hooks::hooks_stop,
+            hooks::hooks_undo_restage,
             commands::head_message,
             commands::branches,
             commands::checkout,

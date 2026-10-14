@@ -30,6 +30,11 @@ keyring = { version = "3.6.3", default-features = false, features = [
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+# Standard shared hook definitions (FEAT-137). MIT OR Apache-2.0.
+toml = "=0.9.12"
+# Manager configuration and, later, marked workflow YAML. No encoding or
+# network feature is needed for UTF-8 repository files. MIT OR Apache-2.0.
+yaml-rust2 = { version = "=0.10.4", default-features = false }
 # The one HTTP client in the application (FEAT-017). MIT OR Apache-2.0.
 #
 # Blocking, which is what this crate already is — gix and shell are both
