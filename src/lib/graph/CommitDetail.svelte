@@ -11,6 +11,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import FileName from '$lib/ui/FileName.svelte';
+	import { fileAttrs, revOfChange } from '$lib/files/open';
 	import type { ChangedFile } from '$lib/types';
 
 	interface Props {
@@ -151,7 +152,12 @@
 				<div class="files">
 					{#if grouping === 'path'}
 						{#each detail.files as file (file.path)}
-							<button class="file" onclick={() => onopen?.(detail.id)} title={file.path}>
+							<button
+								class="file"
+								onclick={() => onopen?.(detail.id)}
+								title={file.path}
+								{...fileAttrs(file.path, revOfChange(detail.id, file.status))}
+							>
 								<FileName path={file.path} status={file.status} />
 							</button>
 						{/each}
@@ -163,6 +169,7 @@
 									class="file indent"
 									onclick={() => onopen?.(detail.id)}
 									title={file.path}
+									{...fileAttrs(file.path, revOfChange(detail.id, file.status))}
 								>
 									<FileName path={basename(file.path)} status={file.status} />
 								</button>

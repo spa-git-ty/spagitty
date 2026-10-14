@@ -11,6 +11,7 @@
 	import ExtensionPanels from '$lib/extensions/ExtensionPanels.svelte';
 	import { extensions } from '$lib/extensions/store.svelte';
 	import { repo } from '$lib/repo.svelte';
+	import { fileAttrs } from '$lib/files/open';
 	import { farmStore } from '../store.svelte';
 	import { openInMerger } from '../merge';
 	import { openInGraph } from '../graph';
@@ -318,7 +319,10 @@
 				<div class="card">
 					{#if detail?.stats?.files.length}
 						{#each detail.stats.files as file (file.path)}
-							<div class="spread file-row">
+							<div
+								class="spread file-row"
+								{...fileAttrs(file.path, task.branch, task.branch ? undefined : 'No branch yet')}
+							>
 								<span class="mono">{file.path}</span>
 								{#if file.binary}
 									<Chip>Binary</Chip>

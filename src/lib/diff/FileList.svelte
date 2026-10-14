@@ -6,6 +6,7 @@
 	import type { MenuItem } from '$lib/ui/menu';
 	import * as api from '$lib/api';
 	import { notice } from '$lib/ui/notice.svelte';
+	import { openInFiles, revOfChange } from '$lib/files/open';
 
 	/**
 	 * The files a commit touched, with what each one cost in lines.
@@ -33,6 +34,8 @@
 		label?: string;
 		/** Shown when there are no files at all. */
 		empty?: string;
+		/** The commit these files are from. Given, a file opens in Files there. */
+		rev?: string | null;
 	}
 
 	let {
@@ -41,7 +44,8 @@
 		onselect,
 		onstep,
 		label = 'Files in this commit',
-		empty = 'No file changes.'
+		empty = 'No file changes.',
+		rev = null
 	}: Props = $props();
 
 	let menu = $state<{ x: number; y: number; path: string; anchor: HTMLElement } | null>(null);
@@ -68,13 +72,22 @@
 	const menuItems = $derived.by((): MenuItem[] => {
 		if (!menu) return [];
 		const filePath = menu.path;
-		return [
-			{
-				id: 'ext-diff',
-				label: 'Open in External Diff Tool',
-				run: () => void openExternal(filePath)
-			}
-		];
+		const items: MenuItem[] = [];
+		if (rev) {
+			const status = files.find((file) => file.path === filePath)?.status ?? '';
+			const at = revOfChange(rev, status);
+			items.push({
+				id: 'open-in-files',
+				label: 'Open in Files',
+				run: () => void openInFiles({ path: filePath, rev: at })
+			});
+		}
+		items.push({
+			id: 'ext-diff',
+			label: 'Open in External Diff Tool',
+			run: () => void openExternal(filePath)
+		});
+		return items;
 	});
 
 	/**

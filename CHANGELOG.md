@@ -14,6 +14,28 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-14
+
+### Fixed
+
+- In **Files**, hiding the blame no longer breaks every line. The line numbers were drawn over the code and the code was cut after a few letters; the code now has the whole width.
+
+### Added
+
+- The blame in **Files** is made wider or narrower by dragging its edge, and keeps its width.
+- Right-click a file on any screen and choose **Open in Files** to read it at the commit that screen shows: the Graph, Diff, Stash, Working copy, Conflicts, Merger, Review, Pull requests, Log search and Farm. A file not in a commit yet says so.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.0.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.0.0] - 2026-10-13
 
 ### Added

@@ -192,6 +192,7 @@
 				baseShort={resolving.baseShort}
 				{others}
 				start={resolving.start}
+				rev={forecast?.a.tip ?? null}
 				onchoose={(path, index, choice) => {
 					resolving.choose(path, index, choice);
 					agentWork.personChose(path, index, choice);

@@ -18,6 +18,7 @@ import {
 	DETAIL_W,
 	DIFF_FILES_W,
 	FARM_LOG_H,
+	FILES_BLAME_W,
 	RAIL_W,
 	REQUESTS_DETAIL_W,
 	REVIEW_PREVIEW_W,
@@ -120,6 +121,15 @@ export const PANELS = {
 		min: 240,
 		max: 720
 	},
+	// Files (FEAT-131): wide enough for a name and an age, and never more
+	// than the code beside it can spare.
+	filesBlame: {
+		variable: 'files-blame-w',
+		side: 'left',
+		initial: FILES_BLAME_W,
+		min: 140,
+		max: 520
+	},
 	farmLog: {
 		variable: 'farm-log-h',
 		side: 'bottom',
@@ -154,6 +164,7 @@ let extra = $state<Record<string, number>>({
 	changesFiles: CHANGES_FILES_W,
 	diffFiles: DIFF_FILES_W,
 	stashEntries: STASH_ENTRIES_W,
+	filesBlame: FILES_BLAME_W,
 	farmLog: FARM_LOG_H
 });
 /**
@@ -341,6 +352,7 @@ export const panels = {
 			changesFiles: CHANGES_FILES_W,
 			diffFiles: DIFF_FILES_W,
 			stashEntries: STASH_ENTRIES_W,
+			filesBlame: FILES_BLAME_W,
 			farmLog: FARM_LOG_H
 		};
 		railCollapsed = false;

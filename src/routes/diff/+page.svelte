@@ -136,6 +136,7 @@
 				selected={diff.path}
 				onselect={(path) => diff.select(path)}
 				onstep={(delta) => diff.step(delta)}
+				rev={diff.commit.id}
 			/>
 			<Splitter panel="diffFiles" label="Resize the file list" />
 			<DiffPane

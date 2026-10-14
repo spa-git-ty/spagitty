@@ -121,6 +121,7 @@
 				onstep={(delta) => stash.stepFile(delta)}
 				label="Files in this stash entry"
 				empty="This entry changed nothing."
+				rev={stash.contents?.id}
 			/>
 			<Splitter panel="diffFiles" label="Resize the file list" />
 			<DiffPane
