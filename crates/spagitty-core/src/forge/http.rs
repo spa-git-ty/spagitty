@@ -539,6 +539,67 @@ pub fn download_file(
     })
 }
 
+/// Logs are bounded text. Signed redirects never receive the account token.
+pub fn get_log(url: &str, token: &str, host: &str, redirects: bool) -> Result<String> {
+    get_text(url, token, host, redirects, "text/plain")
+}
+pub fn get_repository_text(url: &str, token: &str, host: &str) -> Result<String> {
+    get_text(url, token, host, false, "application/vnd.github.raw+json")
+}
+fn get_text(url: &str, token: &str, host: &str, redirects: bool, accept: &str) -> Result<String> {
+    let mut location = url.to_string();
+    for hop in 0..=4 {
+        if !location.starts_with("https://") {
+            return Err(Error::Forge {
+                host: host.into(),
+                detail: "Refusing an unencrypted job log.".into(),
+            });
+        }
+        let mut request = agent().get(&location).header("Accept", accept);
+        if hop == 0 && !token.is_empty() {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        let mut response = request.call().map_err(|e| Error::ForgeOffline {
+            host: host.into(),
+            detail: e.to_string(),
+        })?;
+        let status = response.status().as_u16();
+        if redirects && matches!(status, 301 | 302 | 303 | 307 | 308) {
+            location = response
+                .headers()
+                .get("location")
+                .and_then(|h| h.to_str().ok())
+                .filter(|s| s.starts_with("https://"))
+                .ok_or_else(|| Error::Forge {
+                    host: host.into(),
+                    detail: "The job log has no HTTPS download location.".into(),
+                })?
+                .into();
+            continue;
+        }
+        if !(200..300).contains(&status) {
+            return Err(super::status_error(host, status, "", None));
+        }
+        let mut bytes = Vec::new();
+        response
+            .body_mut()
+            .as_reader()
+            .take(4 * 1024 * 1024 + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > 4 * 1024 * 1024 {
+            bytes.truncate(4 * 1024 * 1024);
+            bytes.extend_from_slice(
+                b"\n[Log exceeds 4 MiB; open the job on its host for the full log.]\n",
+            );
+        }
+        return Ok(String::from_utf8_lossy(&bytes).into_owned());
+    }
+    Err(Error::Forge {
+        host: host.into(),
+        detail: "The job log redirected too many times.".into(),
+    })
+}
+
 fn read(mut response: ureq::http::Response<ureq::Body>) -> Response {
     let status = response.status().as_u16();
     let retry_after = response

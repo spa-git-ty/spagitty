@@ -17,6 +17,12 @@
 /** Height of one commit row, in CSS pixels. The graph's fundamental unit. */
 export const ROW_PITCH = 30;
 
+/** Pipeline cards use one geometry for placement, edges and viewport culling. */
+export const PIPELINE_CARD_WIDTH = 160;
+export const PIPELINE_CARD_HEIGHT = 56;
+export const PIPELINE_COLUMN_PITCH = 200;
+export const PIPELINE_ROW_PITCH = 80;
+
 /**
  * Horizontal distance between two lanes.
  *

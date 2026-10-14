@@ -23,6 +23,7 @@ mod issues;
 mod merger_state;
 mod network_worker;
 mod notifications;
+mod pipelines;
 mod platform;
 mod profiles;
 mod rebase_worker;
@@ -92,6 +93,16 @@ pub fn run() {
             issues::issues_thread,
             issues::issues_write,
             issues::issues_branch,
+            pipelines::pipelines_preview,
+            pipelines::pipelines_source,
+            pipelines::pipelines_preferences,
+            pipelines::pipelines_watches,
+            pipelines::pipelines_cached,
+            pipelines::pipelines_runs,
+            pipelines::pipelines_jobs,
+            pipelines::pipelines_log,
+            pipelines::pipelines_graph,
+            pipelines::pipelines_write,
             releases::releases_preferences,
             releases::releases_hide,
             releases::releases_cached,

@@ -38,6 +38,7 @@ pub mod gitlab;
 pub mod http;
 pub mod issues;
 pub mod keychain;
+pub mod pipelines;
 pub mod releases;
 pub mod review;
 pub mod snapshot;
