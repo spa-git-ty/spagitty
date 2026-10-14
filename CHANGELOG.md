@@ -63,7 +63,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Downloads
 
 - **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
-  `*-macos-x86_64.dmg`), as in 2.2.2. The Mac builds are signed ad hoc and are
+  `*-macos-x86_64.dmg`), as in 2.2.3. The Mac builds are signed ad hoc and are
   not notarized: on first open macOS says the developer cannot be verified.
   Open the app once from the right-click **Open** menu, or allow it under
   **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
@@ -74,6 +74,25 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - Each download now carries a terminal multiplexer for the Terminal screen:
   psmux on Windows, and tmux on macOS and Linux. They are separate programs
   that Spagitty runs, under their own licences, listed in `NOTICE`.
+
+## [2.2.3] - 2026-10-12
+
+### Fixed
+
+- **Push** publishes a new branch without asking for an upstream first, and sets it to track the branch on `origin` or the repository's first remote. A branch that already tracks another branch is pushed there. Fetch and push show Git's progress and actual error messages, including the rejection reason when Git follows it with hints. A push that a hook on the remote refused shows what the hook said.
+- In Settings → You, saving the global or repository Git name and email keeps the saved values visible. Saving one field preserves the other field's unsaved edit, and the configuration is read again from disk so the saved value does not revert to the one from when the repository was opened.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.2.2. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
 
 ## [2.2.2] - 2026-10-12
 

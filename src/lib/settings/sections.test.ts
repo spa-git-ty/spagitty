@@ -156,6 +156,38 @@ describe('the section index and the screen agree', () => {
 });
 
 describe('IdentitySection', () => {
+	it.each(['global', 'local'] as const)('keeps both fields visible after saving in %s scope (BUG-082)', async (scope) => {
+		await settings.load();
+		settings.setScope(scope);
+		const mounted = render(IdentitySection, {});
+		type(mounted.get('#identity-name'), 'Grace Hopper');
+		type(mounted.get('#identity-email'), 'grace@example.com');
+		setIdentity.mockResolvedValueOnce(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: scope, [scope]: 'Grace Hopper' })
+		}));
+		const saves = mounted.all('button').filter((button) => button.textContent?.includes('Save'));
+
+		click(saves[0]);
+		await vi.waitFor(() => expect(settings.busy).toBe(false));
+		flushSync();
+
+		expect((mounted.get('#identity-name') as HTMLInputElement).value).toBe('Grace Hopper');
+		expect((mounted.get('#identity-email') as HTMLInputElement).value).toBe('grace@example.com');
+		expect((saves[1] as HTMLButtonElement).disabled).toBe(false);
+		setIdentity.mockResolvedValueOnce(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: scope, [scope]: 'Grace Hopper' }),
+			email: value({ effective: 'grace@example.com', origin: scope, [scope]: 'grace@example.com' })
+		}));
+		click(saves[1]);
+		await vi.waitFor(() => expect(settings.busy).toBe(false));
+		flushSync();
+
+		expect(setIdentity).toHaveBeenLastCalledWith(scope, 'email', 'grace@example.com');
+		expect((mounted.get('#identity-name') as HTMLInputElement).value).toBe('Grace Hopper');
+		expect((mounted.get('#identity-email') as HTMLInputElement).value).toBe('grace@example.com');
+		mounted.destroy();
+	});
+
 	it('shows each value in its field, with no line repeating where it came from (TASK-050)', async () => {
 		await settings.load();
 		const mounted = render(IdentitySection, {});

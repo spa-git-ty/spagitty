@@ -1167,7 +1167,25 @@ pub fn fetch(repo: &Path, remote: &str, prune: bool) -> Result<String> {
 /// Start a fetch without waiting for it, so its progress can be watched.
 pub fn fetch_spawn(repo: &Path, remote: &str, prune: bool) -> Result<std::process::Child> {
     let args = fetch_args(remote, prune);
-    record_spawn(command(repo, &args), &args)
+    record_spawn(watched(repo, &args), &args)
+}
+
+/// A `git` command whose stderr the caller reads while it runs (BUG-081).
+///
+/// stderr is both git's progress channel and its error channel. Left
+/// inherited, a fetch or a push wrote it to a console the application does not
+/// have: no progress arrived, and a refusal was reported as an exit code with
+/// none of git's words. stdout is closed because nothing reads it, and a pipe
+/// nobody reads is one git can block on.
+fn watched(repo: &Path, args: &[&str]) -> Command {
+    use std::process::Stdio;
+
+    let mut command = command(repo, args);
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    command
 }
 
 /// Fetch particular refs from one remote, and nothing else (FEAT-089): a pull
@@ -1335,7 +1353,7 @@ pub fn push_spawn(
     force: bool,
 ) -> Result<std::process::Child> {
     let args = push_args(remote, refspec, force);
-    record_spawn(command(repo, &args), &args)
+    record_spawn(watched(repo, &args), &args)
 }
 
 fn push_args<'a>(remote: &'a str, refspec: &'a str, force: bool) -> Vec<&'a str> {
@@ -2518,6 +2536,121 @@ mod tests {
             crate::clone::progress(noise.lines().next().unwrap_or_default()).is_some(),
             "git said nothing: {noise:?}"
         );
+    }
+
+    #[test]
+    fn a_watched_push_creates_a_new_branch_sets_its_upstream_and_can_push_again() {
+        use std::io::Read;
+        let _gate = crate::record::test_gate();
+        let fixture = Fixture::empty();
+        fixture.write("notes.txt", "Base\n");
+        fixture.git(&["add", "notes.txt"]);
+        fixture.commit("Base");
+        fixture.git(&["switch", "-c", "feature/new"]);
+        let remote = tempfile::tempdir().expect("remote");
+        run(remote.path(), &["init", "--bare"]).expect("bare remote");
+        fixture.git(&[
+            "remote",
+            "add",
+            "origin",
+            remote.path().to_str().expect("remote path"),
+        ]);
+
+        for message in ["First push", "Second push"] {
+            fixture.write("notes.txt", message);
+            let head = fixture.commit_all(message);
+            let mut child = push_spawn(fixture.path(), "origin", "feature/new", false)
+                .expect("starting the push");
+            assert!(child.stdin.is_none());
+            assert!(child.stdout.is_none());
+            let mut noise = String::new();
+            child
+                .stderr
+                .take()
+                .expect("piped stderr")
+                .read_to_string(&mut noise)
+                .expect("reading stderr");
+            assert!(
+                child.wait().expect("waiting for the push").success(),
+                "{noise}"
+            );
+            assert!(
+                !noise.trim().is_empty(),
+                "git reported no progress or summary"
+            );
+            assert_eq!(
+                fixture
+                    .git(&["rev-parse", "--abbrev-ref", "@{upstream}"])
+                    .trim(),
+                "origin/feature/new"
+            );
+            assert_eq!(
+                run(remote.path(), &["rev-parse", "refs/heads/feature/new"])
+                    .unwrap()
+                    .trim(),
+                head
+            );
+        }
+    }
+
+    #[test]
+    fn a_watched_fetch_pipes_progress_and_updates_remote_refs() {
+        use std::io::Read;
+        let _gate = crate::record::test_gate();
+        let remote = Fixture::woven();
+        let local = Fixture::empty();
+        local.git(&[
+            "remote",
+            "add",
+            "origin",
+            remote.path().to_str().expect("remote path"),
+        ]);
+        let mut child = fetch_spawn(local.path(), "origin", false).expect("starting fetch");
+        let mut noise = String::new();
+        child
+            .stderr
+            .take()
+            .expect("piped stderr")
+            .read_to_string(&mut noise)
+            .expect("reading stderr");
+        assert!(
+            child.wait().expect("waiting for fetch").success(),
+            "{noise}"
+        );
+        assert!(
+            noise
+                .split(['\r', '\n'])
+                .filter_map(crate::clone::progress)
+                .any(|step| step.percent.is_some()),
+            "no transfer progress: {noise}"
+        );
+        assert_eq!(
+            local.git(&["rev-parse", "origin/main"]).trim(),
+            remote.head()
+        );
+    }
+
+    #[test]
+    fn failed_watched_pushes_and_fetches_pipe_gits_own_error() {
+        use std::io::Read;
+        let _gate = crate::record::test_gate();
+        let fixture = Fixture::empty();
+        fixture.git(&["commit", "--allow-empty", "-m", "Base"]);
+        for mut child in [
+            push_spawn(fixture.path(), "missing", "main", false).expect("starting push"),
+            fetch_spawn(fixture.path(), "missing", false).expect("starting fetch"),
+        ] {
+            let mut noise = String::new();
+            child
+                .stderr
+                .take()
+                .expect("piped stderr")
+                .read_to_string(&mut noise)
+                .expect("reading stderr");
+            assert!(!child.wait().expect("waiting for git").success());
+            assert!(noise.contains("fatal:"), "{noise}");
+            assert!(noise.contains("missing"), "{noise}");
+        }
     }
 
     #[test]

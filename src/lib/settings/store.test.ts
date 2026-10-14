@@ -181,6 +181,33 @@ describe('scope', () => {
 });
 
 describe('saving an identity', () => {
+	it.each(['global', 'local'] as const)('keeps the other edited field when saving in %s scope (BUG-082)', async (scope) => {
+		await settings.load();
+		settings.setScope(scope);
+		settings.setDraft('name', 'Grace Hopper');
+		settings.setDraft('email', 'grace@example.com');
+		setIdentity.mockResolvedValueOnce(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: scope, [scope]: 'Grace Hopper' })
+		}));
+
+		await settings.save('name');
+
+		expect(settings.draft('name')).toBe('Grace Hopper');
+		expect(settings.draft('email')).toBe('grace@example.com');
+		expect(settings.isDirty('email')).toBe(true);
+		setIdentity.mockResolvedValueOnce(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: scope, [scope]: 'Grace Hopper' }),
+			email: value({ effective: 'grace@example.com', origin: scope, [scope]: 'grace@example.com' })
+		}));
+
+		await settings.save('email');
+
+		expect(setIdentity).toHaveBeenLastCalledWith(scope, 'email', 'grace@example.com');
+		expect(settings.draft('name')).toBe('Grace Hopper');
+		expect(settings.draft('email')).toBe('grace@example.com');
+		expect(settings.isDirty('email')).toBe(false);
+	});
+
 	it('writes the field to the chosen scope and takes the result as the new state', async () => {
 		await settings.load();
 		const written = anIdentity({
@@ -195,6 +222,63 @@ describe('saving an identity', () => {
 		expect(settings.identity).toEqual(written);
 		expect(settings.draft('name')).toBe('Grace Hopper');
 		expect(settings.isDirty('name')).toBe(false);
+	});
+
+	it('keeps an edit made while the saved field is being written', async () => {
+		await settings.load();
+		settings.setDraft('name', 'Grace Hopper');
+		let finish!: (identity: Identity) => void;
+		setIdentity.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+		const saving = settings.save('name');
+		settings.setDraft('name', 'Margaret Hamilton');
+		finish(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: 'global', global: 'Grace Hopper' })
+		}));
+
+		await saving;
+
+		expect(settings.draft('name')).toBe('Margaret Hamilton');
+		expect(settings.isDirty('name')).toBe(true);
+	});
+
+	/** The scope chip refills the fields, and a refill is not something typed. */
+	it('shows the saved value when the scope was switched away and back while it was written', async () => {
+		await settings.load();
+		settings.setDraft('name', 'Grace Hopper');
+		let finish!: (identity: Identity) => void;
+		setIdentity.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+		const saving = settings.save('name');
+
+		settings.setScope('local');
+		settings.setScope('global');
+		expect(settings.draft('name')).not.toBe('Grace Hopper');
+		finish(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: 'global', global: 'Grace Hopper' })
+		}));
+		await saving;
+
+		expect(settings.draft('name')).toBe('Grace Hopper');
+		expect(settings.isDirty('name')).toBe(false);
+	});
+
+	it('leaves the other scope’s field alone when the scope was switched and not back', async () => {
+		await settings.load();
+		settings.setDraft('name', 'Grace Hopper');
+		let finish!: (identity: Identity) => void;
+		setIdentity.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+		const saving = settings.save('name');
+
+		settings.setScope('local');
+		settings.setDraft('name', 'Ada at work');
+		finish(anIdentity({
+			name: value({ effective: 'Grace Hopper', origin: 'global', global: 'Grace Hopper' })
+		}));
+		await saving;
+
+		expect(settings.draft('name')).toBe('Ada at work');
+		// And back in the scope it was saved to, the saved value is there.
+		settings.setScope('global');
+		expect(settings.draft('name')).toBe('Grace Hopper');
 	});
 
 	it('names the scope the user chose and never the other one', async () => {
