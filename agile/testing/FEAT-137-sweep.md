@@ -4,7 +4,7 @@
 
 **Item:** [FEAT-137](../items/FEAT-137-hooks.md)
 
-None of these rows has been run in the application. Automated cases are named in the automated record; they do not replace the author's inspection.
+None of these rows has been run in the application. Automated cases are named in the automated record; they do not replace the manual inspection.
 
 | Ticket | Preconditions | Steps | Expected result | Priority | Result |
 | --- | --- | --- | --- | --- | --- |

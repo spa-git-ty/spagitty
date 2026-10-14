@@ -5,7 +5,6 @@
 **Status:** Done — on `codex/FEAT-136-issues`; unmerged. Covered by fixtures and mounted tests; not looked at in the running application.
 **Branch:** `codex/FEAT-136-issues`.
 **Screens:** 1W, chrome.
-**Raised by:** the author, 2026-10-14: “focus on the screens !! , apply them all functional end to end”.
 **Proposal:** [Forge views](../../docs/proposals/forge-views.md). **Designs:** [Forge views](../../design_handoff_forge_views/).
 
 ## Change
@@ -35,19 +34,11 @@ GitHub and GitLab issues beside the code, with a branch and an agent one click a
 
 ## Differences from the spec and the artboard
 
-- **The group sits above Settings,** following the author's later placement instruction. Existing chrome stays in place.
+- **The group sits above Settings,** using the forge screen group. Existing chrome stays in place.
 - **Hand to agent opens the existing Farm task editor.** The 2.0 assignment engine accepts only review and merge jobs. The issue becomes an unready task draft, then uses Farm's agent selection and scratch execution.
 - **Remote images stay links,** following the existing Markdown policy.
 - **Replies sorting is GitHub only.** GitLab provides no ordering by reply count; typed requests report the limitation.
 
 ## Checks
 
-See the [automated record](../testing/FEAT-136-automated.md) and [author sweep](../testing/FEAT-136-sweep.md). No new dependency was added.
-
-## The author's note of 2026-10-14
-
-Later on 2026-10-14, the author said: “اعمل بوش اول ب اول وافتح ال PR” and “عشان اراجع معاك اول ب اول”. Push each checked feature branch and open its pull request for incremental review. This supersedes the earlier no-push decision; no merge remains authorized.
-
-The author approved the proposed implementation choices on 2026-10-14: all listed host writes, each confirmed; existing managers remain in control unless Import is chosen; shared blocks use `.spagitty/hooks.toml`, personal blocks use application data; local pipeline execution is deferred; hidden releases are local; separate stacked branches start at `release/3.0.1`, with no merge or push.
-
-The author then said: “اه كمل كده + في الريل الي عالشمال اعمل فاصل للشاشات الجديده زي البروبوزال ما عامل احنا الردي عندنا فاصل فوق بعد الفارم و فاصل تحت قبل الكونفجرشن حطهم فوق الكونفرجيشن وحط بينهم وبين الي فوقيهم خط فاصل”. The four screens form a separate group immediately above Settings, with a divider above them. Existing chrome is preserved. This later note overrides the proposal’s position after Recipes.
+See the [automated record](../testing/FEAT-136-automated.md) and [manual sweep](../testing/FEAT-136-sweep.md). No new dependency was added.

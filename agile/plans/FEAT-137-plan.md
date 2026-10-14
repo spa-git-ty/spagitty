@@ -15,24 +15,24 @@ Written on 2026-10-14, before the code.
 5. **The commands** in `src-tauri/src/hooks.rs`: load/save/install, import, preview staged matches, dry-run, try-message and list/read runs. Register them in `lib.rs`. Reuse the repository watcher for run-record events, including common git directories in worktrees.
 6. **Typed screen state** in `src/lib/hooks/builder-types.ts`, `builder-api.ts`, `builder.svelte.ts`: generation guards when repositories change, separate read/save/run errors, dirty state, stage ordering and selected block/run/step.
 7. **The screen** at `/hooks`, with `/hooks/runs` and `/hooks/edit`: a header switch, Runs’ step list/log/restage/staged summaries and the builder’s stage list/editor/catalogue. Use shared controls, tokens and fonts. Add the Settings link.
-8. **Navigation and records** in `nav.ts`, `icons.ts`, palette commands, the item, automated record, sweep, screens document and changelog. The new group sits immediately above Settings, as the author asked on 2026-10-14.
+8. **Navigation and records** in `nav.ts`, `icons.ts`, palette commands, the item, automated record, sweep, screens document and changelog. The new group sits immediately above Settings.
 
 ## What is decided, and why
 
-- **Managers retain control by default.** The author approved Leave it, with explicit Import. An import never overwrites an existing manager stub.
-- **Shared or personal storage.** The author approved `.spagitty/hooks.toml` for the shared definition and application data for a personal definition.
+- **Managers retain control by default.** Import is explicit. An import never overwrites an existing manager stub.
+- **Shared or personal storage.** Use `.spagitty/hooks.toml` for the shared definition and application data for a personal definition.
 - **One implementation of message checks.** Try a message invokes the generated script on a temporary file; no separate frontend regex validator.
 - **Standalone run records.** Shell commits and application commits write the same records. The screen reads them without entering the commit’s path.
-- **A separate navigation group.** The author’s later note places these screens above Settings with a separator; the shell’s existing appearance stays.
-- **Incremental review.** The author's later instruction on 2026-10-14 authorizes pushing each checked feature branch and opening its pull request. The initial release is merged, so Hooks targets main; later features target the preceding feature branch.
+- **A separate navigation group.** Place these screens above Settings with a separator; the shell’s existing appearance stays.
+- **Incremental review.** Checked feature branches have separate pull requests. The initial release is merged, so Hooks targets main; later features target the preceding feature branch.
 
 ## Where this differs from the item or the proposal
 
-- The four navigation rows sit after Tools and before Settings, following the author’s later instruction.
+- The four navigation rows sit after Tools and before Settings.
 
 ## Dependencies
 
-Amended on 2026-10-14, before adding these dependencies, after the author's approval:
+Configuration parser dependencies:
 
 - **`toml` 0.9.12, MIT OR Apache-2.0.** Read and write standard TOML definitions, including team edits. Already present in the lockfile; its Rust 1.76 minimum fits the workspace.
 - **`yaml-rust2` 0.10.4, MIT OR Apache-2.0.** Read manager YAML, preserving quoting, multiline commands and anchors. Pipelines will reuse its marked parser. Its Rust 1.65 minimum fits the workspace, and encoding support is disabled. Version 0.10.2 failed to compile with encoding disabled; 0.10.4 is the compatible patch release.

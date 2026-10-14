@@ -17,7 +17,7 @@
 
 - No running application, real host writes, real credentials, rate limits or host permissions were exercised.
 - Linux, macOS, WebKit, visual matching and native branch/agent interactions were not run.
-- The Rust commands and mounted frontend have not been used together in the application. The author owns that sweep.
+- The Rust commands and mounted frontend have not been used together in the application. The application sweep has not been run.
 - CI, Rust coverage, cargo-deny and history secret scanning were not run.
 
 ## Results — 2026-10-14
