@@ -5,7 +5,6 @@
 **Status:** Done — on `codex/FEAT-139-releases`; unmerged. Covered by fixtures and mounted tests; not looked at in the running application.
 **Branch:** `codex/FEAT-139-releases`.
 **Screens:** 1Z, chrome.
-**Raised by:** the author, 2026-10-14: “focus on the screens !! , apply them all functional end to end”.
 **Proposal:** [Forge views](../../docs/proposals/forge-views.md). **Designs:** [Forge views](../../design_handoff_forge_views/).
 
 ## Change
@@ -35,7 +34,7 @@ Read, draft, publish and manage releases and their attached files beside the rep
 
 ## Differences from the spec and the artboard
 
-- **The rail group sits above Settings,** following the author's later instruction.
+- **The rail group sits above Settings,** using the forge screen group.
 - **Latest and Pre-release are editable on GitHub only.** GitLab has neither field. Its latest badge follows the host's latest-release endpoint.
 - **Changelog commit, push and publication are separately confirmed.** A cancelled push retains the committed id so the action can resume without another commit. Existing tags are refused for a new changelog commit.
 - **File transfers are bounded to 2 GiB per file.** The file is streamed rather than loaded into memory; failed files can be retried separately.
@@ -44,12 +43,4 @@ Read, draft, publish and manage releases and their attached files beside the rep
 
 ## Checks
 
-See the [automated record](../testing/FEAT-139-automated.md) and [author sweep](../testing/FEAT-139-sweep.md). No new dependency was added.
-
-## The author's note of 2026-10-14
-
-Later on 2026-10-14, the author said: “اعمل بوش اول ب اول وافتح ال PR” and “عشان اراجع معاك اول ب اول”. Push each checked feature branch and open its pull request for incremental review. This supersedes the earlier no-push decision; no merge remains authorized.
-
-The author approved the proposed implementation choices on 2026-10-14: all listed host writes, each confirmed; existing managers remain in control unless Import is chosen; shared blocks use `.spagitty/hooks.toml`, personal blocks use application data; local pipeline execution is deferred; hidden releases are local; separate stacked branches start at `release/3.0.1`, with no merge or push.
-
-The author then said: “اه كمل كده + في الريل الي عالشمال اعمل فاصل للشاشات الجديده زي البروبوزال ما عامل احنا الردي عندنا فاصل فوق بعد الفارم و فاصل تحت قبل الكونفجرشن حطهم فوق الكونفرجيشن وحط بينهم وبين الي فوقيهم خط فاصل”. The four screens form a separate group immediately above Settings, with a divider above them. Existing chrome is preserved. This later note overrides the proposal’s position after Recipes.
+See the [automated record](../testing/FEAT-139-automated.md) and [manual sweep](../testing/FEAT-139-sweep.md). No new dependency was added.

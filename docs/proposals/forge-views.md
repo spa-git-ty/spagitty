@@ -4,8 +4,7 @@
 
 **Prepared:** 2026-10-14\
 **Target:** 3.1.0\
-**Status:** Proposed. To be recorded as four backlog items, FEAT-136 to FEAT-139, once the author answers the questions in [section 13](#13-questions-for-the-author). Nothing here is to be built before those answers.\
-**Raised by:** the author, 2026-10-14: an issue tracker view for issues on GitHub and GitLab (Bitbucket and "iceberg" later); a Hooks tab that shows a pre-commit run step by step with its logs, and lets the person add and edit the common hooks — run the tests of a project when it is in the diff, run a script, format and lint, check the commit message against rules; a pipeline visualiser that renders the workflow YAML as a flow locally, before anything is pushed, and a live view of the remote pipeline per pull request or merge on a watched branch such as main; and, the same day, a Releases tab: list the releases on GitHub or GitLab, draft, remove, hide or publish one, with its files, download links and changelog.\
+**Status:** Implementation scope for four forge screens.\
 **Screens:** 1W Issues, 1X Hooks (Runs and Hooks), 1Y Pipelines (Preview and Live), 1Z Releases — all new. Chrome: four rail rows. *The codes are proposed; check them against the screen list.*\
 **Designs:** [`design_handoff_forge_views/`](../../design_handoff_forge_views/), listed in [section 12](#12-designs).
 
@@ -23,10 +22,10 @@ Spagitty 3.1 shows what happens around the code, not only the code.
 1. **Nothing new is louder than the work.** Each screen is one rail row and one route. The title bar, the rail, the toolbar and the status strip in the artboards are context; where they differ from `TitleBar.svelte`, `NavRail.svelte`, `Toolbar.svelte` and `StatusStrip.svelte`, the components win.
 2. **`forge/http.rs` stays the only place a request is made.** Every call in this proposal goes through it, to a host the person connected, with the token they gave (`forge/keychain.rs`). No new HTTP client, no tokio: `ureq` is blocking and the workers are threads.
 3. **The UI's vocabulary never names a host.** `Issue`, `Release`, `Run`, `Job` are Spagitty's shapes; `forge/github.rs` and `forge/gitlab.rs` map each host's JSON onto them, as `PullRequest` does today. A host that cannot do something (GitLab has no draft releases) shows that as a fact on the screen, not as a missing button with no reason.
-4. **Writes to a host are a decision, not a default.** `forge.rs` records that the forge layer was read-only by decision; `forge/review.rs` later added the review verdict and merge. Issues, Pipelines and Releases each want writes (comment, close, cancel, re-run, publish, delete). Each write is its own action with its own confirmation and failure message, and the set is the author's to approve ([13](#13-questions-for-the-author), question 1).
+4. **Writes to a host are a decision, not a default.** `forge.rs` records that the forge layer was read-only by decision; `forge/review.rs` later added the review verdict and merge. Issues, Pipelines and Releases each want writes (comment, close, cancel, re-run, publish, delete). Each write is its own action with its own confirmation and failure message, with scope defined in the implementation decisions ([13](#13-implementation-decisions), question 1).
 5. **A preview never guesses.** Where Pipelines cannot decide something locally (an expression it does not evaluate, a remote include), the job is drawn as *decided on the host*, never as runs or skipped.
 6. **Hooks work without Spagitty.** A commit made in a terminal runs the same hooks and leaves the same run record. Spagitty reads the record; it is not in the commit's path.
-7. **Labels only where they are needed.** The author wants the screens light on wording; hover titles carry detail.
+7. **Labels only where they are needed.** The screens use short labels; hover titles carry detail.
 
 ## 3. Words used here
 
@@ -49,7 +48,7 @@ Spagitty 3.1 shows what happens around the code, not only the code.
 | 1Y | Pipelines | `/pipelines` (`/pipelines/preview`, `/pipelines/live`) | FEAT-138 |
 | 1Z | Releases | `/releases` | FEAT-139 |
 
-The artboards put the four rows in a group of their own, after Recipes and before Investigate. That is a new group in `NAV_ITEMS`, and FEAT-134 lets people reorder only within a group, so the group is the author's call ([13](#13-questions-for-the-author), question 2). Icons for `issues`, `hooks`, `pipelines` and `releases` are in the artboards' scripts; draw them into `icons.ts` at the same stroke as the others. All four rows are pinned by default (TASK-056) and can be hidden with FEAT-134.
+The artboards put the four rows in a group of their own, after Recipes and before Investigate. That is a new group in `NAV_ITEMS`, and FEAT-134 lets people reorder only within a group, so the group is the author's call ([13](#13-implementation-decisions), question 2). Icons for `issues`, `hooks`, `pipelines` and `releases` are in the artboards' scripts; draw them into `icons.ts` at the same stroke as the others. All four rows are pinned by default (TASK-056) and can be hidden with FEAT-134.
 
 *Settings › Hooks* (FEAT-107) stays where it is for the per-repository switch; it gains a link to the Hooks screen.
 
@@ -75,11 +74,11 @@ The artboards put the four rows in a group of their own, after Recipes and befor
 
 - **Start branch** (local, no write to the host): creates `fix/<n>-<slug>` or `feat/<n>-<slug>` from the default branch, by the label, through the existing branch code, and checks it out. The name is editable before it is made.
 - **Hand to agent:** opens the 2.0 assignment flow with the issue's title, body and comments as the task. The FEAT-115 rules hold: scratch worktree, the person's working copy is not touched.
-- **Comment, Close, Close with comment, New issue:** host writes ([13](#13-questions-for-the-author), question 1). Hidden, not disabled, when the token cannot write.
+- **Comment, Close, Close with comment, New issue:** host writes ([13](#13-implementation-decisions), question 1). Hidden, not disabled, when the token cannot write.
 
 ### 5.4 Other hosts
 
-Bitbucket and "iceberg" are not in 3.1. The screen shows *Bitbucket · soon* only to say so. A host is a module and an arm of `Kind`, nothing more ([13](#13-questions-for-the-author), question 3).
+Bitbucket and "iceberg" are not in 3.1. The screen shows *Bitbucket · soon* only to say so. A host is a module and an arm of `Kind`, nothing more ([13](#13-implementation-decisions), question 3).
 
 ## 6. Hooks (FEAT-137)
 
@@ -140,7 +139,7 @@ When Husky, lefthook or pre-commit owns `core.hooksPath`, Spagitty does not take
 - **Import:** read `.pre-commit-config.yaml` or `lefthook.yml` and map known hooks onto blocks (`run` / `entry` lines that are not recognised become *Run a script*). The original file is left in place.
 - **Leave it:** the builder is read-only and *Runs* still shows runs made through Spagitty's commit, from the output FEAT-107 already captures, as one step per manager command.
 
-Which of these is the default is [13](#13-questions-for-the-author), question 4.
+Which of these is the default is [13](#13-implementation-decisions), question 4.
 
 ## 7. Pipelines (FEAT-138)
 
@@ -159,7 +158,7 @@ Which of these is the default is [13](#13-questions-for-the-author), question 4.
 - **Edges** go from a job's right side to a dependent's left side; a dashed edge leads to a job that is skipped. Matrix jobs show as one card with `×N`, expandable.
 - **Large workflows:** cards are placed once and drawn with the same virtual approach as the graph screen; over 200 jobs the graph opens collapsed to stages.
 - **Side panel:** the selected job's runner, matrix, services, timeout, secrets used (names only), steps, the line in the file, and *why* it runs or is skipped in this simulation.
-- **Run this job locally** is in the artboard; it would need a runner such as `act` and a container engine. [13](#13-questions-for-the-author), question 6.
+- **Run this job locally** is in the artboard; it would need a runner such as `act` and a container engine. [13](#13-implementation-decisions), question 6.
 
 ### 7.3 Live
 
@@ -169,7 +168,7 @@ Which of these is the default is [13](#13-questions-for-the-author), question 4.
 - **No webhooks.** A desktop application cannot receive them. Live polls with conditional requests: every 5 s for a run in progress while the screen is open, every 60 s for watched branches otherwise, and stops when the window is hidden. The status strip says *updated N s ago*, never *live* when it is not.
 - **Watched:** the default branch, plus any branches the person adds (*Watch a branch…*), plus the person's open requests (from `forge/watch.rs`). Stored per repository in application data.
 - **Run strip:** the last 12 runs on the selected branch, bar height by duration, colour by result.
-- **Cancel, Re-run failed:** host writes ([13](#13-questions-for-the-author), question 1). Tokens need Actions read (and write for these) on GitHub, `read_api` (or `api` for writes) on GitLab. A missing scope is said in words, with the scope's name.
+- **Cancel, Re-run failed:** host writes ([13](#13-implementation-decisions), question 1). Tokens need Actions read (and write for these) on GitHub, `read_api` (or `api` for writes) on GitLab. A missing scope is said in words, with the scope's name.
 
 ## 8. Releases (FEAT-139)
 
@@ -191,7 +190,7 @@ Which of these is the default is [13](#13-questions-for-the-author), question 4.
 
 ### 8.4 Writing
 
-All host writes ([13](#13-questions-for-the-author), question 1):
+All host writes ([13](#13-implementation-decisions), question 1):
 
 - **GitHub:** create (`draft: true`), update, publish (`draft: false`), delete; assets uploaded to the release's `upload_url` (`uploads.github.com`), deleted by id. Publishing with a new tag lets GitHub create the tag at `target_commitish`.
 - **GitLab:** no draft on the host, so a GitLab draft lives in Spagitty's application data until *Publish*, which creates the tag (if new) and the release in one call. Files are uploaded to the project's generic package registry and linked as release assets.
@@ -242,15 +241,15 @@ All in `design_handoff_forge_views/source/`, 1440×900, dark reference theme (ea
 
 **When they disagree:** this proposal wins on behaviour, the screens win on layout. Exact sizes and colours come from `metrics.ts`, `app.css` and `themes.ts`. The data in the artboards is made up.
 
-## 13. Questions for the author
+## 13. Implementation decisions
 
-1. **Host writes.** Which of these are in 3.1? Issues: comment, close, new issue. Pipelines: cancel, re-run failed. Releases: create, publish, delete, upload. (Proposed: all, each with its own confirmation. Releases is barely useful without them.)
-2. **Rail group.** A new group for the four rows (as drawn), or into Repository after Recipes?
-3. **"iceberg".** Which host is meant: Gitea, Forgejo, or something else? It decides the module name and the API.
-4. **Hooks when a manager is present.** Default to *Import* into Spagitty's blocks, or *Leave it* and show runs only?
-5. **Hooks storage.** Is `.spagitty/hooks.toml`, committed when *Share with repo* is on, the right place, or should Spagitty write the manager's own file (`lefthook.yml`, `.pre-commit-config.yaml`) instead?
-6. **Run this job locally.** Keep it (needs `act` and a container engine, both outside Spagitty), or drop the button for 3.1?
-7. **Hide a release.** Local to this machine, as proposed, or shared through the repository?
+1. Host writes use individual confirmations.
+2. The four screens form a group immediately above Settings.
+3. Additional hosts are outside this release.
+4. Existing hook managers retain control until explicit Import.
+5. Shared hooks use `.spagitty/hooks.toml`; personal hooks use application data.
+6. Local pipeline execution is outside this release.
+7. Hidden releases are local to this machine.
 
 ## 14. Non-scope
 

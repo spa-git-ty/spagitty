@@ -48,4 +48,3 @@
 
 - `toml` 0.9.12: MIT OR Apache-2.0, Rust 1.76 minimum. Standard TOML definitions; already in the lockfile.
 - `yaml-rust2` 0.10.4: MIT OR Apache-2.0, Rust 1.65 minimum. Manager configuration and the marked parser to be reused by Pipelines. Optional encoding support is disabled. Its new transitive crates are `arraydeque`, `hashlink` and `hashbrown` (MIT OR Apache-2.0), and `foldhash` 0.1.5 (Zlib). `deny.toml` permits Zlib; the existing dependency tree already includes `foldhash` 0.2.0 under that licence.
-- The author approved these additions on 2026-10-14. No network client was added.

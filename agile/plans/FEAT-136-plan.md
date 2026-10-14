@@ -21,11 +21,11 @@ Written on 2026-10-14, before the code.
 - **A cached answer is provisional.** It paints immediately; a failed refresh retains it and says why. Cache keys include repository, account, filter and page.
 - **Writes are one attempt.** Transport failures may follow delivery, so no automatic retry creates duplicate issues or comments.
 - **Known missing permissions hide writes.** Scope headers and host refusals are authoritative. An unknown scope is not presented as proof of access; the host still checks every write.
-- **Incremental review.** This branch starts at Hooks and its pull request targets the Hooks branch, as the author asked.
+- **Incremental review.** This branch starts at Hooks and its pull request targets the Hooks branch.
 
 ## Where this differs from the item or the proposal
 
-- **Navigation placement** follows the author's later instruction: a separate group above Settings.
+- **Navigation placement** uses a separate group above Settings.
 - **Existing Markdown image policy** remains authoritative: images are safe links, rather than loading arbitrary remote images into the webview.
 - **Issue assignment uses the existing Farm task editor.** The 2.0 assignment engine accepts review and merge jobs only. The issue brief opens as an unready Farm draft for review and agent selection; its existing executor owns the scratch worktree. No agent starts from the issue button.
 - **Replies sorting is offered on GitHub only.** GitLab's issue API has no replies ordering; typed requests for that ordering report the limitation.

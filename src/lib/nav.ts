@@ -248,7 +248,7 @@ export const NAV_ITEMS: NavItem[] = [
 		icon: 'folder'
 	},
 	// FEAT-137: the new screens have a separator above them, immediately
-	// before Settings, following the author's note of 2026-10-14.
+	// before Settings.
 	{ code: '1W', label: 'Issues', href: '/issues', group: 'forge', icon: 'issues', since: '3.1' },
 	{ code: '1X', label: 'Hooks', href: '/hooks', group: 'forge', icon: 'hooks', since: '3.1' },
 	{ code: '1Z', label: 'Releases', href: '/releases', group: 'forge', icon: 'releases', since: '3.1' },

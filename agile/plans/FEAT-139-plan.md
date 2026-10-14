@@ -21,7 +21,7 @@ Written on 2026-10-14, before release code.
 - Host writes get one attempt; uncertain delivery asks for a refresh before retry.
 - GitLab has neither host drafts nor release link download counts. Drafts stay local and unavailable counts are absent. Its latest release follows host ordering; GitHub alone exposes the explicit Latest option.
 - Publishing a new GitHub tag uses its resolved commit id. GitLab uses its release create call with a resolved ref. Existing tags are never retargeted.
-- The rail group stays immediately above Settings, as the author requested.
+- The rail group stays immediately above Settings.
 - This branch stacks on Issues; no merge is authorized.
 
 ## Dependencies
