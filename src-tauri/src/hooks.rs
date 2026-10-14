@@ -7,7 +7,7 @@ use crate::commands::AppState;
 use serde::Serialize;
 use spagitty_core::hooks::{
     self,
-    blocks::{Definition, Stage},
+    blocks::{Action, Definition, Stage},
     builder,
 };
 use std::path::{Path, PathBuf};
@@ -158,6 +158,13 @@ pub fn hooks_try_message(
         return Err("The message is too long or contains a NUL character.".into());
     }
     let repo = repository(&state, "hooks_try_message")?;
+    let mut definition = definition;
+    definition.blocks.retain(|block| {
+        block.stage == Stage::CommitMsg && matches!(block.action, Action::Message { .. })
+    });
+    if definition.blocks.is_empty() {
+        return Err("This definition has no commit-message rule to try.".into());
+    }
     let directory = builder::scripts(&repo, &definition, false, false)?;
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let temporary = builder::folder(&repo)?.join(format!(

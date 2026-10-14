@@ -58,7 +58,7 @@ fn add(
                 .split(|c: char| c.is_whitespace() || c == ':')
                 .any(|word| word == *tool)
         });
-    let action = if has_files || preset.is_some() {
+    let action = if has_files {
         if paths.is_empty() {
             paths.push("**".into());
         }

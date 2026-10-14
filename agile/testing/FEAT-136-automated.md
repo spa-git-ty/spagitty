@@ -31,6 +31,19 @@
 - `bun run coverage`: 214 files, 4758 tests passed. Statements 84.09%, branches 74.14%, functions 80.91%, lines 86.93%; all exceed the configured 70% floor.
 - `bun run test` after the final records: 214 files, 4759 tests passed.
 
+## Pull request conflict resolution — 2026-10-14
+
+PR #74 now includes the reviewed Hooks branch. The resolution retains the Issues implementation record and its navigation row beside Hooks. No new dependency was added.
+
+- `cargo fmt --all -- --check`: clean.
+- `cargo clippy --workspace --all-targets -- -D warnings`: clean.
+- `cargo test -p spagitty -p spagitty-core -p spagitty-process`: 171, 906 and 27 passed; 0 failed. The two existing live tests remain ignored.
+- `bun run check`: 0 errors, 0 warnings.
+- `bun run coverage --maxWorkers=4`: 214 files, 4759 tests passed. Statements 84.09%, branches 74.14%, functions 80.90%, lines 86.93%; all exceed the configured 70% floor.
+- `bun run build`: succeeded.
+- The first coverage run exceeded the five-second timeout in the unchanged production CSS probe while Rust tests ran concurrently. All six CSS probe tests passed with one worker. The complete coverage run above passed with four workers; no assertion, timeout or threshold changed.
+- The running application, real host operations, other operating systems, Rust coverage and CI were not checked during this resolution.
+
 ## Baseline differences outside this item
 
 The unchanged icon and brand generator differences and missing optional audit tools are recorded in [FEAT-137](FEAT-137-automated.md). Frontend coverage uses the configured 70% floor, despite older documentation saying 65%.
