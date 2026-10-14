@@ -74,7 +74,7 @@ The builder has the seven catalogue blocks, ordered inside pre-commit, commit-ms
 
 Shared definitions use `.spagitty/hooks.toml`. Personal definitions live in application data. Installing is explicit, including after a clone. A manager retains control by default; Import reads its commands without changing its files. Installing imported blocks switches git to a managed directory, preserving the manager's originals.
 
-The new screens form their own group immediately above Settings, with a separator above them, as the author asked on 2026-10-14. The existing shell components keep their appearance.
+The new screens form their own group immediately above Settings, with a separator above them. The existing shell components keep their appearance.
 
 ## The chrome
 
