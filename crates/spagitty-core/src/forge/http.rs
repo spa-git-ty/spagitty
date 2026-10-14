@@ -349,8 +349,12 @@ fn send_json(verb: Verb, url: &str, token: &str, host: &str, body: &str) -> Resu
 }
 
 fn agent() -> ureq::Agent {
+    agent_with_timeout(TIMEOUT)
+}
+
+fn agent_with_timeout(timeout: Duration) -> ureq::Agent {
     ureq::Agent::config_builder()
-        .timeout_global(Some(TIMEOUT))
+        .timeout_global(Some(timeout))
         .timeout_connect(Some(CONNECT_TIMEOUT))
         // See the header: a redirect that changed host would carry the token
         // with it.
@@ -383,6 +387,156 @@ fn agent() -> ureq::Agent {
         )
         .build()
         .new_agent()
+}
+
+/// Binary transfers use the same TLS and redirect policy, with time for large
+/// artifacts. The caller derives destinations from the configured host.
+pub fn upload_file(
+    url: &str,
+    token: &str,
+    host: &str,
+    path: &std::path::Path,
+    put: bool,
+    mut progress: impl FnMut(u64),
+) -> Result<Response> {
+    if !url.starts_with("https://") {
+        return Err(Error::Forge {
+            host: host.into(),
+            detail: "refusing an unencrypted file upload".into(),
+        });
+    }
+    let file = std::fs::File::open(path)?;
+    let total = file.metadata()?.len();
+    if total > 2 * 1024 * 1024 * 1024 {
+        return Err(Error::Forge {
+            host: host.into(),
+            detail: "Release files must be at most 2 GiB.".into(),
+        });
+    }
+    struct Upload<'a, F> {
+        file: std::fs::File,
+        sent: u64,
+        next: u64,
+        progress: &'a mut F,
+    }
+    impl<F: FnMut(u64)> Read for Upload<'_, F> {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            let size = self.file.read(buffer)?;
+            self.sent += size as u64;
+            if self.sent >= self.next || size == 0 {
+                (self.progress)(self.sent);
+                self.next = self.sent + 262144;
+            }
+            Ok(size)
+        }
+    }
+    let mut reader = Upload {
+        file,
+        sent: 0,
+        next: 0,
+        progress: &mut progress,
+    };
+    let agent = agent_with_timeout(Duration::from_secs(1800));
+    let request = if put { agent.put(url) } else { agent.post(url) };
+    let response = request
+        .header("Authorization", &format!("Bearer {token}"))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Length", &total.to_string())
+        .send(ureq::SendBody::from_reader(&mut reader))
+        .map_err(|error| Error::ForgeOffline {
+            host: host.into(),
+            detail: format!(
+                "Upload delivery is uncertain: {error}. Refresh the host before retrying."
+            ),
+        })?;
+    progress(total);
+    Ok(read(response))
+}
+
+/// Follow signed download locations without forwarding the account token.
+/// The host API URL on the first request is constructed by the core caller.
+pub fn download_file(
+    url: &str,
+    token: &str,
+    host: &str,
+    file: &mut std::fs::File,
+    mut progress: impl FnMut(u64, u64),
+) -> Result<()> {
+    use std::io::Write;
+    let mut location = url.to_string();
+    let agent = agent_with_timeout(Duration::from_secs(1800));
+    for hop in 0..=4 {
+        if !location.starts_with("https://") {
+            return Err(Error::Forge {
+                host: host.into(),
+                detail: "refusing an unencrypted artifact download".into(),
+            });
+        }
+        let mut request = agent
+            .get(&location)
+            .header("Accept", "application/octet-stream");
+        if hop == 0 && !token.is_empty() {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        let mut response = request.call().map_err(|error| Error::ForgeOffline {
+            host: host.into(),
+            detail: error.to_string(),
+        })?;
+        let status = response.status().as_u16();
+        if matches!(status, 301 | 302 | 303 | 307 | 308) {
+            location = response
+                .headers()
+                .get("location")
+                .and_then(|header| header.to_str().ok())
+                .filter(|url| url.starts_with("https://"))
+                .ok_or_else(|| Error::Forge {
+                    host: host.into(),
+                    detail: "The artifact redirect has no HTTPS destination.".into(),
+                })?
+                .into();
+            continue;
+        }
+        if !(200..300).contains(&status) {
+            return Err(super::status_error(host, status, "", None));
+        }
+        let total = response
+            .headers()
+            .get("content-length")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.parse::<u64>().ok())
+            .unwrap_or(0);
+        let limit = 2 * 1024 * 1024 * 1024;
+        if total > limit {
+            return Err(Error::Forge {
+                host: host.into(),
+                detail: "The artifact exceeds 2 GiB.".into(),
+            });
+        }
+        let mut reader = response.body_mut().as_reader();
+        let mut buffer = [0u8; 65536];
+        let mut sent = 0;
+        loop {
+            let count = reader.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            }
+            sent += count as u64;
+            if sent > limit {
+                return Err(Error::Forge {
+                    host: host.into(),
+                    detail: "The artifact exceeds 2 GiB.".into(),
+                });
+            }
+            file.write_all(&buffer[..count])?;
+            progress(sent, total);
+        }
+        file.flush()?;
+        return Ok(());
+    }
+    Err(Error::Forge {
+        host: host.into(),
+        detail: "The artifact redirected too many times.".into(),
+    })
 }
 
 fn read(mut response: ureq::http::Response<ureq::Body>) -> Response {
@@ -447,6 +601,26 @@ mod tests {
             get_conditional_json("http://github.com/x", "secret", "github.com", Some("tag")),
             Err(Error::Forge { .. })
         ));
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("file");
+        assert!(upload_file(
+            "http://example.org/upload",
+            "secret",
+            "example.org",
+            &path,
+            false,
+            |_| {}
+        )
+        .is_err());
+        let mut file = std::fs::File::create(path).unwrap();
+        assert!(download_file(
+            "http://example.org/download",
+            "secret",
+            "example.org",
+            &mut file,
+            |_, _| {}
+        )
+        .is_err());
     }
 
     #[test]

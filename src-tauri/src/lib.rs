@@ -28,6 +28,7 @@ mod profiles;
 mod rebase_worker;
 mod recents;
 mod recipes;
+mod releases;
 mod review_state;
 mod search_worker;
 mod settings;
@@ -91,6 +92,18 @@ pub fn run() {
             issues::issues_thread,
             issues::issues_write,
             issues::issues_branch,
+            releases::releases_preferences,
+            releases::releases_hide,
+            releases::releases_cached,
+            releases::releases_page,
+            releases::releases_write,
+            releases::releases_notes,
+            releases::releases_target,
+            releases::releases_changelog,
+            releases::releases_push_target,
+            releases::releases_upload,
+            releases::releases_artifacts,
+            releases::releases_download_artifact,
             commands::head_message,
             commands::branches,
             commands::checkout,
