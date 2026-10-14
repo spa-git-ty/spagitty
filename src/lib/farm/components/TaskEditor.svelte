@@ -21,6 +21,7 @@
 	interface Props {
 		/** The task being edited, or nothing for a new one. */
 		task: Task | null;
+		initial?: TaskDraft | null;
 		/** Tasks that can be depended on — everything except this one. */
 		candidates: Task[];
 		busy: boolean;
@@ -28,7 +29,7 @@
 		oncancel: () => void;
 	}
 
-	let { task, candidates, busy, onsave, oncancel }: Props = $props();
+	let { task, initial = null, candidates, busy, onsave, oncancel }: Props = $props();
 
 	/*
 	 * Seeded once, on purpose, and `untrack` says so.
@@ -40,8 +41,8 @@
 	 * identifier, so choosing a different task builds a new form rather than
 	 * mutating this one.
 	 */
-	let title = $state(untrack(() => task?.title ?? ''));
-	let description = $state(untrack(() => task?.description ?? ''));
+	let title = $state(untrack(() => task?.title ?? initial?.title ?? ''));
+	let description = $state(untrack(() => task?.description ?? initial?.description ?? ''));
 	let kind = $state<TaskKind>(untrack(() => task?.kind ?? 'general'));
 	let priority = $state<TaskPriority>(untrack(() => task?.priority ?? 'normal'));
 	let dependsOn = $state<string[]>(untrack(() => task?.dependsOn ?? []));
@@ -49,7 +50,7 @@
 	let criteria = $state(untrack(() => text(task?.acceptanceCriteria ?? [])));
 	let checks = $state(untrack(() => text(task?.verification ?? [])));
 	let overrides = $state(untrack(() => task?.verificationOverrides ?? false));
-	let ready = $state(untrack(() => task === null));
+	let ready = $state(untrack(() => initial?.ready ?? task === null));
 
 	const canSave = $derived(title.trim().length > 0 && !busy);
 

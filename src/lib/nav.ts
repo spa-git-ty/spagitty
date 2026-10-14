@@ -76,6 +76,7 @@ export type ScreenCode =
 	| '1T'
 	| '1U'
 	| '1V'
+	| '1W'
 	| '1X';
 
 /**
@@ -247,6 +248,7 @@ export const NAV_ITEMS: NavItem[] = [
 	},
 	// FEAT-137: the new screens have a separator above them, immediately
 	// before Settings.
+	{ code: '1W', label: 'Issues', href: '/issues', group: 'forge', icon: 'issues', since: '3.1' },
 	{ code: '1X', label: 'Hooks', href: '/hooks', group: 'forge', icon: 'hooks', since: '3.1' },
 	{
 		code: '1K',

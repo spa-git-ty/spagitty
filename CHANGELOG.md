@@ -16,6 +16,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Added
 
+- **Issues** reads GitHub and GitLab issues beside the code. Filter the list, read comments and events, create an issue, comment or close after confirmation. Start a branch from the default branch or prepare the full issue as a Farm task for review and agent selection.
+
 - **Hooks** shows each step of a hook run with its state, time and output, including commits made in a terminal. Build tests, formatters, message checks and scripts from blocks, try them on staged files, and save them for this clone or share them with the repository.
   - Existing hook managers stay in control until you import and install. Hand-written hooks are never overwritten.
   - Formatting leaves partially staged files alone. A formatter's restage can be undone while the index still contains its result.

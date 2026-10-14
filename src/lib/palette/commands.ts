@@ -68,6 +68,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.review', title: 'Go to Review', path: '/review', keywords: ['pr', 'pull request', 'read'] },
 	{ id: 'go.recipes', title: 'Go to Recipes', path: '/recipes', keywords: ['blocks', 'steps', 'script', 'automate', 'workflow'] },
 	{ id: 'go.hooks', title: 'Go to Hooks', path: '/hooks', keywords: ['pre-commit', 'checks', 'lint', 'scripts', 'commit message'] },
+	{ id: 'go.issues', title: 'Go to Issues', path: '/issues', keywords: ['bugs', 'tracker', 'tickets', 'discussion'] },
 	{ id: 'go.tags', title: 'Go to Tags', path: '/tags', keywords: ['refs', 'release'] },
 	{ id: 'go.reflog', title: 'Go to Reflog', path: '/reflog', keywords: ['undo', 'recover', 'lost'] },
 	{ id: 'go.rebase', title: 'Go to Interactive rebase', path: '/rebase', keywords: ['reorder', 'squash'] },

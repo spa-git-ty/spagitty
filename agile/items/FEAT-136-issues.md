@@ -2,7 +2,7 @@
 
 # FEAT-136 — Issues beside the code
 
-**Status:** Backlog — recorded 2026-10-14; not started.
+**Status:** Done — on `codex/FEAT-136-issues`; unmerged. Covered by fixtures and mounted tests; not looked at in the running application.
 **Branch:** `codex/FEAT-136-issues`.
 **Screens:** 1W, chrome.
 **Proposal:** [Forge views](../../docs/proposals/forge-views.md). **Designs:** [Forge views](../../design_handoff_forge_views/).
@@ -24,3 +24,21 @@ GitHub and GitLab issues beside the code, with a branch and an agent one click a
 
 - Other hosts, workflow editing, local workflow execution and partial-staging stashes are outside 3.1.
 - The other three screens have their own items.
+
+## What was built
+
+- **Host reads and writes:** `forge/issues.rs` maps GitHub and GitLab lists, comments, events, filters and metadata. `forge/http.rs` adds conditional reads without moving credentials to the frontend.
+- **Commands:** `src-tauri/src/issues.rs` resolves configured remotes, caches per account, confirms writes and creates branches through the existing writer. `forge_views.rs` shares this context with the remaining screens.
+- **Screen:** `src/lib/issues/` contains typed commands, guarded state, virtual rows, safe Markdown, the thread and details. The shared watcher refreshes subscribed screens while visible.
+- **Assignment:** Farm accepts the reviewed issue brief as an unready task draft. Existing execution owns the scratch worktree.
+
+## Differences from the spec and the artboard
+
+- **The group sits above Settings,** using the forge screen group. Existing chrome stays in place.
+- **Hand to agent opens the existing Farm task editor.** The 2.0 assignment engine accepts only review and merge jobs. The issue becomes an unready task draft, then uses Farm's agent selection and scratch execution.
+- **Remote images stay links,** following the existing Markdown policy.
+- **Replies sorting is GitHub only.** GitLab provides no ordering by reply count; typed requests report the limitation.
+
+## Checks
+
+See the [automated record](../testing/FEAT-136-automated.md) and [manual sweep](../testing/FEAT-136-sweep.md). No new dependency was added.

@@ -28,6 +28,32 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let reading = false;
 let lastError = $state<string | null>(null);
 let lastChecked = $state<number | null>(null);
+let notificationEvery: number | null = null;
+let nextNotification = 0;
+const subscribers = new Map<symbol, { every: number; next: number; read: () => void | Promise<void> }>();
+
+/** One forge clock, also used by open forge screens. Turning notifications
+ * off stops their reads while subscribed screens retain their own refresh. */
+function schedule(): void {
+	if (timer) clearInterval(timer);
+	timer = null;
+	const periods = [...subscribers.values()].map((subscriber) => subscriber.every);
+	if (notificationEvery !== null) periods.push(notificationEvery);
+	if (!periods.length) return;
+	timer = setInterval(() => {
+		if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+		const now = Date.now();
+		if (notificationEvery !== null && now >= nextNotification) {
+			nextNotification = now + notificationEvery; void check();
+		}
+		for (const subscriber of subscribers.values()) {
+			if (now >= subscriber.next) {
+				subscriber.next = now + subscriber.every;
+				void Promise.resolve().then(subscriber.read).catch(() => {});
+			}
+		}
+	}, Math.min(...periods));
+}
 
 function readSeen(): Record<string, Watched> | null {
 	try {
@@ -90,8 +116,8 @@ async function check(): Promise<News[]> {
 }
 
 function stop(): void {
-	if (timer) clearInterval(timer);
-	timer = null;
+	notificationEvery = null;
+	schedule();
 }
 
 export const watcher = {
@@ -104,9 +130,16 @@ export const watcher = {
 
 	/** Look now, then every `minutes`. Restarting replaces the timer. */
 	start(minutes: number): void {
-		stop();
+		notificationEvery = Math.max(1, minutes) * 60_000;
+		nextNotification = Date.now() + notificationEvery;
 		void check();
-		timer = setInterval(() => void check(), Math.max(1, minutes) * 60_000);
+		schedule();
+	},
+
+	subscribe(read: () => void | Promise<void>, every = 60_000): () => void {
+		const key = Symbol(); every = Math.max(5000, every);
+		subscribers.set(key, { read, every, next: Date.now() + every }); schedule();
+		return () => { subscribers.delete(key); schedule(); };
 	},
 
 	stop,
