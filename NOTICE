@@ -111,6 +111,20 @@ set added later must be MIT/OFL or an original commissioned mark, relicensable
 under GPL-3.0-or-later, and must be recorded here.
 
 
+WORKFLOW SCHEMAS (FEAT-138)
+--------------------------
+
+GitHub Actions schema: SchemaStore/schemastore, Apache-2.0, unmodified.
+GitLab CI schema: gitlab-org/gitlab-foss, MIT Expat, unmodified.
+Pinned source commits and original licence texts are included under
+crates/spagitty-core/src/pipelines/schemas/. These are bundled data; the
+offline validator never downloads a schema supplied by a repository.
+
+jsonschema 0.19.1 (MIT) validates the bundled schemas, with HTTP/file
+resolution features disabled. regex (MIT OR Apache-2.0) matches bounded
+GitLab conditions. The build-generated dependency list includes their
+transitive dependencies.
+
 CORRESPONDING SOURCE
 --------------------
 

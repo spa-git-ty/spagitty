@@ -128,6 +128,7 @@ describe('NAV_ITEMS', () => {
 			'/repos',
 			'/issues',
 			'/hooks',
+			'/pipelines',
 			'/releases',
 			'/settings'
 		]);
@@ -245,6 +246,7 @@ describe('isShown', () => {
 			'/repos',
 			'/issues',
 			'/hooks',
+			'/pipelines',
 			'/releases',
 			'/settings'
 		]);

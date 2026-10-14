@@ -1,0 +1,5 @@
+SchemaStore/schemastore 8ae3e0c8c1d637a9bbb929e2ba7d77343df98465
+Apache-2.0. Schemas and LICENSE copied without modification from https://github.com/SchemaStore/schemastore/tree/8ae3e0c8c1d637a9bbb929e2ba7d77343df98465
+
+GitLab CI catalog entry points to gitlab-org/gitlab-foss f66cee4af5ded486185553e3dee1eddc9040d3ac
+MIT Expat. Schema ci.json and GITLAB-LICENSE copied without modification from https://gitlab.com/gitlab-org/gitlab-foss/-/tree/f66cee4af5ded486185553e3dee1eddc9040d3ac

@@ -36,6 +36,7 @@ defect.
 | 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
 | 1W | Issues | `/issues` | yes | Built | FEAT-136 |
 | 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
+| 1Y | Pipelines | `/pipelines/preview`, `/pipelines/live` | yes | Built | FEAT-138 |
 | 1Z | Releases | `/releases` | yes | Built | FEAT-139 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
@@ -1274,3 +1275,13 @@ record. Nothing is written under `.spagitty/` in the repository.
 **Keys** are in `keys.ts`: a block's letter adds it, `j` `k` walk the stack,
 Alt with the arrows reorders, Delete removes, Ctrl+Enter runs, Ctrl+Z takes
 an edit back. None fires while a field has the focus.
+
+## 1Y — Pipelines
+
+**Built.** `src/routes/pipelines/`, `src/lib/pipelines/`, `src-tauri/src/pipelines.rs`, `crates/spagitty-core/src/pipelines/` and `forge/pipelines.rs` (FEAT-138).
+
+Preview reads the working copy's GitHub Actions and GitLab CI files. It resolves concrete local includes, anchors, references, inheritance and matrices, then draws dependencies in Needs or Stages columns. The chosen event, ref and changed files determine runs, approval, skipped or decided-on-host states. Bundled offline schemas and nearest-key hints report problems without executing workflow commands or fetching remote includes.
+
+Jobs retain their source file and line. Open source shows those exact working-copy contents in a read-only panel. Matrices expand; workflows above 200 jobs start as stage summaries. The graph draws only cards and edges around the viewport.
+
+Live reads runs on the default branch, personal watches and own open request branches. The shared forge clock reads active branches every five seconds and quiet branches every sixty, while visible. The run graph reads configuration at the run's actual commit. GitHub step states are available while running; its log follows completion. GitLab partial traces can be read while running. Cancel, re-run failed and GitLab lint each ask for confirmation and send one attempt. Nothing runs locally.

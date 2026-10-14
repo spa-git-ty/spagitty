@@ -16,6 +16,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Added
 
+- **Pipelines** previews GitHub Actions and GitLab CI from the working copy, with job dependencies, matrices, conditions and configuration problems. Live follows watched branches and requests, shows job steps and logs, and confirms cancellation or re-running failed jobs. Local preview executes nothing; unsupported data stays decided on the host.
+
 - **Releases** reads and drafts GitHub and GitLab releases, generates notes from commits, previews Markdown and manages attached files. Publishing, deleting and uploading ask for confirmation. GitLab drafts and hidden releases stay on this machine. Writing a changelog makes an ordinary commit with hooks before a separately confirmed push and publication.
 
 - **Issues** reads GitHub and GitLab issues beside the code. Filter the list, read comments and events, create an issue, comment or close after confirmation. Start a branch from the default branch or prepare the full issue as a Farm task for review and agent selection.

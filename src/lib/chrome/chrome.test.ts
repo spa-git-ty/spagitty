@@ -1286,6 +1286,7 @@ describe('NavRail', () => {
 			'All repositories',
 			'Issues',
 			'Hooks',
+			'Pipelines',
 			'Releases',
 			'Settings'
 		]);
@@ -1507,7 +1508,7 @@ describe('NavRail', () => {
 			const shown = labels(view);
 			expect(shown).not.toContain('Stash');
 			expect(shown).not.toContain('Tags');
-			expect(shown.slice(-5)).toEqual(['More', 'Issues', 'Hooks', 'Releases', 'Settings']);
+			expect(shown.slice(-6)).toEqual(['More', 'Issues', 'Hooks', 'Pipelines', 'Releases', 'Settings']);
 
 			view.destroy();
 		});

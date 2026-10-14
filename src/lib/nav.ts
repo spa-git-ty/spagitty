@@ -78,6 +78,7 @@ export type ScreenCode =
 	| '1V'
 	| '1W'
 	| '1X'
+	| '1Y'
 	| '1Z';
 
 /**
@@ -251,6 +252,7 @@ export const NAV_ITEMS: NavItem[] = [
 	// before Settings.
 	{ code: '1W', label: 'Issues', href: '/issues', group: 'forge', icon: 'issues', since: '3.1' },
 	{ code: '1X', label: 'Hooks', href: '/hooks', group: 'forge', icon: 'hooks', since: '3.1' },
+	{ code: '1Y', label: 'Pipelines', href: '/pipelines', group: 'forge', icon: 'pipelines', since: '3.1' },
 	{ code: '1Z', label: 'Releases', href: '/releases', group: 'forge', icon: 'releases', since: '3.1' },
 	{
 		code: '1K',
