@@ -90,6 +90,7 @@
 				{names}
 				{roles}
 				baseShort={null}
+				rev={repo.info?.head.branch ?? repo.info?.head.id ?? null}
 				onchoose={(path, index, choice) => conflicts.choose(path, index, choice)}
 				onwhole={(path, side) => conflicts.whole(path, side)}
 			>

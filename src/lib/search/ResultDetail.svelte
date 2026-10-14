@@ -5,6 +5,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
+	import { fileAttrs, revOfChange } from '$lib/files/open';
 
 	/**
 	 * The opened commit, beside the results rather than instead of them.
@@ -51,7 +52,9 @@
 		</div>
 		<ul class="filelist mono">
 			{#each detail.files as file (file.path)}
-				<li title={file.path}>{file.path}</li>
+				<li title={file.path} {...fileAttrs(file.path, revOfChange(detail.id, file.status))}>
+					{file.path}
+				</li>
 			{/each}
 		</ul>
 	{/if}

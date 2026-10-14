@@ -33,6 +33,7 @@
 	import { graphOrder } from '$lib/graph/order.svelte';
 	import { graph } from '$lib/graph/store.svelte';
 	import { ROW_PITCH } from '$lib/metrics';
+	import FileMenu from '$lib/files/FileMenu.svelte';
 	import Palette from '$lib/palette/Palette.svelte';
 	import { palette } from '$lib/palette/store.svelte';
 	import { registerCommands } from '$lib/palette/commands';
@@ -482,6 +483,9 @@
 
 <!-- Reaches every command from every screen, so it belongs to the shell. -->
 <Palette />
+
+<!-- Right-click a file on any screen to open it in Files. -->
+<FileMenu />
 
 <!--
 	Every confirmation and every result. Both are mounted once, here, because an

@@ -9,6 +9,7 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import Markdown from '$lib/ui/Markdown.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
+	import { pullFileAttrs } from '$lib/files/open';
 	import { room } from './room.svelte';
 	import type { ConflictFix } from '$lib/types';
 	import { holds, lineOfRow, lineRows, rowsOf, sideBySide, type LineRow, type Row, type SideName } from './rows';
@@ -299,7 +300,11 @@
 		{#if row.kind === 'file'}
 			{@const file = fileOf(row.path)}
 			{@const [dir, name] = split(row.path)}
-			<div class="file" class:first={index === 0}>
+			<div
+				class="file"
+				class:first={index === 0}
+				{...pullFileAttrs(row.path, file?.status ?? 'modified', room.head)}
+			>
 				<span class="path mono" title={row.path}><span class="dir">{dir}</span>{name}</span>
 				{#if file}
 					<span class="counts mono"><span class="add">+{file.added}</span> <span class="del">−{file.removed}</span></span>

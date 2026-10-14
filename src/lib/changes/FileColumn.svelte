@@ -2,6 +2,8 @@
 <script lang="ts">
 	import { changes } from '$lib/changes/store.svelte';
 	import { discardAll, discardPaths } from '$lib/changes/discard';
+	import { fileAttrs } from '$lib/files/open';
+	import { repo } from '$lib/repo.svelte';
 	import FileName from '$lib/ui/FileName.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { DiffSide, StatusEntry } from '$lib/types';
@@ -34,6 +36,17 @@
 	function paths(entries: StatusEntry[]): string[] {
 		return entries.map((entry) => entry.path);
 	}
+
+	/**
+	 * Files reads commits, not the working copy: a changed file opens as the
+	 * branch has it, and a new one is not there to open yet.
+	 */
+	const head = $derived(repo.info?.head.branch ?? repo.info?.head.id ?? null);
+
+	function inFiles(entry: StatusEntry) {
+		const fresh = entry.status === 'added' || entry.status === 'untracked';
+		return fileAttrs(entry.path, head, fresh ? 'Not in a commit yet' : undefined);
+	}
 </script>
 
 <div class="column">
@@ -45,7 +58,7 @@
 			</header>
 			<p class="note explain">Nothing can be committed until these are resolved.</p>
 			{#each work.conflicted as entry (entry.path)}
-				<div class="row conflicted" title={entry.path}>
+				<div class="row conflicted" title={entry.path} {...inFiles(entry)}>
 					<span class="open">
 						<FileName path={entry.path} status="conflicted" />
 					</span>
@@ -71,7 +84,7 @@
 		</header>
 
 		{#each work.staged as entry (entry.path)}
-			<div class="row solid" class:selected={selected(entry, 'staged')}>
+			<div class="row solid" class:selected={selected(entry, 'staged')} {...inFiles(entry)}>
 				<button
 					class="open"
 					onclick={() => changes.open({ path: entry.path, side: 'staged' })}
@@ -121,7 +134,7 @@
 		</header>
 
 		{#each work.unstaged as entry (entry.path)}
-			<div class="row dashed" class:selected={selected(entry, 'unstaged')}>
+			<div class="row dashed" class:selected={selected(entry, 'unstaged')} {...inFiles(entry)}>
 				<button
 					class="open"
 					onclick={() => changes.open({ path: entry.path, side: 'unstaged' })}

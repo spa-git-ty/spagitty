@@ -5,6 +5,7 @@
  * keys, the tree.
  */
 
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, fire, flushSync, press, render, type Mounted } from '../../testing/mount';
 import type { BlameCommit, CompactBlame, FilesEntry, FilesRead } from '$lib/types';
@@ -352,6 +353,30 @@ describe('blame', () => {
 
 		press(keys(), 'b');
 		expect(view!.all('.blame')).toHaveLength(7);
+	});
+
+	/**
+	 * With the blame hidden its column is still in the grid, at no width. A
+	 * number and text left to flow took the first two columns and were drawn
+	 * over each other, the text cut to the number's width.
+	 */
+	it('keeps the number and the text in their own columns, with the blame or without it', () => {
+		const source = readFileSync('src/lib/files/FileView.svelte', 'utf8');
+		const rule = (selector: string) =>
+			new RegExp(`\\n\\t${selector.replace('.', '\\.')} \\{[^}]*grid-column: (\\d)`).exec(source)?.[1];
+		expect(rule('.number')).toBe('2');
+		expect(rule('.text')).toBe('3');
+	});
+
+	it('is widened by dragging its edge, which goes when it does', async () => {
+		await opened();
+		const edge = () => view!.all('[role="separator"][aria-label="Resize the blame"]');
+
+		expect(edge()).toHaveLength(1);
+		press(keys(), 'b');
+		expect(edge()).toHaveLength(0);
+		press(keys(), 'b');
+		expect(edge()).toHaveLength(1);
 	});
 
 	it('is drawn after the text: the lines are there before the blame is', async () => {

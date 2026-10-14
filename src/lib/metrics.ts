@@ -417,6 +417,9 @@ export const ROOM_FILES_W = 262;
 /** The review room's Conversation card (FEAT-093). */
 export const ROOM_CONVERSATION_W = 300;
 
+/** The blame beside every line in Files (FEAT-131), widened by dragging. */
+export const FILES_BLAME_W = 260;
+
 // --- Stash screen columns -------------------------------------------------
 
 /**
@@ -636,6 +639,7 @@ export function applyMetrics(
 		'room-files-w': ROOM_FILES_W,
 		'room-conversation-w': ROOM_CONVERSATION_W,
 		'stash-entries-w': STASH_ENTRIES_W,
+		'files-blame-w': FILES_BLAME_W,
 		'farm-log-h': FARM_LOG_H,
 		// A person's mark beside a commit is the graph node's own diameter, so
 		// the Author column, the commit detail and the canvas agree (FEAT-081).

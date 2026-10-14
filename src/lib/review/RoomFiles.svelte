@@ -4,6 +4,7 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import { agentRead, readingNow } from '$lib/agents/levels';
 	import type { Assignment } from '$lib/agents/types';
+	import { pullFileAttrs } from '$lib/files/open';
 	import { filesView } from './files-view.svelte';
 	import { room } from './room.svelte';
 
@@ -82,7 +83,10 @@
 			{@const author = local && room.isAuthors(file.path)}
 			{@const fix = room.hasFix(file.path)}
 			{@const readByAgent = read.has(file.path) && !waiting.get(file.path)}
-			<li class:on={room.layout === 'one' && room.selected === file.path}>
+			<li
+				class:on={room.layout === 'one' && room.selected === file.path}
+				{...pullFileAttrs(file.path, file.status, room.head)}
+			>
 				<input
 					type="checkbox"
 					aria-label="Viewed {name(file.path)}"

@@ -276,6 +276,7 @@ rather than an audit.
 | [BUG-080](items/BUG-080-the-review-pill-runs-out-of-a-narrow-diff.md) | The review pill runs out of a narrow diff, over the conversation | 1R, 1D, 1S | Fixed |
 | [BUG-081](items/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why.md) | Push of a new branch fails and does not say why | chrome, 1A | Open |
 | [BUG-082](items/BUG-082-saving-the-git-identity-clears-the-fields.md) | Saving the git identity clears the fields | 1K | Open |
+| [BUG-083](items/BUG-083-hiding-the-blame-in-files-breaks-every-line.md) | Hiding the blame in Files breaks every line | 1U | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

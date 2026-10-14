@@ -16,6 +16,7 @@ import {
 	DETAIL_W,
 	DIFF_FILES_W,
 	FARM_LOG_H,
+	FILES_BLAME_W,
 	RAIL_W,
 	REQUESTS_DETAIL_W,
 	REVIEW_PREVIEW_W,
@@ -195,6 +196,8 @@ describe('reset', () => {
 			diffFiles: DIFF_FILES_W,
 			stashEntries: STASH_ENTRIES_W,
 			farmLog: FARM_LOG_H,
+			// The blame in Files (FEAT-131).
+			filesBlame: FILES_BLAME_W,
 			// Review's three (FEAT-094).
 			reviewPreview: REVIEW_PREVIEW_W,
 			roomFiles: ROOM_FILES_W,

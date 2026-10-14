@@ -18,6 +18,7 @@
 	import ContributedActions from '$lib/extensions/ContributedActions.svelte';
 	import ExtensionPanels from '$lib/extensions/ExtensionPanels.svelte';
 	import { extensions } from '$lib/extensions/store.svelte';
+	import { fileAttrs, revOfChange } from '$lib/files/open';
 
 	const request = $derived(requests.open);
 	const files = $derived(requests.files);
@@ -44,6 +45,18 @@
 		if (expandedCommitShas[sha]) {
 			requests.selectCommit(sha);
 		}
+	}
+
+	/**
+	 * A file of the pull request opens in Files at its head, or at the commit
+	 * it is listed under. Files reads this repository, so the head has to
+	 * have been fetched.
+	 */
+	function inFiles(path: string, status: string, commitSha: string | null) {
+		const gone = status === 'removed' || status === 'deleted';
+		if (commitSha) return fileAttrs(path, revOfChange(commitSha, gone ? 'deleted' : status));
+		const head = request?.headSha || null;
+		return fileAttrs(path, head, gone ? 'Deleted by this pull request' : undefined);
 	}
 
 	function handleFileClick(path: string, commitSha: string | null = null) {
@@ -203,6 +216,7 @@
 											class="file-btn"
 											onclick={() => handleFileClick(f.path, null)}
 											title={f.path}
+											{...inFiles(f.path, f.status, null)}
 										>
 											<span class="status-tag status-{f.status}">
 												{f.status[0].toUpperCase()}
@@ -274,6 +288,7 @@
 																class="file-btn"
 																onclick={() => handleFileClick(cf.path, commit.sha)}
 																title={cf.path}
+																{...inFiles(cf.path, cf.status, commit.sha)}
 															>
 																<span class="status-tag status-{cf.status}">
 																	{cf.status[0].toUpperCase()}

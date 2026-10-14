@@ -4,6 +4,7 @@
 	import SideBadge from '$lib/merger/SideBadge.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { dialog } from '$lib/ui/dialog.svelte';
+	import { fileAttrs } from '$lib/files/open';
 	import ConflictCard from './ConflictCard.svelte';
 	import { layout, settles, type AgentProposal, type Choice, type Names, type ResolverFile, type SideKey } from './model';
 	import { languageOf } from './paint';
@@ -44,6 +45,8 @@
 		working?: { path: string; index: number } | null;
 		onaccept?: (path: string, index: number) => void;
 		onwhy?: (path: string, index: number) => void;
+		/** Side A's revision: right-click a file to read it there in Files. */
+		rev?: string | null;
 	}
 
 	let {
@@ -62,7 +65,8 @@
 		proposals = {},
 		working = null,
 		onaccept,
-		onwhy
+		onwhy,
+		rev = null
 	}: Props = $props();
 
 	let selected = $state<string | null>(null);
@@ -191,6 +195,7 @@
 				class="file"
 				aria-pressed={file?.path === f.path}
 				title={f.path}
+				{...fileAttrs(f.path, rev)}
 				onclick={() => go({ path: f.path, index: f.regions[0]?.index ?? 0 })}
 			>
 				<span class="name mono">{base(f.path)}</span>
@@ -212,7 +217,7 @@
 		{#if others.length > 0}
 			<span class="label later">Merge on their own</span>
 			{#each others as other (other.path)}
-				<span class="other" title={other.path}>
+				<span class="other" title={other.path} {...fileAttrs(other.path, rev)}>
 					<span class="pip tone-{other.tone}"></span>
 					<span class="mono muted">{base(other.path)}</span>
 				</span>

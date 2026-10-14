@@ -7,6 +7,7 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
+	import Splitter from '$lib/ui/Splitter.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import { shortAge, strengths } from './age';
 	import { pieces } from './colour';
@@ -332,6 +333,13 @@
 						{/if}
 					{/snippet}
 				</VirtualRows>
+				{#if files.blameOn}
+					<!-- On the blame's edge, over the rows: the width is every row's. -->
+					<div class="edge">
+						<div class="reach"></div>
+						<Splitter panel="filesBlame" label="Resize the blame" />
+					</div>
+				{/if}
 			{/if}
 		{:else if content.kind === 'image'}
 			<div class="picture">
@@ -493,6 +501,7 @@
 	.pane {
 		--gutter: 0px;
 		--number: calc(var(--digits) * 1ch + 22px);
+		position: relative;
 		flex: 1;
 		min-height: 0;
 		display: flex;
@@ -503,7 +512,24 @@
 	}
 
 	.pane.blamed {
-		--gutter: clamp(180px, 24%, 290px);
+		--gutter: var(--files-blame-w);
+	}
+
+	.edge {
+		position: absolute;
+		inset-block: 0;
+		left: 0;
+		display: flex;
+		pointer-events: none;
+	}
+
+	/* What the splitter measures from: the blame's own width. */
+	.reach {
+		width: var(--gutter);
+	}
+
+	.edge :global(.splitter) {
+		pointer-events: auto;
 	}
 
 	/* Under the code, not under the gutter: it is about the line. */
@@ -593,7 +619,13 @@
 		color: var(--muted);
 	}
 
+	/*
+	 * Placed, not left to flow: with the blame hidden its column is still
+	 * there at no width, and a number and text that flowed would take the
+	 * first two columns and draw over each other.
+	 */
 	.number {
+		grid-column: 2;
 		padding-right: 12px;
 		text-align: right;
 		color: var(--muted);
@@ -611,6 +643,7 @@
 	}
 
 	.text {
+		grid-column: 3;
 		white-space: pre;
 		overflow: hidden;
 		cursor: text;
