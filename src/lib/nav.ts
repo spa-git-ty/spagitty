@@ -48,6 +48,10 @@ export type CountKey = keyof RepoCounts;
  * 1S is Merger (FEAT-100): any two branches, and what merging them would do
  * before anything is written. Conflicts (1D) stays for the operations git
  * stopped on by itself.
+ *
+ * 1T, 1U and 1V are 3.0's workbench: Terminal (FEAT-130), Files (FEAT-131)
+ * and Recipes (FEAT-133). 1O, which was File history and off the rail, is
+ * Investigate (FEAT-132) and on it.
  */
 export type ScreenCode =
 	| '1A'
@@ -68,7 +72,10 @@ export type ScreenCode =
 	| '1P'
 	| '1Q'
 	| '1R'
-	| '1S';
+	| '1S'
+	| '1T'
+	| '1U'
+	| '1V';
 
 /**
  * What kind of place a destination is (TASK-041).
@@ -134,6 +141,8 @@ export interface NavItem {
 	also?: string[];
 	/** Only offered while the delight layer is on (TASK-045). */
 	delight?: boolean;
+	/** The version a screen arrived in, while that is still news. Settings › Rail marks it. */
+	since?: string;
 }
 
 /**
@@ -180,6 +189,10 @@ export const NAV_ITEMS: NavItem[] = [
 		icon: 'conflict',
 		shows: 'conflicts'
 	},
+	// FEAT-130. A real terminal, so nobody leaves Spagitty for one.
+	{ code: '1T', label: 'Terminal', href: '/terminal', group: 'work', icon: 'terminal', since: '3.0' },
+	// FEAT-131. Any file at any revision, read and never written.
+	{ code: '1U', label: 'Files', href: '/files', group: 'work', icon: 'files', since: '3.0' },
 	// FEAT-100. Merging two branches, seen first. Always on the rail: it is
 	// where a merge starts, not something that happens to you.
 	{ code: '1S', label: 'Merger', href: '/merge', group: 'work', icon: 'merge' },
@@ -194,10 +207,22 @@ export const NAV_ITEMS: NavItem[] = [
 	{ code: '1H', label: 'Pull requests', href: '/requests', group: 'work', icon: 'request' },
 	// FEAT-087. Reading a pull request, after browsing them.
 	{ code: '1R', label: 'Review', href: '/review', group: 'work', icon: 'review' },
+	// FEAT-133. Git steps in blocks, run a step at a time.
+	{ code: '1V', label: 'Recipes', href: '/recipes', group: 'work', icon: 'recipes', since: '3.0' },
 	// TASK-056: the author wanted these back where they can be seen, so the
 	// tools are always on the rail again, and Stash, Tags and Reflog are rows
 	// of their own rather than tabs Branches stands for (reversing TASK-045).
 	{ code: '1E', label: 'Rebase', href: '/rebase', group: 'tools', icon: 'rebase' },
+	// FEAT-132. File history, which was off the rail and about one file, is
+	// the life of a file, a folder, a branch or a line, and on it.
+	{
+		code: '1O',
+		label: 'Investigate',
+		href: '/investigate',
+		group: 'tools',
+		icon: 'investigate',
+		since: '3.0'
+	},
 	{ code: '1I', label: 'Log', href: '/search', group: 'tools', icon: 'search' },
 	{ code: '1G', label: 'Stash', href: '/stash', group: 'tools', icon: 'stash' },
 	{ code: '1N', label: 'Tags', href: '/tags', group: 'tools', icon: 'tag' },
@@ -228,6 +253,142 @@ export const NAV_ITEMS: NavItem[] = [
 	}
 ];
 
+/**
+ * What a person chose for the rail (FEAT-134).
+ *
+ * 3.0 adds four rows, and TASK-056 had already put every tool back on the rail
+ * at the author's request. Only the person using it knows which rows they never
+ * touch, so the choice is theirs: each screen is pinned or hidden, and the rows
+ * of a group can be put in another order. Stored in Spagitty's settings, never
+ * in the repository.
+ *
+ * - `hidden` — the screens taken off the rail.
+ * - `order` — every screen's code in the order chosen. Empty means the order
+ *   of `NAV_ITEMS`. A row only ever moves within its group.
+ * - `where` — where the hidden ones go: under the rail's More button, or
+ *   nowhere but the palette, which lists every screen whatever is chosen.
+ */
+export interface RailSettings {
+	hidden: ScreenCode[];
+	order: ScreenCode[];
+	where: RailWhere;
+}
+
+export type RailWhere = 'more' | 'palette';
+
+/** Everything pinned, the `NAV_ITEMS` order, More. TASK-056's decision stands. */
+export const RAIL_DEFAULT: RailSettings = { hidden: [], order: [], where: 'more' };
+
+/**
+ * What can be chosen about a row.
+ *
+ * - `always` — Farm and Settings. Settings has to stay reachable to undo a
+ *   hide, and the farm is what this application is for.
+ * - `rule` — Conflicts and Badges, which already come and go by a rule of
+ *   their own. The rule is shown in place of the choice.
+ * - `free` — pinned or hidden, as the person likes.
+ */
+export type RailChoice = 'always' | 'rule' | 'free';
+
+export function railChoice(item: NavItem): RailChoice {
+	if (item.group === 'farm' || item.group === 'app') return 'always';
+	if ((item.shows ?? 'always') !== 'always') return 'rule';
+	return 'free';
+}
+
+/** How Settings › Rail words the rule a row keeps. */
+export const RULE_LABELS: Record<Exclude<NavShows, 'always'>, string> = {
+	conflicts: 'When there are any',
+	open: 'While open'
+};
+
+/**
+ * Whether the person hid `item`.
+ *
+ * Only a `free` row can be: a stored list that names Settings — hand-edited,
+ * or written by a build whose rules differed — must not take away the one way
+ * back.
+ */
+export function isHidden(item: NavItem, rail: RailSettings): boolean {
+	return railChoice(item) === 'free' && rail.hidden.includes(item.code);
+}
+
+/**
+ * `items` in the order the person chose.
+ *
+ * The groups keep their places and each stays one run: only the rows inside a
+ * group are re-sequenced. A screen `order` does not name — one a later build
+ * added — goes after the row it follows in `items`, so a new screen arrives
+ * where it was designed to be rather than at the end of a list written before
+ * it existed.
+ */
+export function inOrder(items: NavItem[], order: ScreenCode[]): NavItem[] {
+	if (order.length === 0) return items;
+
+	const groups: NavGroup[] = [];
+	for (const item of items) if (!groups.includes(item.group)) groups.push(item.group);
+
+	return groups.flatMap((group) => {
+		const members = items.filter((item) => item.group === group);
+		const placed = members
+			.filter((item) => order.includes(item.code))
+			.sort((a, b) => order.indexOf(a.code) - order.indexOf(b.code));
+
+		members.forEach((item, index) => {
+			if (placed.includes(item)) return;
+			const before = members
+				.slice(0, index)
+				.reverse()
+				.find((other) => placed.includes(other));
+			placed.splice(before ? placed.indexOf(before) + 1 : 0, 0, item);
+		});
+		return placed;
+	});
+}
+
+/** The order to store: nothing at all when it is the order of `items`. */
+function orderOf(arranged: NavItem[], items: NavItem[]): ScreenCode[] {
+	const codes = arranged.map((item) => item.code);
+	return codes.every((code, index) => code === items[index].code) ? [] : codes;
+}
+
+/**
+ * The order after moving `code` by `delta` rows, within its group.
+ *
+ * A move that would leave the group is no move: the first row of Tools does not
+ * become the last row of Repository by pressing up once more.
+ */
+export function moveBy(
+	code: ScreenCode,
+	delta: number,
+	order: ScreenCode[],
+	items: NavItem[] = NAV_ITEMS
+): ScreenCode[] {
+	const arranged = [...inOrder(items, order)];
+	const from = arranged.findIndex((item) => item.code === code);
+	const to = from + delta;
+	if (from === -1 || to < 0 || to >= arranged.length) return order;
+	if (arranged[to].group !== arranged[from].group) return order;
+
+	const [moving] = arranged.splice(from, 1);
+	arranged.splice(to, 0, moving);
+	return orderOf(arranged, items);
+}
+
+/** The order after dropping `code` on `target`'s row. Another group's row refuses it. */
+export function moveOnto(
+	code: ScreenCode,
+	target: ScreenCode,
+	order: ScreenCode[],
+	items: NavItem[] = NAV_ITEMS
+): ScreenCode[] {
+	const arranged = inOrder(items, order);
+	const from = arranged.findIndex((item) => item.code === code);
+	const to = arranged.findIndex((item) => item.code === target);
+	if (from === -1 || to === -1) return order;
+	return moveBy(code, to - from, order, items);
+}
+
 /** What decides which rows are on the rail right now. */
 export interface NavContext {
 	pathname: string;
@@ -235,6 +396,8 @@ export interface NavContext {
 	conflicts: number | null;
 	/** Whether the delight layer is on. */
 	delight: boolean;
+	/** What the person pinned, hid and reordered. Absent means the default. */
+	rail?: RailSettings;
 }
 
 /** True when `item` is where you are on `pathname`, counting what it stands for. */
@@ -245,7 +408,10 @@ export function isItemActive(item: NavItem, pathname: string): boolean {
 /** Whether `item` is on the rail in `context`. */
 export function isShown(item: NavItem, context: NavContext): boolean {
 	if (item.delight && !context.delight) return false;
+	// The screen you are on is on the rail, hidden or not, for as long as you
+	// are on it: "where am I" always has an answer.
 	if (isItemActive(item, context.pathname)) return true;
+	if (context.rail && isHidden(item, context.rail)) return false;
 	switch (item.shows ?? 'always') {
 		case 'always':
 			return true;
@@ -275,7 +441,8 @@ export interface NavRow {
 
 export function navRows(items: NavItem[] = NAV_ITEMS, context?: NavContext): NavRow[] {
 	let previous: NavGroup | null = null;
-	const shown = context ? items.filter((item) => isShown(item, context)) : items;
+	const arranged = context?.rail ? inOrder(items, context.rail.order) : items;
+	const shown = context ? arranged.filter((item) => isShown(item, context)) : arranged;
 
 	return shown.map((item) => {
 		const startsGroup = item.group !== previous;
@@ -288,10 +455,49 @@ export function navRows(items: NavItem[] = NAV_ITEMS, context?: NavContext): Nav
 	});
 }
 
+/**
+ * The screens the person hid, in rail order (FEAT-134).
+ *
+ * All of them, the one that is open included: a menu whose contents change
+ * with where you are is one nobody can learn.
+ */
+export function hiddenItems(items: NavItem[], context: NavContext): NavItem[] {
+	const rail = context.rail;
+	if (!rail) return [];
+	return inOrder(items, rail.order).filter(
+		(item) => isHidden(item, rail) && (!item.delight || context.delight)
+	);
+}
+
+/** One row of the rail: a screen, or the More button with what is under it. */
+export type RailRow =
+	| ({ kind: 'screen' } & NavRow)
+	| { kind: 'more'; items: NavItem[]; startsGroup: boolean };
+
+/**
+ * The rail as it is drawn: the rows that are on it, and the More button.
+ *
+ * More sits at the end of Tools, and is only there when something is hidden
+ * and the person asked for hidden screens to go under it. With every tool
+ * hidden it is the whole of that group, so it carries the divider itself.
+ */
+export function railRows(items: NavItem[], context: NavContext): RailRow[] {
+	const rows: RailRow[] = navRows(items, context).map((row) => ({ kind: 'screen', ...row }));
+	const under = context.rail?.where === 'more' ? hiddenItems(items, context) : [];
+	if (under.length === 0) return rows;
+
+	const group = (row: RailRow) => (row.kind === 'screen' ? row.item.group : 'tools');
+	const lastTool = rows.findLastIndex((row) => group(row) === 'tools');
+	const app = rows.findIndex((row) => group(row) === 'app');
+	const at = lastTool !== -1 ? lastTool + 1 : app !== -1 ? app : rows.length;
+
+	rows.splice(at, 0, { kind: 'more', items: under, startsGroup: lastTool === -1 });
+	return rows;
+}
+
 /** Screens that exist but are not reachable from the rail. */
 export const OFF_RAIL: Record<string, { code: ScreenCode; label: string }> = {
-	'/diff': { code: '1B', label: 'Diff' },
-	'/history': { code: '1O', label: 'File history' }
+	'/diff': { code: '1B', label: 'Diff' }
 };
 
 /** Routes that are screens but are not reachable from the rail. */

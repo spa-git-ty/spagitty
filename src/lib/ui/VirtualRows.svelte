@@ -31,9 +31,15 @@
 		/** Space under the last row, for whatever floats over the bottom. */
 		tail?: number;
 		label?: string;
+		/**
+		 * Told which rows are drawn, `[start, end)`, whenever that changes
+		 * (FEAT-131). Files asks for a row's colour when it is about to be
+		 * drawn and for no other.
+		 */
+		onrange?: (start: number, end: number) => void;
 	}
 
-	let { items, key, estimate, row, overscan = 600, tail = 0, label }: Props = $props();
+	let { items, key, estimate, row, overscan = 600, tail = 0, label, onrange }: Props = $props();
 
 	/**
 	 * Drawn when the viewport has no height to go by — before layout, or in a
@@ -81,6 +87,11 @@
 	});
 
 	const shown = $derived(items.slice(range[0], range[1]));
+
+	$effect(() => {
+		const [start, end] = range;
+		untrack(() => onrange?.(start, end));
+	});
 	const above = $derived(offsets[range[0]]);
 	const below = $derived(offsets[items.length] - offsets[range[1]]);
 

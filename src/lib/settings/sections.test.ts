@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { click, flushSync, render } from '../../testing/mount';
+import { click, fire, flushSync, press, render } from '../../testing/mount';
 import type { Identity, IdentityValue, Licenses } from '$lib/types';
 
 /**
@@ -103,7 +103,10 @@ fetchAvatars: false,
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' },
+			terminalShell: '',
+			terminalMultiplexer: true
 	});
 	licenses.mockResolvedValue(LIST);
 	about.mockResolvedValue({ version: '0.1.0', commit: 'abc1234', license: 'GPL-3.0-or-later' });
@@ -290,7 +293,10 @@ describe('BehaviourSection', () => {
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' },
+			terminalShell: '',
+			terminalMultiplexer: true
 		});
 		mounted.destroy();
 	});
@@ -310,21 +316,58 @@ describe('BehaviourSection', () => {
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' },
+			terminalShell: '',
+			terminalMultiplexer: true
 		});
 		await settings.load();
 		const mounted = render(BehaviourSection, {});
 
-		// Four toggles, in the order they are declared: FEAT-018 added pruning,
+		// Five toggles, in the order they are declared: FEAT-018 added pruning,
 		// FEAT-019 took signing away — it is now `commit.gpgsign` under You
-		// rather than a preference here — and FEAT-079 added the author
-		// pictures.
+		// rather than a preference here — FEAT-079 added the author pictures,
+		// and FEAT-130 the terminal's multiplexer.
 		expect(mounted.all('button.chip').map((chip) => chip.textContent?.trim())).toEqual([
 			'off',
 			'on',
 			'off',
-			'off'
+			'off',
+			'on'
 		]);
+		mounted.destroy();
+	});
+
+	it('stores the terminal shell when the field is left, and not with every letter (FEAT-130)', async () => {
+		await settings.load();
+		const mounted = render(BehaviourSection, {});
+		const field = mounted.get('.field input') as HTMLInputElement;
+		expect(field.value).toBe('');
+		expect(field.placeholder).toBe('your own shell');
+
+		field.value = '  /usr/bin/fish ';
+		fire(field, 'input');
+		expect(setSettings).not.toHaveBeenCalled();
+
+		fire(field, 'blur');
+		expect(setSettings).toHaveBeenCalledTimes(1);
+		expect(setSettings.mock.calls[0][0]).toMatchObject({ terminalShell: '/usr/bin/fish' });
+		mounted.destroy();
+	});
+
+	it('stores the terminal shell on Enter, and nothing when it has not changed (FEAT-130)', async () => {
+		await settings.load();
+		const mounted = render(BehaviourSection, {});
+		const field = mounted.get('.field input') as HTMLInputElement;
+
+		press(field, 'Enter');
+		fire(field, 'blur');
+		expect(setSettings).not.toHaveBeenCalled();
+
+		field.value = 'nu';
+		fire(field, 'input');
+		press(field, 'Enter');
+		expect(setSettings.mock.calls[0][0]).toMatchObject({ terminalShell: 'nu' });
 		mounted.destroy();
 	});
 });

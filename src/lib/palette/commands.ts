@@ -60,13 +60,22 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.search', title: 'Go to Search', path: '/search', keywords: ['find', 'grep'] },
 	{ id: 'go.requests', title: 'Go to Pull requests', path: '/requests', keywords: ['pr', 'review'] },
 	{ id: 'go.conflicts', title: 'Go to Conflicts', path: '/conflicts', keywords: ['merge'] },
+	{ id: 'go.terminal', title: 'Go to Terminal', path: '/terminal', keywords: ['shell', 'tmux', 'psmux', 'console', 'command line'] },
+	{ id: 'go.files', title: 'Go to Files', path: '/files', keywords: ['tree', 'browse', 'read', 'blame', 'source'] },
+	// FEAT-134: a screen can be taken off the rail, so the palette has to reach
+	// every one of them. These four had only ever been reached from the rail.
+	{ id: 'go.merge', title: 'Go to Merger', path: '/merge', keywords: ['merge', 'branches', 'combine'] },
+	{ id: 'go.review', title: 'Go to Review', path: '/review', keywords: ['pr', 'pull request', 'read'] },
+	{ id: 'go.recipes', title: 'Go to Recipes', path: '/recipes', keywords: ['blocks', 'steps', 'script', 'automate', 'workflow'] },
+	{ id: 'go.tags', title: 'Go to Tags', path: '/tags', keywords: ['refs', 'release'] },
+	{ id: 'go.reflog', title: 'Go to Reflog', path: '/reflog', keywords: ['undo', 'recover', 'lost'] },
 	{ id: 'go.rebase', title: 'Go to Interactive rebase', path: '/rebase', keywords: ['reorder', 'squash'] },
 	{ id: 'go.farm', title: 'Go to Farm', path: '/farm', keywords: ['tasks', 'dag', 'goal'] },
 	{ id: 'go.farm.agents', title: 'Go to Farm agents', path: '/farm?pane=agents', keywords: ['agents', 'installed', 'claude', 'codex', 'cursor', 'farm'] },
 	{ id: 'go.farm.settings', title: 'Go to Farm settings', path: '/farm?pane=settings', keywords: ['farm', 'settings', 'goal', 'policy', 'agents.md'] },
 	{ id: 'go.badges', title: 'Go to Badges', path: '/badges', keywords: ['achievements', 'title', 'agents', 'delight'] },
 	{ id: 'go.repos', title: 'Go to Repositories', path: '/repos', keywords: ['open', 'clone', 'recent'] },
-	{ id: 'go.history', title: 'Go to File history', path: '/history', keywords: ['blame', 'file', 'evolution'] },
+	{ id: 'go.investigate', title: 'Go to Investigate', path: '/investigate', keywords: ['history', 'blame', 'file', 'folder', 'branch', 'line', 'life', 'evolution'] },
 	{ id: 'go.settings', title: 'Go to Settings', path: '/settings', keywords: ['preferences', 'options'] }
 ];
 

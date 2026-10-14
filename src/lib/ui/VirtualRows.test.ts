@@ -70,6 +70,43 @@ it('draws the rows near the viewport, and stands the rest in for by their height
 	expect((spacers[1] as HTMLElement).style.height).toBe(`${(1000 - 46) * 20}px`);
 });
 
+/** FEAT-131: Files asks for a row's colour when it is about to be drawn. */
+it('says which rows are drawn, at first and whenever that changes', () => {
+	const seen: [number, number][] = [];
+	const other = document.createElement('div');
+	document.body.appendChild(other);
+	const told = mount(VirtualRows<string>, {
+		target: other,
+		props: {
+			items: ITEMS,
+			key: (item: string) => item,
+			estimate: () => 20,
+			row: createRawSnippet((item: () => string) => ({ render: () => `<span>${item()}</span>` })),
+			overscan: 600,
+			onrange: (start: number, end: number) => seen.push([start, end])
+		}
+	});
+	flushSync();
+	// Once blind, before the viewport has a height, and once measured.
+	expect(seen.at(-1)).toEqual([0, 46]);
+	const settled = seen.length;
+
+	const scrolled = other.querySelector<HTMLElement>('.viewport')!;
+	scrolled.scrollTop = 10_000;
+	scrolled.dispatchEvent(new Event('scroll'));
+	flushSync();
+	expect(seen.at(-1)).toEqual([470, 546]);
+	expect(seen).toHaveLength(settled + 1);
+
+	// Scrolling inside the rows already drawn says nothing new.
+	scrolled.dispatchEvent(new Event('scroll'));
+	flushSync();
+	expect(seen).toHaveLength(settled + 1);
+
+	unmount(told);
+	other.remove();
+});
+
 it('follows the scroll', () => {
 	viewport().scrollTop = 10_000;
 	viewport().dispatchEvent(new Event('scroll'));

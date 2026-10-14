@@ -137,7 +137,10 @@ describe('command names and arguments', () => {
 			notifyComments: true,
 			notifyReviewRequests: true,
 			notifyChecks: true,
-			notifyEveryMinutes: 2
+			notifyEveryMinutes: 2,
+			rail: { hidden: [], order: [], where: 'more' as const },
+			terminalShell: '',
+			terminalMultiplexer: true
 		};
 		await api.setSettings(settings);
 		expect(invoked).toHaveBeenCalledWith('set_settings', { settings });

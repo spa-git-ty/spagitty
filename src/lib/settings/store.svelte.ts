@@ -15,6 +15,7 @@
  */
 
 import * as api from '../api';
+import { RAIL_DEFAULT, type RailSettings } from '../nav';
 import type {
 	About,
 	Identity,
@@ -39,6 +40,7 @@ export type Section =
 	| 'personality'
 	| 'godmode'
 	| 'appearance'
+	| 'rail'
 	| 'reading'
 	| 'license';
 
@@ -64,6 +66,8 @@ export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'personality', label: 'Personality' },
 	{ id: 'godmode', label: 'God mode' },
 	{ id: 'appearance', label: 'Appearance' },
+	// After Appearance: what is on the rail is how the window looks (FEAT-134).
+	{ id: 'rail', label: 'Rail' },
 	{ id: 'reading', label: 'Reading' },
 	{ id: 'license', label: 'License' }
 ];
@@ -89,7 +93,10 @@ const DEFAULTS: Settings = {
 	notifyComments: true,
 	notifyReviewRequests: true,
 	notifyChecks: true,
-	notifyEveryMinutes: 2
+	notifyEveryMinutes: 2,
+	rail: RAIL_DEFAULT,
+	terminalShell: '',
+	terminalMultiplexer: true
 };
 
 function isSection(value: string): value is Section {
@@ -192,6 +199,15 @@ export const settings = {
 	},
 	get settings(): Settings {
 		return stored;
+	},
+	/**
+	 * What is on the rail (FEAT-134).
+	 *
+	 * Read through here rather than off `settings`: a backend older than the
+	 * key answers without it, and the rail must still draw.
+	 */
+	get rail(): RailSettings {
+		return stored.rail ?? RAIL_DEFAULT;
 	},
 	get licenses(): Licenses | null {
 		return licenses;

@@ -698,14 +698,188 @@ export interface Blame {
 	refused: NotBlamable | null;
 }
 
-/** One commit in a file's evolution history (FEAT-063). */
-export interface FileHistoryEntry {
+// --- Files (FEAT-131) -----------------------------------------------------
+
+/** A branch, tag or commit, resolved to the commit it means. Mirrors `files::Revision`. */
+export interface FilesRevision {
+	id: string;
+	short: string;
+}
+
+export type FilesEntryKind = 'folder' | 'file' | 'link' | 'submodule';
+
+/** One entry of a folder at a revision. Mirrors `files::TreeEntry`. */
+export interface FilesEntry {
+	name: string;
+	/** From the repository's root, with `/` between the parts. */
+	path: string;
+	kind: FilesEntryKind;
+}
+
+/** What a file is, and its text when it has any. Mirrors `files::Content`. */
+export type FilesContent =
+	| { kind: 'text'; text: string }
+	| { kind: 'image'; mime: string; base64: string }
+	| { kind: 'binary' }
+	/** A Git LFS pointer: the object it stands for, and that object's size. */
+	| { kind: 'lfs'; oid: string; objectSize: number }
+	/** Over 50 MB. Not read at all. */
+	| { kind: 'tooLarge' }
+	/** Nothing at that path in that revision, or a folder or submodule. */
+	| { kind: 'missing' };
+
+/** A file read from git's objects at a revision. Mirrors `files::FileRead`. */
+export interface FilesRead {
+	path: string;
+	/** The commit read from, in full. */
+	revision: string;
+	/** The blob's id, which colour is cached by. Empty when nothing is there. */
+	blob: string;
+	size: number;
+	/** The tree-sitter grammar for this path, when one is compiled in. */
+	grammar: string | null;
+	/** False over 5 MB: shown, and not coloured. */
+	colour: boolean;
+	content: FilesContent;
+}
+
+/** What *Find a file* found. Mirrors `files::Found`. */
+export interface FilesFound {
+	paths: string[];
+	/** More matched than were returned. */
+	more: boolean;
+}
+
+/** One commit a blamed file's lines come from. Mirrors `blame::BlameCommit`. */
+export interface BlameCommit {
+	id: string;
+	short: string;
+	summary: string;
+	authorName: string;
+	authorEmail: string;
+	/** Author time, seconds since the unix epoch. */
+	time: number;
+	/** The agent a `Co-authored-by` trailer names, by gate 1's rule. */
+	agent: string | null;
+	/** The path the lines were written under at this commit. */
+	path: string;
+	/** The commit and path this version was changed from. Null when the commit added the file. */
+	previous: string | null;
+	previousPath: string | null;
+}
+
+/** A whole file's blame, each commit said once. Mirrors `blame::CompactBlame`. */
+export interface CompactBlame {
+	path: string;
+	revision: string;
+	commits: BlameCommit[];
+	/** For each line, in order: an index into `commits`. */
+	lines: number[];
+	/** For each line: its number in the commit that wrote it. */
+	origin: number[];
+	refused: NotBlamable | null;
+}
+
+// --- Investigate (FEAT-132) -----------------------------------------------
+
+/** What a life is the life of. Mirrors `investigate::Target`. */
+export type LifeTarget =
+	| { kind: 'file'; path: string }
+	| { kind: 'folder'; path: string }
+	| { kind: 'branch'; name: string }
+	| { kind: 'line'; path: string; line: number };
+
+/** What happened, in one word. Mirrors `investigate::Kind`. */
+export type LifeKind =
+	| 'born'
+	| 'renamed'
+	| 'moved'
+	| 'rewrite'
+	| 'edit'
+	| 'deleted'
+	| 'added'
+	| 'removed'
+	| 'commit'
+	| 'merge'
+	| 'merged'
+	| 'rebase'
+	| 'reset';
+
+/** One thing in a life. Mirrors `investigate::Entry`. */
+export interface LifeEntry {
 	commit: string;
 	short: string;
 	authorName: string;
 	authorEmail: string;
+	/** Seconds since the unix epoch. */
 	time: number;
 	summary: string;
+	/** The agent a `Co-authored-by` trailer names, by gate 1's rule. */
+	agent: string | null;
+	kind: LifeKind;
+	added: number;
+	removed: number;
+	/** A file or a line: the path at this commit. */
+	path: string | null;
+	/** The path before this commit, when it renamed or moved the file. */
+	oldPath: string | null;
+	/** A file: its lines after this commit. Null for a binary file. */
+	size: number | null;
+	/** A file: the share of its lines, as they were, that this commit removed. */
+	share: number | null;
+	/** A folder: how many files this commit added, removed and renamed. */
+	filesAdded: number;
+	filesRemoved: number;
+	filesRenamed: number;
+	/** A line: its text as this commit left it. */
+	text: string | null;
+	/** Said beside the summary: `old → new`, or what a branch landed in. */
+	note: string | null;
+}
+
+/** A page of a life. Mirrors `investigate::Page`. */
+export interface LifePage {
+	entries: LifeEntry[];
+	/** Nothing older is left to read. */
+	done: boolean;
+}
+
+/** How a life is asked for. Mirrors `investigate::Ask`. */
+export interface LifeAsk {
+	target: LifeTarget;
+	rev: string;
+	follow: boolean;
+	since: number | null;
+	skip: number;
+	limit: number;
+}
+
+/** Who has lines in a file today. Mirrors `investigate::Owner`. */
+export interface LifeOwner {
+	name: string;
+	email: string;
+	agent: boolean;
+	lines: number;
+	/** From 0 to 1. */
+	share: number;
+}
+
+/** A file at a revision, from one blame. Mirrors `investigate::Today`. */
+export interface LifeToday {
+	lines: number;
+	owners: LifeOwner[];
+	/** For each commit that still has lines in the file: how many. */
+	alive: Record<string, number>;
+}
+
+/** A branch against the default branch. Mirrors `investigate::BranchFacts`. */
+export interface BranchFacts {
+	against: string | null;
+	fork: string | null;
+	landed: string | null;
+	ahead: number;
+	behind: number;
+	local: boolean;
 }
 
 // --- Conflicts ------------------------------------------------------------
@@ -1226,6 +1400,62 @@ export interface Settings {
 	notifyChecks: boolean;
 	/** Minutes between looks: 1, 2, 5 or 15. */
 	notifyEveryMinutes: number;
+	/** What is pinned, hidden and reordered on the rail (FEAT-134). */
+	rail: import('./nav').RailSettings;
+	/** The shell a terminal runs (FEAT-130). Empty is the platform's own. */
+	terminalShell: string;
+	/** Run the terminal inside tmux, or psmux on Windows, when one can run. */
+	terminalMultiplexer: boolean;
+}
+
+// --- Terminal (FEAT-130) ---------------------------------------------------
+
+/** The multiplexer in use. Mirrors `terminal::MuxInfo`. */
+export interface TerminalMux {
+	/** `tmux` or `psmux`. */
+	name: string;
+	version: string;
+	path: string;
+	/** True when it is the one Spagitty ships. */
+	bundled: boolean;
+}
+
+/** Mirrors `terminal::TerminalInfo`. */
+export interface TerminalInfo {
+	/** Null when no multiplexer can run, or it is turned off: every tab is a plain terminal. */
+	mux: TerminalMux | null;
+	/** The program a new terminal runs. */
+	shell: string;
+}
+
+/** A session on Spagitty's socket. Mirrors `terminal::SessionInfo`. */
+export interface TerminalSession {
+	name: string;
+	windows: number;
+	attached: boolean;
+}
+
+/** One window of a session. Mirrors `terminal::WindowInfo`. */
+export interface TerminalWindow {
+	index: number;
+	name: string;
+	active: boolean;
+}
+
+/** Something asked of a session. Mirrors `terminal::Ask`. */
+export type TerminalAsk =
+	| { kind: 'newWindow'; cwd: string }
+	| { kind: 'selectWindow'; index: number }
+	| { kind: 'splitRight' }
+	| { kind: 'splitDown' }
+	| { kind: 'detach' };
+
+/** Which of what a terminal printed is real. Mirrors `commands::TerminalLinks`. */
+export interface TerminalLinks {
+	/** Each hex word that is a commit here, with the full id it means. */
+	commits: [string, string][];
+	/** Each path that is a file at HEAD. */
+	paths: string[];
 }
 
 /** Where a watched pull request stands (FEAT-114). Mirrors `watch::WatchState`. */

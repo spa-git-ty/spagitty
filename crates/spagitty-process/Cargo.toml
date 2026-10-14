@@ -14,6 +14,12 @@ authors.workspace = true
 # extension host's workers and tool runs need the same containment, and two
 # copies of a Windows Job Object implementation would be two to keep honest.
 
+[dependencies]
+# The Terminal screen's PTY (FEAT-130): ConPTY on Windows, openpty elsewhere,
+# behind one interface. MIT, from WezTerm. A shell run through pipes is not at
+# a terminal and knows it: no colour, no cursor, no `vim`.
+portable-pty = "0.9"
+
 [target.'cfg(unix)'.dependencies]
 # Two calls: `setpgid` on the child, and `kill` on the *group*. MIT OR
 # Apache-2.0, and already in the tree under gix.

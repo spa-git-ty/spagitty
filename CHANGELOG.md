@@ -14,6 +14,67 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-13
+
+### Added
+
+- **Settings → Rail** chooses what is on the left bar. Every screen has a row there, in its group, and is pinned or hidden. Hidden screens go under a **More** button at the end of Tools, or to the palette only; the palette reaches every screen whatever is chosen. Rows are put in another order by dragging, or with Alt and the arrow keys, within their group. Farm and Settings are always on the rail, and Conflicts and Badges keep the rules they had. The screen you are on is always shown while you are on it. Nothing is hidden until you hide it, and **Reset** puts everything back.
+- The palette goes to Merger, Review, Tags and Reflog, which it could not reach before.
+- **Files**, a new screen on the rail, shows any file at any branch, tag or commit. It reads what git has stored and never the files on disk, so it cannot change anything.
+  - The tree opens a folder at a time, and **Find a file** looks through every path. Open files are tabs, kept for each repository.
+  - Code is coloured by tree-sitter for Rust, TypeScript, TSX, JavaScript, Svelte, Python, Go, Java, C, C++, C#, JSON, TOML, YAML, Markdown, CSS, HTML, Bash and SQL. Other languages are coloured as they are in Diff.
+  - **Blame** is beside every line: who, the commit's summary and how long ago, once for each run of lines, and a bar that is stronger where a line is newer. Lines from a commit an agent co-authored are in the agent's colour. Press a run to light every line from its commit.
+  - Press a line to open a card under it: who wrote it and when, the pull request, the commit's summary, and what the line was before. From there, **Commit** shows it on the Graph and **Blame before this** reads the file as it was before that commit.
+  - The keys are for reading: `j` `k`, Ctrl+d and Ctrl+u, `gg` `G`, `/` `?` `n` `N` to search, `]b` `[b` for the next and previous run of blame, `b` to hide it, Enter and Esc for the card, and `y` to copy `path:line@sha`.
+  - An image is shown as a picture. A binary file, a Git LFS pointer and a file over 50 MB say what they are and how big. A file over 5 MB is shown without colour.
+- **Terminal**, a new screen on the rail, is a real terminal, so you do not leave Spagitty for one. ``Ctrl+` `` (``⌘` `` on macOS) opens it from any screen and takes you back.
+  - It runs your shell: `$SHELL` on macOS and Linux; PowerShell 7, then Windows PowerShell, then `cmd` on Windows. **Settings → Behaviour** chooses another.
+  - The shell runs inside tmux, or psmux on Windows, on a socket of Spagitty's own, so your own tmux server is not touched and your `~/.tmux.conf` still applies. Each repository has its own session. Closing Spagitty detaches from a session and never ends it.
+  - On macOS and Linux the system tmux is used when it is 3.2 or later. Otherwise Spagitty uses the one it ships. The pill in the header says which, and its hover gives the path and version.
+  - The **Sessions** panel lists the sessions and the windows of the one shown, with **Split right**, **Split down** and **Detach** in the header. **Follow repository** switches to a repository's session when you open that repository.
+  - Where no multiplexer can run, or it is switched off in Settings, each tab is a plain terminal.
+  - A commit id in the output opens on the Graph, and a `path:line` opens in Files. Each is underlined only once the repository has confirmed it is a commit, or a file at HEAD.
+  - While the terminal has the focus every key goes to the shell, except Ctrl+Shift+P for the palette, Ctrl+Shift+` to leave, and Ctrl+Shift+C and Ctrl+Shift+V to copy and paste (⌘C and ⌘V on macOS).
+  - A terminal keeps running when you go to another screen, and what it printed is there when you come back. It keeps 10,000 lines of scrollback.
+- **Recipes**, a new screen on the rail, runs a list of git steps you build from blocks: stash, pull, merge, pop, commit, push.
+  - There are eighteen blocks in six groups. Press a block or its key to add it. Its branch, remote and other choices are picked from lists, and its git command is shown beside it.
+  - No block forces a push, deletes an unmerged branch or resets hard, and none can be added.
+  - Spagitty checks the list with every change and says, under the block, what is wrong: a pop with no stash above it, a push that would need force, a branch that does not exist. **Run** is disabled until nothing is wrong.
+  - **Run** saves a restore point, then Spagitty runs each command itself, one step at a time. **Undo the whole run** puts HEAD, the branches, the working tree with its untracked files, the index and the stashes back as they were. It cannot take back a push.
+  - The level sets where a run stops: before every step, before a push or a branch being deleted, or not at all. **Read-only** runs nothing. A conflict, a command that fails, a failed check and a rejected push always stop it.
+  - A conflict in a merge can be opened in Merger, and any other in Conflicts. The run goes on when it is settled.
+  - **Agent help** is a switch on each recipe, off unless you turn it on. On, you write what you want in a sentence and the agent proposes the blocks, for you to read and change before anything runs. It also writes a commit message you leave to it, and explains a step that failed. It never runs a command. Off, no agent is called.
+  - **Copy as script** copies the steps as a shell script. **Export** and **Import** move a recipe as JSON.
+  - Recipes are kept on this machine, for each repository. Nothing is added to the repository.
+- **Reflog** lists the restore points recipes made, each with **undo to here** and **drop**. The newest 20 are kept, for 7 days.
+- **Investigate**, on the rail, tells the life of a file, a folder, a branch or a line. It replaces File history, and an old link to that screen arrives here.
+  - A **file**: when it was born and by whom, each time it was renamed, moved to another folder or rewritten, and every edit, back past its renames. A rewrite is a commit that removed at least half of the file's lines. **Follow renames** can be switched off.
+  - A **folder**: the commits that added, removed or renamed a file under it, and its biggest edits.
+  - A **branch**: where it left the default branch, its commits, what was merged into it, where it landed, and the rebases and resets its reflog records.
+  - A **line**: every commit that changed it, with the line as each one left it. **Investigate line** in Files opens it.
+  - The card at the top draws the size over time, with a marker on each birth, rename, move and rewrite, and a row of ticks for each author. Agents are in the agent's colour.
+  - Choose an event to see how much of the file it changed, how many of the lines it wrote are still there today, who owns the file today, and its largest change. **Open file at** reads the file in Files as that commit left it, **Compare with today** shows that version against the file now, and **Show in Graph** selects the commit.
+  - A long history arrives a page at a time, newest first. After 5,000 commits, **Load more** reads on. The range can be the last 30 days, 90 days or year.
+
+### Removed
+
+- File history, as a screen of its own. Investigate does what it did.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 2.2.3. The Mac builds are signed ad hoc and are
+  not notarized: on first open macOS says the developer cannot be verified.
+  Open the app once from the right-click **Open** menu, or allow it under
+  **System Settings › Privacy & Security › Open Anyway**, and macOS remembers
+  the choice. If macOS says the app is **damaged** instead, compare the download
+  with `SHA256SUMS-*.txt`: download it again if it differs, and open an issue if
+  it matches. After updating, macOS may ask once for the keychain password to
+  read a connected account's token or an agent's key; choose **Always Allow**.
+- Each download now carries a terminal multiplexer for the Terminal screen:
+  psmux on Windows, and tmux on macOS and Linux. They are separate programs
+  that Spagitty runs, under their own licences, listed in `NOTICE`.
+
 ## [2.2.3] - 2026-10-12
 
 ### Fixed

@@ -15,10 +15,13 @@ use spagitty_core::branches::{self, BranchRow};
 use spagitty_core::clone::{self, Plan};
 use spagitty_core::conflicts::{self, ConflictSides, ConflictState};
 use spagitty_core::diff::{self, CommitDetail, CommitDiff, FileDiff, Side};
+use spagitty_core::files;
 use spagitty_core::forge::review::ReviewVerdict;
 use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
 use spagitty_core::graph::{GraphOrder, ROW_PITCH};
+use spagitty_core::highlight;
 use spagitty_core::identity::{self, Identity, Key, Scope};
+use spagitty_core::investigate;
 use spagitty_core::merger;
 use spagitty_core::ops::{self, Integration, ResetMode, StashAction};
 use spagitty_core::pull;
@@ -179,6 +182,12 @@ impl AppState {
         let held = self.lock_session(command);
         let session = held.as_ref().ok_or(Error::NoRepository)?;
         f(session)
+    }
+
+    /// Where the open repository is, for work that takes longer than the
+    /// session should be held for: a recipe's run (FEAT-133).
+    pub(crate) fn open_path(&self, command: &'static str) -> Result<PathBuf> {
+        self.with_session(command, |session| Ok(session.path.clone()))
     }
 
     /// A new ticket, which is now the latest. See [`AppState::opened`].
@@ -1030,16 +1039,197 @@ pub fn blame(state: State<'_, AppState>, path: String, revision: String) -> Resu
     })
 }
 
-/// Read commit history for a single file path (FEAT-063).
+// --- Files (FEAT-131) ---------------------------------------------------
+//
+// Every command below takes a revision and reads git's objects at it. None of
+// them holds the session lock while it works: colouring a large file or
+// blaming a long one takes long enough to be noticed, and the graph, the
+// toolbar and the watcher all wait on that lock. The repository handle is
+// taken under the lock and the work is done with it after.
+
+/// The open repository, to read from without holding the session.
+fn files_repo(
+    state: &State<'_, AppState>,
+    command: &'static str,
+) -> Result<spagitty_core::gix::Repository> {
+    state.with_session(command, |session| Ok(session.repo.to_thread_local()))
+}
+
+/// The commit a branch, tag or commit means. An empty revision is `HEAD`.
 #[tauri::command(async)]
-pub fn file_history(
+pub fn files_resolve(state: State<'_, AppState>, rev: String) -> Result<files::Revision> {
+    files::resolve(&files_repo(&state, "files_resolve")?, &rev)
+}
+
+/// One folder of the repository at `rev`. An empty `dir` is the root.
+#[tauri::command(async)]
+pub fn files_tree(
+    state: State<'_, AppState>,
+    rev: String,
+    dir: String,
+) -> Result<Vec<files::TreeEntry>> {
+    files::tree(&files_repo(&state, "files_tree")?, &rev, &dir)
+}
+
+/// `path` as it is in `rev`: text, an image, binary, a Git LFS pointer, too
+/// large, or not there.
+#[tauri::command(async)]
+pub fn files_read(
+    state: State<'_, AppState>,
+    rev: String,
+    path: String,
+) -> Result<files::FileRead> {
+    files::read(&files_repo(&state, "files_read")?, &rev, &path)
+}
+
+/// How many paths *Find a file* shows. Past this the field says to type more.
+const FILES_FIND_LIMIT: usize = 200;
+
+/// The files of `rev` whose paths hold every word of `query`.
+#[tauri::command(async)]
+pub fn files_find(state: State<'_, AppState>, rev: String, query: String) -> Result<files::Found> {
+    files::find(
+        &files_repo(&state, "files_find")?,
+        &rev,
+        &query,
+        FILES_FIND_LIMIT,
+    )
+}
+
+/// The colour of lines `start..end` of a blob, from tree-sitter.
+#[tauri::command(async)]
+pub fn files_spans(
+    state: State<'_, AppState>,
+    blob: String,
+    grammar: String,
+    start: usize,
+    end: usize,
+) -> Result<Vec<highlight::Line>> {
+    highlight::spans(
+        &files_repo(&state, "files_spans")?,
+        &blob,
+        &grammar,
+        start,
+        end,
+    )
+}
+
+/// Who wrote each line of `path` at `rev`, with each commit said once.
+#[tauri::command(async)]
+pub fn files_blame(
+    state: State<'_, AppState>,
+    rev: String,
+    path: String,
+) -> Result<blame::CompactBlame> {
+    blame::compact(&files_repo(&state, "files_blame")?, &path, &rev)
+}
+
+/// What a line was before `commit` wrote it, for the peek.
+#[tauri::command(async)]
+pub fn files_before(
+    state: State<'_, AppState>,
+    commit: String,
+    path: String,
+    line: u32,
+    previous: Option<String>,
+    previous_path: Option<String>,
+) -> Result<Option<String>> {
+    let repo = files_repo(&state, "files_before")?;
+    let from = previous.as_deref().zip(previous_path.as_deref());
+    files::before(&repo, &commit, &path, line, from)
+}
+
+// --- Investigate (FEAT-132) ---------------------------------------------
+//
+// Reads, like Files', and like Files' none holds the session lock while it
+// works: a page of `git log --follow` on a long history takes long enough to
+// be noticed.
+
+/// A page of the life of a file, a folder, a branch or a line.
+#[tauri::command(async)]
+pub fn investigate_life(
+    state: State<'_, AppState>,
+    ask: investigate::Ask,
+) -> Result<investigate::Page> {
+    investigate::life(&files_repo(&state, "investigate_life")?, &ask)
+}
+
+/// Who owns `path` at `rev` today, and what survives of each commit.
+#[tauri::command(async)]
+pub fn investigate_today(
     state: State<'_, AppState>,
     path: String,
-    limit: usize,
-) -> Result<Vec<blame::FileHistoryEntry>> {
-    state.with_session("file_history", |session| {
-        blame::history(&session.repo.to_thread_local(), &path, limit)
-    })
+    rev: String,
+) -> Result<investigate::Today> {
+    investigate::today(&files_repo(&state, "investigate_today")?, &path, &rev)
+}
+
+/// The largest hunk of what `commit` did to `path`.
+#[tauri::command(async)]
+pub fn investigate_hunk(
+    state: State<'_, AppState>,
+    commit: String,
+    path: String,
+    old_path: Option<String>,
+) -> Result<Option<diff::Hunk>> {
+    investigate::largest_hunk(
+        &files_repo(&state, "investigate_hunk")?,
+        &commit,
+        &path,
+        old_path.as_deref(),
+    )
+}
+
+/// `path` as `commit` left it, against `today_path` at `rev`.
+#[tauri::command(async)]
+pub fn investigate_compare(
+    state: State<'_, AppState>,
+    commit: String,
+    path: String,
+    rev: String,
+    today_path: String,
+) -> Result<Vec<diff::Hunk>> {
+    investigate::compare(
+        &files_repo(&state, "investigate_compare")?,
+        &commit,
+        &path,
+        &rev,
+        &today_path,
+    )
+}
+
+/// A branch against the default branch: its fork, where it landed, ahead and behind.
+#[tauri::command(async)]
+pub fn investigate_branch(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<investigate::BranchFacts> {
+    investigate::branch_facts(&files_repo(&state, "investigate_branch")?, &name)
+}
+
+/// What a terminal's link would open (FEAT-130).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalLinks {
+    /// Each hex word that is a commit here, with the full id it means.
+    pub commits: Vec<(String, String)>,
+    /// Each path that is a file at `HEAD`.
+    pub paths: Vec<String>,
+}
+
+/// Which of the hex words and paths a terminal printed are real. With no
+/// repository open, none are: nothing is underlined on a guess.
+#[tauri::command(async)]
+pub fn terminal_links(
+    state: State<'_, AppState>,
+    words: Vec<String>,
+    paths: Vec<String>,
+) -> TerminalLinks {
+    let (commits, paths) = match files_repo(&state, "terminal_links") {
+        Ok(repo) => files::known(&repo, &words, &paths),
+        Err(_) => (Vec::new(), Vec::new()),
+    };
+    TerminalLinks { commits, paths }
 }
 
 /// What operation is in progress, and every conflicted path.

@@ -422,6 +422,9 @@ jobs:
       - run: bun run tauri build ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
         shell: bash
         env:
+          # A release ships the terminal's multiplexer or does not ship (FEAT-130):
+          # without this, a download that failed would be a warning.
+          SPAGITTY_MULTIPLEXER_REQUIRED: 1
           # What the update check compares itself against, and the whole reason
           # it can answer at all: `Cargo.toml` says one version across every
           # release in a series, so a version number cannot identify a build.

@@ -9,6 +9,9 @@
 
 use std::process::{Child, Command};
 
+pub mod mux;
+pub mod pty;
+
 #[cfg(unix)]
 #[derive(Debug)]
 pub struct ProcessTree(u32);

@@ -182,6 +182,12 @@ rather than an audit.
 | [FEAT-127](items/FEAT-127-the-review-room-says-the-pull-request-moved-and-pulls-the-latest.md) | The review room says the pull request moved, and pulls the latest | 1R | Done |
 | [FEAT-128](items/FEAT-128-a-conflicts-columns-scroll-together-or-each-alone.md) | A conflict's columns scroll in place, together or each alone | 1D, 1S | Done |
 | [FEAT-129](items/FEAT-129-review-shows-a-file-before-and-after-side-by-side.md) | Review shows a file before and after, side by side | 1R | Done |
+| [FEAT-130](items/FEAT-130-a-terminal-on-the-rail.md) | A terminal on the rail, with tmux in it | 1T | Done |
+| [FEAT-131](items/FEAT-131-files-any-revision-read-never-written.md) | Files: any revision, read and never written | 1U | Done |
+| [FEAT-132](items/FEAT-132-investigate-the-life-of-a-file-folder-branch-or-line.md) | Investigate: the life of a file, a folder, a branch or a line | 1O | Done |
+| [FEAT-133](items/FEAT-133-recipes-git-steps-in-blocks-run-with-an-agent.md) | Recipes: git steps in blocks, run with an agent | 1V | Done |
+| [FEAT-134](items/FEAT-134-pin-or-hide-what-is-on-the-rail.md) | Pin or hide what is on the rail | 1K | Done |
+| [FEAT-135](items/FEAT-135-farm-sessions-in-the-terminal.md) | Farm sessions in the terminal | 1T, 1A | Backlog |
 
 ## Bugs
 
@@ -348,6 +354,7 @@ of its own.
 | [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Backlog |
 | [TASK-070](items/TASK-070-the-plans-file-list-scrolls-in-a-card-the-height-of-its-neighbours.md) | The plan's file list scrolls, in a card the height of its neighbours | 1S | Done |
 | [TASK-071](items/TASK-071-remove-agy.md) | agy is removed | 1K, 1Q, 1R, 1S | Done |
+| [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Backlog |
 
 ## Skipped identifiers
 

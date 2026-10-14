@@ -189,6 +189,202 @@ pub fn file(repo: &gix::Repository, path: &str, revision: &str) -> Result<Blame>
     })
 }
 
+/// One commit a blamed file's lines come from (FEAT-131).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlameCommit {
+    pub id: String,
+    pub short: String,
+    pub summary: String,
+    pub author_name: String,
+    /// The author's address, which is what a portrait is found by.
+    pub author_email: String,
+    /// Author time, seconds since the unix epoch.
+    pub time: i64,
+    /// The agent a `Co-authored-by` trailer names, by the rule gate 1 applies
+    /// ([`crate::attribution`]). `None` for a commit a person wrote alone.
+    pub agent: Option<String>,
+    /// The path the lines were written under at this commit.
+    pub path: String,
+    /// The commit and path this one's version of the file was changed from:
+    /// what "blame before this" blames, and what the peek's "was" line is
+    /// read from. `None` when this commit added the file.
+    pub previous: Option<String>,
+    pub previous_path: Option<String>,
+}
+
+/// A whole file's blame, with each commit said once.
+///
+/// [`Blame`] repeats the commit on every line and carries the text again;
+/// that is right for a strip beside a diff and wrong for a file of twenty
+/// thousand lines the screen already has. Here a line is two numbers.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompactBlame {
+    pub path: String,
+    /// The revision blamed, resolved to a full id.
+    pub revision: String,
+    pub commits: Vec<BlameCommit>,
+    /// For each line of the file, in order: an index into `commits`.
+    pub lines: Vec<u32>,
+    /// For each line: its number in the commit that wrote it.
+    pub origin: Vec<u32>,
+    /// Set when there are no lines for a reason worth stating.
+    pub refused: Option<NotBlamable>,
+}
+
+/// Blame `path` as of `revision`, compactly (FEAT-131).
+///
+/// The same refusals as [`file`], and the same `git blame`. Works in a bare
+/// repository: a revision is given, so git reads objects and no checkout.
+pub fn compact(repo: &gix::Repository, path: &str, revision: &str) -> Result<CompactBlame> {
+    let spec = if revision.trim().is_empty() {
+        "HEAD"
+    } else {
+        revision.trim()
+    };
+    let suspect = repo
+        .rev_parse_single(spec)
+        .map_err(|_| Error::UnknownCommit(spec.to_string()))?
+        .object()
+        .map_err(|_| Error::UnknownCommit(spec.to_string()))?
+        .peel_to_commit()
+        .map_err(|_| Error::UnknownCommit(spec.to_string()))?
+        .id;
+
+    let empty = |refused| CompactBlame {
+        path: path.to_string(),
+        revision: suspect.to_string(),
+        commits: Vec::new(),
+        lines: Vec::new(),
+        origin: Vec::new(),
+        refused,
+    };
+
+    let Some(contents) = blob_at(repo, suspect, path)? else {
+        return Ok(empty(Some(NotBlamable::NotAFile)));
+    };
+    if is_binary(&contents) {
+        return Ok(empty(Some(NotBlamable::Binary)));
+    }
+    if contents.len() > MAX_BLOB_BYTES {
+        return Ok(empty(Some(NotBlamable::TooLarge)));
+    }
+    if contents.is_empty() {
+        return Ok(empty(Some(NotBlamable::Empty)));
+    }
+
+    let dir = repo.workdir().unwrap_or_else(|| repo.git_dir());
+    // The id rather than the name it was asked by: a branch can move between
+    // the read above and the blame below, and the two must be of one commit.
+    let porcelain = shell::blame_porcelain(dir, &suspect.to_string(), path)?;
+    let mut blamed = parse_compact(&porcelain, path);
+
+    for commit in &mut blamed.commits {
+        let Ok(id) = gix::ObjectId::from_hex(commit.id.as_bytes()) else {
+            continue;
+        };
+        if let Ok(found) = repo.find_commit(id) {
+            commit.agent = crate::attribution::agent_in(&found.message_raw_sloppy().to_string());
+        }
+    }
+
+    Ok(CompactBlame {
+        commits: blamed.commits,
+        lines: blamed.lines,
+        origin: blamed.origin,
+        ..empty(None)
+    })
+}
+
+struct Compact {
+    commits: Vec<BlameCommit>,
+    lines: Vec<u32>,
+    origin: Vec<u32>,
+}
+
+/// Turn `--porcelain` into commits and a commit per line.
+///
+/// A group starts with `<sha> <orig> <final> [count]`. The first time a commit
+/// appears its headers follow; after that only the header line does, so a
+/// commit is filled in once and looked up by id from then on. Content arrives
+/// on a line with a leading tab, and ends the entry for that line.
+fn parse_compact(porcelain: &str, asked_for: &str) -> Compact {
+    let mut commits: Vec<BlameCommit> = Vec::new();
+    let mut index: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    let mut lines = Vec::new();
+    let mut origin = Vec::new();
+    // The commit and original line the content line that follows belongs to.
+    let mut at: Option<(u32, u32)> = None;
+
+    for raw in porcelain.lines() {
+        if raw.starts_with('\t') {
+            if let Some((commit, line)) = at.take() {
+                lines.push(commit);
+                origin.push(line);
+            }
+            continue;
+        }
+
+        let (key, value) = raw.split_once(' ').unwrap_or((raw, ""));
+        if is_object_id(key) {
+            let original = value
+                .split(' ')
+                .next()
+                .and_then(|n| n.parse().ok())
+                .unwrap_or(0);
+            let commit = *index.entry(key.to_string()).or_insert_with(|| {
+                commits.push(BlameCommit {
+                    id: key.to_string(),
+                    short: key.chars().take(7).collect(),
+                    summary: String::new(),
+                    author_name: String::new(),
+                    author_email: String::new(),
+                    time: 0,
+                    agent: None,
+                    path: asked_for.to_string(),
+                    previous: None,
+                    previous_path: None,
+                });
+                (commits.len() - 1) as u32
+            });
+            at = Some((commit, original));
+            continue;
+        }
+
+        let Some((commit, _)) = at else { continue };
+        let commit = &mut commits[commit as usize];
+        match key {
+            "author" => commit.author_name = value.to_string(),
+            // `<ada@example.com>`: the address without its brackets.
+            "author-mail" => {
+                commit.author_email = value
+                    .trim()
+                    .trim_start_matches('<')
+                    .trim_end_matches('>')
+                    .to_string();
+            }
+            "author-time" => commit.time = value.parse().unwrap_or(0),
+            "summary" => commit.summary = value.to_string(),
+            "filename" => commit.path = value.to_string(),
+            // `previous <sha> <path>`, the path being everything after the id.
+            "previous" => {
+                if let Some((id, path)) = value.split_once(' ') {
+                    commit.previous = Some(id.to_string());
+                    commit.previous_path = Some(path.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Compact {
+        commits,
+        lines,
+        origin,
+    }
+}
+
 /// The working directory to run `git` in.
 ///
 /// A bare repository has no checkout, and `git blame` wants one. Blaming a bare
@@ -598,5 +794,190 @@ mod tests {
         let entries = history(&repo, "core.txt", 10).expect("file history");
         assert!(!entries.is_empty());
         assert_eq!(entries[0].author_name, "Ada Lovelace");
+    }
+
+    // --- The compact form Files reads (FEAT-131) ---------------------------
+
+    #[test]
+    fn the_compact_blame_agrees_with_the_one_that_repeats_itself() {
+        let fixture = Fixture::woven();
+        let repo = fixture.open();
+
+        let long = file(&repo, "core.txt", "HEAD").expect("blame");
+        let short = compact(&repo, "core.txt", "HEAD").expect("blame");
+
+        assert_eq!(short.lines.len(), long.lines.len());
+        assert_eq!(short.origin.len(), short.lines.len());
+        for (line, &commit) in long.lines.iter().zip(&short.lines) {
+            let commit = &short.commits[commit as usize];
+            assert_eq!(commit.id, line.commit, "line {}", line.line);
+            assert_eq!(commit.summary, line.summary);
+            assert_eq!(commit.author_name, line.author_name);
+            assert_eq!(commit.time, line.time);
+        }
+        assert_eq!(short.revision, fixture.head());
+        assert_eq!(short.refused, None);
+    }
+
+    #[test]
+    fn each_commit_is_said_once_with_who_wrote_it() {
+        let fixture = Fixture::woven();
+        let repo = fixture.open();
+
+        let blame = compact(&repo, "core.txt", "HEAD").expect("blame");
+        let ids: std::collections::HashSet<&str> =
+            blame.commits.iter().map(|c| c.id.as_str()).collect();
+
+        // Three commits wrote core.txt: the import and the two rewrites.
+        assert_eq!(blame.commits.len(), 3);
+        assert_eq!(ids.len(), 3);
+        for commit in &blame.commits {
+            assert_eq!(commit.author_email, "ada@example.com");
+            assert_eq!(commit.short, commit.id[..7]);
+            assert_eq!(commit.path, "core.txt");
+            assert_eq!(commit.agent, None);
+        }
+    }
+
+    #[test]
+    fn a_commit_that_changed_the_file_names_what_it_changed_it_from() {
+        let fixture = Fixture::woven();
+        let repo = fixture.open();
+
+        let blame = compact(&repo, "core.txt", "HEAD").expect("blame");
+        let import = fixture.rev("HEAD~2");
+        let rewrite = blame
+            .commits
+            .iter()
+            .find(|c| c.summary == "Rewrite line 38")
+            .expect("the rewrite");
+        let added = blame
+            .commits
+            .iter()
+            .find(|c| c.summary == "Initial import")
+            .expect("the import");
+
+        // Line 38 is line 38 of the commit that rewrote it, changed from the
+        // import; the import added the file and has no before.
+        assert_eq!(blame.origin[37], 38);
+        assert_eq!(blame.commits[blame.lines[37] as usize].id, rewrite.id);
+        assert_eq!(rewrite.previous.as_deref(), Some(import.as_str()));
+        assert_eq!(rewrite.previous_path.as_deref(), Some("core.txt"));
+        assert_eq!(added.previous, None);
+    }
+
+    #[test]
+    fn a_line_from_an_agents_commit_is_marked_and_a_namesakes_is_not() {
+        let fixture = Fixture::empty();
+        fixture.write("a.rs", "one\ntwo\nthree\n");
+        fixture.git(&["add", "-A"]);
+        fixture.commit("Add");
+        fixture.write("a.rs", "one\nTWO\nthree\n");
+        fixture.commit_all("Cache on disk\n\nCo-authored-by: Codex <noreply@example.com>");
+        fixture.write("a.rs", "one\nTWO\nTHREE\n");
+        fixture.commit_all("Tidy\n\nCo-authored-by: Claude Shannon <claude@bell-labs.example>");
+        let repo = fixture.open();
+
+        let blame = compact(&repo, "a.rs", "HEAD").expect("blame");
+        let agent_of = |line: usize| blame.commits[blame.lines[line] as usize].agent.as_deref();
+
+        assert_eq!(agent_of(0), None);
+        assert_eq!(agent_of(1), Some("Codex"));
+        assert_eq!(agent_of(2), None, "a person called Claude is a person");
+    }
+
+    #[test]
+    fn a_renamed_files_lines_keep_the_name_they_were_written_under() {
+        let fixture = Fixture::empty();
+        fixture.write("old.rs", "alpha\nbeta\ngamma\ndelta\nepsilon\n");
+        fixture.git(&["add", "-A"]);
+        let first = fixture.commit("Add");
+        fixture.git(&["mv", "old.rs", "new.rs"]);
+        fixture.write("new.rs", "alpha\nBETA\ngamma\ndelta\nepsilon\n");
+        fixture.git(&["add", "-A"]);
+        fixture.commit("Rename and edit");
+        let repo = fixture.open();
+
+        let blame = compact(&repo, "new.rs", "HEAD").expect("blame");
+        let of = |line: usize| &blame.commits[blame.lines[line] as usize];
+
+        assert_eq!(of(0).path, "old.rs");
+        assert_eq!(of(1).path, "new.rs");
+        assert_eq!(of(1).previous.as_deref(), Some(first.as_str()));
+        assert_eq!(of(1).previous_path.as_deref(), Some("old.rs"));
+    }
+
+    #[test]
+    fn the_compact_blame_refuses_what_the_long_one_refuses() {
+        let fixture = Fixture::woven();
+        let repo = fixture.open();
+
+        assert_eq!(
+            compact(&repo, "logo.bin", "HEAD").expect("blame").refused,
+            Some(NotBlamable::Binary)
+        );
+        assert_eq!(
+            compact(&repo, "nope.txt", "HEAD").expect("blame").refused,
+            Some(NotBlamable::NotAFile)
+        );
+        assert_eq!(
+            compact(&repo, "src", "HEAD").expect("blame").refused,
+            Some(NotBlamable::NotAFile)
+        );
+        assert!(compact(&repo, "core.txt", "no-such-rev").is_err());
+    }
+
+    #[test]
+    fn an_older_revision_is_blamed_as_it_was() {
+        let fixture = Fixture::woven();
+        let repo = fixture.open();
+
+        let then = compact(&repo, "core.txt", "v0.1.0").expect("blame");
+
+        // At the first tag nothing had been rewritten yet.
+        assert_eq!(then.commits.len(), 1);
+        assert_eq!(then.commits[0].summary, "Initial import");
+        assert_eq!(then.lines.len(), 40);
+    }
+
+    #[test]
+    fn a_bare_repository_is_blamed_from_its_objects() {
+        let fixture = Fixture::woven();
+        let bare = tempfile::tempdir().expect("temp dir");
+        let target = bare.path().join("bare.git");
+        fixture.git(&[
+            "clone",
+            "-q",
+            "--bare",
+            ".",
+            target.to_str().expect("a utf-8 path"),
+        ]);
+        let repo = gix::open(&target).expect("open the bare clone");
+
+        let blame = compact(&repo, "core.txt", "main").expect("blame");
+
+        assert_eq!(blame.lines.len(), 40);
+        assert_eq!(blame.refused, None);
+    }
+
+    #[test]
+    fn porcelain_with_a_path_that_has_spaces_keeps_the_whole_path() {
+        let id = "a".repeat(40);
+        let before = "b".repeat(40);
+        let porcelain = format!(
+            "{id} 3 1 1\nauthor Ada Lovelace\nauthor-mail <ada@example.com>\nauthor-time 1700000000\nsummary Edit\nprevious {before} my docs/old name.md\nfilename my docs/new name.md\n\thello\n{id} 9 2\n\tworld\n"
+        );
+
+        let parsed = parse_compact(&porcelain, "my docs/new name.md");
+
+        assert_eq!(parsed.commits.len(), 1);
+        assert_eq!(parsed.lines, [0, 0]);
+        assert_eq!(parsed.origin, [3, 9]);
+        assert_eq!(
+            parsed.commits[0].previous_path.as_deref(),
+            Some("my docs/old name.md")
+        );
+        assert_eq!(parsed.commits[0].path, "my docs/new name.md");
+        assert_eq!(parsed.commits[0].author_email, "ada@example.com");
     }
 }

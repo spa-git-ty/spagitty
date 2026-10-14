@@ -49,7 +49,7 @@ import RepoTabs from './RepoTabs.svelte';
 import StatusStrip from './StatusStrip.svelte';
 import TitleBar from './TitleBar.svelte';
 import Toolbar from './Toolbar.svelte';
-import { NAV_ITEMS } from '$lib/nav';
+import { NAV_ITEMS, type RailSettings } from '$lib/nav';
 import { activity } from '$lib/activity/store.svelte';
 import { branching } from '$lib/graph/branching.svelte';
 import { version } from '$lib/version';
@@ -1267,11 +1267,18 @@ describe('NavRail', () => {
 			'Farm',
 			'Graph',
 			'Working copy',
+			// FEAT-130 and FEAT-131.
+			'Terminal',
+			'Files',
 			'Merger',
 			'Branches',
 			'Pull requests',
 			'Review',
+			// FEAT-133.
+			'Recipes',
 			'Rebase',
+			// FEAT-132.
+			'Investigate',
 			'Log',
 			'Stash',
 			'Tags',
@@ -1467,6 +1474,124 @@ describe('NavRail', () => {
 		view.destroy();
 	});
 
+	/**
+	 * Pin or hide what is on the rail (FEAT-134). What a person hid goes under
+	 * a More button at the end of Tools, or to the palette only.
+	 */
+	describe('what the person hid', () => {
+		const chosen = (rail: Partial<RailSettings> = {}): RailSettings => ({
+			hidden: ['1G', '1N'],
+			order: [],
+			where: 'more',
+			...rail
+		});
+		const labels = (view: { all(selector: string): HTMLElement[] }) =>
+			view.all('.item').map((item) => item.getAttribute('aria-label'));
+
+		it('has no More button until something is hidden', () => {
+			repoControl.setInfo(info());
+			const view = render(NavRail, {});
+
+			expect(view.find('.item.more')).toBeNull();
+
+			view.destroy();
+		});
+
+		it('takes the hidden screens off and puts More before Settings', () => {
+			repoControl.setInfo(info());
+			const view = render(NavRail, { rail: chosen() });
+
+			const shown = labels(view);
+			expect(shown).not.toContain('Stash');
+			expect(shown).not.toContain('Tags');
+			expect(shown.slice(-2)).toEqual(['More', 'Settings']);
+
+			view.destroy();
+		});
+
+		it('opens a menu of the hidden screens with their codes, and goes to the one chosen', () => {
+			repoControl.setInfo(info());
+			const view = render(NavRail, { rail: chosen() });
+			const more = view.get('.item.more');
+
+			expect(more.getAttribute('aria-expanded')).toBe('false');
+			click(more);
+			expect(more.getAttribute('aria-expanded')).toBe('true');
+
+			const entries = view.all('[role="menu"] [role="menuitem"]');
+			expect(entries.map((entry) => entry.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+				'Stash 1G',
+				'Tags 1N'
+			]);
+
+			click(entries[1]);
+			expect(goto).toHaveBeenCalledWith('/tags');
+			expect(view.find('[role="menu"]')).toBeNull();
+
+			view.destroy();
+		});
+
+		it('closes the menu when More is pressed again', () => {
+			repoControl.setInfo(info());
+			const view = render(NavRail, { rail: chosen() });
+
+			click(view.get('.item.more'));
+			expect(view.find('[role="menu"]')).not.toBeNull();
+			click(view.get('.item.more'));
+			expect(view.find('[role="menu"]')).toBeNull();
+
+			view.destroy();
+		});
+
+		/** "Where am I" always has an answer. */
+		it('keeps a hidden screen on the rail while it is the one open', () => {
+			repoControl.setInfo(info());
+			at('/stash');
+			const view = render(NavRail, { rail: chosen() });
+
+			expect(labels(view)).toContain('Stash');
+			expect(view.get('.item[data-active="true"]').getAttribute('aria-label')).toBe('Stash');
+
+			view.destroy();
+		});
+
+		it('has no More button when hidden screens are for the palette only', () => {
+			repoControl.setInfo(info());
+			const view = render(NavRail, { rail: chosen({ hidden: ['1G'], where: 'palette' }) });
+
+			expect(labels(view)).not.toContain('Stash');
+			expect(view.find('.item.more')).toBeNull();
+
+			view.destroy();
+		});
+
+		it('draws the rows in the order chosen', () => {
+			repoControl.setInfo(info());
+			const order = NAV_ITEMS.map((item) => item.code);
+			const rebase = order.indexOf('1E');
+			const log = order.indexOf('1I');
+			[order[rebase], order[log]] = [order[log], order[rebase]];
+			const view = render(NavRail, { rail: chosen({ hidden: [], order }) });
+
+			const shown = labels(view);
+			expect(shown.indexOf('Log')).toBeLessThan(shown.indexOf('Rebase'));
+
+			view.destroy();
+		});
+
+		/** Settings › Rail shows the rail itself, to be looked at. */
+		it('as a preview is inert, closed, and never offers to open a repository', () => {
+			const view = render(NavRail, { preview: true });
+
+			const nav = view.get('nav');
+			expect(nav.hasAttribute('inert')).toBe(true);
+			expect(nav.getAttribute('aria-label')).toBe('Preview of the rail');
+			expect(view.get('.slot').classList.contains('preview')).toBe(true);
+			expect(view.find('.open-repository')).toBeNull();
+
+			view.destroy();
+		});
+	});
 });
 
 describe('ResizeEdges', () => {

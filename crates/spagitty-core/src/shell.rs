@@ -725,6 +725,16 @@ pub fn blame(repo: &Path, revision: &str, path: &str) -> Result<String> {
     run(repo, &["blame", "--line-porcelain", revision, "--", path])
 }
 
+/// The same blame, with each commit's headers given once (FEAT-131).
+///
+/// `--porcelain` rather than `--line-porcelain`: Files blames whole files of
+/// twenty thousand lines, and repeating a dozen header lines on every one of
+/// them is ten megabytes of text to say what a few hundred commits said. The
+/// exception that sends blame through `git` at all is the one on [`blame`].
+pub fn blame_porcelain(repo: &Path, revision: &str, path: &str) -> Result<String> {
+    run(repo, &["blame", "--porcelain", revision, "--", path])
+}
+
 // --- History rewriting and moving ------------------------------------------
 //
 // Everything below mutates refs, the index or the working tree, which is the
@@ -1447,6 +1457,140 @@ pub fn worktree_prune(repo: &Path) -> Result<()> {
     Ok(())
 }
 
+// --- Investigate (FEAT-132) -------------------------------------------------
+//
+// Three more reads that go through `git`, for the reason blame does: what they
+// ask is not in `gix`. Following a file across renames (`--follow`) and
+// following one line through history (`-L`) are both things git works out
+// commit by commit with its own rename detection, and a second implementation
+// that disagreed with `git log --follow` about where a file came from would be
+// worse than a slower one that agrees. They are reads: nothing below writes.
+
+/// What starts each commit in [`life_log`] and [`line_log`]'s output, and what
+/// separates its fields. Control characters, so no subject can contain them.
+pub const LIFE_RECORD: char = '\u{1e}';
+pub const LIFE_FIELD: char = '\u{1f}';
+/// What separates one `Co-authored-by` value from the next.
+pub const LIFE_TRAILER: char = '\u{1d}';
+
+/// id, short id, author, address, author time, parents, subject, co-authors.
+const LIFE_FORMAT: &str = "--format=%x1e%H%x1f%h%x1f%an%x1f%ae%x1f%at%x1f%P%x1f%s%x1f%(trailers:key=Co-authored-by,valueonly,separator=%x1d)";
+
+/// What to read a life of, for [`life_log`].
+pub struct LifeLog<'a> {
+    /// A revision, or a range such as `fork..branch`.
+    pub revision: &'a str,
+    /// A file or a folder to keep to. `None` reads every commit.
+    pub path: Option<&'a str>,
+    /// Follow one file across renames. Only meaningful with a file's path.
+    pub follow: bool,
+    pub skip: usize,
+    pub limit: usize,
+    /// Nothing older than this, in seconds since the epoch.
+    pub since: Option<i64>,
+}
+
+/// One page of history, with each commit's raw status lines and numstat.
+///
+/// A commit is a record starting with [`LIFE_RECORD`]; after its header line
+/// come `:mode mode id id STATUS\tpath[\tpath]` lines and `added\tremoved\tpath`
+/// lines. Paths are not quoted, so they are read as they are.
+pub fn life_log(repo: &Path, ask: &LifeLog<'_>) -> Result<String> {
+    let skip = format!("--skip={}", ask.skip);
+    let limit = format!("-n{}", ask.limit.max(1));
+    let since = ask.since.map(|at| format!("--since=@{at}"));
+
+    let mut args = vec![
+        "-c",
+        "core.quotepath=off",
+        "log",
+        LIFE_FORMAT,
+        "--raw",
+        "--numstat",
+        "-M",
+        "--no-color",
+        "--no-abbrev",
+        skip.as_str(),
+        limit.as_str(),
+    ];
+    if ask.follow {
+        args.push("--follow");
+    }
+    if let Some(since) = since.as_deref() {
+        args.push(since);
+    }
+    args.push(ask.revision);
+    args.push("--");
+    if let Some(path) = ask.path {
+        args.push(path);
+    }
+    run(repo, &args)
+}
+
+/// Every commit that changed line `line` of `path` as it is at `revision`,
+/// each with the patch for that line (`git log -L`).
+pub fn line_log(
+    repo: &Path,
+    revision: &str,
+    path: &str,
+    line: u32,
+    limit: usize,
+) -> Result<String> {
+    let range = format!("-L{line},{line}:{path}");
+    let limit = format!("-n{}", limit.max(1));
+    run(
+        repo,
+        &[
+            "-c",
+            "core.quotepath=off",
+            "log",
+            LIFE_FORMAT,
+            "--no-color",
+            limit.as_str(),
+            range.as_str(),
+            revision,
+        ],
+    )
+}
+
+/// How many commits `b` has that `a` lacks, and `a` that `b` lacks: ahead and
+/// behind, as `(ahead, behind)` of `b` against `a`.
+pub fn ahead_behind(repo: &Path, a: &str, b: &str) -> Result<(u32, u32)> {
+    let range = format!("{a}...{b}");
+    let out = run(repo, &["rev-list", "--left-right", "--count", &range, "--"])?;
+    let mut counts = out
+        .split_whitespace()
+        .map(|n| n.parse::<u32>().unwrap_or(0));
+    let behind = counts.next().unwrap_or(0);
+    let ahead = counts.next().unwrap_or(0);
+    Ok((ahead, behind))
+}
+
+/// The commits `tip` has on its own first-parent line that `base` lacks,
+/// newest first: a branch's own commits, without what was merged into it.
+pub fn own_commits(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>> {
+    let range = format!("{base}..{tip}");
+    let out = run(repo, &["rev-list", "--first-parent", &range, "--"])?;
+    Ok(out.lines().map(|id| id.trim().to_string()).collect())
+}
+
+/// The commit on `onto`'s first-parent line that first contained `tip`: where
+/// a merged branch landed. `None` when `tip` is not in `onto`, or is its tip.
+pub fn landing(repo: &Path, tip: &str, onto: &str) -> Result<Option<String>> {
+    let range = format!("{tip}..{onto}");
+    let out = run(
+        repo,
+        &[
+            "rev-list",
+            "--ancestry-path",
+            "--first-parent",
+            &range,
+            "--",
+        ],
+    )?;
+    Ok(out.lines().last().map(|id| id.trim().to_string()))
+}
+
 /// Read commit history touching a single path, following renames (FEAT-063).
 pub fn file_history(repo: &Path, path: &str, limit: usize) -> Result<String> {
     let limit_str = format!("-{}", limit.max(1));
@@ -2078,6 +2222,131 @@ pub fn last_touch(repo: &Path, range: &str, path: &str) -> Result<String> {
         repo,
         &["log", "-1", "--format=%H%x1f%h%x1f%s", range, "--", path],
     )
+}
+
+/// What a command printed and how it ended, whichever way that was.
+///
+/// Every other function here turns a non-zero exit into an error, because its
+/// caller asked for one thing and either has it or does not. A recipe's step
+/// (FEAT-133) is different: the exit is what the run decides on, and the
+/// output is shown to the person as it was, on success as on failure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ran {
+    /// `None` when a signal ended it.
+    pub code: Option<i32>,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+impl Ran {
+    pub fn ok(&self) -> bool {
+        self.code == Some(0)
+    }
+
+    /// Both streams, the way a terminal would have shown them.
+    pub fn output(&self) -> String {
+        let mut all = self.stdout.trim_end().to_string();
+        let err = self.stderr.trim_end();
+        if !err.is_empty() {
+            if !all.is_empty() {
+                all.push('\n');
+            }
+            all.push_str(err);
+        }
+        all
+    }
+}
+
+/// Run `git` in `repo` and say how it ended, without making an error of a
+/// non-zero exit (FEAT-133). Recorded like every other spawn.
+///
+/// `env` is added to the command's environment and `input` is written to its
+/// stdin. The only error is git not starting at all.
+pub fn ran_with(
+    repo: &Path,
+    args: &[&str],
+    env: &[(&str, &OsStr)],
+    input: Option<&str>,
+) -> Result<Ran> {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    let lock = operation_lock(repo);
+    let _guard = lock.lock().expect("git operation lock");
+    let started = Instant::now();
+    let mut command = command(repo, args);
+    // No editor ever opens: a rebase or a merge that wants a message takes
+    // the one git wrote.
+    command
+        .env("GIT_EDITOR", "true")
+        .env("GIT_SEQUENCE_EDITOR", "true")
+        .envs(env.iter().copied())
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let spawned = command.spawn().and_then(|mut child| {
+        if let Some(input) = input {
+            // Dropped at the end of the block, closing stdin.
+            let mut stdin = child.stdin.take().expect("piped stdin");
+            stdin.write_all(input.as_bytes())?;
+        }
+        child.wait_with_output()
+    });
+    let elapsed = started.elapsed().as_millis() as u64;
+    let output = match spawned {
+        Ok(output) => output,
+        Err(error) => {
+            record::push(
+                args,
+                Outcome::Failed {
+                    code: None,
+                    stderr: error.to_string(),
+                },
+                elapsed,
+            );
+            return Err(error.into());
+        }
+    };
+    let ran = Ran {
+        code: output.status.code(),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    };
+    record::push(
+        args,
+        if ran.ok() {
+            Outcome::Ok
+        } else {
+            Outcome::Failed {
+                code: ran.code,
+                stderr: ran.stderr.trim().to_string(),
+            }
+        },
+        elapsed,
+    );
+    Ok(ran)
+}
+
+/// [`ran_with`] and nothing added.
+pub fn ran(repo: &Path, args: &[&str]) -> Result<Ran> {
+    ran_with(repo, args, &[], None)
+}
+
+/// [`ran`], with a non-zero exit made the error it is everywhere else here.
+pub fn ran_ok(repo: &Path, args: &[&str]) -> Result<String> {
+    let ran = ran(repo, args)?;
+    if ran.ok() {
+        Ok(ran.stdout)
+    } else {
+        Err(Error::Git {
+            command: args.join(" "),
+            stderr: ran.stderr.trim().to_string(),
+        })
+    }
 }
 
 #[cfg(test)]

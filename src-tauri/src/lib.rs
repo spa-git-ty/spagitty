@@ -24,10 +24,12 @@ mod platform;
 mod profiles;
 mod rebase_worker;
 mod recents;
+mod recipes;
 mod review_state;
 mod search_worker;
 mod settings;
 mod supplemental;
+mod terminal;
 #[cfg(test)]
 mod testing;
 mod timing;
@@ -44,6 +46,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .manage(commands::AppState::default())
+        // Terminals belong to the window, not to the repository that is open.
+        .manage(terminal::TerminalState::default())
         .invoke_handler(tauri::generate_handler![
             commands::open_repo,
             commands::close_repo,
@@ -97,7 +101,43 @@ pub fn run() {
             commands::search_start,
             commands::search_stop,
             commands::blame,
-            commands::file_history,
+            commands::files_resolve,
+            commands::files_tree,
+            commands::files_read,
+            commands::files_find,
+            commands::files_spans,
+            commands::files_blame,
+            commands::files_before,
+            commands::investigate_life,
+            commands::investigate_today,
+            commands::investigate_hunk,
+            commands::investigate_compare,
+            commands::investigate_branch,
+            commands::terminal_links,
+            terminal::terminal_info,
+            terminal::terminal_open,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_close,
+            terminal::terminal_session_name,
+            terminal::terminal_sessions,
+            terminal::terminal_windows,
+            terminal::terminal_act,
+            recipes::recipes_list,
+            recipes::recipes_save,
+            recipes::recipes_delete,
+            recipes::recipes_import,
+            recipes::recipes_check,
+            recipes::recipes_propose,
+            recipes::recipe_run_start,
+            recipes::recipe_run_answer,
+            recipes::recipe_run_stop,
+            recipes::recipe_run_undo,
+            recipes::recipe_run_current,
+            recipes::recipe_run_close,
+            recipes::restore_points,
+            recipes::restore_point_undo,
+            recipes::restore_point_drop,
             commands::conflicts,
             commands::conflict_sides,
             commands::conflict_regions,
@@ -318,6 +358,9 @@ pub fn run() {
 
             // Agents' assignments. Nothing runs until one is assigned.
             agents::manage(app.handle());
+
+            // Recipes' runs. Nothing runs until one is run.
+            recipes::manage(app.handle());
             Ok(())
         })
         .build(tauri::generate_context!())

@@ -24,6 +24,12 @@ src-tauri/gen/schemas/windows-schema.json
 /examples/extensions/*/dist/
 *.spagitty-extension
 
+# The terminal's multiplexer is downloaded before Tauri reads its resources
+# (FEAT-130): a binary for one platform, fetched and checked, never committed.
+/multiplexer/bundle/*
+!/multiplexer/bundle/.gitkeep
+/multiplexer/.download/
+
 # The official extension is staged before Tauri reads its resources.
 /extensions/coderabbit/bundle/*
 !/extensions/coderabbit/bundle/.gitkeep

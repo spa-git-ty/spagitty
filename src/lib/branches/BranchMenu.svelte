@@ -39,6 +39,12 @@
 		/** The names are still being read. */
 		loading?: boolean;
 		onpick: (name: string) => void;
+		/**
+		 * Offer *A commit…* under the names (FEAT-131): whatever is typed in the
+		 * field is handed over as a revision. For a control that reads at a
+		 * revision; one that checks a branch out has no use for it.
+		 */
+		oncommit?: (revision: string) => void;
 		onclose: () => void;
 	}
 
@@ -52,6 +58,7 @@
 		current = null,
 		loading = false,
 		onpick,
+		oncommit,
 		onclose
 	}: Props = $props();
 
@@ -192,9 +199,24 @@
 				event.preventDefault();
 				const at = rows[cursor];
 				if (at && pickable(at)) choose(at);
+				// Nothing by that name: it may be a commit.
+				else if (rows.length === 0) asCommit();
 				return;
 			}
 		}
+	}
+
+	/** Hand what was typed over as a revision, or ask for it to be typed. */
+	function asCommit() {
+		const revision = query.trim();
+		if (!oncommit) return;
+		if (revision === '') {
+			field?.focus();
+			return;
+		}
+		const take = oncommit;
+		close();
+		take(revision);
 	}
 
 	/** Close when the focus is somewhere else, as `Menu` does. */
@@ -239,7 +261,7 @@
 			aria-controls="{uid}-list"
 			aria-autocomplete="list"
 			aria-activedescendant={cursor >= 0 ? `${uid}-${cursor}` : undefined}
-			placeholder="Find a branch"
+			placeholder={oncommit ? 'Find a branch, or type a commit' : 'Find a branch'}
 			spellcheck="false"
 			autocomplete="off"
 			autocapitalize="off"
@@ -319,6 +341,19 @@
 			</div>
 		{/each}
 	</div>
+	{#if oncommit}
+		<!-- Kept out of the list: it is not a name, and the arrows move over names. -->
+		<button
+			type="button"
+			class="commit"
+			tabindex="-1"
+			onmousedown={(event) => event.preventDefault()}
+			onclick={asCommit}
+		>
+			<span>A commit…</span>
+			{#if query.trim() !== ''}<span class="mono typed">{query.trim()}</span>{/if}
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -510,5 +545,29 @@
 		padding: 14px 12px;
 		text-align: center;
 		font-size: var(--fs-secondary);
+	}
+
+	/* A commit…, under the names and apart from them (FEAT-131). */
+	.commit {
+		flex: none;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 12px;
+		border-top: 1px solid var(--pane-edge);
+		font-size: var(--fs-secondary);
+		text-align: left;
+	}
+
+	.commit:hover {
+		background: var(--hover);
+	}
+
+	.typed {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--muted);
 	}
 </style>

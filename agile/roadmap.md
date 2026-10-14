@@ -306,6 +306,30 @@ A third way to read a file in Review: the whole of it as it was beside the whole
 
 The pill has the whole diff column to be laid out in and wraps when it must, and the diff keeps a least width while the panels beside it give way.
 
+## 3.0.0 — the workbench and recipes, the author's request of 2026-10-12
+
+The proposal is `docs/proposals/workbench-and-recipes.md` and the designs are `design_handoff_workbench/`. In this order, because each uses the one before.
+
+### 36. FEAT-134 — pin or hide what is on the rail
+
+Settings › Rail. It comes first because four new rows are coming.
+
+### 37. FEAT-131 — Files
+
+Any revision, read from git's objects and never written, with tree-sitter colour and blame with a peek. It brings the highlighter and blame at a revision that FEAT-132 uses.
+
+### 38. FEAT-132 — Investigate
+
+The life of a file, a folder, a branch or a line. It replaces File history.
+
+### 39. FEAT-130 — Terminal
+
+A PTY and xterm.js, with tmux or psmux shipped where the system has none. The CI bundling is the long part. Farm sessions are their own item, FEAT-135, and are not in 3.0.0.
+
+### 40. FEAT-133 — Recipes
+
+The proposal's question 1 was answered on 2026-10-13: Spagitty runs the git commands, and the agent is called for judgment. A note from the author the same day makes the agent's help a switch on each recipe: on, it proposes the blocks; off, no agent is called.
+
 ## Deliberately not on this list
 
 Recorded so they do not resurface as gaps: dragging commits onto branches,

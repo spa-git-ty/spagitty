@@ -922,7 +922,7 @@ fn line_stats(old: Option<&[u8]>, new: Option<&[u8]>) -> Stats {
 ///
 /// Two changes close enough that their context would overlap belong in one
 /// hunk; that is what keeps a diff from splitting into a block per line.
-fn hunks(old: &[u8], new: &[u8]) -> Vec<Hunk> {
+pub(crate) fn hunks(old: &[u8], new: &[u8]) -> Vec<Hunk> {
     let input = blob::InternedInput::new(
         blob::sources::byte_lines(old),
         blob::sources::byte_lines(new),

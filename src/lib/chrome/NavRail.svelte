@@ -4,13 +4,34 @@
 	import { page } from '$app/state';
 	import { delight } from '$lib/delight/store.svelte';
 	import { resolving } from '$lib/merger/resolve.svelte';
-	import { isItemActive, navRows } from '$lib/nav';
+	import { isItemActive, NAV_ITEMS, railRows } from '$lib/nav';
 	import { repo } from '$lib/repo.svelte';
 	import { review } from '$lib/review/store.svelte';
 	import { agents } from '$lib/agents/store.svelte';
 	import { farmStore } from '$lib/farm/store.svelte';
+	import { settings } from '$lib/settings/store.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import type { NavItem } from '$lib/nav';
+	import Menu from '$lib/ui/Menu.svelte';
+	import type { MenuItem } from '$lib/ui/menu';
+	import type { NavItem, RailSettings } from '$lib/nav';
+
+	interface Props {
+		/**
+		 * What to draw instead of the stored choice (FEAT-134).
+		 *
+		 * Settings › Rail shows this component, not a drawing of it, so what a
+		 * person sees there while choosing is what the rail will be.
+		 */
+		rail?: RailSettings;
+		/**
+		 * Drawn to be looked at: in the flow of the page, closed, and inert.
+		 * A preview that navigated would take the person off the screen they
+		 * are previewing from.
+		 */
+		preview?: boolean;
+	}
+
+	let { rail, preview = false }: Props = $props();
 
 	/**
 	 * The rail is an ornament (FEAT-082): a floating pill of icons beside the
@@ -30,12 +51,41 @@
 	 * other screen is open, for as long as it is.
 	 */
 	const rows = $derived(
-		navRows(undefined, {
+		railRows(NAV_ITEMS, {
 			pathname: page.url.pathname,
 			conflicts: counts.conflicts,
-			delight: delight.on
+			delight: delight.on,
+			rail: rail ?? settings.rail
 		})
 	);
+
+	/**
+	 * The More button's menu (FEAT-134): the screens the person hid, each with
+	 * its code. Opened beside the button rather than at the pointer, so it is
+	 * in the same place from the keyboard.
+	 */
+	let more = $state<{ x: number; y: number; anchor: HTMLElement } | null>(null);
+
+	function toggleMore(event: MouseEvent) {
+		const anchor = event.currentTarget as HTMLElement;
+		if (more) {
+			more = null;
+			return;
+		}
+		const box = anchor.getBoundingClientRect();
+		more = { x: box.right + 8, y: box.top, anchor };
+	}
+
+	const hidden = $derived(rows.flatMap((row) => (row.kind === 'more' ? row.items : [])));
+
+	function under(items: NavItem[]): MenuItem[] {
+		return items.map((item) => ({
+			id: item.code,
+			label: item.label,
+			note: item.code,
+			run: () => void goto(item.href)
+		}));
+	}
 
 	/**
 	 * A count of `null` means "not computed yet" and renders as a dot. Only the
@@ -71,8 +121,8 @@
 	}
 </script>
 
-<div class="slot">
-	<nav class="rail ornament" aria-label="Screens">
+<div class="slot" class:preview>
+	<nav class="rail ornament" aria-label={preview ? 'Preview of the rail' : 'Screens'} inert={preview}>
 		<!--
 			Opening a repository is the first thing a new user needs, so with
 			nothing open it takes the top of the rail, filled with the accent. It
@@ -80,7 +130,7 @@
 			open one, and a bright button offering to replace the repository you
 			are working in is the opposite of what the rail is for.
 		-->
-		{#if !repo.info}
+		{#if !repo.info && !preview}
 			<div class="open">
 				<button
 					class="item open-repository primary"
@@ -94,29 +144,62 @@
 			</div>
 		{/if}
 
-		{#each rows as row (row.item.href)}
-			{#if row.startsGroup && row.heading}
-				<div class="hr" aria-hidden="true"></div>
+		{#each rows as row (row.kind === 'more' ? 'more' : row.item.href)}
+			{#if row.kind === 'more'}
+				{#if row.startsGroup}
+					<div class="hr" aria-hidden="true"></div>
+				{/if}
+				<button
+					class="item more"
+					title="More"
+					aria-label="More"
+					aria-haspopup="menu"
+					aria-expanded={more !== null}
+					onclick={toggleMore}
+				>
+					<span class="glyph"><Icon name="more" size="1.2em" /></span>
+					<span class="label">More</span>
+				</button>
+			{:else}
+				{#if row.startsGroup && row.heading}
+					<div class="hr" aria-hidden="true"></div>
+				{/if}
+				<button
+					class="item"
+					data-active={isItemActive(row.item, page.url.pathname)}
+					title={row.item.label}
+					aria-label={row.item.label}
+					onclick={() => goto(row.item.href)}
+				>
+					<span class="glyph">
+						<Icon name={row.item.icon} size="1.2em" />
+						{#if waiting(row.item)}<span class="dot" aria-hidden="true"></span>{/if}
+					</span>
+					<span class="label">{row.item.label}</span>
+					<span class="count mono">
+						{row.item.count ? countLabel(row.item.count) : ''}
+					</span>
+				</button>
 			{/if}
-			<button
-				class="item"
-				data-active={isItemActive(row.item, page.url.pathname)}
-				title={row.item.label}
-				aria-label={row.item.label}
-				onclick={() => goto(row.item.href)}
-			>
-				<span class="glyph">
-					<Icon name={row.item.icon} size="1.2em" />
-					{#if waiting(row.item)}<span class="dot" aria-hidden="true"></span>{/if}
-				</span>
-				<span class="label">{row.item.label}</span>
-				<span class="count mono">
-					{row.item.count ? countLabel(row.item.count) : ''}
-				</span>
-			</button>
 		{/each}
 	</nav>
 </div>
+
+<!--
+	Outside the pill: an ornament's blur makes it the containing block of
+	anything `position: fixed` inside it, and the pill clips what overflows it,
+	so a menu mounted in there would be drawn inside the rail and cut off.
+-->
+{#if more && hidden.length > 0}
+	<Menu
+		x={more.x}
+		y={more.y}
+		anchor={more.anchor}
+		label="More screens"
+		items={under(hidden)}
+		onclose={() => (more = null)}
+	/>
+{/if}
 
 <style>
 	/*
@@ -157,14 +240,28 @@
 		transition: width var(--t-slow) var(--ease);
 	}
 
-	.rail:hover,
-	.rail:focus-within {
+	.slot:not(.preview) .rail:hover,
+	.slot:not(.preview) .rail:focus-within {
 		width: var(--rail-open);
 		transition-delay: 160ms;
 	}
 
 	.rail:not(:hover):not(:focus-within) {
 		transition-delay: 0ms;
+	}
+
+	/*
+	 * The preview in Settings › Rail (FEAT-134): the same pill, standing in
+	 * the page instead of floating beside the pane, and closed — it is there
+	 * to show which rows there are, and its labels are in the list beside it.
+	 */
+	.preview {
+		z-index: auto;
+	}
+
+	.preview .rail {
+		position: static;
+		max-height: none;
 	}
 
 	.item {
@@ -245,10 +342,10 @@
 		text-overflow: ellipsis;
 	}
 
-	.rail:hover .label,
-	.rail:hover .count,
-	.rail:focus-within .label,
-	.rail:focus-within .count {
+	.slot:not(.preview) .rail:hover .label,
+	.slot:not(.preview) .rail:hover .count,
+	.slot:not(.preview) .rail:focus-within .label,
+	.slot:not(.preview) .rail:focus-within .count {
 		opacity: 1;
 		transition-delay: 160ms;
 	}

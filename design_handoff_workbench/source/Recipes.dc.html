@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Recipe builder</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#b8321f}a:hover{color:#8f2616}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--warn:#9a5b00;--ok:#2f7d45;--danger:#b3124a;--lane-1:#c23b22;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel);--b-save:#8a6420;--b-sync:#3f6690;--b-comb:#6e4f86;--b-branch:#3d6b4a;--b-shape:#8f4b3d;--b-guard:#6b655e}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--warn:#f0b54a;--ok:#7cc68d;--danger:#ff7a85;--lane-1:#f2715a;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000);--b-save:#c9a46a;--b-sync:#8fb0d4;--b-comb:#b9a3c9;--b-branch:#93b89c;--b-shape:#c99b90;--b-guard:#9e968c}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--agent-soft:color-mix(in srgb,var(--agent) 12%,transparent);--agent-edge:color-mix(in srgb,var(--agent) 50%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 80%,#000);box-shadow:none}
+.btn.off{opacity:.5;pointer-events:none}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool.l{border-radius:999px 0 0 999px;padding-right:6px}
+.caret{height:32px;padding:0 10px 0 5px;border-radius:0 999px 999px 0;color:var(--muted);font-size:var(--fs-mono)}
+.seg{display:flex;align-items:center;justify-content:center;flex:1 1 auto;height:30px;padding:0 8px;border-radius:999px;font-size:var(--fs-secondary)}
+.seg.on{background:var(--surface-2);box-shadow:var(--shadow-1);font-weight:600}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.rail-item.new::after{content:'';position:absolute;bottom:7px;left:50%;width:14px;margin-left:-7px;height:2px;border-radius:2px;background:var(--agent)}
+.blk{position:relative;display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:36px;padding:5px 12px 5px 10px;border-radius:9px;color:var(--ink);background:var(--surface);border:1px solid var(--pane-edge);font-size:var(--fs-secondary);font-weight:600;box-shadow:var(--shadow-1)}
+.blk.pal{min-height:30px;padding:3px 10px 3px 8px;font-size:12.5px;font-weight:550;text-align:left;box-shadow:none;background:var(--surface-veil)}
+.blk.pal:hover{background:var(--hover)}
+.hat{background:transparent;border-style:dashed;box-shadow:none;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:3px;flex:none}
+.kbd{font-family:var(--font-mono);font-size:10.5px;font-weight:400;padding:0 5px;border-radius:4px;border:1px solid var(--pane-edge);background:var(--sunken);color:var(--muted)}
+.cmd{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);white-space:nowrap;margin:0 6px}
+.slot{background:var(--sunken);color:var(--ink);border:1px solid var(--pane-edge);border-radius:6px;padding:1px 8px;font-family:var(--font-mono);font-size:11.5px;font-weight:400;white-space:nowrap}
+.slotin{background:var(--sunken);color:var(--ink);border:1px solid var(--pane-edge);border-radius:6px;padding:3px 9px;font-family:var(--font-mono);font-size:11.5px;outline:none;width:210px}
+.cat{width:12px;height:12px;border-radius:4px;flex:none}
+.mini{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--muted)}
+.mini:hover{background:var(--hover);color:var(--ink)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">spagitty<button aria-label="Close spagitty" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">quiblo</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="14">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 6px">Recipes</span>
+<div role="tablist" aria-label="Saved recipes" style="display: flex; flex-wrap: wrap; gap: 6px">
+<button role="tab" aria-selected="true" class="chip on" style="font-family: var(--font-mono)">sync-and-ship</button>
+<button role="tab" aria-selected="false" class="chip" style="font-family: var(--font-mono)">update-from-main</button>
+<button role="tab" aria-selected="false" class="chip" style="font-family: var(--font-mono)">squash-for-pr</button>
+<button class="chip" aria-label="New recipe">+</button>
+</div>
+<span style="flex: 1"></span>
+<span class="note" style="font-family: var(--font-mono); font-size: var(--fs-mono)">on feature/avatars</span>
+<button class="btn">Copy as script</button>
+<button class="btn">Save</button>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 12px 12px">
+
+<aside aria-label="Blocks" style="flex: 1 1 220px; max-width: 250px; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 12px; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: auto">
+<sc-for list="{{palette}}" as="g" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; gap: 5px">
+<span class="note" style="display: flex; align-items: center; gap: 7px; font-size: 12px"><span class="cat" style="background: {{g.color}}"></span>{{g.name}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 5px">
+<sc-for list="{{g.blocks}}" as="b" hint-placeholder-count="3">
+<button class="blk pal" onClick="{{b.add}}" aria-label="Add {{b.label}}"><span class="dot" style="background: {{g.color}}"></span>{{b.label}}<kbd class="kbd">{{b.key}}</kbd></button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</aside>
+
+<section aria-label="Recipe" style="flex: 999 1 420px; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--sunken); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: auto; padding: 22px 26px">
+<div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
+<div class="blk hat"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>On Run<span class="slot">feature/avatars</span></div>
+<sc-for list="{{stack}}" as="s" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 2px">
+<div style="display: flex; align-items: center; gap: 6px">
+<div class="blk"><span class="dot" style="background: {{s.color}}"></span>
+<span style="font-family: var(--font-mono); font-size: 11px; opacity: .7">{{s.n}}</span>
+<sc-for list="{{s.parts}}" as="p" hint-placeholder-count="3">
+<span style="display: contents">
+<sc-if value="{{p.isText}}" hint-placeholder-val="{{true}}"><span>{{p.t}}</span></sc-if>
+<sc-if value="{{p.isSlot}}" hint-placeholder-val="{{false}}"><button class="slot" aria-haspopup="listbox">{{p.t}} ▾</button></sc-if>
+<sc-if value="{{p.isInput}}" hint-placeholder-val="{{false}}"><input class="slotin" aria-label="Commit message" maxlength="72" value="{{p.msg}}" onChange="{{p.onMsg}}"></sc-if>
+</span>
+</sc-for>
+</div>
+<code class="cmd">{{s.line}}</code>
+<button class="mini" aria-label="Move {{s.label}} up" onClick="{{s.up}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></button>
+<button class="mini" aria-label="Remove {{s.label}}" onClick="{{s.remove}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<sc-if value="{{s.hasIssue}}" hint-placeholder-val="{{false}}">
+<span role="status" style="margin-left: 6px; font-size: 12px; padding: 2px 10px; border-radius: 999px; color: {{s.issueInk}}; background: color-mix(in srgb, {{s.issueInk}} 14%, transparent); border: 1px solid color-mix(in srgb, {{s.issueInk}} 40%, transparent)">{{s.issue}}</span>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}"><span class="note" style="padding: 14px 4px">Pick blocks on the left.</span></sc-if>
+</div>
+<div class="note" style="margin-top: auto; padding-top: 22px; display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px">
+<span><kbd class="kbd">Ctrl K</kbd> add</span>
+<span><kbd class="kbd">J</kbd> <kbd class="kbd">K</kbd> move</span>
+<span><kbd class="kbd">Alt ↑↓</kbd> reorder</span>
+<span><kbd class="kbd">Del</kbd> remove</span>
+<span><kbd class="kbd">Ctrl ↵</kbd> run</span>
+<span><kbd class="kbd">Ctrl Z</kbd> undo</span>
+</div>
+</section>
+
+<aside aria-label="Agent" style="flex: 1 1 340px; max-width: 400px; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 14px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 10px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--agent)" stroke-width="2" aria-hidden="true"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"></path></svg>
+<button class="btn" aria-haspopup="menu" style="flex: 1; justify-content: space-between">Claude Code<span class="note">▾</span></button>
+</div>
+<div role="radiogroup" aria-label="Level" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--pane-edge)">
+<sc-for list="{{levels}}" as="lv" hint-placeholder-count="4">
+<button role="radio" aria-checked="{{lv.on}}" class="seg {{lv.cls}}" onClick="{{lv.pick}}">{{lv.name}}</button>
+</sc-for>
+</div>
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="display: flex; justify-content: space-between" class="note"><span>Note</span><span style="font-family: var(--font-mono); font-size: 11.5px">{{noteLeft}}</span></span>
+<textarea aria-label="Note for the agent" maxlength="140" rows="2" placeholder="Only what blocks can’t say" value="{{note}}" onChange="{{onNote}}" style="resize: none; border-radius: 10px; padding: 8px 10px; background: var(--sunken); border: 1px solid var(--pane-edge); outline: none; font-size: var(--fs-secondary)"></textarea>
+</label>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px">
+<span style="display: flex; align-items: center; gap: 8px"><span class="note" style="flex: 1">Brief</span><span class="chip" title="Shipped with Spagitty" style="font-family: var(--font-mono); font-size: 11px; color: var(--agent); border-color: var(--agent-edge)">recipes.md v1</span></span>
+<pre style="flex: 1; min-height: 0; margin: 0; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--sunken); border: 1px solid var(--pane-edge); font-family: var(--font-mono); font-size: 11.5px; line-height: 1.55; white-space: pre-wrap; color: var(--ink)">{{brief}}</pre>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="note" style="flex: 1; font-size: 12px">{{runNote}}</span>
+<a href="RecipeRun.dc.html" class="btn primary {{runCls}}">Run · {{count}} steps</a>
+</div>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · 3 changed files · fetched 1 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">feature/avatars<span class="note">▾</span></span>
+<span class="vr"></span>
+<div style="display: flex; align-items: center; gap: 2px">
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button><button class="caret" aria-label="How to pull" aria-haspopup="menu">▾</button></span>
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button><button class="caret" aria-label="What to fetch" aria-haspopup="menu">▾</button></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+<span class="vr" style="margin: 0 6px"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"></path><path d="M7 4.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 8.5a2.5 2.5 0 1 0 0-.02"></path></svg>Branch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 8l2-4h14l2 4"></path><path d="M9.5 13h5"></path></svg>Stash</button>
+</div>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">1,284 commits · Tags 12 · Submodules 0<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v3.0.0</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z','M7 4v-1','M7 9.5v-.5','M7 15v-.5'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ folder: ['M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','|','investigate','search','more','|','settings'];
+var NEW = { terminal: 1, files: 1, recipes: 1, investigate: 1 };
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', investigate:'Investigate', search:'Log', folder:'All repositories', settings:'Settings', more:'More'};
+ICONS.more = ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'];
+var ACTIVE = 'recipes';
+var CATS = [
+ { key: 'save', name: 'Save', color: 'var(--b-save)' },
+ { key: 'sync', name: 'Sync', color: 'var(--b-sync)' },
+ { key: 'comb', name: 'Combine', color: 'var(--b-comb)' },
+ { key: 'branch', name: 'Branch', color: 'var(--b-branch)' },
+ { key: 'shape', name: 'Shape history', color: 'var(--b-shape)' },
+ { key: 'guard', name: 'Guard', color: 'var(--b-guard)' }
+];
+function t(x) { return { t: x, isText: true, isSlot: false, isInput: false }; }
+function s(x) { return { t: x, isText: false, isSlot: true, isInput: false }; }
+var IN = { t: '', isText: false, isSlot: false, isInput: true };
+var B = {
+ stash:  { cat: 'save', label: 'Stash', parts: [t('Stash'), s('+ untracked')], step: 'Stash — include untracked', cmd: 'git stash push -u' },
+ pop:    { cat: 'save', label: 'Pop stash', parts: [t('Pop stash'), s('on conflict: stop')], step: 'Pop the stash from step {stash} — on conflict, stop', cmd: 'git stash pop' },
+ commit: { cat: 'save', label: 'Commit', parts: [t('Commit'), s('all changes'), IN], step: 'Commit all changes — message: "{msg}"', cmd: 'git add -A, git commit -m' },
+ amend:  { cat: 'save', label: 'Amend', parts: [t('Amend last commit'), s('keep message')], step: 'Amend the last commit — keep its message', cmd: 'git commit --amend --no-edit' },
+ fetch:  { cat: 'sync', label: 'Fetch', parts: [t('Fetch'), s('all remotes')], step: 'Fetch all remotes, prune', cmd: 'git fetch --all --prune' },
+ pull:   { cat: 'sync', label: 'Pull', parts: [t('Pull'), s('origin'), s('fast-forward only')], step: 'Pull from origin — fast-forward only', cmd: 'git pull --ff-only' },
+ push:   { cat: 'sync', label: 'Push', parts: [t('Push to'), s('origin'), s('no force')], step: 'Push to origin — never force', cmd: 'git push' },
+ merge:  { cat: 'comb', label: 'Merge', parts: [t('Merge'), s('main'), t('into this'), s('merge commit')], step: 'Merge main into feature/avatars — always a merge commit', cmd: 'git merge --no-ff main' },
+ rebase: { cat: 'comb', label: 'Rebase', parts: [t('Rebase onto'), s('main')], step: 'Rebase feature/avatars onto main', cmd: 'git rebase main' },
+ pick:   { cat: 'comb', label: 'Cherry-pick', parts: [t('Cherry-pick'), s('a3f9c1e')], step: 'Cherry-pick a3f9c1e', cmd: 'git cherry-pick' },
+ sw:     { cat: 'branch', label: 'Switch', parts: [t('Switch to'), s('main')], step: 'Switch to main', cmd: 'git switch' },
+ newb:   { cat: 'branch', label: 'New branch', parts: [t('New branch'), s('fix/avatar-race'), t('from'), s('here')], step: 'Create fix/avatar-race from HEAD and switch to it', cmd: 'git switch -c' },
+ delb:   { cat: 'branch', label: 'Delete branch', parts: [t('Delete'), s('fix/avatar-race'), s('if merged')], step: 'Delete fix/avatar-race — only if fully merged', cmd: 'git branch -d' },
+ squash: { cat: 'shape', label: 'Squash', parts: [t('Squash last'), s('3'), t('commits')], step: 'Squash the last 3 commits into one', cmd: 'git reset --soft HEAD~3, git commit' },
+ reword: { cat: 'shape', label: 'Reword', parts: [t('Reword'), s('HEAD')], step: 'Reword HEAD — propose a message, ask me', cmd: 'git commit --amend' },
+ tests:  { cat: 'guard', label: 'Run tests', parts: [t('Run'), s('cargo test'), t('stop if red')], step: 'Run `cargo test` — stop if it fails', cmd: 'cargo test' },
+ ask:    { cat: 'guard', label: 'Ask me', parts: [t('Stop and ask me')], step: 'Stop. Show me the state and wait', cmd: '' },
+ clean:  { cat: 'guard', label: 'Only if clean', parts: [t('Stop unless'), s('working tree clean')], step: 'Stop unless the working tree is clean', cmd: 'git status --porcelain' }
+};
+var LINE = { stash: 'git stash push -u', pop: 'git stash pop', commit: 'git commit -am "{msg}"', amend: 'git commit --amend --no-edit', fetch: 'git fetch --all --prune', pull: 'git pull --ff-only origin', push: 'git push origin', merge: 'git merge --no-ff main', rebase: 'git rebase main', pick: 'git cherry-pick a3f9c1e', sw: 'git switch main', newb: 'git switch -c fix/avatar-race', delb: 'git branch -d fix/avatar-race', squash: 'git reset --soft HEAD~3 && git commit', reword: 'git commit --amend', tests: 'cargo test', ask: '# pause', clean: 'git diff --quiet' };
+var KEY = { stash: 'S', pop: 'P', commit: 'C', amend: 'A', fetch: 'F', pull: 'L', push: 'U', merge: 'M', rebase: 'R', pick: 'Y', sw: 'W', newb: 'N', delb: 'D', squash: 'Q', reword: 'E', tests: 'T', ask: '?', clean: 'G' };
+var LEVELS = ['Suggest', 'Step', 'Sign off', 'Unattended'];
+function color(cat) { for (var i = 0; i < CATS.length; i++) if (CATS[i].key === cat) return CATS[i].color; return 'var(--b-guard)'; }
+class Component extends DCLogic {
+ constructor(props) {
+  super(props);
+  var start = ['stash', 'pull', 'merge', 'pop', 'commit', 'push'];
+  this.state = { stack: start.map(function (k, i) { return { k: k, id: i + 1 }; }), seq: 10, level: 1, note: 'Keep my merge commit message as git suggests it.', msg: 'Sync with main' };
+ }
+ renderVals() {
+  var self = this, st = this.state;
+  var rail = RAIL.map(function (k) {
+   if (k === '|') return { sep: true, btn: false, paths: [] };
+   return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: (k === ACTIVE ? 'on ' : '') + (NEW[k] && k !== ACTIVE ? 'new' : '') };
+  });
+  var palette = CATS.map(function (c) {
+   var blocks = Object.keys(B).filter(function (k) { return B[k].cat === c.key; }).map(function (k) {
+    return { label: B[k].label, key: KEY[k], add: function () { self.setState({ stack: self.state.stack.concat([{ k: k, id: self.state.seq }]), seq: self.state.seq + 1 }); } };
+   });
+   return { name: c.name, color: c.color, blocks: blocks };
+  });
+  var keys = st.stack.map(function (x) { return x.k; });
+  var stashAt = keys.indexOf('stash');
+  var onMsg = function (e) { self.setState({ msg: String(e.target.value).slice(0, 72) }); };
+  var errors = 0;
+  var stack = st.stack.map(function (x, i) {
+   var b = B[x.k], issue = '', ink = 'var(--warn)';
+   var before = keys.slice(0, i), after = keys.slice(i + 1);
+   if (x.k === 'pop' && before.indexOf('stash') < 0) { issue = 'Needs a Stash above it'; ink = 'var(--danger)'; errors++; }
+   if (x.k === 'stash' && after.indexOf('pop') < 0) issue = 'Changes stay stashed';
+   if (x.k === 'push' && before.indexOf('rebase') >= 0) { issue = 'After a rebase this needs force — not allowed'; ink = 'var(--danger)'; errors++; }
+   if (x.k === 'push' && before.indexOf('squash') >= 0) { issue = 'After a squash this needs force — not allowed'; ink = 'var(--danger)'; errors++; }
+   if ((x.k === 'merge' || x.k === 'rebase' || x.k === 'pull' || x.k === 'sw') && before.indexOf('stash') < 0 && before.indexOf('commit') < 0 && before.indexOf('clean') < 0) issue = 'Tree has 3 changes — stash or commit first?';
+   return {
+    n: i + 1, label: b.label, line: LINE[x.k].replace('{msg}', st.msg), parts: b.parts.map(function (p) { return { t: p.t, isText: p.isText, isSlot: p.isSlot, isInput: p.isInput, msg: st.msg, onMsg: onMsg }; }), color: color(b.cat), z: 100 - i,
+    hasIssue: !!issue, issue: issue, issueInk: ink,
+    remove: function () { self.setState({ stack: self.state.stack.filter(function (y) { return y.id !== x.id; }) }); },
+    up: function () { if (i === 0) return; var a = self.state.stack.slice(); var tmp = a[i - 1]; a[i - 1] = a[i]; a[i] = tmp; self.setState({ stack: a }); }
+   };
+  });
+  var levels = LEVELS.map(function (n, i) { return { name: n, on: i === st.level ? 'true' : 'false', cls: i === st.level ? 'on' : '', pick: function () { self.setState({ level: i }); } }; });
+  var steps = st.stack.map(function (x, i) {
+   return (i + 1) + '. ' + B[x.k].step.replace('{stash}', String(stashAt + 1)).replace('{msg}', st.msg);
+  });
+  var cmds = [];
+  st.stack.forEach(function (x) { if (B[x.k].cmd) B[x.k].cmd.split(', ').forEach(function (c) { if (cmds.indexOf(c) < 0) cmds.push(c); }); });
+  var brief = [
+   '---',
+   'recipe: sync-and-ship',
+   'repo: spagitty · branch: feature/avatars',
+   'agent: claude-code · level: ' + LEVELS[st.level].toLowerCase(),
+   'restore-point: yes',
+   '---',
+   '# Do exactly these steps, in order',
+   steps.join('\n'),
+   '',
+   '## Allowed commands',
+   cmds.join(' · ') + ' · git status · git log',
+   '',
+   '## Never',
+   '- force-push, reset --hard, clean -f',
+   '- touch a branch not named above',
+   '- edit files, except to resolve a conflict you report',
+   '',
+   '## When a step fails',
+   'Stop. Report the step, the command, its exit code and `git status`.',
+   st.note ? '\n## Note from Mahmoud\n' + st.note : ''
+  ].join('\n');
+  return {
+   theme: this.props.theme || 'dark', rail: rail, palette: palette, stack: stack, empty: stack.length === 0,
+   levels: levels, note: st.note, noteLeft: (140 - st.note.length) + '', msg: st.msg,
+   onNote: function (e) { self.setState({ note: String(e.target.value).slice(0, 140) }); },
+   onMsg: function (e) { self.setState({ msg: String(e.target.value).slice(0, 72) }); },
+   brief: brief, count: stack.length,
+   runCls: errors > 0 || stack.length === 0 ? 'off' : '',
+   runNote: errors > 0 ? errors + ' to fix first' : 'A restore point is made first'
+  };
+ }
+}
+</script>
+</body>
+</html>

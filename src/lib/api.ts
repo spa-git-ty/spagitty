@@ -7,7 +7,7 @@
  * types from `./types`, so a command rename is a one-file change.
  */
 
-import { invoke as call, type InvokeArgs } from '@tauri-apps/api/core';
+import { Channel, invoke as call, type InvokeArgs } from '@tauri-apps/api/core';
 import { timing } from './timing.svelte';
 import type { DesktopTheme } from './omarchy';
 import type {
@@ -33,7 +33,21 @@ import type {
 	FileDiff,
 	IdentityProfile,
 	Identity,
-	FileHistoryEntry,
+	BranchFacts,
+	CompactBlame,
+	Hunk,
+	LifeAsk,
+	LifePage,
+	LifeToday,
+	TerminalAsk,
+	TerminalInfo,
+	TerminalLinks,
+	TerminalSession,
+	TerminalWindow,
+	FilesEntry,
+	FilesFound,
+	FilesRead,
+	FilesRevision,
 	IdentityKey,
 	IdentityScope,
 	Licenses,
@@ -307,9 +321,152 @@ export function blame(path: string, revision: string): Promise<Blame> {
 	return invoke('blame', { path, revision });
 }
 
-/** Read commit history for a single file path (FEAT-063). */
-export function fileHistory(path: string, limit = 100): Promise<FileHistoryEntry[]> {
-	return invoke('file_history', { path, limit });
+// --- Files (FEAT-131): git's objects at a revision, read and never written ---
+
+/** The commit a branch, tag or commit means. An empty revision is HEAD. */
+export function filesResolve(rev: string): Promise<FilesRevision> {
+	return invoke('files_resolve', { rev });
+}
+
+/** One folder of the repository at `rev`. An empty `dir` is the root. */
+export function filesTree(rev: string, dir: string): Promise<FilesEntry[]> {
+	return invoke('files_tree', { rev, dir });
+}
+
+/** `path` as it is in `rev`. */
+export function filesRead(rev: string, path: string): Promise<FilesRead> {
+	return invoke('files_read', { rev, path });
+}
+
+/** The files of `rev` whose paths hold every word of `query`. */
+export function filesFind(rev: string, query: string): Promise<FilesFound> {
+	return invoke('files_find', { rev, query });
+}
+
+/**
+ * The colour of lines `start..end` of a blob: for each line, pairs of token
+ * class and length in UTF-16 units. Empty for a blob too large to colour.
+ */
+export function filesSpans(
+	blob: string,
+	grammar: string,
+	start: number,
+	end: number
+): Promise<number[][]> {
+	return invoke('files_spans', { blob, grammar, start, end });
+}
+
+/** Who wrote each line of `path` at `rev`, each commit said once. */
+export function filesBlame(rev: string, path: string): Promise<CompactBlame> {
+	return invoke('files_blame', { rev, path });
+}
+
+/** What line `line` of `path` was before `commit` wrote it. Null when it replaced nothing. */
+export function filesBefore(
+	commit: string,
+	path: string,
+	line: number,
+	previous: string | null,
+	previousPath: string | null
+): Promise<string | null> {
+	return invoke('files_before', { commit, path, line, previous, previousPath });
+}
+
+// --- Investigate (FEAT-132): the life of a file, a folder, a branch or a line ---
+
+/** A page of a life, newest first. */
+export function investigateLife(ask: LifeAsk): Promise<LifePage> {
+	return invoke('investigate_life', { ask });
+}
+
+/** Who owns `path` at `rev` today, and what survives of each commit. */
+export function investigateToday(path: string, rev: string): Promise<LifeToday> {
+	return invoke('investigate_today', { path, rev });
+}
+
+/** The largest hunk of what `commit` did to `path`. Null when it changed no line. */
+export function investigateHunk(
+	commit: string,
+	path: string,
+	oldPath: string | null
+): Promise<Hunk | null> {
+	return invoke('investigate_hunk', { commit, path, oldPath });
+}
+
+/** `path` as `commit` left it, against `todayPath` at `rev`. */
+export function investigateCompare(
+	commit: string,
+	path: string,
+	rev: string,
+	todayPath: string
+): Promise<Hunk[]> {
+	return invoke('investigate_compare', { commit, path, rev, todayPath });
+}
+
+/** A branch against the default branch: its fork, where it landed, ahead and behind. */
+export function investigateBranch(name: string): Promise<BranchFacts> {
+	return invoke('investigate_branch', { name });
+}
+
+// --- Terminal (FEAT-130) ----------------------------------------------------
+
+/** The event a terminal's exit is announced with, carrying its id and code. */
+export const TERMINAL_EXIT_EVENT = 'terminal-exit';
+
+/** Which multiplexer is in use, and which shell a terminal runs. */
+export function terminalInfo(): Promise<TerminalInfo> {
+	return invoke('terminal_info');
+}
+
+/**
+ * Open a terminal: the multiplexer's client attached to `session`, or with no
+ * session a plain shell. Its output arrives on `output` as raw bytes, never
+ * as JSON, and the answer is the id its keystrokes are sent to.
+ */
+export function terminalOpen(
+	ask: { session: string | null; cwd: string; cols: number; rows: number },
+	output: (bytes: Uint8Array) => void
+): Promise<number> {
+	const channel = new Channel<ArrayBuffer | number[]>();
+	channel.onmessage = (message) => {
+		output(message instanceof ArrayBuffer ? new Uint8Array(message) : Uint8Array.from(message));
+	};
+	return invoke('terminal_open', { ask, output: channel });
+}
+
+export function terminalWrite(id: number, data: string): Promise<void> {
+	return invoke('terminal_write', { id, data });
+}
+
+export function terminalResize(id: number, cols: number, rows: number): Promise<void> {
+	return invoke('terminal_resize', { id, cols, rows });
+}
+
+/** Close a terminal. With a multiplexer the session carries on. */
+export function terminalClose(id: number): Promise<void> {
+	return invoke('terminal_close', { id });
+}
+
+/** The session a repository's terminal attaches to: its folder's name. */
+export function terminalSessionName(path: string): Promise<string> {
+	return invoke('terminal_session_name', { path });
+}
+
+export function terminalSessions(): Promise<TerminalSession[]> {
+	return invoke('terminal_sessions');
+}
+
+export function terminalWindows(session: string): Promise<TerminalWindow[]> {
+	return invoke('terminal_windows', { session });
+}
+
+export function terminalAct(session: string, action: TerminalAsk): Promise<void> {
+	return invoke('terminal_act', { session, action });
+}
+
+/** Which of the hex words and paths a terminal printed are real. */
+export function terminalLinks(words: string[], paths: string[]): Promise<TerminalLinks> {
+	return invoke('terminal_links', { words, paths });
 }
 
 /** What is in progress and what is conflicted. Reads only; nothing is written. */

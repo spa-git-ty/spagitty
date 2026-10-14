@@ -26,11 +26,14 @@ defect.
 | 1L | Clone | modal | no | Built | FEAT-012 |
 | 1M | Reflog | `/reflog` | yes | Built | FEAT-050 |
 | 1N | Tags | `/tags` | yes | Built | FEAT-051 |
-| 1O | File history | `/history` | no | Built | FEAT-063 |
+| 1O | Investigate | `/investigate` | yes | Built | FEAT-132 (was File history, FEAT-063) |
 | 1P | Badges | `/badges` | yes | Built | FEAT-072 |
 | 1Q | Farm | `/farm` | yes | Built | FEAT-073 |
 | 1R | Review | `/review` | yes | Built | FEAT-087 |
 | 1S | Merger | `/merge` | yes | Built | FEAT-100 |
+| 1T | Terminal | `/terminal` | yes | Built | FEAT-130 |
+| 1U | Files | `/files` | yes | Built | FEAT-131 |
+| 1V | Recipes | `/recipes` | yes | Built | FEAT-133 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -90,13 +93,18 @@ Persistent across every screen, built with FEAT-001.
   Submodules N" line, now alone.
 
   Rail order is the screens roughly as they are worked through — Farm, then
-  Graph, Working copy, Conflicts (while there is something to resolve), Merger,
+  Graph, Working copy, Conflicts (while there is something to resolve), Files, Merger,
   Branches, Pull requests, Review — then the tools, always shown since TASK-056:
-  Rebase, Log, Stash, Tags, Reflog, Badges (with the delight layer on) and All
+  Rebase, Investigate, Log, Stash, Tags, Reflog, Badges (with the delight layer on) and All
   repositories; then Settings. Log follows Rebase because it is where you go to
   look something up rather than a step in that sequence. Stash, Tags and Reflog
   are rows of their own again, as the author asked; Branches still names all
   four in its segmented control.
+
+  Since FEAT-134 a person can take a screen off the rail, in Settings → Rail,
+  and reorder the rows of a group. What they hid is under a **More** button at
+  the end of Tools, or in the palette only. The screen that is open is always
+  on the rail while it is open, hidden or not.
 
 ## The window itself
 
@@ -610,7 +618,7 @@ and never the directory.
 **Built.** `src/routes/settings/+page.svelte`, `src/lib/settings/`.
 
 Sections behind a chip index — You, Remotes, External Tools, Behaviour,
-Personality, God mode, Appearance, License — because these are read rarely and
+Personality, God mode, Appearance, Rail, License — because these are read rarely and
 changed rarely, and one route that says which part of itself is showing is
 easier to link to than eight rail entries. The section is in the URL fragment,
 so `/settings#accounts` lands where the Pull requests screen points.
@@ -630,6 +638,14 @@ the version, the build, the project's licence and its dependencies' licences, so
 the name described nothing it contained. `#advanced` is still accepted as a
 fragment and selects the renamed section, because a link written before the
 rename doing nothing at all is worse than one that is merely out of date.
+
+**Rail** (FEAT-134) chooses what is on the nav rail. Every screen has a row, in
+its group, and is pinned or hidden; hidden screens go under the rail's More
+button or to the palette only, and the rows of a group can be reordered. Farm
+and Settings read *Always*, and Conflicts and Badges show the rule they keep.
+The section's preview is `NavRail` itself, drawn from the choice. It is stored
+as `rail: { hidden, order, where }` in Spagitty's settings, never in the
+repository, and the default is everything pinned (TASK-056).
 
 **Nothing here needs an open repository.** With none, the identity falls back to
 the global scope alone and every other section is unaffected. **God mode** is
@@ -778,13 +794,52 @@ it.
 the existing design rather than needing a rule: the list is written by opening a
 repository, and the clone offers to open only what succeeded.
 
-## 1O — File history
+## 1O — Investigate
 
-A dedicated view for inspecting a single file's commit evolution and line attribution (FEAT-063).
+**Built.** `src/routes/investigate/+page.svelte`, `src/lib/investigate/`,
+`crates/spagitty-core/src/investigate.rs` (FEAT-132). It was File history
+(FEAT-063), off the rail and about one file; `/history` now comes here with
+the path it was given.
 
-**The commit timeline follows renames.** `history::file_commits` walks commits touching the selected path via `git log --follow`, displaying author name, time, summary, and short hash.
+The life of a file, a folder, a branch or a line: when it was born and by
+whom, how it grew, when it was renamed, moved or rewritten, and who owns it
+today. The target is in the address — `?kind=line&path=…&line=…&rev=…` — so
+Files' *Investigate line* and a bookmark arrive the same way.
 
-**Interactive line attribution.** The right pane renders line-by-line blame metadata (author name, commit SHA, timestamp) alongside file content. Hovering a commit in the timeline or blame gutter highlights every line introduced by that commit.
+**A life is a list of entries, newest first, read a page at a time.** The
+first page is on screen before the second is asked for. At 5,000 entries the
+reading stops and *Load more* reads on. A life is kept by its target and by
+where HEAD is, so going back to one costs nothing and a new commit reads it
+again.
+
+**Where the entries come from.** A file's are `git log --follow --raw
+--numstat`; a folder's are the same log on a pathspec; a line's are `git log
+-L`; a branch's are the commits since it left the default branch, with where
+it landed and the rebases and resets its reflog records. A file's size after
+each commit is counted from the object, not summed.
+
+**A rewrite** is a commit that removed at least half the file's lines as they
+were before it: `REWRITE_SHARE`, a named constant. A new name in the same
+folder is *renamed*, and the same file in another folder is *moved*.
+
+**A branch's fork is not its merge base.** A branch that has had the default
+branch merged into it, or has landed, shares a late commit with it. The fork
+is the commit the branch's oldest own commit was made on, where "own" is on
+its first-parent line and not in the other branch.
+
+**The life card** is a line of facts, the size over time with a marker on
+each born, renamed, moved and rewrite, and a row of ticks for each author,
+agents in `--agent`. `chart.ts` works out where everything goes, as
+arithmetic, and the component draws it.
+
+**The selected event** says what share of the file it changed, how many of
+the lines it wrote today's blame still gives it, and who owns the file today
+— one `blame::compact` for the whole life, not one for each event — and
+shows its largest hunk. *Open file at <sha>* reads it in Files as that commit
+left it, *Compare with today* shows that version against the file now, in
+place, and *Show in Graph* selects the commit.
+
+Like Files, it is given a revision and answers from git's objects.
 
 ## 1P — Badges
 
@@ -986,3 +1041,199 @@ of N* — with Continue, Skip this commit and Abort; git's ours and theirs are
 put back as A and B. Once every commit is replayed, Finish the rebase in the
 commit dialog moves the receiving branch and removes the worktree. Neither
 branch moves before then.
+
+## 1T — Terminal
+
+**Built.** `src/routes/terminal/+page.svelte`, `src/lib/terminal/`,
+`src-tauri/src/terminal.rs`, `crates/spagitty-process/src/pty.rs` and
+`mux.rs` (FEAT-130).
+
+A real terminal on the rail, after Conflicts, so nobody leaves Spagitty for
+one. ``Ctrl+` `` (``⌘` `` on macOS) opens it from any screen and goes back to the
+one you were on.
+
+**The pieces.** A PTY from `portable-pty` (ConPTY on Windows, openpty
+elsewhere) runs the program. Its output crosses to the screen on a Tauri
+channel as raw bytes, is gathered for a frame (`batch.ts`) and written to
+xterm.js once, which is what lets a million lines go by without the window
+stopping. xterm.js draws with WebGL and falls back to its own renderer where
+that is refused. Scrollback is 10,000 lines.
+
+**A multiplexer when one can run.** tmux, or psmux on Windows, on a socket of
+Spagitty's own (`-L spagitty`), beside whatever tmux the person runs and never
+touching it. One session for each repository, named for its folder with six letters made
+from its whole path, so two repositories with one folder name never share a
+session, attached
+with `new-session -A -s <name> -c <path>`. What is in the PTY is the *client*:
+*Detach*, closing the screen's terminal and closing Spagitty all end the
+client, and the session carries on. Nothing the screen can ask kills a
+session. `mux::choose` is the rule for which binary, a pure function: on macOS
+and Linux the system tmux when it is 3.2 or later and otherwise the one
+Spagitty ships; on Windows the psmux that shipped, and otherwise one on the
+`PATH`. The pill in the header names it and says *bundled* when it is
+Spagitty's; its hover gives the path and version.
+
+**None, and nothing said.** Where no multiplexer can run, or it is switched
+off in Settings › Behaviour, each tab is a plain shell, the Sessions panel and
+the pill are not drawn, and no text on the screen mentions one. A terminal
+that works is not missing anything.
+
+**The shell** is the one in Settings › Behaviour, and otherwise the
+platform's own: `$SHELL` on macOS and Linux; `pwsh`, then Windows PowerShell,
+then `cmd` on Windows.
+
+**The Sessions panel** lists the sessions on the socket with their windows and
+whether anyone is attached, the windows of the one shown, and *Follow
+repository*. Followed, opening another repository switches to its session and
+makes it if it is not there. The lists are read again every two seconds while
+the screen is shown, because a `tmux new-window` typed in the terminal changes
+them.
+
+**A terminal outlives the screen.** The emulators and their elements are kept
+in the store, not in the component. Leaving takes the element out of the page;
+the program runs on, its output is still written, and coming back puts the
+same element back.
+
+**Links are checked, never guessed.** A hex word of 7 to 40 characters and a
+`path:line[:col]` are found on a line (`links.ts`), and the repository is
+asked which are real (`files::known`): a word that resolves to a commit, a
+path that is a file at `HEAD`. Only those are underlined. A commit opens on
+the Graph and a place in a file opens in Files. What the repository said is
+kept, so a screen of `git log` is asked about once.
+
+**Keys** are in `keys.ts`, one table read by the emulator and by the layout.
+With the focus in the terminal every key is the shell's, except
+`Ctrl+Shift+P` for the palette, ``Ctrl+Shift+` `` to leave, and `Ctrl+Shift+C`
+and `Ctrl+Shift+V` to copy and paste (`⌘C` and `⌘V` on macOS).
+
+**What ships.** `tools/multiplexer.ts` runs before Tauri reads its resources.
+It downloads one pinned asset for the target, from the project that makes it,
+and refuses a file whose SHA-256 is not the one written beside it: psmux on
+Windows, and the tmux project's own static build on macOS and Linux, with
+their licence texts. A release build sets `SPAGITTY_MULTIPLEXER_REQUIRED`, so
+a download that failed stops the build. `NOTICE` lists both.
+
+**Not here.** Farm sessions in the panel are FEAT-135.
+
+## 1U — Files
+
+**Built.** `src/routes/files/+page.svelte`, `src/lib/files/`,
+`crates/spagitty-core/src/files.rs`, `highlight.rs`, `blame.rs` (FEAT-131).
+
+Any file at any branch, tag or commit: a tree, the files opened from it as
+tabs, and one of them read, with blame beside every line.
+
+**It cannot write, and that is structural.** `files.rs` takes a revision and
+reads trees and blobs from the object database. It never asks the repository
+where its working copy is, so there is no flag to forget and nothing to
+disable. A test reads the module's source for a way to the disk, and another
+reads a file after its working copy has been changed and then deleted. A bare
+repository reads the same. *View only* in the header and `VIEW` in the status
+line say so; neither is a mode there is another of. There is no edit button
+and no *Open in editor*.
+
+**What arrives when.** The text is read and drawn at once. Colour is asked
+for a page of lines at a time, when rows are about to be drawn (`VirtualRows`'
+`onrange`), and fills in after. Blame is asked for after the first paint. A
+file of twenty thousand lines costs its text to open and what is in view to
+colour.
+
+**Colour** is tree-sitter, in Rust: `tree-sitter-highlight` with nineteen
+grammars compiled in. A blob is coloured whole, once, and kept by its id — a
+blob never changes, so nothing is ever invalidated. What crosses to the screen
+is, for each line, pairs of token class and length; the classes are the twelve
+`tok-*` the Diff screen already has, so the two screens read the same. A
+language with no grammar here (Kotlin, Dockerfile, and anything else
+`lib/diff/highlight.ts` knows) is read by that highlighter instead, and the
+status line then names the language without *tree-sitter*. Over 5 MB a file is
+shown without colour; over 50 MB it is not opened.
+
+**Blame** is `blame::compact`: each commit once, and for each line an index
+into them. Each run of lines from one commit has one head — portrait, name,
+summary, age — and every line has a bar, stronger the newer the line is among
+the file's own commits. A commit with a `Co-authored-by` trailer naming an
+agent, by the rule gate 1 applies (`attribution.rs`, kept in step with
+`tools/attribution.mjs` by a test), is drawn in `--agent` with the hexagon.
+Pressing a block lights every line from its commit.
+
+**The peek** opens under a pressed line, as a row of the list, never over the
+code: who and when, the pull request the summary names, the summary, the sha,
+and what the line was before — the line that commit's change removed in that
+place. *Commit* selects it on the Graph, *Blame before this* opens the file at
+the commit it was changed from, under the name it had then, and *Investigate
+line* goes to 1O.
+
+**Keys** are in `keys.ts`, a table tested as one: `j` `k`, Ctrl+d Ctrl+u,
+`gg` `G`, `/` `?` `n` `N`, `]b` `[b`, `b`, Enter, Esc, and `y`, which
+copies `path:line@sha`. None types into the file.
+
+**The revision** is chosen from the branch menu (FEAT-122) with its tags and
+*A commit…*, which takes whatever is typed in the menu's field as a revision.
+A tab keeps the revision it was opened at and takes the screen there when it
+is shown. Another screen opens a file here with
+`/files?path=…&rev=…&line=…`.
+
+The revision, the tabs, the open folders and the two switches are kept per
+repository in `localStorage`.
+
+## 1V — Recipes
+
+**Built.** `src/routes/recipes/+page.svelte`, `src/lib/recipes/`,
+`src-tauri/src/recipes.rs`, `crates/spagitty-core/src/recipes/` (FEAT-133).
+
+Git steps in blocks: an ordered stack from a closed catalogue of eighteen,
+each with a few parameters chosen from lists, run by Spagitty a step at a
+time.
+
+**The catalogue is closed, and that is the safety.** A step is an enum
+(`recipes::Step`). There is no variant for a force push, `branch -D` or
+`reset --hard`, so no recipe can hold one, whether it was built by hand,
+proposed by an agent or imported from a file. A command is a list of
+arguments and never a line for a shell. The screen's list of blocks is
+`catalogue.ts`, and a Rust test fails when it and the core's come apart.
+
+**The validator** is `validate.rs`: one pure function of the recipe and a
+`World`, which is what is true of the repository. It walks the steps keeping
+what they would leave behind (the branch checked out, the branches made, the
+stashes pushed, whether pushed commits were rewritten) and its findings are
+shown under the block they are about. It runs after every edit and again at
+*Run*, against the repository as it is then. An error stops a run; a warning
+does not.
+
+**The agent's help is a switch**, off by default (the author, 2026-10-13).
+On, the person writes a sentence and the agent proposes the blocks
+(`propose.rs`), which arrive in the builder to be read and edited: its answer
+is parsed into the same enum, so a block it invents is refused. During a run
+it writes a message a step leaves to it and explains a failure. It runs no
+command, and a command-line agent is started in an empty directory of its
+own, never in the working copy. Off, the sentence, the note and *agent
+writes* are disabled and nothing asks an agent for anything.
+
+**A run** (`run.rs`) is stepped: `tick` runs one step or stops, `answer`
+takes the person's choice. The level stops it before a step: every step at
+*Ask every step*, a push and a branch being deleted at *Ask before pushing*,
+nothing at *Full access*; *Read-only* runs nothing. These stop it at any
+level: *Stop and ask me*, a conflict, a non-zero exit, a failed check, a
+rejected push, and a tree that is not clean at *Stop unless clean*. A merge's
+conflict can be taken to Merger and any other to Conflicts. The run is on a
+thread in the backend and sends the whole run when it changes and each line
+as it is printed. While a step runs it holds the activity lanes.
+
+**The restore point** (`restore.rs`) is written before the first step under
+`refs/spagitty/restore/<id>/`: where `HEAD` was, the tip of every branch the
+recipe names, each stash, the index as a tree, and the working tree as a
+tree with its untracked files, made through an index of its own. *Undo the
+whole run* ends an operation left in progress and puts them back. It never
+deletes a file git did not know about, and it cannot take back a push. The
+newest twenty are kept, none longer than seven days, and Reflog lists them.
+
+**The brief** (`brief.rs`) is `recipes.md`, compiled in with its version, and
+then this recipe in the spec's form. The person sees it as it is sent. With
+the help off there is none, and the panel shows the commands as a script.
+
+**Kept** in the data directory, per repository: the recipes, and each run's
+record. Nothing is written under `.spagitty/` in the repository.
+
+**Keys** are in `keys.ts`: a block's letter adds it, `j` `k` walk the stack,
+Alt with the arrows reorders, Delete removes, Ctrl+Enter runs, Ctrl+Z takes
+an edit back. None fires while a field has the focus.

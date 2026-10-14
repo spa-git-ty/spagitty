@@ -6,6 +6,7 @@
 	import HooksSection from '$lib/settings/HooksSection.svelte';
 	import LicenseSection from '$lib/settings/LicenseSection.svelte';
 	import AppearanceSection from '$lib/settings/AppearanceSection.svelte';
+	import RailSection from '$lib/settings/RailSection.svelte';
 	import ReadingSection from '$lib/settings/ReadingSection.svelte';
 	import BehaviourSection from '$lib/settings/BehaviourSection.svelte';
 	import IdentitySection from '$lib/settings/IdentitySection.svelte';
@@ -119,6 +120,8 @@
 			{#if settings.godMode}<GodModeSection />{/if}
 		{:else if settings.section === 'appearance'}
 			<AppearanceSection />
+		{:else if settings.section === 'rail'}
+			<RailSection />
 		{:else if settings.section === 'reading'}
 			<ReadingSection />
 		{:else if settings.section === 'license'}
