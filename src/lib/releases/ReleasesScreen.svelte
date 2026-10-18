@@ -60,7 +60,7 @@
 					</div>
 				{/snippet}
 			</VirtualRows>
-			{#if !releases.visible.length && !releases.reading}<p class="empty note">No releases match this filter.</p>{/if}
+			{#if !releases.visible.length && !releases.reading && !Object.values(releases.errors).some(Boolean)}<p class="empty note">No releases match this filter.</p>{/if}
 			{#if releases.more}<Btn busy={releases.reading} onclick={() => releases.read()}>More releases</Btn>{/if}
 		</section>
 		<section class="editor pane" aria-label="Release editor">
