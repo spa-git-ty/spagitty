@@ -142,7 +142,7 @@ fn read(root: &Path, file: &str) -> Result<Node> {
             return Ok(node.clone());
         }
     }
-    let node = yaml::parse(&source, file).map_err(config)?;
+    let node = yaml::parse(&source, file).map_err(|e| config(format!("could not read the workflow: {e}")))?;
     if cache.len() >= 100 {
         cache.clear();
     }
