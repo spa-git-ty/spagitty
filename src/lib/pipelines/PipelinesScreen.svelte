@@ -51,7 +51,8 @@
 		<div class="body live">
 			<aside class="pane sidebar" aria-label="Watched branches"><h2>Branches</h2>{#each pipelines.branches as name}<div class="branch-row"><button class="workflow" class:on={pipelines.branch === name} onclick={() => pipelines.chooseBranch(name)}><span class="mono">{name}</span><span class="note">{pipelines.lists[name]?.runs[0]?.name ?? ''}</span></button>{#if name !== pipelines.branches[0]}<button aria-label={`Stop watching ${name}`} onclick={() => pipelines.watch(name, true)}>×</button>{/if}</div>{/each}<h2>Requests</h2>{#each pipelines.requests as name}<button class="workflow" class:on={pipelines.branch === name} onclick={() => pipelines.chooseBranch(name)}><span class="mono">{name}</span></button>{/each}{#if !pipelines.host}<p class="note">Connect a supported hosted remote in Settings.</p>{:else if pipelines.host.repo.kind === 'bitbucket'}<p class="note">Bitbucket · soon</p>{/if}</aside>
 			<section class="pane graph-pane live-pane" aria-label="Pipeline run"><div class="run-head">{#if run}<strong>{run.name} #{run.id}</strong><span class="chip">{run.state === 'completed' ? run.result : run.state} · {duration(run.duration)}</span><span class="mono note">{run.branch} · {run.commit.slice(0, 7)} · {run.event}</span>{/if}<span class="grow"></span><div class="durations" aria-label="Last twelve runs">{#each durations as r}<button class:selected={run?.id === r.id} data-result={r.result || r.state} style:height={`${8 + 28 * (r.duration ?? 0) / maximum}px`} title={`#${r.id} ${r.result || r.state} · ${duration(r.duration)}`} aria-label={`Open run ${r.id}`} onclick={() => pipelines.openRun(r.id)}></button>{/each}</div>{#if run}<Btn danger disabled={run.state === 'completed' || !pipelines.canWrite} busy={pipelines.busy} onclick={() => pipelines.send('cancel')}>Cancel</Btn><Btn disabled={!pipelines.canWrite || run.state !== 'completed' || !['failure', 'failed', 'timed_out'].includes(run.result)} busy={pipelines.busy} onclick={() => pipelines.send('rerunFailed')}>Re-run failed</Btn><a class="external" href={run.url} target="_blank" rel="noreferrer">Open on host ↗</a>{/if}</div>
-				{#if !run}<p class="empty note">{pipelines.reading ? 'Reading pipeline runs…' : 'No runs on this branch.'}</p>{/if}
+				{#if !run}<p class="empty note">{pipelines.reading ? 'Reading pipeline runs…' : 'No runs on this branch.'}</p>
+				{:else}
 				{#if pipelines.graphWarning}<p class="note warning">{pipelines.graphWarning}</p>{/if}
 				<PipelineGraph jobs={liveGraph} stages={pipelines.graph?.stages ?? [...new Set(pipelines.jobs.map((j) => j.stage))]} selected={String(liveJob?.id ?? '')} onselect={(id) => pipelines.selectLiveJob(Number(id))} />
 				{#if pipelines.moreJobs}<button class="more" onclick={() => pipelines.readJobs(true)}>More jobs</button>{/if}
@@ -60,6 +61,7 @@
 				{#if pipelines.host?.repo.kind === 'gitHub' && liveJob && liveJob.state !== 'completed'}<p class="note log-info">GitHub exposes the log after completion. Step states refresh while the job runs.</p>{/if}
 				<div class="logs" aria-label="Job log"><VirtualRows items={pipelines.log.split('\n').map((text, index) => ({ text, index }))} key={(line) => String(line.index)} estimate={() => 24} label="Log lines">{#snippet row(line)}<pre>{line.text || ' '}</pre>{/snippet}</VirtualRows></div>
 				<div class="updated note" role="status">{pipelines.updated ? `Updated ${pipelines.age} s ago` : 'Waiting for a host response'}{pipelines.reading ? ' · reading' : ''}</div>
+				{/if}
 			</section>
 		</div>
 	{/if}
