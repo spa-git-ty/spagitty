@@ -14,13 +14,31 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-18
+
 ### Added
 
 - **Home** is the new top of the rail and the screen Spagitty opens on. **Needs you** lists what is waiting on you in this repository, most urgent first: farm tasks ready to merge or stuck, review requests, failed checks on your branches, changes asked for on your pull requests, and issues assigned to you. Below it are the farm, the working copy, recent branches, open pull requests, the latest commits, sixteen weeks of commits, pipelines and releases.
 - **Starting a farm** is one step at a time: the goal, anything to start from, the crew and rules, and how the tasks are made. Only a one-line goal is required. The crew and rules come back as the last farm in the repository had them, and earlier farms can be resumed or used as a starting point. A farm can start from issues, Markdown briefs and a branch in progress; the planner is given all of them, the repository's rules and a map of the repository, and can be replaced by one task per issue or an empty plan. Once the farm exists, the tracker reads Plan, Build and Wrap up.
 - **A slice per task.** A farm can give each task a worktree holding only the repository's top-level files and the paths the task may touch or must read. The checks still run on the whole tree. Tasks gain *Reads*, paths they need but may not change, which the planner can fill in. Chosen in the farm's Rules, as *Where each task works*.
-- **The farm merges without touching your working copy.** When it merges a task by itself, it builds the merge commit on the side, runs the task's checks on it again if the branch moved since the task started, and moves the branch only if it is still where it was. You can be on any branch. A conflict blocks the task and writes nothing; a merge result that fails its checks goes back to the agent. Every branch move is recorded with who made the work and who passed it, and Activity lists them.
 - **Notifications** are kept. The bell in the title bar opens a drawer with everything Spagitty has told you, across repositories, grouped by day, with search, filters and one action per item. Pull request news, the farm, failed or recovered checks, failed fetches, pulls and pushes, and published releases all land there. Settings › Notifications can clear the ones older than 90 days.
+
+### Changed
+
+- **The farm merges without touching your working copy.** When it merges a task by itself, it builds the merge commit on the side, runs the task's checks on it again if the branch moved since the task started, and moves the branch only if it is still where it was. You can be on any branch. A conflict blocks the task and writes nothing; a merge result that fails its checks goes back to the agent. Every branch move is recorded with who made the work and who passed it, and Activity lists them.
+- **Spagitty opens on Home.** The last session's tab and selected commit still come back.
+- **The farm's Setup page is gone**, replaced by the steps above. Its rules sheet shows the autonomy levels as one row, with where you come in under it.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.1.1, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
 
 ## [3.1.1] - 2026-10-18
 
