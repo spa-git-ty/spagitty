@@ -75,6 +75,10 @@ pub struct Job {
     pub state: String,
     pub reason: String,
     pub depth: usize,
+    /// GitLab: `needs` stands for the stage order, not a `needs:` key. The
+    /// graph draws stage columns for these rather than every edge.
+    #[serde(default)]
+    pub implicit: bool,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -103,7 +107,7 @@ fn strings(n: &Node, key: &str) -> Vec<String> {
     n.get(key).map(Node::strings).unwrap_or_default()
 }
 fn config(message: impl Into<String>) -> Error {
-    Error::Config(message.into())
+    Error::Workflow(message.into())
 }
 fn problem(n: &Node, message: impl Into<String>) -> Problem {
     Problem {
@@ -127,8 +131,8 @@ pub fn source(root: &Path, file: &str) -> Result<String> {
     }
     Ok(std::fs::read_to_string(path)?)
 }
-fn read(root: &Path, file: &str) -> Result<Node> {
-    type Cache = BTreeMap<std::path::PathBuf, (u64, Node)>;
+fn read(root: &Path, file: &str) -> Result<yaml::Parsed> {
+    type Cache = BTreeMap<std::path::PathBuf, (u64, yaml::Parsed)>;
     static CACHE: OnceLock<std::sync::Mutex<Cache>> = OnceLock::new();
     let source = source(root, file)?;
     let hash = crate::hooks::generate::hash(source.as_bytes());
@@ -137,19 +141,20 @@ fn read(root: &Path, file: &str) -> Result<Node> {
         .get_or_init(Default::default)
         .lock()
         .map_err(|_| config("The workflow cache could not be read."))?;
-    if let Some((old, node)) = cache.get(&path) {
+    if let Some((old, parsed)) = cache.get(&path) {
         if *old == hash {
-            return Ok(node.clone());
+            return Ok(parsed.clone());
         }
     }
-    let node = yaml::parse(&source, file).map_err(|e| config(format!("could not read the workflow: {e}")))?;
+    let parsed = yaml::parse_all(&source, file).map_err(config)?;
     if cache.len() >= 100 {
         cache.clear();
     }
-    cache.insert(path, (hash, node.clone()));
-    Ok(node)
+    cache.insert(path, (hash, parsed.clone()));
+    Ok(parsed)
 }
 type ReadSource<'a> = &'a dyn Fn(&str) -> Result<Node>;
+type ReadParsed<'a> = &'a dyn Fn(&str) -> Result<yaml::Parsed>;
 fn include(
     read_source: ReadSource<'_>,
     file: &str,
@@ -654,6 +659,15 @@ fn decision(n: &Node, root: &Node, c: &Simulation, github: bool, opaque: bool) -
     }
     manual |= github && n.get("environment").is_some();
     match chosen {
+        Some(false) if trigger == Some(false) => (
+            "skipped".into(),
+            if github {
+                "The workflow's on: does not start a run for this event and ref."
+            } else {
+                "The workflow: rules create no pipeline for this event and ref."
+            }
+            .into(),
+        ),
         Some(false) => (
             "skipped".into(),
             "Excluded by the event, ref, paths or condition.".into(),
@@ -843,6 +857,7 @@ fn job(
         state: decision.0,
         reason: decision.1,
         depth: 0,
+        implicit: false,
     }
 }
 fn graph(workflow: &mut Workflow, implicit: &BTreeSet<String>) {
@@ -931,10 +946,29 @@ fn graph(workflow: &mut Workflow, implicit: &BTreeSet<String>) {
 fn workflow(root_path: &Path, file: &str, c: &Simulation) -> Result<Workflow> {
     workflow_from(file, c, &|file| read(root_path, file))
 }
-fn workflow_from(file: &str, c: &Simulation, read_source: ReadSource<'_>) -> Result<Workflow> {
+fn workflow_from(file: &str, c: &Simulation, read_source: ReadParsed<'_>) -> Result<Workflow> {
     let bytes = std::cell::Cell::new(0usize);
+    let github = file != ".gitlab-ci.yml";
+    let duplicates = std::cell::RefCell::new(Vec::new());
     let bounded = |file: &str| {
-        let node = read_source(file)?;
+        let parsed = read_source(file)?;
+        duplicates
+            .borrow_mut()
+            .extend(parsed.duplicates.iter().map(|d| Problem {
+                file: file.into(),
+                line: d.line,
+                message: format!(
+                    "{} is written twice (also on line {}). {}",
+                    d.key,
+                    d.first,
+                    if github {
+                        "GitHub refuses a workflow with a repeated key."
+                    } else {
+                        "GitLab keeps this later one, and so does the preview."
+                    }
+                ),
+            }));
+        let node = parsed.root;
         let size = node.value().map_err(config)?.to_string().len();
         bytes.set(bytes.get().saturating_add(size));
         if bytes.get() > 8 * 1024 * 1024 {
@@ -943,7 +977,6 @@ fn workflow_from(file: &str, c: &Simulation, read_source: ReadSource<'_>) -> Res
         Ok(node)
     };
     let read_source: ReadSource<'_> = &bounded;
-    let github = file != ".gitlab-ci.yml";
     let mut files = BTreeSet::new();
     let mut opaque = false;
     let root = if github {
@@ -1035,7 +1068,22 @@ fn workflow_from(file: &str, c: &Simulation, read_source: ReadSource<'_>) -> Res
                 }
             }
         };
-        let mut j = job(id, &node, &root, c, github, opaque, &mut w.problems);
+        // Local keys win over included ones, so an unread include can change
+        // a job's outcome only through what the file leaves unset: the
+        // workflow's rules, or the job's own conditions.
+        let decided_here = root.get("workflow").is_some()
+            && ["rules", "only", "except"]
+                .iter()
+                .any(|key| node.get(key).is_some());
+        let mut j = job(
+            id,
+            &node,
+            &root,
+            c,
+            github,
+            opaque && !decided_here,
+            &mut w.problems,
+        );
         if node.get("needs").is_some() {
             explicit.insert(id.clone());
         }
@@ -1105,6 +1153,7 @@ fn workflow_from(file: &str, c: &Simulation, read_source: ReadSource<'_>) -> Res
     if !github {
         for j in &mut w.jobs {
             if !explicit.contains(&j.id) {
+                j.implicit = true;
                 implicit.insert(j.id.clone());
                 if let Some(stage) = w.stages.iter().position(|s| s == &j.stage) {
                     j.depth = stage;
@@ -1152,10 +1201,14 @@ fn workflow_from(file: &str, c: &Simulation, read_source: ReadSource<'_>) -> Res
             state: "host".into(),
             reason: "Remote, conditional or wildcard includes are not fetched.".into(),
             depth: 0,
+            implicit: false,
         });
     }
     w.source_files = files.into_iter().collect();
     graph(&mut w, &implicit);
+    let mut repeated = duplicates.into_inner();
+    repeated.dedup_by(|a, b| a.file == b.file && a.line == b.line);
+    w.problems.splice(0..0, repeated);
     Ok(w)
 }
 
@@ -1228,7 +1281,7 @@ pub fn hosted(repo: &crate::forge::Repo, token: &str, id: u64) -> Result<Workflo
                 forge::encode_segment(commit)
             )
         };
-        yaml::parse(
+        yaml::parse_all(
             &http::get_repository_text(&format!("{}/{endpoint}", root(repo)?), token, &repo.host)?,
             file,
         )
@@ -1276,11 +1329,9 @@ pub fn preview(
                     .collect::<Vec<_>>()
             })
     } else {
-        let upstream = crate::branches::list(&repo)?
-            .into_iter()
-            .find(|b| b.current)
-            .and_then(|b| b.upstream);
-        if let Some(upstream) = upstream {
+        // One ref, not every branch's drift: listing a repository with a
+        // thousand branches took half a minute before anything was drawn.
+        if let Some(upstream) = crate::branches::current_upstream(&repo) {
             working_paths(&repo, &upstream)
         } else {
             Err(config(
@@ -1477,6 +1528,17 @@ mod tests {
         );
         let w = workflow(f.path(), ".gitlab-ci.yml", &context()).unwrap();
         assert!(w.jobs.iter().all(|j| j.state == "host"));
+        // A job with its own rules, under the file's own workflow rules, is
+        // decided here: an include cannot override keys the file sets.
+        f.write(
+            ".gitlab-ci.yml",
+            "workflow: {rules: [{when: always}]}\ninclude: {remote: 'https://example.com/ci.yml'}\ncheck:\n  script: echo test\n  rules: [{when: never}]\n",
+        );
+        let w = workflow(f.path(), ".gitlab-ci.yml", &context()).unwrap();
+        assert_eq!(
+            w.jobs.iter().find(|j| j.id == "check").unwrap().state,
+            "skipped"
+        );
         assert!(source(f.path(), "../outside.yml").is_err());
         f.write(".gitlab-ci.yml", "include: {local: .gitlab-ci.yml}");
         assert!(workflow(f.path(), ".gitlab-ci.yml", &context()).is_err());

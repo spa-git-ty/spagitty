@@ -44,10 +44,12 @@ export const pipelines = {
 	async load(path: string | null) {
 		if (owner === path) { attached = !!path; if (path) await this.preview(); schedule(); return; }
 		this.clear(); owner = path; attached = !!path; if (!path) return; const ticket = epoch; loading = true;
-		await this.preview();
+		// The host list is not waited behind the workflow files: Live and the host
+		// switch need it, and a large preview should not hold them back.
+		const previewed = this.preview();
 		try { const answer = await api.remotes(); if (ticket !== epoch) return; hosts = answer; remote = hosts.find((h) => h.repo.kind !== 'bitbucket')?.remote ?? hosts[0]?.remote ?? ''; if (view === 'live') await this.readWatches(); }
 		catch (cause) { if (ticket === epoch) errors.hosts = describe(cause); }
-		finally { if (ticket === epoch) { loading = false; schedule(); } }
+		finally { await previewed; if (ticket === epoch) { loading = false; schedule(); } }
 	},
 	async setView(next: 'preview' | 'live') { view = next; schedule(); if (next === 'live' && owner && !watches) await this.readWatches(); },
 	async choose(remoteName: string) { if (remote === remoteName) return; epoch++; jobTicket++; logTicket++; remote = remoteName; watches = null; lists = {}; branch = ''; jobs = []; runId = 0; selectedJob = 0; log = ''; reading = false; busy = false; updated = 0; canWrite = true; errors.runs = ''; errors.jobs = ''; errors.log = ''; errors.write = ''; checked = {}; graph = null; graphWarning = ''; if (view === 'live') await this.readWatches(); else await this.preview(); },

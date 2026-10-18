@@ -4,7 +4,7 @@ export type { Hosted, Read } from '$lib/issues/types';
 export interface Simulation { event: string; reference: string; base: string; defaultBranch: string; changed: string[]; changesKnown: boolean }
 export interface Problem { file: string; line: number; message: string }
 export interface Step { name: string; command: string; condition: string }
-export interface Job { id: string; name: string; stage: string; needs: string[]; condition: string; matrix: unknown[]; environment: string; services: string[]; steps: Step[]; runsOn: string[]; timeout: string; secrets: string[]; file: string; line: number; state: string; reason: string; depth: number }
+export interface Job { id: string; name: string; stage: string; needs: string[]; condition: string; matrix: unknown[]; environment: string; services: string[]; steps: Step[]; runsOn: string[]; timeout: string; secrets: string[]; file: string; line: number; state: string; reason: string; depth: number; implicit?: boolean; duration?: number | null }
 export interface Workflow { file: string; name: string; kind: string; triggers: string[]; stages: string[]; jobs: Job[]; problems: Problem[]; sourceFiles: string[] }
 export interface Preview { workflows: Workflow[]; changed: string[]; changesWarning: string | null; simulation: Simulation }
 export interface Run { id: number; name: string; branch: string; commit: string; event: string; state: string; result: string; url: string; started: number; ended: number; duration: number | null }

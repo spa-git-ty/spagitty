@@ -2,7 +2,7 @@
 
 # BUG-088 — CI problem file badge wraps awkwardly on the hyphen
 
-**Status:** Fixed — on `fix/ui-bugs-from-screenshots`; unmerged.
+**Status:** Fixed — on `fix/ui-bugs-from-screenshots`; unmerged. Carried into the rebuilt screen of [BUG-090](BUG-090-pipelines-screen-does-not-match-its-artboards.md).
 **Screens:** 1Y (Pipelines · preview)
 **Raised by:** the author, 2026-10-18, on 3.1.0: ".gitlab-" / "ci.yml:1" split across two lines.
 

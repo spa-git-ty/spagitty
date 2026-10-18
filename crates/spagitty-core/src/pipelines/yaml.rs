@@ -85,7 +85,26 @@ impl MarkedEventReceiver for Events {
     }
 }
 
+/// A key written twice in one mapping. GitLab reads such a file and keeps the
+/// later value, so the preview does the same and reports it (BUG-087).
+#[derive(Clone, Debug)]
+pub struct Duplicate {
+    pub key: String,
+    pub line: usize,
+    pub first: usize,
+}
+#[derive(Clone, Debug)]
+pub struct Parsed {
+    pub root: Node,
+    pub duplicates: Vec<Duplicate>,
+}
+
+#[cfg(test)]
 pub fn parse(text: &str, file: &str) -> Result<Node, String> {
+    parse_all(text, file).map(|parsed| parsed.root)
+}
+
+pub fn parse_all(text: &str, file: &str) -> Result<Parsed, String> {
     if text.len() > 1024 * 1024 {
         return Err("Workflow files must be smaller than 1 MiB.".into());
     }
@@ -95,6 +114,7 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
         .map_err(|e| e.to_string())?;
     let mut cursor = 0;
     let mut anchors = BTreeMap::new();
+    let mut duplicates = Vec::new();
     while cursor < events.0.len()
         && matches!(
             events.0[cursor].0,
@@ -107,6 +127,7 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
         events: &[(Event, Marker)],
         cursor: &mut usize,
         anchors: &mut BTreeMap<usize, Node>,
+        duplicates: &mut Vec<Duplicate>,
         file: &str,
         depth: usize,
     ) -> Result<Node, String> {
@@ -146,7 +167,7 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
                 reference = tag.as_ref().is_some_and(|t| t.suffix == "reference");
                 let mut values = Vec::new();
                 while !matches!(events.get(*cursor).map(|x| &x.0), Some(Event::SequenceEnd)) {
-                    values.push(node(events, cursor, anchors, file, depth + 1)?);
+                    values.push(node(events, cursor, anchors, duplicates, file, depth + 1)?);
                 }
                 *cursor += 1;
                 Data::List(values)
@@ -156,12 +177,12 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
                 let mut values = BTreeMap::new();
                 let mut merges = Vec::new();
                 while !matches!(events.get(*cursor).map(|x| &x.0), Some(Event::MappingEnd)) {
-                    let key = node(events, cursor, anchors, file, depth + 1)?;
+                    let key = node(events, cursor, anchors, duplicates, file, depth + 1)?;
                     let name = key.text();
                     if name.is_empty() {
                         return Err("Workflow mapping keys must be text.".into());
                     }
-                    let mut value = node(events, cursor, anchors, file, depth + 1)?;
+                    let mut value = node(events, cursor, anchors, duplicates, file, depth + 1)?;
                     value.line = key.line;
                     if name == "<<" {
                         if value.map().is_some() {
@@ -169,8 +190,12 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
                         } else {
                             merges.extend(value.list().iter().cloned());
                         }
-                    } else if values.insert(name.clone(), value).is_some() {
-                        return Err(format!("Duplicate YAML key {name}."));
+                    } else if let Some(old) = values.insert(name.clone(), value) {
+                        duplicates.push(Duplicate {
+                            key: name,
+                            line: key.line,
+                            first: old.line,
+                        });
                     }
                 }
                 *cursor += 1;
@@ -198,7 +223,14 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
         }
         Ok(n)
     }
-    let result = node(&events.0, &mut cursor, &mut anchors, file, 0)?;
+    let result = node(
+        &events.0,
+        &mut cursor,
+        &mut anchors,
+        &mut duplicates,
+        file,
+        0,
+    )?;
     if events.0[cursor..]
         .iter()
         .any(|(e, _)| matches!(e, Event::DocumentStart))
@@ -206,7 +238,10 @@ pub fn parse(text: &str, file: &str) -> Result<Node, String> {
         return Err("A workflow must contain one YAML document.".into());
     }
     result.value()?;
-    Ok(result)
+    Ok(Parsed {
+        root: result,
+        duplicates,
+    })
 }
 
 pub fn merge(base: &Node, added: &Node) -> Node {
@@ -278,10 +313,18 @@ mod tests {
         );
     }
     #[test]
-    fn recursive_anchors_documents_and_duplicate_keys_are_refused() {
-        for text in ["a: &a [*a]", "a: 1\na: 2", "a: 1\n---\nb: 2"] {
+    fn recursive_anchors_and_documents_are_refused() {
+        for text in ["a: &a [*a]", "a: 1\n---\nb: 2"] {
             assert!(parse(text, "ci.yml").is_err());
         }
         assert!(references(&parse("a: !reference [a]", "ci.yml").unwrap()).is_err());
+    }
+    #[test]
+    fn a_duplicate_key_keeps_the_later_value_and_is_reported() {
+        let parsed = parse_all("a: 1\nb: 2\na: 3\n", "ci.yml").unwrap();
+        assert_eq!(parsed.root.get("a").unwrap().text(), "3");
+        assert_eq!(parsed.duplicates.len(), 1);
+        let d = &parsed.duplicates[0];
+        assert_eq!((d.key.as_str(), d.line, d.first), ("a", 3, 1));
     }
 }

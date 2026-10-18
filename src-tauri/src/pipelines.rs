@@ -47,7 +47,7 @@ pub fn pipelines_preferences<R: Runtime>(
                 .iter()
                 .any(|b| b.is_empty() || b.len() > 255 || b.contains(['\n', '\r', '\0']))
         {
-            return Err(Error::Config(
+            return Err(Error::Workflow(
                 "Choose up to 100 branch names, each shorter than 256 characters.".into(),
             ));
         }
@@ -156,7 +156,7 @@ pub fn pipelines_write<R: Runtime>(
     confirmed: bool,
 ) -> Result<serde_json::Value> {
     if !confirmed {
-        return Err(Error::Config(
+        return Err(Error::Workflow(
             "Confirm this pipeline action before sending it.".into(),
         ));
     }

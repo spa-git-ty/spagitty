@@ -284,9 +284,10 @@ rather than an audit.
 | [BUG-084](items/BUG-084-pipelines-live-shows-empty-trace-panel.md) | Pipelines Live still draws the trace panel when a branch has no runs | 1Y | Fixed |
 | [BUG-085](items/BUG-085-hooks-runs-step-list-collapses-when-detail-hidden.md) | Hooks Runs step list collapses when the detail panel is hidden | 1X | Fixed |
 | [BUG-086](items/BUG-086-pipelines-preview-target-branch-input-no-placeholder.md) | Pipelines Preview target branch input has no placeholder | 1Y | Fixed |
-| [BUG-087](items/BUG-087-ci-yaml-error-mislabeled-as-git-config.md) | CI YAML parse error is reported as a git-configuration error | 1Y | Fixed |
+| [BUG-087](items/BUG-087-ci-yaml-error-mislabeled-as-git-config.md) | A repeated key empties the GitLab preview, and says it is a git-configuration error | 1Y | Fixed |
 | [BUG-088](items/BUG-088-ci-problem-file-badge-wraps-on-hyphen.md) | CI problem file badge wraps awkwardly on the hyphen | 1Y | Fixed |
-| [BUG-089](items/BUG-089-releases-misleading-empty-state-on-api-error.md) | Releases shows "No releases match this filter" after an API error | 1Z | Fixed |
+| [BUG-089](items/BUG-089-releases-misleading-empty-state-on-api-error.md) | Releases on GitLab is always empty: "responded 302" | 1Z | Fixed |
+| [BUG-090](items/BUG-090-pipelines-screen-does-not-match-its-artboards.md) | Pipelines does not look like its artboards, and Preview takes half a minute | 1Y | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -402,3 +403,4 @@ missing documents are not listed here, and fails again if a row here is stale.
 | BUG-087 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
 | BUG-088 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
 | BUG-089 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-090 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |

@@ -12,7 +12,8 @@ import { pipelines } from './store.svelte';
 import PipelinesScreen from './PipelinesScreen.svelte';
 import PipelineGraph from './PipelineGraph.svelte';
 import { layout } from './layout';
-import { liveGraph } from './live';
+import { liveGraph, stageOrder } from './live';
+import { tone, word } from './states';
 const host: Hosted = { remote: 'origin', repo: { kind: 'gitHub', host: 'github.com', owner: 'team', name: 'app' }, user: 'ada' };
 const job = (id: string, patch: Partial<Job> = {}): Job => ({ id, name: id, stage: '', needs: [], depth: 0, condition: '', matrix: [], environment: '', services: [], steps: [{ name: 'Test', command: 'cargo test', condition: '' }], runsOn: ['linux'], timeout: '', secrets: [], file: '.github/workflows/ci.yml', line: 8, state: 'runs', reason: 'matches', ...patch });
 const workflow: Workflow = { file: '.github/workflows/ci.yml', name: 'CI', kind: 'gitHub', triggers: ['push'], stages: [], jobs: [job('build', { matrix: [{ os: 'linux' }, { os: 'windows' }] }), job('test', { needs: ['build'], depth: 1 })], problems: [], sourceFiles: ['.github/workflows/ci.yml'] };
@@ -63,7 +64,7 @@ it('watching is saved per remote and a stale log cannot replace the newly select
 });
 it('mounted preview selects jobs, opens the exact source and shows matrix details', async () => {
 	await pipelines.load('/repo'); vi.mocked(api.source).mockResolvedValue('on: push\njobs:\n  build: {}'); const ui = render(PipelinesScreen, {});
-	click(ui.get('[aria-label="Select test"]')); expect(ui.all('dd')[1].textContent).toBe('build'); click(ui.get('.source-link')); await settle(); expect(api.source).toHaveBeenCalledWith(workflow.file); expect(ui.text()).toContain('Requested line 8'); click(ui.get('[aria-label="Select build"]')); expect(ui.text()).toContain('2 combinations'); ui.destroy();
+	click(ui.get('[aria-label="Select test"]')); expect(ui.all('dd')[1].textContent).toBe('build'); click(ui.get('.source-link')); await settle(); expect(api.source).toHaveBeenCalledWith(workflow.file); expect(ui.text()).toContain('.github/workflows/ci.yml · working copy'); expect(ui.text()).toContain('line 8'); click(ui.get('[aria-label="Select build"]')); expect(ui.text()).toContain('2 combinations'); ui.destroy();
 });
 it('matrix expansion and both layouts share dependency edges without drawing every offscreen card', () => {
 	const select = vi.fn(); const ui = render(PipelineGraph, { jobs: workflow.jobs, onselect: select }); expect(ui.all('path')).toHaveLength(1);
@@ -71,7 +72,7 @@ it('matrix expansion and both layouts share dependency edges without drawing eve
 	const arranged = layout(workflow.jobs, [], 'needs', new Set(['build']), false); expect(arranged.cards[2].x).toBeGreaterThan(arranged.cards[0].x);
 });
 it('large workflows start collapsed and ambiguous host names get no invented dependency', async () => {
-	const rows = Array.from({ length: 201 }, (_, i) => job(`job${i}`, { stage: 'test' })); const ui = render(PipelineGraph, { jobs: rows, stages: ['test'], onselect: vi.fn() }); expect(ui.text()).toContain('Expand stages'); expect(ui.all('.card')).toHaveLength(1); ui.destroy();
+	const rows = Array.from({ length: 201 }, (_, i) => job(`job${i}`, { stage: 'test' })); const ui = render(PipelineGraph, { jobs: rows, stages: ['test'], onselect: vi.fn() }); expect(ui.text()).toContain('Expand stages'); expect(ui.all('.job')).toHaveLength(1); ui.destroy();
 	const mapped = liveGraph([{ ...liveJob, id: 1, name: 'build (linux)' }, { ...liveJob, id: 2, name: 'build (windows)' }, liveJob], workflow); expect(mapped[2].needs).toEqual(['1', '2']);
 	const ambiguous = liveGraph([liveJob], { ...workflow, jobs: [job('a', { name: 'test' }), job('b', { name: 'test' })] }); expect(ambiguous[0].needs).toEqual([]);
 });
@@ -82,4 +83,33 @@ it('refresh retains a selected job on a later page and inactive branches use six
 	vi.mocked(api.runs).mockImplementation(async (_, branch) => ({ data: { runs: [{ ...run, branch, state: 'completed', result: 'success' }], etag: null, more: false }, cacheWarning: null }));
 	await pipelines.refresh(); expect(watcher.subscribe).toHaveBeenLastCalledWith(expect.any(Function), 60_000);
 	vi.mocked(api.runs).mockClear(); await pipelines.refresh(false); expect(api.runs).not.toHaveBeenCalled();
+});
+
+it('GitLab stage order is drawn as columns, not as an edge from every job to every job', () => {
+	const stages = ['.pre', 'build', 'test', 'deploy'];
+	const jobs = [
+		job('compile', { stage: 'build', depth: 1, implicit: true }),
+		job('lint', { stage: 'build', depth: 1, implicit: true }),
+		job('unit', { stage: 'test', depth: 2, needs: ['compile', 'lint'], implicit: true }),
+		job('ship', { stage: 'deploy', depth: 1, needs: ['compile'] })
+	];
+	const arranged = layout(jobs, stages, 'stages', new Set(), false);
+	// The empty .pre stage leaves no gap: build is the first column.
+	expect(arranged.cards.find((c) => c.job.id === 'compile')?.x).toBe(0);
+	expect(arranged.labels.map((l) => l.text)).toEqual(['build', 'test', 'deploy']);
+	// Only the written needs: is an edge.
+	expect(arranged.edges.map((e) => e.key)).toEqual(['compile/0>ship/0']);
+});
+
+it('live stages follow the order the host created the jobs, not the newest-first list', () => {
+	const rows = [{ ...liveJob, id: 9, stage: 'deploy' }, { ...liveJob, id: 4, stage: 'test' }, { ...liveJob, id: 1, stage: 'build' }];
+	expect(stageOrder(rows)).toEqual(['build', 'test', 'deploy']);
+	expect(liveGraph(rows, null).map((j) => j.depth)).toEqual([2, 1, 0]);
+});
+
+it('one state reads the same on both hosts', () => {
+	expect(tone('failure')).toBe(tone('failed'));
+	expect(tone('runs')).toBe('ok');
+	expect(word('completed', 'failed')).toBe('Failed');
+	expect(word('running', '')).toBe('Running');
 });
