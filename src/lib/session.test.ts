@@ -68,10 +68,10 @@ describe('a path on the command line', () => {
 
 		await resumeSession(port);
 
-		expect(calls).toEqual(['launchPath', 'open /tmp/asked-for']);
+		expect(calls).toEqual(['launchPath', 'open /tmp/asked-for', 'goto /home']);
 	});
 
-	it('does not navigate anywhere, because the launch has no stored place', async () => {
+	it('lands on Home, and wants no commit, because the launch has no stored place', async () => {
 		const { port, calls } = recorder({
 			launch: '/tmp/asked-for',
 			places: { '/tmp/asked-for': { route: '/branches', selected: 'abc' } }
@@ -79,7 +79,7 @@ describe('a path on the command line', () => {
 
 		await resumeSession(port);
 
-		expect(calls.some((call) => call.startsWith('goto'))).toBe(false);
+		expect(calls.filter((call) => call.startsWith('goto'))).toEqual(['goto /home']);
 		expect(calls.some((call) => call.startsWith('want'))).toBe(false);
 	});
 });
@@ -93,7 +93,7 @@ describe('the last session', () => {
 		expect(calls).toContain('open /tmp/last-session');
 	});
 
-	it('lands on the route and the commit it was left on', async () => {
+	it('lands on Home, with the commit it was left on (FEAT-140)', async () => {
 		const { port, calls } = recorder({
 			active: '/tmp/last-session',
 			places: { '/tmp/last-session': { route: '/branches', selected: 'c0ffee' } }
@@ -106,7 +106,7 @@ describe('the last session', () => {
 			'active',
 			'placeOf /tmp/last-session',
 			'open /tmp/last-session',
-			'goto /branches',
+			'goto /home',
 			'want c0ffee'
 		]);
 	});
@@ -124,10 +124,10 @@ describe('the last session', () => {
 		);
 	});
 
-	it('stays put when the stored route is the one already on screen', async () => {
+	it('stays put when Home is already on screen', async () => {
 		const { port, calls } = recorder({
 			active: '/tmp/last-session',
-			route: '/branches',
+			route: '/home',
 			places: { '/tmp/last-session': { route: '/branches', selected: null } }
 		});
 
@@ -152,12 +152,18 @@ describe('the last session', () => {
 
 		await resumeSession(port);
 
-		expect(calls).toEqual(['launchPath', 'active', 'placeOf /tmp/last-session', 'open /tmp/last-session']);
+		expect(calls).toEqual([
+			'launchPath',
+			'active',
+			'placeOf /tmp/last-session',
+			'open /tmp/last-session',
+			'goto /home'
+		]);
 	});
 });
 
 describe('a tab that no longer resolves', () => {
-	it('stops after the open and navigates nowhere', async () => {
+	it('lands on Home, where the failure is said, and wants nothing', async () => {
 		const { port, calls } = recorder({
 			active: '/tmp/moved',
 			places: { '/tmp/moved': { route: '/branches', selected: 'c0ffee' } },
@@ -166,17 +172,17 @@ describe('a tab that no longer resolves', () => {
 
 		await resumeSession(port);
 
-		expect(calls).toEqual(['launchPath', 'active', 'placeOf /tmp/moved', 'open /tmp/moved']);
+		expect(calls).toEqual(['launchPath', 'active', 'placeOf /tmp/moved', 'open /tmp/moved', 'goto /home']);
 	});
 });
 
 describe('an empty launch', () => {
-	it('does nothing at all when there is no path and no tab', async () => {
+	it('opens nothing when there is no path and no tab, and lands on Home', async () => {
 		const { port, calls } = recorder();
 
 		await resumeSession(port);
 
-		expect(calls).toEqual(['launchPath', 'active']);
+		expect(calls).toEqual(['launchPath', 'active', 'goto /home']);
 	});
 });
 

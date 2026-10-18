@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Farm start — so far</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<aside aria-labelledby="sofar" style="box-sizing: border-box; width: 100%; background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 4px; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px">
+  <h2 id="sofar" style="margin: 0 0 8px; font-size: 15px; font-weight: 600">Your farm</h2>
+  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+    <div style="display: flex; flex-direction: column; gap: 5px; padding: 12px 0; border-top: 1px solid rgba(243,233,221,0.07)">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <span style="font-size: 12px; color: rgba(243,233,221,0.62)">{{ r.label }}</span>
+        <sc-if value="{{ r.remembered }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(106,167,224,0.14); color: #9cc6ee">last time</span></sc-if>
+      </div>
+      <span style="{{ r.valueStyle }}">{{ r.value }}</span>
+      <sc-if value="{{ r.badges }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; margin-top: 2px">
+          <span style="width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #f2715a; background: #3a2420; box-shadow: 0 0 0 2px #231c18">CC</span>
+          <span style="margin-left: -5px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #6aa7e0; background: #1f2a36; box-shadow: 0 0 0 2px #231c18">CX</span>
+          <span style="margin-left: -5px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #a58bd8; background: #2b2438; box-shadow: 0 0 0 2px #231c18">CU</span>
+          <span style="margin-left: -5px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #f0b54a; background: #352a17; box-shadow: 0 0 0 2px #231c18">PI</span>
+        </div>
+      </sc-if>
+    </div>
+  </sc-for>
+  <p style="margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: rgba(243,233,221,0.62)">Crew and rules are remembered for this repository.</p>
+</aside>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"int","min":1,"max":4,"default":1},"$preview":{"width":320,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const step = this.props.step ?? 1;
+    const on = 'font-size: 14px; line-height: 1.4; color: #f3e9dd';
+    const dim = 'font-size: 14px; line-height: 1.4; color: rgba(243,233,221,0.45)';
+    const rows = [
+      { label: 'Goal', value: 'Gitea support for pull requests', valueStyle: on },
+      { label: 'Start from', value: step >= 2 ? '3 issues · 1 brief' : 'Nothing yet · optional', valueStyle: step >= 2 ? on : dim },
+      { label: 'Crew', value: '4 agents', valueStyle: step >= 3 ? on : dim, remembered: step < 3, badges: true },
+      { label: 'Rules', value: 'Semi-automatic · 3 at once · 2 checks', valueStyle: step >= 3 ? on : dim, remembered: step < 3 },
+      { label: 'Tasks', value: step >= 4 ? 'Planned by Claude Code' : '—', valueStyle: step >= 4 ? on : dim }
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — dock</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer;border:0;background:transparent;color:inherit;padding:0}
+</style>
+</helmet>
+<div role="contentinfo" aria-label="Application status" style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 2px 4px 0; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 13.2px">
+
+  <span style="display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; color: rgba(243,233,221,0.62)">
+    <span aria-hidden="true" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #7cc68d"></span>
+    <span>Repository ready</span><span aria-hidden="true">·</span><span>{{ working }}</span><span aria-hidden="true">·</span><span style="overflow: hidden; text-overflow: ellipsis">fetched 3 min ago</span>
+  </span>
+
+  <div role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; box-sizing: border-box; border-radius: 24px; background-color: rgba(57,51,48,0.72); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.09); border-top-color: rgba(255,255,255,0.16); box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3)">
+    <button type="button" aria-haspopup="listbox" title="Switch branch" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.09); border-radius: 999px; background: rgba(18,14,13,0.7)">
+      <span style="font-size: 13.2px; font-weight: 600">main</span>
+      <span aria-hidden="true" style="font-family: 'JetBrains Mono', ui-monospace, monospace; color: rgba(243,233,221,0.62)">▾</span>
+    </button>
+
+    <span aria-hidden="true" style="width: 1px; height: 22px; background: rgba(243,233,221,0.1)"></span>
+
+    <div style="display: flex; align-items: center; gap: 2px">
+      <div style="display: flex; align-items: stretch; height: 32px; border-radius: 999px">
+        <button type="button" title="Fetch and fast-forward the current branch" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 6px 0 11px; border-radius: 999px 0 0 999px; white-space: nowrap">
+          <svg aria-hidden="true" width="16.5" height="16.5" viewBox="0 0 24 24" fill="none" stroke="rgba(243,233,221,0.62)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>
+          <span>Pull</span>
+        </button>
+        <button type="button" aria-haspopup="menu" aria-label="How to pull" style="display: flex; align-items: center; padding: 0 10px 0 5px; border-radius: 0 999px 999px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: rgba(243,233,221,0.62)"><span aria-hidden="true">▾</span></button>
+      </div>
+
+      <div style="display: flex; align-items: stretch; height: 32px; border-radius: 999px">
+        <button type="button" title="Fetch every remote" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 6px 0 11px; border-radius: 999px 0 0 999px; white-space: nowrap">
+          <svg aria-hidden="true" width="16.5" height="16.5" viewBox="0 0 24 24" fill="none" stroke="rgba(243,233,221,0.62)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
+          <span>Fetch</span>
+        </button>
+        <button type="button" aria-haspopup="menu" aria-label="What to fetch" style="display: flex; align-items: center; padding: 0 10px 0 5px; border-radius: 0 999px 999px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: rgba(243,233,221,0.62)"><span aria-hidden="true">▾</span></button>
+      </div>
+
+      <button type="button" title="Push the current branch" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 999px; white-space: nowrap">
+        <svg aria-hidden="true" width="16.5" height="16.5" viewBox="0 0 24 24" fill="none" stroke="rgba(243,233,221,0.62)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>
+        <span>Push</span>
+      </button>
+
+      <span aria-hidden="true" style="width: 1px; height: 22px; margin: 0 6px; background: rgba(243,233,221,0.1)"></span>
+
+      <button type="button" title="Name a branch at the commit selected in the graph, or at HEAD" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 999px; white-space: nowrap">
+        <svg aria-hidden="true" width="16.5" height="16.5" viewBox="0 0 24 24" fill="none" stroke="rgba(243,233,221,0.62)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"></path><path d="M7 4.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 8.5a2.5 2.5 0 1 0 0-.02"></path><path d="M7 20.5a2.5 2.5 0 1 0 0-.02"></path></svg>
+        <span>Branch</span>
+      </button>
+
+      <button type="button" title="Stash the work in progress" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 999px; white-space: nowrap">
+        <svg aria-hidden="true" width="16.5" height="16.5" viewBox="0 0 24 24" fill="none" stroke="rgba(243,233,221,0.62)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 8l2-4h14l2 4"></path><path d="M9.5 13h5"></path></svg>
+        <span>Stash</span>
+      </button>
+    </div>
+  </div>
+
+  <span style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; color: rgba(243,233,221,0.62)">
+    <span>1,284 commits</span><span aria-hidden="true">·</span><span>Tags 12</span><span aria-hidden="true">·</span><span>Submodules 0</span>
+    <span style="margin-left: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px">v0.8.1</span>
+  </span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"working":{"editor":"text","default":"working copy clean"},"$preview":{"width":1440,"height":76}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { working: this.props.working ?? 'working copy clean' };
+  }
+}
+</script>
+</body>
+</html>

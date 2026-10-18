@@ -6,6 +6,7 @@
 	import { isMac } from '$lib/platform';
 	import BrandMark from '$lib/ui/BrandMark.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { center } from '$lib/notifications/center.svelte';
 	import Wordmark from '$lib/ui/Wordmark.svelte';
 	import type { IconName } from '$lib/ui/icons';
 
@@ -71,6 +72,28 @@
 	<span class="name" role="img" aria-label="Spagitty"><BrandMark size={18} /><Wordmark size={15} /></span>
 
 	<div class="controls">
+		<!--
+			The notification center's bell (FEAT-142), left of the window
+			controls: an accent count of what is unread, and pressed while the
+			drawer is open.
+		-->
+		<button
+			class="bell"
+			class:pressed={center.open}
+			aria-pressed={center.open}
+			title="Notifications"
+			aria-label={center.unread ? `Notifications, ${center.unread} new` : 'Notifications'}
+			onclick={(event) => {
+				event.stopPropagation();
+				center.toggle();
+			}}
+			ondblclick={(event) => event.stopPropagation()}
+		>
+			<Icon name="bell" size="1.05em" weight={1.8} />
+			{#if center.unread > 0}
+				<span class="badge">{center.unread > 99 ? '99+' : center.unread}</span>
+			{/if}
+		</button>
 		{#each mac ? [] : CONTROLS as control (control.kind)}
 			<button
 				class="control {control.kind}"
@@ -158,6 +181,56 @@
 	.control:hover {
 		background: var(--hover);
 		color: var(--ink);
+	}
+
+	/* The bell is drawn like the controls beside it, and is not one of them. */
+	.bell {
+		position: relative;
+		width: 32px;
+		height: 26px;
+		margin-right: 6px;
+		border-radius: var(--r-pill);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--muted);
+		transition:
+			background 0.1s ease,
+			color 0.1s ease;
+	}
+
+	.bell:hover {
+		background: var(--hover);
+		color: var(--ink);
+	}
+
+	.bell:active {
+		background: var(--press);
+		transform: scale(0.94);
+	}
+
+	.bell.pressed {
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+
+	.badge {
+		position: absolute;
+		top: -2px;
+		right: -3px;
+		min-width: 15px;
+		height: 15px;
+		padding: 0 4px;
+		box-sizing: border-box;
+		display: grid;
+		place-items: center;
+		border-radius: var(--r-pill);
+		background: var(--accent);
+		color: var(--on-accent);
+		font-size: calc(var(--fs-mono) * 0.8);
+		font-weight: 700;
+		line-height: 1;
+		pointer-events: none;
 	}
 
 	.control:active {

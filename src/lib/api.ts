@@ -272,6 +272,11 @@ export function createBranch(name: string, start: string, checkout: boolean): Pr
 	return invoke('create_branch', { name, start, checkout });
 }
 
+/** What Home shows that only git knows (FEAT-140). */
+export function homeOverview(): Promise<import('./home/types').Overview> {
+	return invoke('home_overview');
+}
+
 /** Every stash entry, newest first. */
 export function stashes(): Promise<StashEntry[]> {
 	return invoke('stashes');

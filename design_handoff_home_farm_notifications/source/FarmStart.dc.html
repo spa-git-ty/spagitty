@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Farm start — Start</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#120d0b}
+a{color:#f2715a;text-decoration:none}a:hover{color:#ff9a86}
+button{font:inherit;cursor:pointer}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 10px; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px; background-color: #120d0b; background-image: radial-gradient(1200px 420px at 30% -10%, rgba(242,113,90,0.16), rgba(18,13,11,0) 70%)">
+  <div style="display: flex; align-items: center; gap: 6px; height: 34px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 10px; background: rgba(243,233,221,0.08); font-weight: 600">spagitty <span aria-hidden="true" style="color: rgba(243,233,221,0.62)">×</span></div>
+    <div style="padding: 6px 14px; color: rgba(243,233,221,0.62)">quiblo</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; flex-grow: 1; align-items: stretch">
+    <dc-import name="Rail" active="farm" hint-size="88px,900px"></dc-import>
+
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; background: #1c1613; border: 1px solid rgba(243,233,221,0.1); border-radius: 22px; padding: 22px 30px 18px; display: flex; flex-direction: column; gap: 22px">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 600">Farm</h1>
+          <span style="color: rgba(243,233,221,0.62)">spagitty · new farm</span>
+        </div>
+        <dc-import name="Steps" step="{{ 4 }}" hint-size="560px,48px"></dc-import>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; flex-grow: 1; align-items: flex-start; justify-content: center">
+        <section style="flex: 999 1 560px; min-width: 0; max-width: 780px; display: flex; flex-direction: column; gap: 18px; padding-top: 18px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: #f2715a; font-weight: 600">Step 4 of 4</span>
+            <h2 style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em">How should the tasks be made?</h2>
+            <p style="margin: 0; font-size: 15px; color: rgba(243,233,221,0.62)">Nothing runs until you accept the tasks.</p>
+          </div>
+
+          <div role="radiogroup" aria-label="How the tasks are made" style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ ways }}" as="w" hint-placeholder-count="3">
+              <button type="button" role="radio" aria-checked="{{ w.on }}" onClick="{{ w.pick }}" style="{{ w.style }}">
+                <span style="{{ w.ringStyle }}"><span style="{{ w.pipStyle }}"></span></span>
+                <span style="display: flex; flex-direction: column; gap: 5px; text-align: left; min-width: 0">
+                  <span style="font-size: 16px; font-weight: 600">{{ w.name }}</span>
+                  <span style="font-size: 13.5px; line-height: 1.45; color: rgba(243,233,221,0.68)">{{ w.desc }}</span>
+                </span>
+                <sc-if value="{{ w.hasPicker }}" hint-placeholder-val="{{ false }}">
+                  <span style="margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(243,233,221,0.18); font-size: 13px"><span style="width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 9px; font-weight: 700; color: #f2715a; background: rgba(242,113,90,0.18)">CC</span>Claude Code ▾</span>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px">
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">The planner gets</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <span style="padding: 6px 12px; border-radius: 999px; background: rgba(242,113,90,0.12); color: #f3e9dd; font-size: 13px">Goal and notes</span>
+              <span class="mono" style="padding: 6px 12px; border-radius: 999px; background: rgba(106,167,224,0.12); color: #9cc6ee; font-size: 12.5px">#142</span>
+              <span class="mono" style="padding: 6px 12px; border-radius: 999px; background: rgba(106,167,224,0.12); color: #9cc6ee; font-size: 12.5px">#147</span>
+              <span class="mono" style="padding: 6px 12px; border-radius: 999px; background: rgba(106,167,224,0.12); color: #9cc6ee; font-size: 12.5px">#151</span>
+              <span class="mono" style="padding: 6px 12px; border-radius: 999px; background: rgba(240,181,74,0.12); color: #f0b54a; font-size: 12.5px">gitea.md</span>
+              <span class="mono" style="padding: 6px 12px; border-radius: 999px; background: rgba(243,233,221,0.07); color: rgba(243,233,221,0.8); font-size: 12.5px">AGENTS.md</span>
+              <span style="padding: 6px 12px; border-radius: 999px; background: rgba(243,233,221,0.07); color: rgba(243,233,221,0.8); font-size: 13px">a map of the repository</span>
+            </div>
+          </div>
+        </section>
+
+        <div style="flex: 1 1 280px; max-width: 340px; padding-top: 18px">
+          <dc-import name="SoFar" step="{{ 4 }}" hint-size="100%,520px"></dc-import>
+        </div>
+      </div>
+
+      <footer style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 12px 20px; border-radius: 18px; background: rgba(36,29,25,0.9); border: 1px solid rgba(243,233,221,0.1)">
+        <a href="FarmCrew.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 6px; color: rgba(243,233,221,0.75)">← Crew &amp; rules</a>
+        <button type="button" style="height: 48px; padding: 0 26px; border-radius: 12px; border: 0; background: #f2715a; color: #2a0e07; font-weight: 600; font-size: 15px; box-shadow: 0 8px 24px rgba(242,113,90,0.3)">{{ cta }}</button>
+      </footer>
+    </main>
+  </div>
+  <dc-import name="Dock" status="Repository ready · no farm yet" hint-size="100%,64px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { way: 0 };
+  }
+  renderVals() {
+    const defs = [
+      ['Plan it with an agent', 'Reads everything you gave it and the repository, then proposes tasks in waves.', 'Plan it with Claude Code', true],
+      ['One task per issue', '3 tasks, straight from #142, #147 and #151. Edit them before they run.', 'Make 3 tasks', false],
+      ['I’ll write the tasks', 'Start from an empty plan.', 'Open an empty plan', false]
+    ];
+    const way = this.state.way;
+    const ways = defs.map(([name, desc, cta, hasPicker], i) => {
+      const on = way === i;
+      return {
+        name, desc, on, hasPicker: hasPicker && on,
+        pick: () => this.setState({ way: i }),
+        style: 'display: flex; align-items: center; gap: 16px; width: 100%; padding: 18px 20px; border-radius: 16px; color: #f3e9dd; background: ' + (on ? 'rgba(242,113,90,0.08)' : '#231c18') + '; border: 1.5px solid ' + (on ? '#f2715a' : 'rgba(243,233,221,0.1)'),
+        ringStyle: 'flex: none; width: 20px; height: 20px; box-sizing: border-box; border-radius: 50%; display: grid; place-items: center; border: 2px solid ' + (on ? '#f2715a' : 'rgba(243,233,221,0.35)'),
+        pipStyle: 'width: 10px; height: 10px; border-radius: 50%; background: ' + (on ? '#f2715a' : 'transparent')
+      };
+    });
+    return { ways, cta: defs[way][2] };
+  }
+}
+</script>
+</body>
+</html>

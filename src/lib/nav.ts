@@ -52,8 +52,13 @@ export type CountKey = keyof RepoCounts;
  * 1T, 1U and 1V are 3.0's workbench: Terminal (FEAT-130), Files (FEAT-131)
  * and Recipes (FEAT-133). 1O, which was File history and off the rail, is
  * Investigate (FEAT-132) and on it.
+ *
+ * 2A is Home (FEAT-140), the first code past the alphabet: what the open
+ * repository needs from you, then its state at a glance. It is the top of the
+ * rail, above the Farm, and the screen a launch opens on.
  */
 export type ScreenCode =
+	| '2A'
 	| '1A'
 	| '1B'
 	| '1C'
@@ -107,10 +112,15 @@ export type ScreenCode =
  * a collapsed rail keeps the dividers, which is the same information at the
  * width available.
  */
-export type NavGroup = 'farm' | 'work' | 'tools' | 'app';
+export type NavGroup = 'home' | 'farm' | 'work' | 'tools' | 'app';
 
-/** What each group is called in the rail. `farm` has none: it is one row. */
+/**
+ * What each group is called in the rail. `home` and `farm` have none: each is
+ * one row. Home (FEAT-140) is a group of its own above the Farm, with a
+ * divider between them and no heading, as the handoff draws it.
+ */
 export const GROUP_LABELS: Record<NavGroup, string | null> = {
+	home: null,
 	farm: null,
 	work: 'Repository',
 	tools: 'Tools',
@@ -174,7 +184,10 @@ export const REF_SCREENS = ['/branches', '/tags', '/stash', '/reflog'] as const;
  * than the rows that left from above it.
  */
 export const NAV_ITEMS: NavItem[] = [
-	{ code: '1Q', label: 'Farm', href: '/farm', group: 'farm', icon: 'farm' },
+	// FEAT-140. What the repository needs from you; then a divider, then the
+	// Farm and everything else as before.
+	{ code: '2A', label: 'Home', href: '/home', group: 'home', icon: 'home', since: '3.2' },
+	{ code: '1Q', label: 'Farm', href: '/farm', group: 'farm', icon: 'farm', dividerBefore: true },
 	{ code: '1A', label: 'Graph', href: '/', count: 'commits', group: 'work', icon: 'graph' },
 	{
 		code: '1C',
@@ -302,7 +315,7 @@ export const RAIL_DEFAULT: RailSettings = { hidden: [], order: [], where: 'more'
 export type RailChoice = 'always' | 'rule' | 'free';
 
 export function railChoice(item: NavItem): RailChoice {
-	if (item.group === 'farm' || item.group === 'app') return 'always';
+	if (item.group === 'home' || item.group === 'farm' || item.group === 'app') return 'always';
 	if ((item.shows ?? 'always') !== 'always') return 'rule';
 	return 'free';
 }

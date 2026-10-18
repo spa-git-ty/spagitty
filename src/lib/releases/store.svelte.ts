@@ -2,6 +2,8 @@
 import { dialog } from '$lib/ui/dialog.svelte';
 import { describe } from '$lib/ui/notice.svelte';
 import { watcher } from '$lib/notifications/watcher.svelte';
+import { center } from '$lib/notifications/center.svelte';
+import { fromRelease } from '$lib/notifications/feeds';
 import * as api from './api';
 import { empty, type Artifact, type Asset, type Download, type FileTransfer, type Hosted, type Preferences, type Release, type Write } from './types';
 
@@ -112,6 +114,8 @@ export const releases = {
 		await this.read(true); if (ticket !== epoch) return false;
 		const saved = this.rows.find((release) => release.tag === submitted.tag);
 		if (saved) { selected = saved.id; draft = clone(saved); }
+		// Kept in the notification center (FEAT-142) when it went out, not when a draft was saved.
+		if (publish && saved && !saved.draft && (submitted.draft || submitted.local || !submitted.id)) void center.add(fromRelease(submitted.tag, (saved ?? submitted).assets.length, saved?.url || null));
 		return true;
 	},
 	async remove(deleteTag = false) {

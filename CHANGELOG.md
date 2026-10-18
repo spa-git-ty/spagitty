@@ -14,6 +14,11 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Home** is the new top of the rail and the screen Spagitty opens on. **Needs you** lists what is waiting on you in this repository, most urgent first: farm tasks ready to merge or stuck, review requests, failed checks on your branches, changes asked for on your pull requests, and issues assigned to you. Below it are the farm, the working copy, recent branches, open pull requests, the latest commits, sixteen weeks of commits, pipelines and releases.
+- **Notifications** are kept. The bell in the title bar opens a drawer with everything Spagitty has told you, across repositories, grouped by day, with search, filters and one action per item. Pull request news, the farm, failed or recovered checks, failed fetches, pulls and pushes, and published releases all land there. Settings › Notifications can clear the ones older than 90 days.
+
 ## [3.1.1] - 2026-10-18
 
 ### Changed

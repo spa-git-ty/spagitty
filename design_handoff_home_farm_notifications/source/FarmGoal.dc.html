@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Farm start — Goal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#120d0b}
+a{color:#f2715a;text-decoration:none}a:hover{color:#ff9a86}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+input::placeholder,textarea::placeholder{color:rgba(243,233,221,0.4)}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 10px; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px; background-color: #120d0b; background-image: radial-gradient(1200px 420px at 30% -10%, rgba(242,113,90,0.16), rgba(18,13,11,0) 70%)">
+  <div style="display: flex; align-items: center; gap: 6px; height: 34px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 10px; background: rgba(243,233,221,0.08); font-weight: 600">spagitty <span aria-hidden="true" style="color: rgba(243,233,221,0.62)">×</span></div>
+    <div style="padding: 6px 14px; color: rgba(243,233,221,0.62)">quiblo</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; flex-grow: 1; align-items: stretch">
+    <dc-import name="Rail" active="farm" hint-size="88px,900px"></dc-import>
+
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; background: #1c1613; border: 1px solid rgba(243,233,221,0.1); border-radius: 22px; padding: 22px 30px 18px; display: flex; flex-direction: column; gap: 22px">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 600">Farm</h1>
+          <span style="color: rgba(243,233,221,0.62)">spagitty · new farm</span>
+        </div>
+        <dc-import name="Steps" step="{{ 1 }}" hint-size="560px,48px"></dc-import>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; flex-grow: 1; align-items: flex-start; justify-content: center">
+        <section style="flex: 999 1 560px; min-width: 0; max-width: 780px; display: flex; flex-direction: column; gap: 22px; padding-top: 18px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: #f2715a; font-weight: 600">Step 1 of 4</span>
+            <h2 style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em">What should be true when it’s done?</h2>
+          </div>
+
+          <label for="goal" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Goal</label>
+          <input id="goal" type="text" value="Gitea support for pull requests" style="box-sizing: border-box; width: 100%; height: 68px; padding: 0 22px; border-radius: 16px; border: 1.5px solid #f2715a; background: #120d0b; color: #f3e9dd; font-size: 22px; box-shadow: 0 0 0 5px rgba(242,113,90,0.14); outline: none">
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label for="notes" style="font-size: 13px; color: rgba(243,233,221,0.62)">Anything the agents should know <span style="opacity: 0.8">· optional</span></label>
+            <textarea id="notes" rows="3" placeholder="Same Host trait as GitHub and GitLab. Do not touch the GitHub code path." style="box-sizing: border-box; width: 100%; padding: 14px 18px; border-radius: 14px; border: 1px solid rgba(243,233,221,0.16); background: #120d0b; color: #f3e9dd; font-size: 15px; line-height: 1.5; resize: vertical"></textarea>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px">
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">Or pick up a past farm</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px">
+              <button type="button" style="text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(243,233,221,0.1); background: #231c18; color: #f3e9dd">
+                <span style="display: flex; justify-content: space-between; width: 100%; font-size: 12px"><span style="color: #f0b54a">Stopped · 4 of 7 merged</span><span style="color: rgba(243,233,221,0.62)">Oct 12</span></span>
+                <span style="font-size: 15px; font-weight: 500">Hooks tab, step by step</span>
+                <span style="font-size: 13px; color: #f2715a">Resume →</span>
+              </button>
+              <button type="button" style="text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(243,233,221,0.1); background: #231c18; color: #f3e9dd">
+                <span style="display: flex; justify-content: space-between; width: 100%; font-size: 12px"><span style="color: #7cc68d">Done · 9 of 9 merged</span><span style="color: rgba(243,233,221,0.62)">Oct 7</span></span>
+                <span style="font-size: 15px; font-weight: 500">GitLab support for pull requests</span>
+                <span style="font-size: 13px; color: #f2715a">Use as a starting point →</span>
+              </button>
+            </div>
+          </div>
+
+          <details style="font-size: 13px; color: rgba(243,233,221,0.62)">
+            <summary style="cursor: pointer">How a farm runs</summary>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px">
+              <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(243,233,221,0.16); color: #f3e9dd">Goal</span><span aria-hidden="true">→</span>
+              <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(243,233,221,0.16); color: #f3e9dd">Plan</span><span aria-hidden="true">→</span>
+              <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(243,233,221,0.16); color: #f3e9dd">Each task in its own worktree</span><span aria-hidden="true">→</span>
+              <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(243,233,221,0.16); color: #f3e9dd">Your checks</span><span aria-hidden="true">→</span>
+              <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(243,233,221,0.16); color: #f3e9dd">Another agent reviews</span><span aria-hidden="true">→</span>
+              <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(124,198,141,0.5); color: #7cc68d">Merged</span>
+            </div>
+          </details>
+        </section>
+
+        <div style="flex: 1 1 280px; max-width: 340px; padding-top: 18px">
+          <dc-import name="SoFar" step="{{ 1 }}" hint-size="100%,520px"></dc-import>
+        </div>
+      </div>
+
+      <footer style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 12px 20px; border-radius: 18px; background: rgba(36,29,25,0.9); border: 1px solid rgba(243,233,221,0.1)">
+        <span style="font-size: 13px; color: rgba(243,233,221,0.62)">One line is enough. <span class="mono" style="padding: 2px 6px; border-radius: 6px; background: rgba(243,233,221,0.08)">Enter</span> to go on.</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px">
+          <a href="FarmStart.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 12px; color: #f3e9dd; border: 1px solid rgba(243,233,221,0.22)">Skip to start</a>
+          <a href="FarmContext.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 22px; border-radius: 12px; background: #f2715a; color: #2a0e07; font-weight: 600">Continue</a>
+        </div>
+      </footer>
+    </main>
+  </div>
+  <dc-import name="Dock" status="Repository ready · no farm yet" hint-size="100%,64px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * What every Home card shares (FEAT-140): the card's padding, its heading row
+ * and the rule between rows. Each card's own layout stays in its component.
+ */
+
+.home-card {
+	min-width: 0;
+	padding: 20px 22px 12px;
+	border-radius: var(--r-pane);
+	display: flex;
+	flex-direction: column;
+}
+
+.home-card.roomy {
+	padding: 20px 22px;
+	gap: 14px;
+}
+
+.home-card-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 6px;
+}
+
+.home-card.roomy .home-card-head {
+	margin-bottom: 0;
+}
+
+.home-card-head h2 {
+	margin: 0;
+	font-size: var(--fs-ui);
+	font-weight: 600;
+}
+
+.home-card-head .note,
+.home-quiet {
+	color: var(--muted);
+	font-size: var(--fs-mono);
+}
+
+.home-link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--accent);
+	font: inherit;
+	font-size: var(--fs-mono);
+	cursor: pointer;
+}
+
+.home-link:hover {
+	text-decoration: underline;
+}
+
+.home-row {
+	border-top: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+}
+
+.home-ellipsis {
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.home-error {
+	margin: 6px 0;
+	color: var(--danger);
+	font-size: var(--fs-secondary);
+}

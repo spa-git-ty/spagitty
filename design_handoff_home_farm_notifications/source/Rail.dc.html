@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — rail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+</style>
+</helmet>
+<nav aria-label="Screens" style="width: 88px; box-sizing: border-box; padding: 14px 0; border-radius: 30px; background: #1a1411; border: 1px solid rgba(243,233,221,0.1); display: flex; flex-direction: column; align-items: center; gap: 6px; color: rgba(243,233,221,0.7); font-family: system-ui, sans-serif">
+
+  <a href="Main.dc.html" aria-label="Home" title="Home" style="{{ homeStyle }}">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"></path></svg>
+    <span aria-hidden="true" style="{{ homeDot }}"></span>
+  </a>
+
+  <span aria-hidden="true" style="width: 40px; height: 1px; background: rgba(243,233,221,0.16); margin: 6px 0"></span>
+
+  <a href="FarmGoal.dc.html" aria-label="Farm" title="Farm" style="{{ farmStyle }}">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="12" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="M12 7v10M12 12H5v5M12 12h7v5"></path></svg>
+  </a>
+
+  <span aria-hidden="true" style="width: 40px; height: 1px; background: rgba(243,233,221,0.16); margin: 6px 0"></span>
+
+  <button type="button" aria-label="Graph" title="Graph" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="6" r="2"></circle><circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="9" r="2"></circle><path d="M6 8v8M18 11c0 4-6 3-10 6"></path></svg>
+  </button>
+  <button type="button" aria-label="Working copy" title="Working copy" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+  </button>
+  <button type="button" aria-label="Merger" title="Merger" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="5" r="2"></circle><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="12" r="2"></circle><path d="M6 7v10M6 7c0 4 5 5 10 5"></path></svg>
+  </button>
+  <button type="button" aria-label="Branches" title="Branches" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="5" r="2"></circle><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="7" r="2"></circle><path d="M6 7v10M18 9c0 5-12 3-12 8"></path></svg>
+  </button>
+  <button type="button" aria-label="Pull requests" title="Pull requests" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"></circle><circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="18" r="2"></circle><path d="M6 8v8M18 16V9a3 3 0 0 0-3-3h-4M13 4l-2 2 2 2"></path></svg>
+  </button>
+  <button type="button" aria-label="Review" title="Review" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+  </button>
+
+  <span aria-hidden="true" style="width: 40px; height: 1px; background: rgba(243,233,221,0.16); margin: 6px 0"></span>
+
+  <button type="button" aria-label="Issues" title="Issues" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+  </button>
+  <button type="button" aria-label="Log" title="Log" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+  </button>
+
+  <span aria-hidden="true" style="width: 40px; height: 1px; background: rgba(243,233,221,0.16); margin: 6px 0"></span>
+
+  <button type="button" aria-label="All repositories" title="All repositories" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5h6l2 2h10V19H3z"></path></svg>
+  </button>
+  <button type="button" aria-label="Settings" title="Settings" style="width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; color: inherit; display: grid; place-items: center">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"></path></svg>
+  </button>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","farm"],"default":"home"},"$preview":{"width":88,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'home';
+    const on = 'position: relative; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: #f2715a; background: rgba(242,113,90,0.2); box-shadow: inset 0 0 0 1px rgba(242,113,90,0.35)';
+    const off = 'position: relative; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: rgba(243,233,221,0.7)';
+    return {
+      homeStyle: active === 'home' ? on : off,
+      farmStyle: active === 'farm' ? on : off,
+      homeDot: 'position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: #f2715a; box-shadow: 0 0 0 2px #1a1411'
+    };
+  }
+}
+</script>
+</body>
+</html>

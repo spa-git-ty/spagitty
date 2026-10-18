@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#120d0b}
+a{color:#f2715a;text-decoration:none}a:hover{color:#ff9a86}
+button{font:inherit;cursor:pointer}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 10px; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px; background-color: #120d0b; background-image: radial-gradient(1200px 420px at 30% -10%, rgba(242,113,90,0.16), rgba(18,13,11,0) 70%)">
+
+  <div style="display: flex; align-items: center; gap: 6px; height: 34px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 10px; background: rgba(243,233,221,0.08); font-weight: 600">spagitty <span aria-hidden="true" style="color: rgba(243,233,221,0.62)">×</span></div>
+    <div style="padding: 6px 14px; color: rgba(243,233,221,0.62)">quiblo</div>
+    <div style="padding: 6px 10px; color: rgba(243,233,221,0.62)">+</div>
+    <button type="button" aria-label="Notifications, 4 new" title="Notifications" style="{{ bellStyle }}">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg>
+      <span style="position: absolute; top: 2px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #f2715a; color: #2a0e07; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 2px #120d0b">4</span>
+    </button>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; flex-grow: 1; align-items: flex-start">
+    <dc-import name="Rail" active="home" hint-size="88px,900px"></dc-import>
+
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; background: #1c1613; border: 1px solid rgba(243,233,221,0.1); border-radius: 22px; padding: 26px 30px 30px; display: flex; flex-direction: column; gap: 22px">
+
+      <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <h1 style="margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em">spagitty</h1>
+            <span class="mono" style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(243,233,221,0.22); font-size: 12px">main <span style="color: #7cc68d">↑2</span><span style="color: rgba(243,233,221,0.62)">↓0</span></span>
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">fetched 3 min ago</span>
+          </div>
+          <div style="font-size: 13px; color: rgba(243,233,221,0.62)">github.com/spa-git-ty/spagitty · GPL-3.0 · v0.8.1</div>
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button type="button" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(243,233,221,0.22); background: transparent; color: #f3e9dd">Fetch all</button>
+          <a href="FarmGoal.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 12px; background: #f2715a; color: #2a0e07; font-weight: 600">New farm</a>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch">
+
+        <section aria-labelledby="needs" style="flex: 2 1 560px; min-width: 0; background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px 10px; display: flex; flex-direction: column">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px">
+            <div style="display: flex; align-items: baseline; gap: 10px">
+              <h2 id="needs" style="margin: 0; font-size: 18px; font-weight: 600">Needs you</h2>
+              <span style="font-size: 13px; color: rgba(243,233,221,0.62)">6 · oldest 2 h</span>
+            </div>
+            <div style="display: flex; gap: 6px; font-size: 12px">
+              <span style="padding: 4px 10px; border-radius: 999px; background: rgba(242,113,90,0.18); color: #f3e9dd">All</span>
+              <span style="padding: 4px 10px; border-radius: 999px; color: rgba(243,233,221,0.62)">Reviews 2</span>
+              <span style="padding: 4px 10px; border-radius: 999px; color: rgba(243,233,221,0.62)">Failing 2</span>
+              <span style="padding: 4px 10px; border-radius: 999px; color: rgba(243,233,221,0.62)">Farm 2</span>
+            </div>
+          </div>
+          <sc-for list="{{ needs }}" as="n" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; column-gap: 14px; padding: 12px 0; border-top: 1px solid rgba(243,233,221,0.07)">
+              <div style="{{ n.iconStyle }}">
+                <sc-if value="{{ n.isReview }}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></sc-if>
+                <sc-if value="{{ n.isMerge }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2"></circle><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="12" r="2"></circle><path d="M6 7v10M6 7c0 4 5 5 10 5"></path></svg></sc-if>
+                <sc-if value="{{ n.isFail }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"></path><path d="M12 10v4M12 17v.5"></path></svg></sc-if>
+                <sc-if value="{{ n.isTalk }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path></svg></sc-if>
+                <sc-if value="{{ n.isIssue }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="2"></circle></svg></sc-if>
+              </div>
+              <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                <div style="display: flex; align-items: baseline; gap: 10px; min-width: 0">
+                  <span style="{{ n.kindStyle }}">{{ n.kind }}</span>
+                  <span style="font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ n.title }}</span>
+                </div>
+                <div style="font-size: 13px; color: rgba(243,233,221,0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ n.meta }}</div>
+              </div>
+              <span style="font-size: 12px; color: rgba(243,233,221,0.62)">{{ n.time }}</span>
+              <button type="button" style="{{ n.btnStyle }}">{{ n.action }}</button>
+            </div>
+          </sc-for>
+        </section>
+
+        <div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+          <section aria-labelledby="farmcard" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <h2 id="farmcard" style="margin: 0; font-size: 15px; font-weight: 600">Farm</h2>
+              <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(243,233,221,0.62)">
+                <span aria-hidden="true" style="display: inline-flex; gap: 2px; align-items: flex-end; height: 12px"><span style="width: 3px; height: 12px; border-radius: 2px; background: #f2715a"></span><span style="width: 3px; height: 8px; border-radius: 2px; background: #7cc68d"></span><span style="width: 3px; height: 11px; border-radius: 2px; background: #6aa7e0"></span></span>
+                Building
+              </span>
+            </div>
+            <div style="font-size: 17px; font-weight: 500; line-height: 1.3">Gitea support for pull requests</div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; justify-content: space-between; font-size: 13px"><span><b style="font-size: 20px; font-weight: 600">2</b> <span style="color: rgba(243,233,221,0.62)">of 9 merged</span></span><span style="color: rgba(243,233,221,0.62)">7 to go</span></div>
+              <div aria-label="2 merged, 3 working, 1 checking, 1 stuck, 2 waiting" role="img" style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px">
+                <span style="height: 6px; border-radius: 3px; background: #7cc68d"></span><span style="height: 6px; border-radius: 3px; background: #7cc68d"></span><span style="height: 6px; border-radius: 3px; background: #f2715a"></span><span style="height: 6px; border-radius: 3px; background: #f2715a"></span><span style="height: 6px; border-radius: 3px; background: #f2715a"></span><span style="height: 6px; border-radius: 3px; background: #6aa7e0"></span><span style="height: 6px; border-radius: 3px; background: #ff5c7c"></span><span style="height: 6px; border-radius: 3px; background: rgba(243,233,221,0.12)"></span><span style="height: 6px; border-radius: 3px; background: rgba(243,233,221,0.12)"></span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <div style="display: flex">
+                <span style="width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #f2715a; background: #3a2420; box-shadow: 0 0 0 2px #231c18, 0 0 0 5px rgba(242,113,90,0.25)">CC</span>
+                <span style="margin-left: -6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #6aa7e0; background: #1f2a36; box-shadow: 0 0 0 2px #231c18">CX</span>
+                <span style="margin-left: -6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #a58bd8; background: #2b2438; box-shadow: 0 0 0 2px #231c18, 0 0 0 5px rgba(165,139,216,0.25)">CU</span>
+                <span style="margin-left: -6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #f0b54a; background: #352a17; box-shadow: 0 0 0 2px #231c18">PI</span>
+              </div>
+              <a href="FarmGoal.dc.html" style="font-size: 13px; font-weight: 500">Open the farm →</a>
+            </div>
+          </section>
+
+          <section aria-labelledby="wc" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between">
+              <h2 id="wc" style="margin: 0; font-size: 15px; font-weight: 600">Working copy</h2>
+              <span style="font-size: 12px; color: rgba(243,233,221,0.62)">3 changed · 1 stash</span>
+            </div>
+            <div class="mono" style="display: flex; flex-direction: column; gap: 7px; font-size: 12.5px">
+              <div style="display: flex; gap: 10px"><span style="color: #f0b54a; width: 12px">M</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">src/lib/home/HomeScreen.svelte</span></div>
+              <div style="display: flex; gap: 10px"><span style="color: #7cc68d; width: 12px">A</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">src/lib/home/needs.ts</span></div>
+              <div style="display: flex; gap: 10px"><span style="color: #f0b54a; width: 12px">M</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">src/lib/nav.ts</span></div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 2px">
+              <button type="button" style="height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(243,233,221,0.22); background: transparent; color: #f3e9dd; font-size: 13px">Commit…</button>
+              <button type="button" style="height: 34px; padding: 0 14px; border-radius: 10px; border: 0; background: transparent; color: rgba(243,233,221,0.62); font-size: 13px">Stash</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px">
+
+        <section aria-labelledby="br" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px 12px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px">
+            <h2 id="br" style="margin: 0; font-size: 15px; font-weight: 600">Branches</h2>
+            <a href="#" style="font-size: 12px">All 23</a>
+          </div>
+          <sc-for list="{{ branches }}" as="b" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 76px; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(243,233,221,0.07)">
+              <div style="min-width: 0; display: flex; flex-direction: column; gap: 4px">
+                <span class="mono" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ b.name }}</span>
+                <span style="font-size: 12px; color: rgba(243,233,221,0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="{{ b.tagStyle }}">{{ b.tag }}</span> · {{ b.who }} · {{ b.time }}</span>
+              </div>
+              <div title="{{ b.abTitle }}" style="display: flex; flex-direction: column; gap: 4px; align-items: stretch">
+                <div style="display: flex; align-items: center; height: 6px">
+                  <div style="flex: 1; display: flex; justify-content: flex-end"><span style="{{ b.behindStyle }}"></span></div>
+                  <span style="width: 2px; height: 10px; background: rgba(243,233,221,0.35)"></span>
+                  <div style="flex: 1; display: flex"><span style="{{ b.aheadStyle }}"></span></div>
+                </div>
+                <div class="mono" style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(243,233,221,0.62)"><span>↓{{ b.behind }}</span><span style="color: #7cc68d">↑{{ b.ahead }}</span></div>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+
+        <section aria-labelledby="pr" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px 12px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px">
+            <h2 id="pr" style="margin: 0; font-size: 15px; font-weight: 600">Pull requests</h2>
+            <a href="#" style="font-size: 12px">5 open</a>
+          </div>
+          <sc-for list="{{ prs }}" as="p" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(243,233,221,0.07)">
+              <div style="min-width: 0; display: flex; flex-direction: column; gap: 4px">
+                <span style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span class="mono" style="color: rgba(243,233,221,0.62); font-size: 12px">#{{ p.n }}</span> {{ p.title }}</span>
+                <span style="font-size: 12px; color: rgba(243,233,221,0.62)"><span style="{{ p.stateStyle }}">{{ p.state }}</span> · {{ p.who }} · <span class="mono"><span style="color: #7cc68d">+{{ p.add }}</span> <span style="color: #ff8aa1">−{{ p.del }}</span></span></span>
+              </div>
+              <span title="{{ p.checksTitle }}" style="{{ p.checkStyle }}"></span>
+            </div>
+          </sc-for>
+        </section>
+
+        <section aria-labelledby="cm" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px 12px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px">
+            <h2 id="cm" style="margin: 0; font-size: 15px; font-weight: 600">Latest commits</h2>
+            <a href="#" style="font-size: 12px">Graph</a>
+          </div>
+          <div style="position: relative">
+            <span aria-hidden="true" style="position: absolute; left: 6px; top: 14px; bottom: 14px; width: 2px; background: rgba(243,233,221,0.14)"></span>
+            <sc-for list="{{ commits }}" as="c" hint-placeholder-count="7">
+              <div style="position: relative; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 7px 0">
+                <span style="{{ c.dotStyle }}"></span>
+                <div style="min-width: 0; display: flex; align-items: baseline; gap: 10px">
+                  <span class="mono" style="font-size: 12px; color: rgba(243,233,221,0.62)">{{ c.hash }}</span>
+                  <span style="font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ c.msg }}</span>
+                </div>
+                <span style="font-size: 12px; color: rgba(243,233,221,0.62)">{{ c.time }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px">
+
+        <section aria-labelledby="act" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="act" style="margin: 0; font-size: 15px; font-weight: 600">Commits, last 16 weeks</h2>
+            <span style="font-size: 12px; color: rgba(243,233,221,0.62)">{{ total }} commits</span>
+          </div>
+          <div role="img" aria-label="Commit activity heatmap, last 16 weeks" style="display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 4px">
+            <sc-for list="{{ weeks }}" as="w" hint-placeholder-count="16">
+              <div style="display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 4px">
+                <sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7">
+                  <span style="{{ d.style }}"></span>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: rgba(243,233,221,0.62)">
+            <span>Busiest on Tuesdays</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px">less <span style="width: 10px; height: 10px; border-radius: 3px; background: rgba(243,233,221,0.07)"></span><span style="width: 10px; height: 10px; border-radius: 3px; background: rgba(242,113,90,0.3)"></span><span style="width: 10px; height: 10px; border-radius: 3px; background: rgba(242,113,90,0.55)"></span><span style="width: 10px; height: 10px; border-radius: 3px; background: rgba(242,113,90,0.8)"></span><span style="width: 10px; height: 10px; border-radius: 3px; background: #f2715a"></span> more</span>
+          </div>
+        </section>
+
+        <section aria-labelledby="pl" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="pl" style="margin: 0; font-size: 15px; font-weight: 600">Pipelines</h2>
+            <span style="font-size: 12px; color: #f0b54a">1 running</span>
+          </div>
+          <sc-for list="{{ pipes }}" as="pp" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 12px">
+              <span class="mono" style="font-size: 12.5px">{{ pp.name }}</span>
+              <div role="img" aria-label="{{ pp.label }}" style="display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; align-items: end; height: 22px">
+                <sc-for list="{{ pp.runs }}" as="r" hint-placeholder-count="14">
+                  <span style="{{ r.style }}"></span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <div style="font-size: 12px; color: rgba(243,233,221,0.62)">Newest on the right · <span class="mono">check</span> on <span class="mono">feature/hooks-tab</span>, 2 min</div>
+        </section>
+
+        <section aria-labelledby="rl" style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 id="rl" style="margin: 0; font-size: 15px; font-weight: 600">Releases</h2>
+            <a href="#" style="font-size: 12px">All</a>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 12px">
+            <span class="mono" style="font-size: 26px; font-weight: 500">v0.8.1</span>
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">latest · 4 days ago · 3 files</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: rgba(243,233,221,0.05)">
+            <span style="font-size: 13px"><b style="font-weight: 600">14</b> entries under Unreleased</span>
+            <span style="font-size: 12px; color: rgba(243,233,221,0.62)">8 added · 5 fixed · 1 removed</span>
+          </div>
+          <button type="button" style="align-self: flex-start; height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(243,233,221,0.22); background: transparent; color: #f3e9dd; font-size: 13px">Draft v0.9.0</button>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dc-import name="Dock" working="3 changed" hint-size="100%,64px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"notificationsOpen":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tint = (c, a) => {
+      const h = c.replace('#', '');
+      const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    };
+    const need = (k, color, kind, title, meta, time, action, primary) => ({
+      kind, title, meta, time, action,
+      isReview: k === 'review', isMerge: k === 'merge', isFail: k === 'fail', isTalk: k === 'talk', isIssue: k === 'issue',
+      iconStyle: 'width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: ' + color + '; background: ' + tint(color, 0.14),
+      kindStyle: 'font-size: 12px; font-weight: 600; white-space: nowrap; color: ' + color,
+      btnStyle: primary
+        ? 'height: 34px; padding: 0 14px; border-radius: 10px; border: 0; background: #f2715a; color: #2a0e07; font-weight: 600; font-size: 13px; white-space: nowrap'
+        : 'height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(243,233,221,0.22); background: transparent; color: #f3e9dd; font-size: 13px; white-space: nowrap'
+    });
+    const needs = [
+      need('merge', '#7cc68d', 'Merge ready', 'T-02 gitea.rs: list, create and merge', 'Farm · checks passed · Codex approved · +412 −18', '6 min', 'Approve merge', true),
+      need('review', '#6aa7e0', 'Review requested', '#66 Issues: a GitLab provider', '@nour asked you · 14 files · +612 −40', '12 min', 'Review', true),
+      need('fail', '#ff5c7c', 'Task stuck', 'T-09 Store the token in the system keyring', 'Farm · failed its checks 3 of 3 · libsecret-1 is missing', '9 min', 'Open task'),
+      need('fail', '#ff5c7c', 'Checks failed', 'feature/hooks-tab', 'Your branch · bun run check failed at step 4', '21 min', 'See the run'),
+      need('talk', '#f0b54a', 'Changes requested', '#63 Files: the blame column resizes', 'Your pull request · 3 comments from @karim', '1 h', 'Open'),
+      need('issue', '#a58bd8', 'Assigned to you', '#151 Crash when a repository has no commits', 'Issue · bug · opened by @salma', '2 h', 'Open')
+    ];
+
+    const br = (name, tag, tagColor, who, time, ahead, behind) => {
+      const max = 18;
+      return {
+        name, tag, who, time, ahead, behind,
+        abTitle: ahead + ' ahead, ' + behind + ' behind main',
+        tagStyle: 'color: ' + tagColor,
+        aheadStyle: 'height: 6px; border-radius: 0 3px 3px 0; background: #7cc68d; width: ' + Math.max(ahead ? 8 : 0, Math.round(ahead / max * 100)) + '%',
+        behindStyle: 'height: 6px; border-radius: 3px 0 0 3px; background: rgba(243,233,221,0.4); width: ' + Math.max(behind ? 8 : 0, Math.round(behind / max * 100)) + '%'
+      };
+    };
+    const branches = [
+      br('feature/hooks-tab', 'checks failing', '#ff8aa1', 'you', '21 min', 7, 2),
+      br('farm/T-04-review-comments', 'farm · Claude Code', '#f2715a', 'agent', '6 min', 4, 0),
+      br('fix/blame-resize', 'PR #63', '#f0b54a', 'you', '1 h', 3, 0),
+      br('feature/gitlab-issues', 'PR #66', '#6aa7e0', '@nour', '3 h', 18, 5),
+      br('release/0.8', 'release', 'rgba(243,233,221,0.62)', '@karim', '4 d', 0, 12)
+    ];
+
+    const pr = (n, title, state, color, who, add, del, checks) => ({
+      n, title, state, who, add, del,
+      stateStyle: 'color: ' + color,
+      checksTitle: checks === 'ok' ? 'Checks passed' : checks === 'fail' ? 'Checks failed' : 'Checks running',
+      checkStyle: 'width: 10px; height: 10px; border-radius: 50%; background: ' + (checks === 'ok' ? '#7cc68d' : checks === 'fail' ? '#ff5c7c' : '#f0b54a') + '; box-shadow: 0 0 0 4px ' + (checks === 'ok' ? 'rgba(124,198,141,0.16)' : checks === 'fail' ? 'rgba(255,92,124,0.16)' : 'rgba(240,181,74,0.16)')
+    });
+    const prs = [
+      pr(66, 'Issues: a GitLab provider', 'Your review', '#6aa7e0', '@nour', 612, 40, 'ok'),
+      pr(64, 'Releases: a changelog preview', 'Approved', '#7cc68d', 'you', 230, 31, 'ok'),
+      pr(63, 'Files: the blame column resizes', 'Changes requested', '#f0b54a', 'you', 48, 19, 'ok'),
+      pr(67, 'Hooks: run pre-commit step by step', 'Draft', 'rgba(243,233,221,0.62)', 'you', 905, 122, 'fail'),
+      pr(65, 'What CodeRabbit found on #63', 'Approved', '#7cc68d', '@karim', 12, 9, 'run')
+    ];
+
+    const lanes = ['#f2715a', '#7cc68d', '#f0b54a', '#a58bd8', '#6aa7e0'];
+    const cm = (hash, msg, time, lane) => ({
+      hash, msg, time,
+      dotStyle: 'width: 12px; height: 12px; border-radius: 50%; margin-left: 1px; background: #231c18; border: 2.5px solid ' + lanes[lane] + '; box-sizing: border-box'
+    });
+    const commits = [
+      cm('2062b86', 'Issues puts hosted discussions beside the code', '2 h', 0),
+      cm('e2b1d00', 'Hiding the blame in Files breaks every line', '5 h', 0),
+      cm('7107f14', 'agy is removed', '9 h', 1),
+      cm('a8be63f', 'What CodeRabbit found on #63 and #64', '1 d', 0),
+      cm('e94c91e', 'The rest of the review’s findings', '1 d', 2),
+      cm('a698730', 'Merger waits for git on a push', '2 d', 0),
+      cm('d5c3ff8', 'An agent’s progress you can read', '2 d', 4)
+    ];
+
+    let seed = 7, total = 0;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const weeks = [];
+    for (let w = 0; w < 16; w++) {
+      const days = [];
+      for (let d = 0; d < 7; d++) {
+        const bias = (d === 1 ? 1.5 : d >= 5 ? 0.4 : 1) * (0.5 + w / 20);
+        const v = Math.floor(rnd() * 5 * bias);
+        const lvl = Math.min(4, v);
+        total += v;
+        const bg = ['rgba(243,233,221,0.07)', 'rgba(242,113,90,0.3)', 'rgba(242,113,90,0.55)', 'rgba(242,113,90,0.8)', '#f2715a'][lvl];
+        days.push({ style: 'display: block; aspect-ratio: 1 / 1; border-radius: 3px; background: ' + bg });
+      }
+      weeks.push({ days });
+    }
+
+    const pipe = (name, pattern) => ({
+      name,
+      label: name + ': last 14 runs',
+      runs: pattern.split('').map((c, i) => ({
+        style: 'display: block; border-radius: 2px; height: ' + (c === 'f' ? 22 : c === 'r' ? 16 : 12 + ((i * 7) % 8)) + 'px; background: ' + (c === 'f' ? '#ff5c7c' : c === 'r' ? '#f0b54a' : '#7cc68d') + (c === 'r' ? '; box-shadow: 0 0 8px rgba(240,181,74,0.6)' : '')
+      }))
+    });
+    const pipes = [
+      pipe('check', 'ooooofoooooofr'),
+      pipe('release', 'oooooooooooooo'),
+      pipe('coderabbit', 'oooofooooooooo')
+    ];
+
+    const open = this.props.notificationsOpen ?? false;
+    const bellStyle = 'position: relative; margin-left: auto; width: 36px; height: 34px; border-radius: 10px; border: 0; display: grid; place-items: center; ' +
+      (open ? 'background: rgba(242,113,90,0.2); color: #f2715a' : 'background: transparent; color: rgba(243,233,221,0.75)');
+    return { needs, branches, prs, commits, weeks, total, pipes, bellStyle };
+  }
+}
+</script>
+</body>
+</html>

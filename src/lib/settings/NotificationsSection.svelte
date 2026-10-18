@@ -3,6 +3,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { watcher } from '$lib/notifications/watcher.svelte';
+	import { center } from '$lib/notifications/center.svelte';
 	import { settings, type BooleanSetting } from './store.svelte';
 
 	/**
@@ -22,6 +23,22 @@
 	const stored = $derived(settings.settings);
 	const on = $derived(stored.notifyPullRequests);
 	const connected = $derived(settings.accounts.length > 0);
+
+	let clearing = $state(false);
+	let cleared = $state<number | null>(null);
+
+	async function clearOld() {
+		clearing = true;
+		try {
+			cleared = await center.clear(Date.now() - 90 * 24 * 60 * 60 * 1000);
+		} finally {
+			clearing = false;
+		}
+	}
+
+	$effect(() => {
+		void center.load();
+	});
 </script>
 
 <section class="section">
@@ -100,6 +117,21 @@
 			</p>
 		{/if}
 	{/if}
+
+	<!--
+		The notification center keeps everything until the person clears it
+		(FEAT-142). Not behind the watcher's switch: the farm, the checks and git
+		write there whether pull requests are watched or not.
+	-->
+	<div class="hr"></div>
+	<div class="row">
+		<Btn disabled={clearing} onclick={clearOld}>Clear older than 90 days</Btn>
+		<span class="note">
+			{cleared === null
+				? `The notification center keeps ${center.entries.length} ${center.entries.length === 1 ? 'notification' : 'notifications'}.`
+				: `${cleared} cleared.`}
+		</span>
+	</div>
 </section>
 
 <style>

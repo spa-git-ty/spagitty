@@ -142,6 +142,29 @@ pub fn current_upstream(repo: &gix::Repository) -> Option<String> {
     upstream_of(repo, &head).map(|(_, short)| short)
 }
 
+/// How far the checked-out branch has drifted from its upstream (FEAT-140).
+/// Counts one branch, where [`divergences`] counts every one.
+pub fn current_divergence(repo: &gix::Repository) -> Option<Divergence> {
+    let head = repo.head_ref().ok()??;
+    let local = head.clone().into_fully_peeled_id().ok()?.detach();
+    let (up, upstream) = upstream_of(repo, &head)?;
+    let (ahead, behind) = ahead_behind(repo, local, up);
+    Some(Divergence {
+        upstream,
+        ahead,
+        behind,
+    })
+}
+
+/// `(ahead, behind)` of `local` against `other`: what
+/// `git rev-list --count --left-right local...other` reports.
+pub fn ahead_behind(repo: &gix::Repository, local: ObjectId, other: ObjectId) -> (usize, usize) {
+    (
+        count_excluding(repo, local, other),
+        count_excluding(repo, other, local),
+    )
+}
+
 /// The remote-tracking ref a branch is configured to follow: its id and its
 /// short name. `None` for a branch with no upstream, and for remote-tracking
 /// refs, which do not have one.

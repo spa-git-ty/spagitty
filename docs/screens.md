@@ -12,6 +12,7 @@ defect.
 
 | Code | Screen | Route | Rail | State | Item |
 | --- | --- | --- | --- | --- | --- |
+| 2A | Home | `/home` | yes, top | Built | FEAT-140 |
 | 1A | Graph | `/` | yes | Built | FEAT-001 |
 | 1B | Diff | `/diff` | no | Built | FEAT-002 |
 | 1C | Working copy | `/changes` | yes | Built | FEAT-003 |
@@ -66,6 +67,14 @@ not reach and the accounts Settings had no client for, were closed by FEAT-017.
 because it is how the next unbuilt screen says what it will be rather than
 pretending to be it: a half-built screen that looks real is harder to read than
 an honest empty one.
+
+## 2A — Home
+
+**Item:** [FEAT-140](../agile/items/FEAT-140-home.md). **Route:** `/home`.
+
+The top of the rail, above a divider and the Farm, and the screen a launch opens on: the last session's tab and selected commit come back, the screen is Home. The header names the repository, the branch against its upstream, when it was last fetched, and the remote, licence and version; `Fetch all` and `New farm`.
+
+**Needs you** lists what waits on the person now, most urgent first — merge ready, review requested, task stuck, checks failed, changes requested, assigned to you — with All, Reviews, Failing and Farm chips. A row leaves when its thing is done. Each kind's colour, icon and button come from `src/lib/notifications/kinds.ts`, which the notification center reads too. Beside it, the Farm card and Working copy; below, Branches, Pull requests and Latest commits, then sixteen weeks of commits, Pipelines and Releases. The git half is one read (`home_overview`); the forge half rides the watcher's clock and Home adds no timer.
 
 ## 1Z — Releases
 
