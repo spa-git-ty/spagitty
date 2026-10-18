@@ -58,7 +58,7 @@
 <style>
 	.runs { display: flex; flex: 1; min-height: 0; gap: 10px; }
 	.left, .detail { background: var(--surface); border: 1px solid var(--pane-edge); border-radius: var(--r-panel); }
-	.left { width: var(--detail-w); flex: none; padding: 14px; display: flex; flex-direction: column; gap: 7px; overflow: auto; }
+	.left { width: 260px; min-width: 200px; flex: none; padding: 14px; display: flex; flex-direction: column; gap: 7px; overflow: auto; }
 	.run-label { display: flex; justify-content: space-between; gap: 10px; font-size: var(--fs-secondary); padding: 3px 2px 10px; }
 	.step { display: flex; align-items: center; gap: 10px; padding: 10px; min-width: 0; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: var(--r-button); background: var(--surface-2); }
 	.step.chosen { outline: 2px solid var(--lane-5); outline-offset: 2px; }
