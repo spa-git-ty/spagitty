@@ -26,6 +26,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Pipelines** Preview opens at once on a repository with many branches; it took half a minute with a thousand.
 - **Pipelines** looks like its design: panes, the simulation bar, a legend with counts and the job's reason. Live uses the whole window, names a GitLab run once, draws its stages in order and counts the seconds since the last update. GitLab's stage order is shown as columns instead of a line from every job to every job.
 - **Pipelines** decides a job in a file with a remote include when the file's own rules decide it.
+- **Pipelines** job logs show their colours and section titles instead of raw terminal codes, and **Hide log** gives the graph the whole pane.
+- **Pipelines** Stages draws only the lines of the job you point at or select, as GitLab's stage view does; Needs draws them all, with that job's lines lit. Live has the same switch.
 - **Releases** lists GitLab releases; it stopped at "responded 302" while looking for the latest one.
 - **Hooks** and **Issues** keep their side columns when the commit detail panel is hidden.
 

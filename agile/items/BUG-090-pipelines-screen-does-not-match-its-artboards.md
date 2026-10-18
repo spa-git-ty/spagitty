@@ -29,6 +29,14 @@
 - **Graph:** `states.ts` gives one tone and one glyph per state for both hosts; empty columns close up; stage-order edges are not drawn (the columns show it); cards sit near the cards they need; GitLab opens in Stages, GitHub in Needs. Job cards are `.job`, not `.card`.
 - **Store:** hosts and the preview are read at the same time.
 
+## Found on the first build (2026-10-18)
+
+The author's screenshot of Live on `develop` (pipeline #133516):
+
+- **The graph was a tangle.** Every line was a real `needs:`: `build-job` feeds 17 package jobs and `publish-helm-oci` needs 12. In Stages, a line from build to package jumps the test and scan columns and runs through their cards. Stages now draws only the lines of the job under the pointer or selected, as GitLab's own stage view does; Needs draws all of them, the focused job's lit and the rest dimmed. Live has the Stages / Needs switch too. Graphs cached by 3.1.0 have no `implicit` mark, so the cache is read under a new name (`pipeline-graph-2`).
+- **The log was raw terminal output:** `\e[0K`, `\e[36;1m`, `section_start:…`. `ansi.ts` turns colour codes into theme tones, drops cursor codes, makes GitLab sections and GitHub `##[group]` into headings, and keeps the last redraw of a `\r` line.
+- **The log took the graph's room.** *Hide log* / *Show log* in the log's head, remembered on this machine; with the log hidden the graph has the pane.
+
 ## Tests
 
 - Core: the include rule in `remote_data_is_opaque_and_local_escape_and_cycles_are_refused`.

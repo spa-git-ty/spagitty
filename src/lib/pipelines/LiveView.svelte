@@ -3,6 +3,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import PipelineGraph from './PipelineGraph.svelte';
+	import { parseLog } from './ansi';
 	import { liveGraph, stageOrder } from './live';
 	import { ago, clock, mark, tone, word } from './states';
 	import { pipelines } from './store.svelte';
@@ -22,9 +23,24 @@
 	const hostName = $derived(pipelines.host?.repo.kind === 'gitHub' ? 'GitHub' : pipelines.host?.repo.kind === 'gitLab' ? 'GitLab' : 'host');
 	const jobs = $derived(liveGraph(pipelines.jobs, pipelines.graph));
 	const stages = $derived(pipelines.graph?.stages.length ? pipelines.graph.stages : stageOrder(pipelines.jobs));
+	// GitLab opens in Stages, GitHub in Needs; the person can switch either way.
+	let chosenMode = $state<'needs' | 'stages' | null>(null);
+	const mode = $derived(chosenMode ?? (gitLab ? 'stages' : 'needs'));
 	const strip = $derived(pipelines.runs.slice(0, 12).reverse());
 	const longest = $derived(Math.max(1, ...strip.map((r) => r.duration ?? 0)));
-	const logLines = $derived(pipelines.log.split('\n').map((text, index) => ({ text, index })));
+	const logLines = $derived(parseLog(pipelines.log));
+
+	// Whether the log is shown. A convenience of this machine's: kept in the
+	// browser's storage, and shown when that storage cannot be read.
+	const LOG_KEY = 'spagitty.pipelines.logHidden';
+	let logHidden = $state(read());
+	function read(): boolean {
+		try { return localStorage.getItem(LOG_KEY) === '1'; } catch { return false; }
+	}
+	function toggleLog() {
+		logHidden = !logHidden;
+		try { localStorage.setItem(LOG_KEY, logHidden ? '1' : '0'); } catch { /* shown next time */ }
+	}
 
 	const elapsed = (r: Run) => r.duration ?? (r.started ? Math.max(0, now / 1000 - r.started) : null);
 	const latest = (name: string) => pipelines.lists[name]?.runs[0] ?? null;
@@ -109,9 +125,17 @@
 			</header>
 			{#if pipelines.graphWarning}<p class="hint" role="status">{pipelines.graphWarning}</p>{/if}
 
-			<div class="graph-area">
+			<div class="graph-area" class:alone={logHidden || !liveJob}>
 				{#if jobs.length}
-					<PipelineGraph {jobs} {stages} mode={gitLab ? 'stages' : 'needs'} selected={String(liveJob?.id ?? '')} onselect={(id) => pipelines.selectLiveJob(Number(id))} />
+					<div class="graph-tools">
+						<span class="note">{jobs.length} jobs{mode === 'stages' ? ' · point at a job for what it needs' : ''}</span>
+						<span class="grow"></span>
+						<div class="seg" role="group" aria-label="Graph layout">
+							<button type="button" class:on={mode === 'stages'} aria-pressed={mode === 'stages'} onclick={() => { chosenMode = 'stages'; }}>Stages</button>
+							<button type="button" class:on={mode === 'needs'} aria-pressed={mode === 'needs'} onclick={() => { chosenMode = 'needs'; }}>Needs</button>
+						</div>
+					</div>
+					<PipelineGraph {jobs} {stages} {mode} selected={String(liveJob?.id ?? '')} onselect={(id) => pipelines.selectLiveJob(Number(id))} />
 				{:else}
 					<p class="empty note">{pipelines.reading ? 'Reading jobs…' : 'This run has no jobs yet.'}</p>
 				{/if}
@@ -127,22 +151,29 @@
 					</span>
 					<span class="grow"></span>
 					<span class="note">{gitLab && liveJob.state !== 'completed' ? 'partial trace · polled' : liveJob.state === 'completed' ? 'completed log' : 'steps only until it ends'}</span>
+					<button class="toggle" aria-expanded={!logHidden} aria-controls="pipeline-log" onclick={toggleLog}>{logHidden ? 'Show log' : 'Hide log'}</button>
 				</div>
-				{#if liveJob.steps.length}
+				{#if liveJob.steps.length && !logHidden}
 					<div class="steps">
 						{#each liveJob.steps as step (step.number)}
 							<span class="step" data-tone={tone(step.result || step.state)} title={step.result || step.state}><span aria-hidden="true">{mark(step.result || step.state)}</span> {step.name}</span>
 						{/each}
 					</div>
 				{/if}
-				{#if !gitLab && liveJob.state !== 'completed'}
+				{#if !gitLab && liveJob.state !== 'completed' && !logHidden}
 					<p class="note log-info">GitHub gives the log once the job ends; the steps above refresh while it runs.</p>
 				{/if}
-				<div class="logs" aria-label="Job log">
-					<VirtualRows items={logLines} key={(line) => String(line.index)} estimate={() => 22} label="Log lines">
-						{#snippet row(line)}<pre>{line.text || ' '}</pre>{/snippet}
-					</VirtualRows>
-				</div>
+				{#if !logHidden}
+					<div class="logs" id="pipeline-log" aria-label="Job log">
+						{#if logLines.length}
+							<VirtualRows items={logLines} key={(line) => String(line.index)} estimate={() => 20} label="Log lines">
+								{#snippet row(line)}<pre class:heading={line.heading}>{#each line.spans as span, i (i)}<span class:bold={span.bold} data-tone={span.tone}>{span.text}</span>{:else}{' '}{/each}</pre>{/snippet}
+							</VirtualRows>
+						{:else}
+							<p class="note empty-log">{pipelines.errors.log || (liveJob.state === 'completed' ? 'This job wrote no log.' : 'Waiting for output…')}</p>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 			<div class="updated note" role="status">{updated}{pipelines.reading ? ' · reading' : ''}</div>
 		{/if}
@@ -384,10 +415,57 @@
 	}
 
 	.graph-area {
-		flex: 1 1 45%;
-		min-height: 160px;
+		flex: 1 1 50%;
+		min-height: 180px;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.graph-area.alone {
+		flex: 1 1 100%;
+	}
+
+	.graph-tools {
+		flex: none;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 16px 0;
+	}
+
+	.seg {
+		display: inline-flex;
+		padding: 3px;
+		border-radius: var(--r-pill);
+		background: var(--sunken);
+		border: 1px solid var(--pane-edge);
+	}
+
+	.seg button {
+		padding: 2px 12px;
+		border-radius: var(--r-pill);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
+	}
+
+	.seg button.on {
+		background: var(--surface-2);
+		color: var(--ink);
+		font-weight: 600;
+		box-shadow: var(--shadow-1);
+	}
+
+	.toggle {
+		padding: 3px 10px;
+		border-radius: var(--r-pill);
+		border: 1px solid var(--pane-edge);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
+	}
+
+	.toggle:hover {
+		color: var(--ink);
+		background: var(--hover);
 	}
 
 	.more {
@@ -426,7 +504,7 @@
 	}
 
 	.logs {
-		flex: 1 1 40%;
+		flex: 1 1 38%;
 		min-height: 140px;
 		margin: 0 16px 10px;
 		padding: 8px 0;
@@ -442,7 +520,30 @@
 		overflow-wrap: anywhere;
 		font-family: var(--font-mono);
 		font-size: var(--fs-mono);
+		line-height: 1.5;
 		color: var(--ink);
+	}
+
+	.logs pre.heading {
+		margin-top: 6px;
+		font-weight: 600;
+	}
+
+	.logs .bold {
+		font-weight: 600;
+	}
+
+	.logs [data-tone='danger'] { color: var(--danger); }
+	.logs [data-tone='ok'] { color: var(--ok); }
+	.logs [data-tone='warn'] { color: var(--warn); }
+	.logs [data-tone='blue'] { color: var(--lane-5); }
+	.logs [data-tone='violet'] { color: var(--lane-4); }
+	.logs [data-tone='cyan'] { color: var(--agent); }
+	.logs [data-tone='muted'] { color: var(--muted); }
+
+	.empty-log {
+		margin: 0;
+		padding: 8px 14px;
 	}
 
 	.updated {

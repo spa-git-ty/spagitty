@@ -113,3 +113,19 @@ it('one state reads the same on both hosts', () => {
 	expect(word('completed', 'failed')).toBe('Failed');
 	expect(word('running', '')).toBe('Running');
 });
+
+it('Stages draws only the lines of the job in focus; Needs draws them all', () => {
+	const jobs = [job('build', { stage: 'build' }), job('lint', { stage: 'test' }), job('ship', { stage: 'deploy', depth: 1, needs: ['build'] })];
+	const stages = ['build', 'test', 'deploy'];
+	const quiet = render(PipelineGraph, { jobs, stages, mode: 'stages' as const, onselect: vi.fn() });
+	expect(quiet.all('path')).toHaveLength(0);
+	quiet.destroy();
+	const focused = render(PipelineGraph, { jobs, stages, mode: 'stages' as const, selected: 'ship', onselect: vi.fn() });
+	expect(focused.all('path.lit')).toHaveLength(1);
+	focused.destroy();
+	const all = render(PipelineGraph, { jobs, stages, mode: 'needs' as const, selected: 'lint', onselect: vi.fn() });
+	expect(all.all('path')).toHaveLength(1);
+	expect(all.all('path.dim')).toHaveLength(1);
+	all.destroy();
+});
+

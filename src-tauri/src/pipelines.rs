@@ -125,7 +125,9 @@ pub fn pipelines_graph<R: Runtime>(
     id: u64,
 ) -> Result<views::Read<local::Workflow>> {
     let entry = views::selected(&app, &views::path(&state, "pipelines_graph")?, &remote)?;
-    let file = views::cache_file(&app, &entry, "pipeline-graph", &id.to_string())?;
+    // "-2": graphs cached by 3.1.0 lack `implicit`, so every GitLab job looked
+    // as though it needed every job of the stage before, and was drawn so.
+    let file = views::cache_file(&app, &entry, "pipeline-graph-2", &id.to_string())?;
     if let Some(data) = views::cached(&file) {
         return Ok(views::Read {
             data,

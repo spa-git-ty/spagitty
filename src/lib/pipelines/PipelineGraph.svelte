@@ -30,7 +30,20 @@
 	const graph = $derived(layout(jobs, stages, mode, expanded, collapsed));
 	// Cards and edges are placed once and only the visible ones are drawn.
 	const cards = $derived(graph.cards.filter((c) => c.x + W >= left - 100 && c.x <= left + (width || 1000) + 100 && c.y + H >= top - 100 && c.y <= top + (height || 600) + 100));
-	const edges = $derived(graph.edges.filter((e) => Math.max(e.x1, e.x2) >= left && Math.min(e.x1, e.x2) <= left + (width || 1000) && Math.max(e.y1, e.y2) >= top && Math.min(e.y1, e.y2) <= top + (height || 600)));
+	// The job under the pointer, or else the selected one: its lines are lit.
+	let hovered = $state('');
+	const focus = $derived(hovered || selected);
+	const touches = (e: { from: string; to: string }) => !!focus && (e.from === focus || e.to === focus);
+	// Stages draws the order as columns; a needs: line there jumps whole
+	// columns and runs through the cards between, so only the focused job's
+	// lines are drawn, as GitLab's own stage view does. Needs draws them all.
+	const edges = $derived(
+		graph.edges
+			.filter((e) => mode === 'needs' || touches(e))
+			.filter((e) => Math.max(e.x1, e.x2) >= left && Math.min(e.x1, e.x2) <= left + (width || 1000) && Math.max(e.y1, e.y2) >= top && Math.min(e.y1, e.y2) <= top + (height || 600))
+			// Lit lines last, so they are drawn over the others.
+			.sort((a, b) => Number(touches(a)) - Number(touches(b)))
+	);
 
 	function scroll(event: Event) {
 		const node = event.currentTarget as HTMLElement;
@@ -62,7 +75,7 @@
 			<span class="column" style:left={`${label.x}px`} style:width={`${W}px`}>{label.text}</span>
 		{/each}
 		<svg width={graph.width} height={graph.height} aria-hidden="true">
-			{#each edges as edge (edge.key)}<path d={edge.path} class:skipped={edge.skipped} />{/each}
+			{#each edges as edge (edge.key)}<path d={edge.path} class:skipped={edge.skipped} class:lit={touches(edge)} class:dim={!!focus && !touches(edge)} />{/each}
 		</svg>
 		{#each cards as card (card.key)}
 			<div
@@ -74,6 +87,9 @@
 				style:width={`${W}px`}
 				style:height={`${H}px`}
 				title={card.job.reason}
+				onmouseenter={() => { hovered = card.job.id; }}
+				onmouseleave={() => { if (hovered === card.job.id) hovered = ''; }}
+				role="group"
 			>
 				<button class="pick" onclick={() => select(card.job.id)} aria-label={`Select ${card.job.name}`}>
 					<span class="name">
@@ -143,6 +159,16 @@
 
 	path.skipped {
 		stroke-dasharray: 4 4;
+	}
+
+	path.dim {
+		opacity: 0.35;
+	}
+
+	path.lit {
+		stroke: var(--accent);
+		stroke-width: 2;
+		opacity: 1;
 	}
 
 	.job {

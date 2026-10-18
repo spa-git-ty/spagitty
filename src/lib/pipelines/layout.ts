@@ -3,7 +3,7 @@ import { PIPELINE_CARD_HEIGHT as H, PIPELINE_CARD_WIDTH as W, PIPELINE_COLUMN_PI
 import type { Job } from './types';
 
 export interface Card { key: string; job: Job; x: number; y: number; subtitle: string; count: number }
-export interface Edge { key: string; path: string; skipped: boolean; x1: number; x2: number; y1: number; y2: number }
+export interface Edge { key: string; from: string; to: string; path: string; skipped: boolean; x1: number; x2: number; y1: number; y2: number }
 export interface Label { column: number; x: number; text: string }
 
 /** Room above the first row for the column labels. */
@@ -89,6 +89,8 @@ export function layout(jobs: Job[], stages: string[], mode: 'needs' | 'stages', 
 				const x1 = start.x + W, x2 = card.x, y1 = start.y + H / 2, y2 = card.y + H / 2, middle = (x1 + x2) / 2;
 				edges.push({
 					key: `${start.key}>${card.key}`,
+					from: start.job.id,
+					to: card.job.id,
 					path: `M${x1} ${y1} C${middle} ${y1},${middle} ${y2},${x2} ${y2}`,
 					skipped: card.job.state === 'skipped',
 					x1, x2, y1, y2
