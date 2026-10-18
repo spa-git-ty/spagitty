@@ -193,7 +193,8 @@
 					maxParallel: farm.maxParallel,
 					maxAttempts: farm.maxAttempts,
 					permissions: { ...farm.permissions },
-					supplemental: farm.supplemental
+					supplemental: farm.supplemental,
+					workspace: farm.workspace ?? 'worktree'
 				}
 			: {};
 		rules = true;
@@ -355,7 +356,7 @@
 
 	{#if rules}
 		<FarmSheet title={C.rules} onclose={() => (rules = false)}>
-			<RulesEditor bind:settings {busy} {act} />
+			<RulesEditor bind:settings {busy} {act} workspaces />
 			<div class="actions">
 				<Btn onclick={() => (rules = false)}>{C.close}</Btn>
 				<Btn primary disabled={busy || !farm} onclick={saveRules}>{C.saveRules}</Btn>

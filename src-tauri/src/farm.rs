@@ -593,6 +593,9 @@ pub struct TaskDraft {
     pub depends_on: Vec<TaskId>,
     #[serde(default)]
     pub allowed_paths: Vec<String>,
+    /// What the task reads and may not change (FEAT-143).
+    #[serde(default)]
+    pub reads: Vec<String>,
     #[serde(default)]
     pub acceptance_criteria: Vec<String>,
     #[serde(default)]
@@ -614,6 +617,7 @@ impl TaskDraft {
         task.priority = self.priority;
         task.depends_on = self.depends_on;
         task.allowed_paths = clean(self.allowed_paths);
+        task.reads = clean(self.reads);
         task.acceptance_criteria = clean(self.acceptance_criteria);
         task.verification = clean(self.verification);
         task.verification_overrides = self.verification_overrides;

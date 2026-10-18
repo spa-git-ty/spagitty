@@ -10,8 +10,10 @@
 pub mod branch;
 pub mod cleanup;
 pub mod lock;
+pub mod slice;
 pub mod worktree;
 
 pub use branch::{branch_name, is_farm_branch, provider_of, task_of, worktree_dir, NAMESPACE};
 pub use lock::Leases;
+pub use slice::{SliceProvider, WorktreeSlice};
 pub use worktree::{create, remove, worktree_path, Workspace, FARM_DIR};

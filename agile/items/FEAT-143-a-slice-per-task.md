@@ -2,7 +2,7 @@
 
 # FEAT-143 — A slice per task
 
-**Status:** Open — on `release/3.2.0`.
+**Status:** Done — on `release/3.2.0`; unmerged. Covered by Rust tests on Windows and WSL; not looked at in the running application (the author is checking it).
 **Branch:** `release/3.2.0`.
 **Screens:** 1Q.
 **Proposal:** [A local hub for parallel agents](../../design_handoff_home_farm_notifications/HUB.md), step 1. The author chose the local hub over a server on 2026-10-18.
@@ -45,3 +45,14 @@ checks still run on the whole tree.
 
 - Leases on what an agent reads. Leases stay on what it may touch.
 - A provider over the network (HUB.md's option 2).
+
+## What was built
+
+- **`workspace/slice.rs`**: the `SliceProvider` trait, `WorktreeSlice`, the patterns (`/*`, `!/*/`, then each declared path anchored), and `narrow`, `widen` and `is_sparse` over `git sparse-checkout` in non-cone mode.
+- **The farm:** `Farm.workspace` (FEAT-141 carries it in the remembered setup), `Task.reads` from the planner's `reads` and the task editor, and the service narrowing at each run start and widening before verification.
+- **The prompt's `YOUR SLICE`** section on a slice farm.
+- **The screens:** *Where each task works* in the wizard's step 3 and the Rules sheet; *Reads* in the task editor.
+
+## Differences from the item
+
+- **The reviewer** works in the widened tree: verification runs before review, so a task in review is whole.

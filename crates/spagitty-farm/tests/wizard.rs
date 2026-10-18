@@ -144,3 +144,19 @@ fn a_farm_written_before_reads_as_worktrees_with_nothing_to_start_from() {
     assert_eq!(read.workspace, WorkspaceMode::Worktree);
     assert!(read.goal.sources.is_empty());
 }
+
+#[test]
+fn two_farms_started_in_the_same_millisecond_are_two_farms() {
+    let repo = Fixture::woven();
+    let farm = service(&repo);
+    let ids: Vec<FarmId> = (0..3)
+        .map(|n| {
+            let created = farm.create(&format!("Farm {n}"), "").unwrap();
+            add_task(&farm, "work");
+            created.id
+        })
+        .collect();
+    assert_ne!(ids[0], ids[1]);
+    assert_ne!(ids[1], ids[2]);
+    assert_eq!(farm.past().len(), 2);
+}

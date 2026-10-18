@@ -291,6 +291,10 @@ pub struct Task {
     /// as free rein — the safe reading of a missing answer.
     #[serde(default)]
     pub allowed_paths: Vec<String>,
+    /// Paths the task needs to read and may not change (FEAT-143). A slice
+    /// holds these as well as `allowed_paths`; leases do not count them.
+    #[serde(default)]
+    pub reads: Vec<String>,
     #[serde(default)]
     pub acceptance_criteria: Vec<String>,
     /// Verification commands for this task specifically. Added to the farm's
@@ -342,6 +346,7 @@ impl Task {
             assigned_agent: None,
             implemented_by: None,
             allowed_paths: Vec::new(),
+            reads: Vec::new(),
             acceptance_criteria: Vec::new(),
             verification: Vec::new(),
             verification_overrides: false,

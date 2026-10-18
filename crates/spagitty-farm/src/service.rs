@@ -50,7 +50,7 @@ use crate::persistence::store;
 use crate::policy::{self, Policy};
 use crate::review::{reviewer, Review};
 use crate::verification::{evidence, verifier, CommandResult, Verification};
-use crate::workspace::{self, Leases};
+use crate::workspace::{self, Leases, SliceProvider};
 
 /// Where farm events go.
 ///
@@ -407,7 +407,7 @@ impl FarmService {
         }
 
         let mut farm = Farm::new(
-            FarmId::new(format!("farm-{now}")),
+            self.fresh_farm_id(now),
             self.repo.to_string_lossy(),
             goal,
             now,
@@ -426,6 +426,29 @@ impl FarmService {
             status: FarmStatus::Idle,
         });
         Ok(farm)
+    }
+
+    /// An id no farm here has had (FEAT-141). Two farms started in the same
+    /// millisecond would otherwise share one, and the second would overwrite
+    /// the first in the archive of past farms.
+    fn fresh_farm_id(&self, now: u64) -> FarmId {
+        let taken: Vec<String> = self
+            .farm()
+            .into_iter()
+            .map(|farm| farm.id.as_str().to_string())
+            .chain(
+                store::list_past(&self.repo)
+                    .into_iter()
+                    .map(|past| past.id.as_str().to_string()),
+            )
+            .collect();
+        let mut id = format!("farm-{now}");
+        let mut n = 1;
+        while taken.contains(&id) {
+            n += 1;
+            id = format!("farm-{now}-{n}");
+        }
+        FarmId::new(id)
     }
 
     /// The crew and rules the last farm here started with (FEAT-141).
@@ -1098,7 +1121,22 @@ impl FarmService {
         // The worktree is cut from the branch the user is on, so a farm run
         // starts from what they can see rather than from `main` on a checkout
         // that has moved on.
-        let workspace = match workspace::create(&self.repo, id, definition.provider, &destination) {
+        // A slice farm narrows the worktree every time a run starts — the first
+        // run, and each one after a send-back widened it for the checks
+        // (FEAT-143). A whole-worktree farm cuts it as it always did.
+        let sliced = self
+            .farm()
+            .is_some_and(|farm| farm.workspace == WorkspaceMode::Slice);
+        let opened = if sliced {
+            workspace::WorktreeSlice {
+                repo: self.repo.clone(),
+                provider: definition.provider,
+            }
+            .open(id, &destination, &workspace::slice::patterns(&task))
+        } else {
+            workspace::create(&self.repo, id, definition.provider, &destination)
+        };
+        let workspace = match opened {
             Ok(workspace) => workspace,
             Err(error) => {
                 self.state.lock().expect("farm lock").leases.release(id);
@@ -1462,6 +1500,10 @@ impl FarmService {
                 .unwrap_or_else(|| workspace::worktree_path(&self.repo, id));
             (workdir, verifier::commands_for(&farm.verification, task))
         };
+
+        // The checks see the whole tree, whatever the agent worked in
+        // (FEAT-143). A worktree that was never narrowed is left as it is.
+        workspace::slice::widen(&workdir)?;
 
         self.set_status(id, TaskStatus::Verification, None)?;
         let before = evidence::clean_commit(&workdir).ok();

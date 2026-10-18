@@ -129,6 +129,8 @@ export interface Task {
 	assignedAgent: string | null;
 	implementedBy: string | null;
 	allowedPaths: string[];
+	/** What the task reads and may not change (FEAT-143). */
+	reads?: string[];
 	acceptanceCriteria: string[];
 	verification: string[];
 	verificationOverrides: boolean;
@@ -427,6 +429,7 @@ export interface TaskDraft {
 	priority: TaskPriority;
 	dependsOn: string[];
 	allowedPaths: string[];
+	reads?: string[];
 	acceptanceCriteria: string[];
 	verification: string[];
 	verificationOverrides: boolean;

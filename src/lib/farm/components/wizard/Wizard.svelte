@@ -57,7 +57,7 @@
 		title = '',
 		description = '',
 		step = $bindable(1),
-		workspaces = false,
+		workspaces = true,
 		oncreated
 	}: Props = $props();
 

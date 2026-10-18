@@ -22,7 +22,7 @@
 //! has no content teaches the agent nothing; a section that says "Allowed
 //! files: the whole repository" tells it something true and important.
 
-use crate::model::{Farm, Goal, GoalSource, Handoff, Task};
+use crate::model::{Farm, Goal, GoalSource, Handoff, Task, WorkspaceMode};
 use crate::policy::Policy;
 use crate::review::Review;
 
@@ -68,6 +68,8 @@ pub fn implementation(context: &Context<'_>) -> String {
             ),
         );
     }
+
+    slice_section(&mut out, context.farm, context.task);
 
     section(
         &mut out,
@@ -194,6 +196,37 @@ pub fn decomposition(farm: &Farm, task: &Task, policy: &Policy) -> String {
         &crate::orchestrator::planner::Plan::subtask_contract(),
     );
     out.trim_end().to_string()
+}
+
+/// Where the agent is standing, when the farm works in slices (FEAT-143):
+/// which paths are checked out, and that the rest is in the repository, only
+/// not here. Absent for a whole worktree, which needs no explaining.
+fn slice_section(out: &mut String, farm: &Farm, task: &Task) {
+    if farm.workspace != WorkspaceMode::Slice {
+        return;
+    }
+    let mut shown: Vec<String> = task
+        .allowed_paths
+        .iter()
+        .chain(task.reads.iter())
+        .filter(|path| !path.trim().is_empty())
+        .cloned()
+        .collect();
+    shown.dedup();
+    if shown.is_empty() {
+        return;
+    }
+    section(
+        out,
+        "YOUR SLICE",
+        &format!(
+            "This worktree is a slice: only the repository's top-level files and these \
+             paths are checked out.\n{}\n\nEverything else is still in the repository, \
+             only not here. Read it with `git show HEAD:<path>` if you need to; do not \
+             create files outside these paths. The checks run on the whole tree.",
+            bullets(&shown)
+        ),
+    );
 }
 
 fn goal_section(out: &mut String, goal: &Goal) {
@@ -607,6 +640,20 @@ mod tests {
         assert!(prompt.contains("## Brief: docs/specs/gitea.md\n\n# Gitea\n\nUse the v1 API."));
         assert!(prompt.contains("Every task starts from feature/gitea"));
         assert!(prompt.contains("No files are tracked yet."));
+    }
+
+    #[test]
+    fn a_slice_farm_tells_the_agent_what_is_checked_out() {
+        let (mut farm, mut task, policy) = (farm(), task(), Policy::default());
+        task.reads = vec!["backend/src/session/**".into()];
+        let whole = implementation(&context(&farm, &task, &policy));
+        assert!(!whole.contains("YOUR SLICE"));
+
+        farm.workspace = WorkspaceMode::Slice;
+        let sliced = implementation(&context(&farm, &task, &policy));
+        assert!(sliced.contains("# YOUR SLICE"));
+        assert!(sliced.contains("- backend/src/auth/**\n- backend/src/session/**"));
+        assert!(sliced.contains("The checks run on the whole tree."));
     }
 
     #[test]
