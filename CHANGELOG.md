@@ -20,7 +20,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Pipelines** Preview opens at once on a repository with many branches; it took half a minute with a thousand.
 - **Pipelines** looks like its design: panes, the simulation bar, a legend with counts and the job's reason. Live uses the whole window, names a GitLab run once, draws its stages in order and counts the seconds since the last update. GitLab's stage order is shown as columns instead of a line from every job to every job.
 - **Pipelines** decides a job in a file with a remote include when the file's own rules decide it.
-
+- **Releases** lists GitLab releases; it stopped at "responded 302" while looking for the latest one.
 ## [3.1.0] - 2026-10-14
 
 ### Added
