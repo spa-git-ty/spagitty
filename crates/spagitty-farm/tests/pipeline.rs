@@ -1375,18 +1375,13 @@ fn a_branch_switch_does_not_redirect_a_task_merge() {
     harness.repo.git(&["switch", "-c", "unrelated"]);
     let before = harness.repo.git(&["rev-parse", "HEAD"]);
     harness.service.approve(&task).unwrap();
+    // The person's branch is left where it was (FEAT-144): the work lands on
+    // the branch the task recorded, without the person going back to it.
     assert_eq!(harness.repo.git(&["rev-parse", "HEAD"]), before);
-    assert_eq!(harness.status(&task), TaskStatus::Review);
-    assert!(harness
-        .service
-        .farm()
-        .unwrap()
-        .task(&task)
-        .unwrap()
-        .note
-        .as_deref()
-        .unwrap()
-        .contains("Switch back"));
+    assert_eq!(harness.status(&task), TaskStatus::Done);
+    let main = harness.repo.git(&["ls-tree", "--name-only", "main"]);
+    assert!(main.lines().any(|file| file == "agent-output.txt"));
+    assert!(!harness.repo.path().join("agent-output.txt").exists());
 }
 
 #[test]

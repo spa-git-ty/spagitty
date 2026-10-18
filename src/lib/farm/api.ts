@@ -15,6 +15,7 @@ import type {
 	AgentDefinition,
 	Brief,
 	GoalSource,
+	LedgerEntry,
 	PastFarm,
 	Setup,
 	AgentStatus,
@@ -76,6 +77,11 @@ export function remembered(): Promise<Setup | null> {
 /** Remember the open farm's crew and rules for the next one. */
 export function remember(): Promise<Setup> {
 	return invoke('farm_remember');
+}
+
+/** Every branch move the farm made, oldest first (FEAT-144). */
+export function ledger(): Promise<LedgerEntry[]> {
+	return invoke('farm_ledger');
 }
 
 /** The earlier farms in this repository, newest first. */

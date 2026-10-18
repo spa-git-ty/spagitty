@@ -210,6 +210,19 @@ export interface PastFarm {
 	setup: Setup;
 }
 
+/** One branch move the farm made (FEAT-144). Mirrors `model::LedgerEntry`. */
+export interface LedgerEntry {
+	seq: number;
+	atMs: number;
+	ref: string;
+	old: string | null;
+	new: string;
+	kind: 'land' | 'retryLost' | 'merger';
+	tasks: string[];
+	by: { task: string; agent: string | null; reviewer: string | null }[];
+	checks: string;
+}
+
 /** A written brief, read for the wizard. */
 export interface Brief {
 	path: string;

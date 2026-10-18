@@ -23,6 +23,7 @@ import type {
 	Farm,
 	FarmEvent,
 	FarmStatus,
+	LedgerEntry,
 	RecordedEvent,
 	Task,
 	TaskDetail,
@@ -438,6 +439,36 @@ export const FARM_COPY = {
 	cliExecutable: 'Executable',
 	input: 'Prompt input'
 } as const;
+
+/**
+ * One branch move, in a sentence (FEAT-144): `T-02 merged into main: Codex,
+ * passed by Claude Code · checked merged with main`.
+ */
+export function ledgerLine(entry: LedgerEntry, agents: AgentStatus[]): string {
+	const branch = entry.ref.replace(/^refs\/heads\//, '');
+	const tasks = entry.tasks.join(', ');
+	const who = entry.by
+		.map((credit) => {
+			const made = credit.agent ? agentName(credit.agent, agents) : null;
+			const passed = credit.reviewer ? `passed by ${agentName(credit.reviewer, agents)}` : null;
+			return [made, passed].filter(Boolean).join(', ');
+		})
+		.filter(Boolean)
+		.join('; ');
+	const what =
+		entry.kind === 'land'
+			? `${tasks} merged into ${branch}`
+			: entry.kind === 'merger'
+				? `${tasks} merged into ${branch} in Merger`
+				: `${branch} moved while ${tasks} was merging; it was merged again`;
+	const checked =
+		entry.checks === 'before:pass'
+			? 'checked as merged with ' + branch
+			: entry.checks === 'before:skipped'
+				? 'its own checks stood'
+				: '';
+	return [who ? `${what}: ${who}` : what, checked].filter(Boolean).join(' · ');
+}
 
 export function agentName(id: string | null | undefined, agents: AgentStatus[]): string {
 	return (

@@ -337,6 +337,7 @@ pub fn run() {
             farm::farm_remembered,
             farm::farm_remember,
             farm::farm_past,
+            farm::farm_ledger,
             farm::farm_resume,
             farm::farm_briefs,
             farm::farm_brief,

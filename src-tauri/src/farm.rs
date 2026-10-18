@@ -377,6 +377,12 @@ pub fn farm_remember(state: State<'_, FarmState>) -> Result<Setup> {
     Ok(state.service()?.remember()?)
 }
 
+/// Every branch move the farm made, oldest first (FEAT-144).
+#[tauri::command(async)]
+pub fn farm_ledger(state: State<'_, FarmState>) -> Result<Vec<LedgerEntry>> {
+    Ok(state.service()?.ledger())
+}
+
 /// The earlier farms in this repository, newest first.
 #[tauri::command(async)]
 pub fn farm_past(state: State<'_, FarmState>) -> Result<Vec<PastFarm>> {

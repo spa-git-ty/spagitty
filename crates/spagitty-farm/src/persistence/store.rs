@@ -45,7 +45,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::Result;
-use crate::model::{Farm, PastFarm, Recorded, Setup};
+use crate::model::{Farm, LedgerEntry, PastFarm, Recorded, Setup};
 use crate::workspace::worktree::FARM_DIR;
 
 /// How many events are kept.
@@ -59,6 +59,7 @@ const FARM_FILE: &str = "farm.json";
 const EVENTS_FILE: &str = "events.jsonl";
 const REGISTRY_FILE: &str = "agents.json";
 const SETUP_FILE: &str = "setup.json";
+const LEDGER_FILE: &str = "ledger.jsonl";
 const PAST_DIR: &str = "past";
 
 /// How many earlier farms are kept. The wizard offers the newest few; a
@@ -101,6 +102,39 @@ pub fn load_farm(repo: &Path) -> Option<Farm> {
 
 pub fn save_farm(repo: &Path, farm: &Farm) -> Result<()> {
     write_json(&farm_path(repo), farm)
+}
+
+/// Every branch move the farm made, oldest first (FEAT-144). A line that
+/// does not parse — the last one, when the process died writing it — is
+/// dropped, as the event log drops it.
+pub fn load_ledger(repo: &Path) -> Vec<LedgerEntry> {
+    let Ok(text) = std::fs::read_to_string(directory(repo).join(LEDGER_FILE)) else {
+        return Vec::new();
+    };
+    text.lines()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect()
+}
+
+/// Append one move. The sequence number is the next after the last one read.
+/// Appended, never rewritten.
+pub fn append_ledger(repo: &Path, mut entry: LedgerEntry) -> Result<LedgerEntry> {
+    entry.seq = load_ledger(repo)
+        .last()
+        .map(|last| last.seq + 1)
+        .unwrap_or(1);
+    let path = directory(repo).join(LEDGER_FILE);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let line = serde_json::to_string(&entry)?;
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
+    writeln!(file, "{line}")?;
+    Ok(entry)
 }
 
 /// The crew and rules the last farm here started with (FEAT-141).
@@ -314,6 +348,44 @@ mod tests {
         );
         farm.tasks.push(Task::new(task_id(1), "Investigate", 1_000));
         farm
+    }
+
+    #[test]
+    fn the_ledger_is_appended_in_sequence_and_a_torn_line_is_dropped() {
+        use crate::model::{LedgerAgent, LedgerKind};
+        let dir = tempfile::tempdir().unwrap();
+        let entry = |new: &str| LedgerEntry {
+            seq: 0,
+            at_ms: 1,
+            reference: "refs/heads/main".into(),
+            old: Some("a".into()),
+            new: new.into(),
+            kind: LedgerKind::Land,
+            tasks: vec![task_id(1)],
+            by: vec![LedgerAgent {
+                task: task_id(1),
+                agent: None,
+                reviewer: None,
+            }],
+            checks: "before:pass".into(),
+        };
+        assert_eq!(append_ledger(dir.path(), entry("b")).unwrap().seq, 1);
+        assert_eq!(append_ledger(dir.path(), entry("c")).unwrap().seq, 2);
+        // A crash mid-write.
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(dir.path().join(".spagitty/farm/ledger.jsonl"))
+            .unwrap();
+        write!(file, "{{\"seq\":3,\"at").unwrap();
+        let read = load_ledger(dir.path());
+        assert_eq!(
+            read.iter().map(|e| e.new.as_str()).collect::<Vec<_>>(),
+            ["b", "c"]
+        );
+        let json = serde_json::to_value(&read[0]).unwrap();
+        assert_eq!(json["ref"], "refs/heads/main");
+        assert_eq!(json["kind"], "land");
     }
 
     #[test]

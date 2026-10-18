@@ -182,6 +182,38 @@ pub fn land(repo: &gix::Repository, ask: &LandAsk) -> Result<Landed> {
     })
 }
 
+/// The merge commit of `source_tip` into `onto_tip`, written but on no
+/// branch (FEAT-144).
+///
+/// The farm's landing lane builds what it means to land before anything
+/// moves, and checks it. A conflict is an error naming the path, and no file
+/// anywhere is touched by finding it.
+pub fn candidate(
+    repo: &gix::Repository,
+    onto_tip: &str,
+    source_tip: &str,
+    message: &str,
+) -> Result<String> {
+    let dir = workdir(repo)?;
+    let tree = merged_tree(repo, onto_tip, source_tip, &[], preferred(dir))?;
+    shell::commit_tree(dir, &tree, &[onto_tip, source_tip], message)
+}
+
+/// Move the local branch `branch` from `old` to `commit`, the way a land
+/// does: `merge --ff-only` where it is checked out, a compare-and-swap
+/// `update-ref` where it is not. A branch that is no longer at `old` is
+/// [`Error::Stale`], never overwritten.
+pub fn advance(
+    repo: &gix::Repository,
+    branch: &str,
+    commit: &str,
+    old: &str,
+    reason: &str,
+) -> Result<()> {
+    let dir = workdir(repo)?;
+    move_to(repo, dir, Target::A, branch, commit, old, reason)
+}
+
 fn verb(strategy: Strategy) -> &'static str {
     match strategy {
         Strategy::Merge => "merge",

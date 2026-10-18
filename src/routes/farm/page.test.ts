@@ -441,6 +441,19 @@ describe('Farm journey routes and actions', () => {
 			)
 		);
 	});
+	it('lists every branch move in Activity, newest first (FEAT-144)', async () => {
+		vi.mocked(api.ledger).mockResolvedValue([
+			{ seq: 1, atMs: Date.now() - 60000, ref: 'refs/heads/main', old: 'aaaaaaa1', new: 'bbbbbbb2', kind: 'land', tasks: ['T1'], by: [{ task: 'T1', agent: 'claude-1', reviewer: null }], checks: 'before:skipped' },
+			{ seq: 2, atMs: Date.now(), ref: 'refs/heads/main', old: null, new: 'ccccccc3', kind: 'merger', tasks: ['T2'], by: [], checks: 'merger' }
+		]);
+		await show([sampleTask('T1')], '?pane=activity');
+		await vi.waitFor(() => expect(view.text()).toContain('Branch moves'));
+		const moves = view.all('.move').map((m) => m.textContent?.replace(/\s+/g, ' ').trim());
+		expect(moves[0]).toContain('T2 merged into main in Merger');
+		expect(moves[1]).toContain('T1 merged into main');
+		expect(moves[1]).toContain('aaaaaaa → bbbbbbb');
+		vi.mocked(api.ledger).mockReset();
+	});
 	it('filters Activity failures and links their tasks', async () => {
 		await show(
 			[sampleTask('T1')],

@@ -2,9 +2,9 @@
 
 # FEAT-144 — The landing lane: merging without a queue, and a log of every branch move
 
-**Status:** Open — on `release/3.2.0`.
+**Status:** Done — on `release/3.2.0`; unmerged. Covered by Rust tests in WSL and component tests; not looked at in the running application (the author is checking it).
 **Branch:** `release/3.2.0`.
-**Screens:** 1Q, 2A, chrome.
+**Screens:** 1Q.
 **Proposal:** [A local hub for parallel agents](../../design_handoff_home_farm_notifications/HUB.md), steps 2 and 3, worked out in [the landing lane and the local hub](../../docs/proposals/landing-lane-and-local-hub.md), §5.1 and §5.5.
 
 ## Change
@@ -52,3 +52,14 @@ compare-and-swap. Every branch move it makes is written to a ledger.
 - Landing several tasks as one move, the two tiers of checks and the revert
   walk (the proposal's §5.2 and §5.3).
 - Own copies and intake (FEAT-147).
+
+## What was built
+
+- **Merger's `candidate` and `advance`**, public in `spagitty-core/src/merger/land.rs`: the merge commit written with `merge-tree` and `commit-tree` on no branch, and the move by `--ff-only` or `update-ref <new> <old>`.
+- **The lane** in `spagitty-farm`'s `service.rs` (`land`, `check_candidate`, `LaneStop`): `merge_checked` reads the tip, builds the candidate, checks it in `.spagitty/farm/lane/<branch>/` when the tip moved, and advances, rebuilding up to three times.
+- **The ledger** in `model/ledger.rs` and `persistence/store.rs` (`ledger.jsonl`), written by every land, every lost race and every Merger merge, read by `farm_ledger` and shown in Activity's *Branch moves*.
+
+## Differences from the item
+
+- **The ledger is not on Home yet.** The handoff's HUB.md says the log feeds Home and the notification center as well; both show the farm's merges through its events today, and reading the ledger there is left for when there are batches to show.
+- **The merge message** is `Merge branch '<task branch>' into <destination>`, where `git merge` of a commit id wrote `Merge commit '<id>'`.
