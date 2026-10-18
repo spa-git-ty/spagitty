@@ -83,7 +83,7 @@ Write to CHANGELOG.md requires a clean checked-out target branch and enabled hoo
 
 **Item:** [FEAT-136](../agile/items/FEAT-136-issues.md). **Route:** `/issues`.
 
-The separate forge group above Settings starts with Issues. Its header selects a configured hosted remote and accepts state, assignee, label, milestone, sort and text filters. The virtual list shows state, title, labels, author, update date and reply count. Saved pages paint before host revalidation; read, cache and write errors remain separate.
+Issues follows Recipes in the Repository group. Its header selects a configured hosted remote and accepts state, assignee, label, milestone, sort and text filters. The virtual list shows state, title, labels, author, update date and reply count. Saved pages paint before host revalidation; read, cache and write errors remain separate.
 
 The middle column combines the description, comments and events in date order. The details column shows assignees, labels, milestone progress and reported development links. Markdown uses the application's existing safe renderer. Create, comment and close each ask for confirmation. Known read-only credentials hide writes. Replies sorting is available on GitHub; GitLab does not provide it.
 
@@ -99,7 +99,7 @@ The builder has the seven catalogue blocks, ordered inside pre-commit, commit-ms
 
 Shared definitions use `.spagitty/hooks.toml`. Personal definitions live in application data. Installing is explicit, including after a clone. A manager retains control by default; Import reads its commands without changing its files. Installing imported blocks switches git to a managed directory, preserving the manager's originals.
 
-The new screens form their own group immediately above Settings, with a separator above them. The existing shell components keep their appearance.
+The new screens are rows of the Repository group, after Recipes. The existing shell components keep their appearance.
 
 ## The chrome
 

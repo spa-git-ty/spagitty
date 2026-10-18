@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Changed
+
+- **Issues, Hooks, Pipelines and Releases** are rows of the Repository group on the rail, after Recipes, instead of a group of their own above Settings.
+
 ### Fixed
 
 - **Pipelines** draws a GitLab file that repeats a key, keeping the later one as GitLab does, and lists each repetition as a problem. Its messages no longer call a workflow problem a git-configuration error.
@@ -22,7 +26,6 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Pipelines** decides a job in a file with a remote include when the file's own rules decide it.
 - **Releases** lists GitLab releases; it stopped at "responded 302" while looking for the latest one.
 - **Hooks** and **Issues** keep their side columns when the commit detail panel is hidden.
-
 ### Fixed
 
 - **Pipelines** draws a GitLab file that repeats a key, keeping the later one as GitLab does, and lists each repetition as a problem. Its messages no longer call a workflow problem a git-configuration error.
