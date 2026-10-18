@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-10-18
+
 ### Changed
 
 - **Issues, Hooks, Pipelines and Releases** are rows of the Repository group on the rail, after Recipes, instead of a group of their own above Settings.
@@ -26,13 +28,18 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Pipelines** decides a job in a file with a remote include when the file's own rules decide it.
 - **Releases** lists GitLab releases; it stopped at "responded 302" while looking for the latest one.
 - **Hooks** and **Issues** keep their side columns when the commit detail panel is hidden.
-### Fixed
 
-- **Pipelines** draws a GitLab file that repeats a key, keeping the later one as GitLab does, and lists each repetition as a problem. Its messages no longer call a workflow problem a git-configuration error.
-- **Pipelines** Preview opens at once on a repository with many branches; it took half a minute with a thousand.
-- **Pipelines** looks like its design: panes, the simulation bar, a legend with counts and the job's reason. Live uses the whole window, names a GitLab run once, draws its stages in order and counts the seconds since the last update. GitLab's stage order is shown as columns instead of a line from every job to every job.
-- **Pipelines** decides a job in a file with a remote include when the file's own rules decide it.
-- **Releases** lists GitLab releases; it stopped at "responded 302" while looking for the latest one.
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.1.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.1.0] - 2026-10-14
 
 ### Added
