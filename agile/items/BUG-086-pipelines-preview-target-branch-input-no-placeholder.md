@@ -3,7 +3,7 @@
 # BUG-086 — Pipelines Preview target branch input has no placeholder
 
 **Status:** Fixed — on `fix/ui-bugs-from-screenshots`; unmerged.
-**Screens:** 1X (Pipelines · preview)
+**Screens:** 1Y (Pipelines · preview)
 **Raised by:** the author, 2026-10-18, on 3.1.0: the input between "to" and "with" is blank with no cue.
 
 ## What happens

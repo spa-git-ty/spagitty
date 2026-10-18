@@ -3,7 +3,7 @@
 # BUG-089 — Releases shows "No releases match this filter" after an API error
 
 **Status:** Fixed — on `fix/ui-bugs-from-screenshots`; unmerged.
-**Screens:** 1X (Releases)
+**Screens:** 1Z (Releases)
 **Raised by:** the author, 2026-10-18, on 3.1.0: after a 302 error the sidebar says "No releases match this filter." / "All 0".
 
 ## What happens

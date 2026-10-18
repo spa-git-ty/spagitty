@@ -3,7 +3,7 @@
 # BUG-084 — Pipelines Live still draws the trace panel when a branch has no runs
 
 **Status:** Fixed — on `fix/ui-bugs-from-screenshots`; unmerged.
-**Screens:** 1X (Pipelines · live)
+**Screens:** 1Y (Pipelines · live)
 **Raised by:** the author, 2026-10-18, on 3.1.0: "No runs on this branch." with an empty log box and polling timer still shown.
 
 ## What happens
