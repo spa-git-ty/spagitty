@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Security gate** records the three unmaintained notices for the zbus 5 notification dependencies by advisory ID, with the upstream migration needed to remove them. Other advisories remain blocking.
+
 ## [3.1.1] - 2026-10-18
 
 ### Changed
