@@ -140,7 +140,7 @@
 	.event { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 0; border-top: 1px solid var(--soft); }
 	.comment { display: flex; flex-direction: column; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--soft); }
 	textarea { width: 100%; resize: vertical; padding: 9px 10px; font-size: var(--fs-ui); }
-	.details { width: var(--detail-w); flex: none; padding: 16px; overflow: auto; }
+	.details { width: 270px; flex: none; padding: 16px; overflow: auto; }
 	.details section + section { border-top: 1px solid var(--soft); padding-top: 12px; margin-top: 16px; }
 	h3 { text-transform: uppercase; font-size: var(--fs-secondary); font-weight: 500; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
 	.details p { margin: 7px 0; overflow-wrap: anywhere; font-size: var(--fs-secondary); }
@@ -152,6 +152,6 @@
 	.note { color: var(--muted); font-size: var(--fs-secondary); }
 	.empty { padding: 24px; text-align: center; margin: auto; }
 	.cached { padding: 0 12px; }
-	@media (max-width: 1100px) { .details { width: calc(var(--detail-w) * 0.75); padding: 12px; } .list { min-width: 210px; } .host-link { display: none; } }
-	@media (max-width: 900px) { .details { width: calc(var(--detail-w) * 0.6); } .head select { max-width: 240px; } }
+	@media (max-width: 1100px) { .details { width: 200px; padding: 12px; } .list { min-width: 210px; } .host-link { display: none; } }
+	@media (max-width: 900px) { .details { width: 162px; } .head select { max-width: 240px; } }
 </style>

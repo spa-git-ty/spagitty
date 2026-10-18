@@ -94,7 +94,7 @@
 	.head select { max-width: 120px; font-size: var(--fs-secondary); }
 	.manager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 12px 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-button); font-size: var(--fs-secondary); color: var(--muted); }
 	.body { display: flex; flex: 1; min-height: 0; gap: 10px; padding: 0 12px 12px; }
-	.stack, .catalogue { width: var(--detail-w); flex: none; min-height: 0; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--pane-edge); border-radius: var(--r-panel); background: var(--surface); }
+	.stack, .catalogue { width: 270px; flex: none; min-height: 0; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--pane-edge); border-radius: var(--r-panel); background: var(--surface); }
 	.stage { display: flex; flex-direction: column; gap: 7px; }
 	.stage + .stage { margin-top: 10px; }
 	.stage-head { display: flex; align-items: center; gap: 8px; margin: 0 1px 3px; }
@@ -115,5 +115,5 @@
 	.catalogue-block:hover { background: var(--hover); }
 	.catalogue-title { display: flex; align-items: center; gap: 8px; font-size: var(--fs-secondary); }
 	.error { color: var(--danger); margin: 0; padding: 0 16px 8px; }
-	@media (max-width: 1100px) { .catalogue { width: calc(var(--detail-w) * 0.8); padding: 10px; } .stack { width: calc(var(--detail-w) * 0.85); padding: 10px; } .storage { display: none; } }
+	@media (max-width: 1100px) { .catalogue { width: 216px; padding: 10px; } .stack { width: 230px; padding: 10px; } .storage { display: none; } }
 </style>

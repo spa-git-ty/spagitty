@@ -22,6 +22,10 @@ On the Hooks Runs view, when the right-hand detail panel is hidden, the left ste
 
 - `src/lib/hooks/HookRuns.svelte`: give `.left` its own width (`var(--detail-w)` replaced with a fixed minimum-backed width) and add `min-width: 200px`.
 
+## Also fixed
+
+The same variable was read in three more places, which collapsed the same way: the Hooks builder's stack and catalogue, the Issues details column, and HookRuns' own narrow-window rule (`calc(var(--detail-w) * 0.75)`, still 0). Each now has its own width.
+
 ## Not done
 
 - The step list is not made independently resizable in this fix; it keeps a fixed readable width.

@@ -90,5 +90,5 @@
 	.actions { display: flex; gap: 8px; margin-top: 10px; }
 	.error { color: var(--danger); }
 	.note { font-size: var(--fs-secondary); line-height: 1.5; }
-	@media (max-width: 850px) { .left { width: calc(var(--detail-w) * 0.75); padding: 10px; } .time { display: none; } }
+	@media (max-width: 850px) { .left { width: 210px; min-width: 0; padding: 10px; } .time { display: none; } }
 </style>
