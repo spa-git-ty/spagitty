@@ -193,7 +193,7 @@ rather than an audit.
 | [FEAT-138](items/FEAT-138-pipelines.md) | Preview workflows and follow their runs | 1Y | Done |
 | [FEAT-139](items/FEAT-139-releases.md) | Draft and publish releases with their files | 1Z | Done |
 | [FEAT-140](items/FEAT-140-home.md) | Home: what this repository needs from you | 2A, chrome | Done |
-| [FEAT-141](items/FEAT-141-starting-a-farm-one-step-at-a-time.md) | Starting a farm, one step at a time | 1Q | Open |
+| [FEAT-141](items/FEAT-141-starting-a-farm-one-step-at-a-time.md) | Starting a farm, one step at a time | 1Q | Done |
 | [FEAT-142](items/FEAT-142-a-notification-center.md) | A notification center that keeps what it said | chrome, 1K | Done |
 | [FEAT-143](items/FEAT-143-a-slice-per-task.md) | A slice per task | 1Q | Open |
 | [FEAT-144](items/FEAT-144-the-landing-lane.md) | The landing lane: merging without a queue, and a log of every branch move | 1Q, 2A, chrome | Open |

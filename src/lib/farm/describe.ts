@@ -313,7 +313,11 @@ export function duration(ms: number | null | undefined): string {
 }
 
 /** Farm's journey vocabulary and presentation rules (FEAT-108). */
-export const PHASES = ['Crew', 'Goal', 'Plan', 'Build', 'Wrap up'] as const;
+/**
+ * The tracker once a farm exists (FEAT-141). The crew and the goal are the
+ * wizard's steps now, so the tracker starts at Plan.
+ */
+export const PHASES = ['Plan', 'Build', 'Wrap up'] as const;
 export const STEPS = ['Queued', 'Worktree', 'Working', 'Checks', 'Review', 'Merged'] as const;
 export const PANES = ['Board', 'Crew', 'Activity'] as const;
 export const TASK_TABS = ['Output', 'Changes', 'Checks', 'Review', 'Hand-off'] as const;
@@ -458,7 +462,7 @@ export function agentMonogram(agent: AgentDefinition | undefined): string {
 /** "You come in:" — the handoff's table, one line per autonomy level. */
 export function whereYouComeIn(autonomy: Autonomy): string {
 	return {
-		manual: 'you start every task and every merge yourself.',
+		manual: 'to start every task and every merge yourself.',
 		assisted: 'after each task, before it is reviewed or merged.',
 		semiAuto: 'only to approve merges, and when a task is stuck.',
 		auto: 'only when a task is stuck after its tries.',
@@ -792,11 +796,11 @@ export function attention(
 		!runs.some((r) => r.task === task.id && r.outcome.state === 'running')
 	);
 }
-export function phaseFor(farm: Farm | null, planning: AgentRun | null, crew: number): number {
-	if (!farm) return crew ? 1 : 0;
-	if (farm.status === 'completed') return 4;
-	if (planning || !farm.tasks.some((t) => !['draft', 'cancelled'].includes(t.status))) return 2;
-	return 3;
+export function phaseFor(farm: Farm | null, planning: AgentRun | null): number {
+	if (!farm) return 0;
+	if (farm.status === 'completed') return 2;
+	if (planning || !farm.tasks.some((t) => !['draft', 'cancelled'].includes(t.status))) return 0;
+	return 1;
 }
 const NUMBER_WORDS = [
 	'zero',

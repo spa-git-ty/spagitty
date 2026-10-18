@@ -925,8 +925,14 @@ rather than by volume, because volume ranks whoever was given the most work.
 **Built.** `src/routes/farm/+page.svelte`, `src/lib/farm/` and
 `crates/spagitty-farm` (FEAT-073, redesigned in FEAT-108–113).
 
-A farm follows five phases: **Crew → Goal → Plan → Build → Wrap up**.
-The phase tracker stays in the header. Farm remains at 1Q on the rail; its
+A farm starts with a wizard, one step at a time (FEAT-141): **Goal → Start
+from → Crew & rules → Start**. Only a one-line goal is required; the crew and
+rules come back as the last farm in the repository had them, and earlier farms
+can be resumed or started from. The farm can start from issues, briefs and a
+branch in progress, all of which go into the planning prompt with a map of the
+repository. After it, the farm follows three phases: **Plan → Build → Wrap up**.
+The tracker stays in the header; while the wizard is open it shows the
+wizard's steps. Farm remains at 1Q on the rail; its
 dot means a task needs the person, including checked, approved work waiting
 to merge, in the repository the farm belongs to. So the dot works before the
 screen is visited, the shell opens a repository's farm when it already has one

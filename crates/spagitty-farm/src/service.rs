@@ -377,9 +377,34 @@ impl FarmService {
 
     /// Start a new farm against a goal, replacing any previous one.
     pub fn create(&self, goal_title: &str, description: &str) -> Result<Farm> {
+        self.create_from(goal_title, description, Vec::new())
+    }
+
+    /// Start a new farm against a goal and what it starts from (FEAT-141).
+    ///
+    /// The farm it replaces is kept under `past/` when it had any work in it,
+    /// so the wizard can offer to resume it or start from it. A farm that was
+    /// set up and never planned is nothing to come back to.
+    pub fn create_from(
+        &self,
+        goal_title: &str,
+        description: &str,
+        sources: Vec<GoalSource>,
+    ) -> Result<Farm> {
+        if !self.sessions.lock().expect("sessions lock").is_empty() {
+            return Err(Error::Refused(
+                "Agents are still running in this farm. Stop them before starting another.".into(),
+            ));
+        }
         let now = now_ms();
         let mut goal = Goal::new(GoalId::new(format!("goal-{now}")), goal_title, now);
         goal.description = description.to_string();
+        goal.sources = sources;
+        if let Some(previous) = self.farm() {
+            if !previous.tasks.is_empty() {
+                store::archive_farm(&self.repo, &previous)?;
+            }
+        }
 
         let mut farm = Farm::new(
             FarmId::new(format!("farm-{now}")),
@@ -401,6 +426,52 @@ impl FarmService {
             status: FarmStatus::Idle,
         });
         Ok(farm)
+    }
+
+    /// The crew and rules the last farm here started with (FEAT-141).
+    pub fn remembered(&self) -> Option<Setup> {
+        store::load_setup(&self.repo)
+    }
+
+    /// Remember this farm's crew and rules for the next one.
+    pub fn remember(&self) -> Result<Setup> {
+        let farm = self.farm().ok_or(Error::NoFarm)?;
+        let setup = Setup::of(&farm);
+        store::save_setup(&self.repo, &setup)?;
+        Ok(setup)
+    }
+
+    /// The farms that came before in this repository, newest first.
+    pub fn past(&self) -> Vec<PastFarm> {
+        store::list_past(&self.repo)
+    }
+
+    /// Put an earlier farm back, keeping the one it replaces (FEAT-141).
+    ///
+    /// Refused while an agent is running: the running task belongs to the farm
+    /// on screen, and swapping the farm out from under it would orphan it.
+    pub fn resume(&self, id: &FarmId) -> Result<Farm> {
+        if !self.sessions.lock().expect("sessions lock").is_empty() {
+            return Err(Error::Refused(
+                "Agents are still running in this farm. Stop them before resuming another.".into(),
+            ));
+        }
+        let past = store::take_past(&self.repo, id.as_str())
+            .ok_or_else(|| Error::Refused("That farm is no longer kept.".into()))?;
+        let mut state = self.state.lock().expect("farm lock");
+        if let Some(current) = state.farm.take() {
+            if !current.tasks.is_empty() {
+                store::archive_farm(&self.repo, &current)?;
+            }
+        }
+        state.farm = Some(past.clone());
+        state.leases = Leases::default();
+        self.persist(&state)?;
+        drop(state);
+        self.emit(FarmEvent::FarmStatusChanged {
+            status: past.status,
+        });
+        Ok(past)
     }
 
     /// Replace the farm's settings — autonomy, permissions, parallelism,
@@ -1011,9 +1082,15 @@ impl FarmService {
             (task, prompt, unattended)
         };
 
+        // A farm started from a branch in progress finishes that branch: its
+        // tasks start from it and merge into it (FEAT-141).
+        let in_progress = self
+            .farm()
+            .and_then(|farm| farm.goal.branch().map(str::to_string));
         let destination = task
             .merge_target
             .clone()
+            .or(in_progress)
             .map(Ok)
             .unwrap_or_else(|| evidence::branch(&self.repo))?;
         self.set_status(id, TaskStatus::Assigned, None)?;
@@ -2187,7 +2264,11 @@ impl FarmService {
         let prompt = {
             let state = self.state.lock().expect("farm lock");
             let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
-            context::planning(farm, &policy::read(&self.repo))
+            context::planning(
+                farm,
+                &policy::read(&self.repo),
+                &context::repository_map(&tracked_paths(&self.repo)),
+            )
         };
         self.start_planning(prompt, None, agent)
     }
@@ -2670,6 +2751,22 @@ impl FarmService {
             })
             .unwrap_or(AgentProvider::Custom)
     }
+}
+
+/// Every tracked path, from the index, for the planner's map (FEAT-141).
+/// A repository that cannot be read gives an empty map, never a failed plan.
+fn tracked_paths(repo: &Path) -> Vec<String> {
+    let Ok(repository) = spagitty_core::repo::open(repo) else {
+        return Vec::new();
+    };
+    let Ok(index) = repository.index_or_empty() else {
+        return Vec::new();
+    };
+    index
+        .entries()
+        .iter()
+        .map(|entry| entry.path(&index).to_string())
+        .collect()
 }
 
 #[cfg(test)]

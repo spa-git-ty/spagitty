@@ -209,9 +209,27 @@ pub struct Farm {
     pub supplemental_evidence: std::collections::BTreeMap<TaskId, crate::supplemental::Evidence>,
     #[serde(default)]
     pub supplemental_repairs: std::collections::BTreeMap<TaskId, u32>,
+    /// Where each task works (FEAT-143). A farm written before is worktrees.
+    #[serde(default)]
+    pub workspace: WorkspaceMode,
     pub created_ms: u64,
     #[serde(default)]
     pub updated_ms: u64,
+}
+
+/// Where a task's agent works (FEAT-143).
+///
+/// Both are a worktree of the task's own. A slice is one whose sparse checkout
+/// holds only the paths the task may touch and must read; the checks still run
+/// on the whole tree.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WorkspaceMode {
+    /// The whole repository, checked out for the task.
+    #[default]
+    Worktree,
+    /// Only the paths the task may touch, and what it must read.
+    Slice,
 }
 
 /// Two, not the core count.
@@ -248,6 +266,7 @@ impl Farm {
             supplemental: crate::supplemental::Policy::default(),
             supplemental_evidence: Default::default(),
             supplemental_repairs: Default::default(),
+            workspace: WorkspaceMode::default(),
             created_ms: now,
             updated_ms: now,
         }

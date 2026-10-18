@@ -358,8 +358,125 @@ pub fn farm_create(
     state: State<'_, FarmState>,
     title: String,
     description: String,
+    sources: Option<Vec<GoalSource>>,
 ) -> Result<Farm> {
-    Ok(state.service()?.create(&title, &description)?)
+    Ok(state
+        .service()?
+        .create_from(&title, &description, sources.unwrap_or_default())?)
+}
+
+/// The crew and rules the last farm here started with (FEAT-141).
+#[tauri::command(async)]
+pub fn farm_remembered(state: State<'_, FarmState>) -> Result<Option<Setup>> {
+    Ok(state.service()?.remembered())
+}
+
+/// Remember the open farm's crew and rules for the next farm here.
+#[tauri::command(async)]
+pub fn farm_remember(state: State<'_, FarmState>) -> Result<Setup> {
+    Ok(state.service()?.remember()?)
+}
+
+/// The earlier farms in this repository, newest first.
+#[tauri::command(async)]
+pub fn farm_past(state: State<'_, FarmState>) -> Result<Vec<PastFarm>> {
+    Ok(state.service()?.past())
+}
+
+/// Put an earlier farm back.
+#[tauri::command(async)]
+pub fn farm_resume(state: State<'_, FarmState>, id: FarmId) -> Result<Farm> {
+    let service = state.service()?;
+    let farm = service.resume(&id)?;
+    watch_all(&service);
+    Ok(farm)
+}
+
+/// How large a brief may be. A brief is something a person wrote for the
+/// planner to read, and past this it is a document the planner should be
+/// pointed at, not handed.
+const BRIEF_LIMIT: u64 = 256 * 1024;
+
+/// A written brief, read for the wizard (FEAT-141).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Brief {
+    /// Relative to the repository when it is inside it, else the file's name.
+    pub path: String,
+    pub text: String,
+    pub bytes: u64,
+}
+
+/// The repository's tracked Markdown files, for the wizard's brief picker.
+#[tauri::command(async)]
+pub fn farm_briefs(state: State<'_, FarmState>) -> Result<Vec<String>> {
+    let repo = state
+        .path
+        .lock()
+        .expect("farm path lock")
+        .clone()
+        .ok_or_else(|| Failure::from(spagitty_farm::Error::NoFarm))?;
+    let Ok(repository) = spagitty_core::repo::open(&repo) else {
+        return Ok(Vec::new());
+    };
+    let Ok(index) = repository.index_or_empty() else {
+        return Ok(Vec::new());
+    };
+    let mut found: Vec<String> = index
+        .entries()
+        .iter()
+        .map(|entry| entry.path(&index).to_string())
+        .filter(|path| path.to_lowercase().ends_with(".md"))
+        .collect();
+    found.sort();
+    Ok(found)
+}
+
+/// Read one brief: a path in the repository, or a file the person picked.
+#[tauri::command(async)]
+pub fn farm_brief(state: State<'_, FarmState>, path: String) -> Result<Brief> {
+    let repo = state
+        .path
+        .lock()
+        .expect("farm path lock")
+        .clone()
+        .ok_or_else(|| Failure::from(spagitty_farm::Error::NoFarm))?;
+    let asked = PathBuf::from(&path);
+    let full = if asked.is_absolute() {
+        asked
+    } else {
+        repo.join(&asked)
+    };
+    let refuse = |message: String| Failure {
+        kind: "refused".into(),
+        message,
+    };
+    let bytes = std::fs::metadata(&full)
+        .map_err(|error| refuse(format!("{path} could not be read: {error}")))?
+        .len();
+    if bytes > BRIEF_LIMIT {
+        return Err(refuse(format!(
+            "{path} is {} KB; a brief is read whole, and this one is past 256 KB.",
+            bytes / 1024
+        )));
+    }
+    let text = std::fs::read_to_string(&full)
+        .map_err(|error| refuse(format!("{path} is not text: {error}")))?;
+    let shown = match (std::fs::canonicalize(&full), std::fs::canonicalize(&repo)) {
+        (Ok(file), Ok(root)) if file.starts_with(&root) => file
+            .strip_prefix(&root)
+            .map(|rest| rest.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_else(|_| path.clone()),
+        _ => full
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| path.clone()),
+    };
+    Ok(Brief {
+        path: shown,
+        text,
+        bytes,
+    })
 }
 
 /// The settings the Farm screen can change.
@@ -379,6 +496,8 @@ pub struct FarmSettings {
     pub agents: Option<Vec<AgentId>>,
     pub goal_title: Option<String>,
     pub goal_description: Option<String>,
+    /// Where each task works (FEAT-143).
+    pub workspace: Option<WorkspaceMode>,
 }
 
 #[tauri::command(async)]
@@ -419,6 +538,9 @@ pub fn farm_configure(state: State<'_, FarmState>, settings: FarmSettings) -> Re
         }
         if let Some(description) = settings.goal_description {
             farm.goal.description = description;
+        }
+        if let Some(workspace) = settings.workspace {
+            farm.workspace = workspace;
         }
     })?)
 }

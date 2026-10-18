@@ -17,6 +17,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Added
 
 - **Home** is the new top of the rail and the screen Spagitty opens on. **Needs you** lists what is waiting on you in this repository, most urgent first: farm tasks ready to merge or stuck, review requests, failed checks on your branches, changes asked for on your pull requests, and issues assigned to you. Below it are the farm, the working copy, recent branches, open pull requests, the latest commits, sixteen weeks of commits, pipelines and releases.
+- **Starting a farm** is one step at a time: the goal, anything to start from, the crew and rules, and how the tasks are made. Only a one-line goal is required. The crew and rules come back as the last farm in the repository had them, and earlier farms can be resumed or used as a starting point. A farm can start from issues, Markdown briefs and a branch in progress; the planner is given all of them, the repository's rules and a map of the repository, and can be replaced by one task per issue or an empty plan. Once the farm exists, the tracker reads Plan, Build and Wrap up.
 - **Notifications** are kept. The bell in the title bar opens a drawer with everything Spagitty has told you, across repositories, grouped by day, with search, filters and one action per item. Pull request news, the farm, failed or recovered checks, failed fetches, pulls and pushes, and published releases all land there. Settings › Notifications can clear the ones older than 90 days.
 
 ## [3.1.1] - 2026-10-18

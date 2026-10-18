@@ -2,7 +2,7 @@
 
 # FEAT-141 — Starting a farm, one step at a time
 
-**Status:** Open — on `release/3.2.0`.
+**Status:** Done — on `release/3.2.0`; unmerged. Covered by Rust and mounted tests; not looked at in the running application (the author is checking it).
 **Branch:** `release/3.2.0`.
 **Screens:** 1Q.
 **Designs:** [Home, starting a farm, and the notification center](../../design_handoff_home_farm_notifications/README.md), section 2 and `source/Farm*.dc.html`, `Steps.dc.html`, `SoFar.dc.html`.
@@ -65,3 +65,17 @@ change.
 
 The handoff's open question 1 is answered: with Crew folded into the wizard the
 tracker after it is Plan → Build → Wrap up.
+
+## What was built
+
+- **The goal's sources** in `spagitty-farm`'s `model/goal.rs` (`GoalSource`: issue, brief, branch), carried into the planning prompt's `STARTING POINTS` with a `REPOSITORY MAP` built from the index (`context::repository_map`). A farm from a branch gives its tasks that branch as their start and merge target.
+- **Remembered setup and past farms** in `model/setup.rs` and `persistence/store.rs`: `setup.json`, and `past/<farm>.json` for a replaced farm that had work in it (the newest twenty are kept). The service's `create_from`, `remember`, `remembered`, `past` and `resume`; the Tauri commands `farm_remembered`, `farm_remember`, `farm_past`, `farm_resume`, `farm_briefs` and `farm_brief` (Markdown, 256 KB at most).
+- **The wizard** in `src/lib/farm/wizard.ts` and `src/lib/farm/components/wizard/`, the crew tiles in `CrewTiles.svelte`, and the segmented autonomy and *Where each task works* in `RulesEditor.svelte`, which the Rules sheet shares. `Setup.svelte` is gone.
+- **The farm page** shows the wizard's steps in the header while it is open and Plan → Build → Wrap up after; `?start=1` opens the wizard, which Home's *New farm* uses.
+
+## Differences from the handoff
+
+- **Step 3's headline** is "Same crew and rules as last time?" only when something was remembered; a repository's first farm asks "Who works on it, and by which rules?".
+- **Agents at once and Tries** keep the existing segmented choices rather than − and + steppers.
+- **A brief** is picked from the repository's Markdown files or with the file picker; a file dropped on the window is not read (see above).
+- **Resume** puts the stopped farm back as it was; the farm it replaces is kept with the others.

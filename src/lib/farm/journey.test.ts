@@ -140,16 +140,13 @@ describe('Farm journey', () => {
 		expect(plannedCount(9, false)).toBe('9 tasks');
 	});
 
-	it('puts the farm in its phase', () => {
-		expect(phaseFor(null, null, 0)).toBe(0);
-		expect(phaseFor(null, null, 1)).toBe(1);
-		expect(phaseFor(sampleSnapshot().farm, null, 1)).toBe(2);
-		expect(phaseFor(sampleSnapshot([sampleTask('A', { status: 'running' })]).farm, null, 1)).toBe(
-			3
-		);
+	it('puts the farm in its phase: Plan, Build, Wrap up (FEAT-141)', () => {
+		expect(phaseFor(null, null)).toBe(0);
+		expect(phaseFor(sampleSnapshot().farm, null)).toBe(0);
+		expect(phaseFor(sampleSnapshot([sampleTask('A', { status: 'running' })]).farm, null)).toBe(1);
 		const done = sampleSnapshot([sampleTask('A', { status: 'done' })]).farm!;
 		done.status = 'completed';
-		expect(phaseFor(done, null, 1)).toBe(4);
+		expect(phaseFor(done, null)).toBe(2);
 	});
 	it('filters events without showing transcript floods', () => {
 		expect(

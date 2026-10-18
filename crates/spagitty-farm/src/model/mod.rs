@@ -22,6 +22,7 @@ pub mod farm;
 pub mod goal;
 pub mod handoff;
 pub mod run;
+pub mod setup;
 pub mod task;
 
 pub use agent::{
@@ -29,10 +30,11 @@ pub use agent::{
     AgentProvider, AgentRole, AgentTraits,
 };
 pub use event::{FarmEvent, Recorded};
-pub use farm::{Autonomy, Farm, FarmStatus, Permissions};
-pub use goal::Goal;
+pub use farm::{Autonomy, Farm, FarmStatus, Permissions, WorkspaceMode};
+pub use goal::{Goal, GoalSource};
 pub use handoff::{Handoff, HandoffStatus, ProposedTask, TestOutcome, TestReport};
 pub use run::{AgentRun, RunOutcome, RunPhase};
+pub use setup::{PastFarm, Setup};
 pub use task::{Task, TaskKind, TaskOrigin, TaskPriority, TaskStatus};
 
 use std::fmt;
