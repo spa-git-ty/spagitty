@@ -914,10 +914,10 @@ fn sha256_hex(input: &[u8]) -> String {
     }
     message.extend_from_slice(&bits.to_be_bytes());
 
-    for block in message.chunks_exact(64) {
+    for block in message.as_chunks::<64>().0 {
         let mut w = [0u32; 64];
-        for (index, word) in block.chunks_exact(4).enumerate() {
-            w[index] = u32::from_be_bytes([word[0], word[1], word[2], word[3]]);
+        for (index, word) in block.as_chunks::<4>().0.iter().enumerate() {
+            w[index] = u32::from_be_bytes(*word);
         }
         for index in 16..64 {
             let s0 = w[index - 15].rotate_right(7)

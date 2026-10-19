@@ -95,10 +95,7 @@ impl Archive {
         if total as usize > MAX_ENTRIES {
             return Err(format!("it has more than {MAX_ENTRIES} entries"));
         }
-        if cd_offset
-            .checked_add(cd_size)
-            .map_or(true, |end| end > eocd)
-        {
+        if cd_offset.checked_add(cd_size).is_none_or(|end| end > eocd) {
             return Err("its directory points outside the file".into());
         }
 
@@ -195,7 +192,7 @@ impl Archive {
                 data_start(&data, entry).ok_or_else(|| format!("{}: damaged entry", entry.name))?;
             if start
                 .checked_add(entry.compressed)
-                .map_or(true, |end| end > cd_offset as u64)
+                .is_none_or(|end| end > cd_offset as u64)
             {
                 return Err(format!(
                     "{}: its data runs past the end of the archive",

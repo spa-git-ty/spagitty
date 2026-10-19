@@ -1930,7 +1930,7 @@ impl FarmService {
                 .farm()
                 .map(|f| {
                     f.supplemental != input.policy
-                        || f.task(&task.id).map_or(true, |now| {
+                        || f.task(&task.id).is_none_or(|now| {
                             now.status != TaskStatus::Review
                                 || now.worktree != task.worktree
                                 || now.branch != task.branch
