@@ -17,6 +17,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Changed
 
 - **Screens no longer wait for each other.** Every command used to queue behind the slowest one reading the repository, so selecting a commit while a long file was being blamed waited for the blame. Reads now run side by side, and only changes to the repository take turns.
+- **Create pull request and Add worktree choose a branch from the list the toolbar uses**, which can be searched, instead of a plain drop-down of every branch.
 
 ### Fixed
 

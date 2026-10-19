@@ -4,6 +4,8 @@
 	import { worktreeModal } from './modal.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import { branches } from '$lib/branches/store.svelte';
+	import BranchField from '$lib/branches/BranchField.svelte';
+	import { optionsOf } from '$lib/branches/pick';
 	import Btn from '$lib/ui/Btn.svelte';
 	import { open as openDialog } from '@tauri-apps/plugin-dialog';
 
@@ -15,6 +17,8 @@
 	let error = $state<string | null>(null);
 
 	const branchList = $derived(branches.rows.map((r) => r.name));
+	const branchOptions = $derived(optionsOf(branches.rows));
+	const currentBranch = $derived(branches.rows.find((r) => r.current)?.name ?? null);
 
 	async function chooseFolder(): Promise<void> {
 		try {
@@ -155,17 +159,16 @@
 					<div class="field-row">
 						<label class="label" for="existing-branch">Branch</label>
 						{#if branchList.length > 0}
-							<select
+							<BranchField
 								id="existing-branch"
-								class="field select"
-								bind:value={selectedBranch}
+								label="Branch"
+								placeholder="Select a branch…"
+								value={selectedBranch}
+								options={branchOptions}
+								current={currentBranch}
 								disabled={isSubmitting}
-							>
-								<option value="">Select a branch…</option>
-								{#each branchList as b}
-									<option value={b}>{b}</option>
-								{/each}
-							</select>
+								onpick={(name) => (selectedBranch = name)}
+							/>
 						{:else}
 							<input
 								id="existing-branch"
@@ -285,10 +288,6 @@
 
 	.field:focus {
 		border-color: var(--accent);
-	}
-
-	.select {
-		cursor: pointer;
 	}
 
 	.mode-tabs {

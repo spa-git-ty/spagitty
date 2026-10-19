@@ -2,7 +2,7 @@
 
 # TASK-069 — The two modals that choose a branch use the branch menu
 
-**Status:** Backlog — found while building FEAT-122, 2026-10-12.
+**Status:** Done — on `release/3.4.0`; unmerged. Covered by component tests; not looked at in the running application (the author is checking it).
 **Screens:** 1H, 1J.
 
 ## Problem

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	drawn,
 	marks,
+	optionsOf,
 	rank,
 	ROWS_PER_GROUP,
 	search,
@@ -17,6 +18,7 @@ import {
 	words,
 	type BranchOption
 } from './pick';
+import type { BranchRow } from '../types';
 
 const local = (name: string): BranchOption => ({ name, group: 'local' });
 const remote = (name: string): BranchOption => ({ name, group: 'remote' });
@@ -167,5 +169,16 @@ describe('split and drawn', () => {
 			const { dir, leaf } = drawn(name, query);
 			expect([...dir, ...leaf].map((mark) => mark.text).join(''), name).toBe(name);
 		}
+	});
+});
+
+describe('optionsOf (TASK-069)', () => {
+	it('lists each row under the group of its kind', () => {
+		const row = (name: string, kind: BranchRow['kind']) => ({ name, kind }) as BranchRow;
+		expect(optionsOf([row('main', 'branch'), row('origin/main', 'remote'), row('v1', 'tag')])).toEqual([
+			local('main'),
+			remote('origin/main'),
+			tag('v1')
+		]);
 	});
 });

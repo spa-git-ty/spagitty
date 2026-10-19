@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { portal } from '$lib/ui/portal';
 	import { drawn, sections, type BranchOption } from './pick';
 
 	/**
@@ -46,6 +47,12 @@
 		 */
 		oncommit?: (revision: string) => void;
 		onclose: () => void;
+		/**
+		 * `dialog` for a field in a dialog (TASK-069): drawn from `<body>`, above
+		 * the dialog, since the dialog's glass would otherwise be what it is
+		 * placed against.
+		 */
+		layer?: 'page' | 'dialog';
 	}
 
 	let {
@@ -59,7 +66,8 @@
 		loading = false,
 		onpick,
 		oncommit,
-		onclose
+		onclose,
+		layer = 'page'
 	}: Props = $props();
 
 	const uid = $props.id();
@@ -242,6 +250,8 @@
 	bind:this={element}
 	class="menu branch-menu floating"
 	class:measuring={placed === null}
+	class:dialog={layer === 'dialog'}
+	use:portal={layer === 'dialog'}
 	style="left: {placed?.left ?? x}px; top: {placed?.top ?? y}px;{placed?.height
 		? ` height: ${placed.height}px;`
 		: ''}"
@@ -372,6 +382,11 @@
 		overflow: hidden;
 		transform-origin: top left;
 		animation: pop-in var(--t-enter-liquid) var(--spring-liquid);
+	}
+
+	/* Above the dialogs' scrim, which is at 1000. */
+	.menu.dialog {
+		z-index: 1001;
 	}
 
 	.measuring {

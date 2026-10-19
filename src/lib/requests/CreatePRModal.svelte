@@ -2,6 +2,8 @@
 <script lang="ts">
 	import { requests } from './store.svelte';
 	import { branches } from '$lib/branches/store.svelte';
+	import BranchField from '$lib/branches/BranchField.svelte';
+	import { optionsOf } from '$lib/branches/pick';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 
@@ -13,6 +15,7 @@
 	let localError = $state<string | null>(null);
 
 	const branchList = $derived(branches.rows.map((r) => r.name));
+	const branchOptions = $derived(optionsOf(branches.rows));
 	const currentBranch = $derived(branches.rows.find((r) => r.current)?.name ?? '');
 
 	$effect(() => {
@@ -88,16 +91,15 @@
 					<div class="field-col">
 						<label class="label" for="base-branch">Base Branch (Merge into)</label>
 						{#if branchList.length > 0}
-							<select
+							<BranchField
 								id="base-branch"
-								class="select field"
-								bind:value={baseBranch}
+								label="Base branch"
+								value={baseBranch}
+								options={branchOptions}
+								current={currentBranch}
 								disabled={requests.creating}
-							>
-								{#each branchList as b}
-									<option value={b}>{b}</option>
-								{/each}
-							</select>
+								onpick={(name) => (baseBranch = name)}
+							/>
 						{:else}
 							<input
 								id="base-branch"
@@ -115,16 +117,15 @@
 					<div class="field-col">
 						<label class="label" for="head-branch">Head Branch (Compare)</label>
 						{#if branchList.length > 0}
-							<select
+							<BranchField
 								id="head-branch"
-								class="select field"
-								bind:value={headBranch}
+								label="Head branch"
+								value={headBranch}
+								options={branchOptions}
+								current={currentBranch}
 								disabled={requests.creating}
-							>
-								{#each branchList as b}
-									<option value={b}>{b}</option>
-								{/each}
-							</select>
+								onpick={(name) => (headBranch = name)}
+							/>
 						{:else}
 							<input
 								id="head-branch"
@@ -283,10 +284,6 @@
 
 	.field:focus {
 		border-color: var(--accent);
-	}
-
-	.select {
-		cursor: pointer;
 	}
 
 	.textarea {
