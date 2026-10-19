@@ -24,6 +24,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Assigning an agent twice in quick succession starts one agent.** Two clicks on Assign, or a click and a resume, could each start an agent on the same pull request or merge while the first was still being set up, spending tokens twice. The second is now told *An agent is already assigned to this.*
 - **A remote agent's limits hold inside a step.** Tokens per run, tokens per day and minutes were checked only between steps, and one step can make forty exchanges with the model, so a large file could cost several times the limit. The agent now stops after the exchange that reaches it, keeps what it found, and says which limit it reached. Stop and the minutes limit also end a step that is waiting for the model to answer.
 - **Resuming an agent after the pull request or branch moved starts it over.** It used to carry on from the files it had finished, at code that was no longer there, and keep its findings against the old commit.
+- **The Terminal's + brings a session back after its last shell has exited**, instead of saying *no server running on session*.
 - **A model's reply that cannot be read says so.** A reply cut off by the connection, larger than 8 MB, or not text was taken as an empty answer, so the agent reported that the model said nothing. It now says which of the three happened.
 
 ## [3.3.0] - 2026-10-19

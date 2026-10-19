@@ -187,6 +187,23 @@ describe('with a multiplexer', () => {
 		expect(opened).toHaveLength(1);
 	});
 
+	it('attaches again on `+` when the session’s client has gone, rather than asking a server that is not there (BUG-095)', async () => {
+		await terminal.enter('/repos/thing');
+		await settle();
+		// The last shell in the session exited, and the client with it.
+		exit(opened[0].id);
+		await settle();
+		expect(terminal.has('thing')).toBe(false);
+
+		await terminal.add('/repos/thing');
+		await settle();
+
+		expect(act).not.toHaveBeenCalled();
+		expect(opened.map((one) => one.ask.session)).toEqual(['thing', 'thing']);
+		expect(terminal.current).toBe('thing');
+		expect(terminal.has('thing')).toBe(true);
+	});
+
 	it('reads the windows again after asking for something', async () => {
 		await terminal.enter('/repos/thing');
 		await settle();

@@ -318,8 +318,18 @@ export const terminal = {
 
 	/** `+`: a new window in the session, or a new shell. */
 	async add(cwd: string | null): Promise<void> {
-		if (this.multiplexed && current) await this.act({ kind: 'newWindow', cwd: cwd ?? '' });
-		else this.newTab(cwd);
+		if (!this.multiplexed || !current) {
+			this.newTab(cwd);
+			return;
+		}
+		// No client of ours on it: its last shell exited, or the multiplexer
+		// could not start. There may be no session to add a window to, and
+		// asking says *no server running* (BUG-095). Attaching makes it again.
+		if (!terminals.has(current)) {
+			this.attach(current, cwd ?? '');
+			return;
+		}
+		await this.act({ kind: 'newWindow', cwd: cwd ?? '' });
 	},
 
 	select(key: string, cwd: string | null): void {

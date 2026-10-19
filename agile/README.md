@@ -304,6 +304,7 @@ rather than an audit.
 | [BUG-092](items/BUG-092-nothing-can-be-dragged-into-place-on-windows.md) | Nothing can be dragged into place on Windows | Settings, 1E, 1X, 1A | Fixed |
 | [BUG-093](items/BUG-093-the-farm-wizard-s-search-box-and-step-markers-are-broken.md) | The farm wizard's search box and step markers are broken | 1Q | Fixed |
 | [BUG-094](items/BUG-094-a-resumed-agent-skips-files-that-changed-since.md) | A resumed agent skips files that changed since its first run | 1R, 1S | Fixed |
+| [BUG-095](items/BUG-095-the-terminal-s-plus-says-no-server-running.md) | The Terminal's `+` says *no server running on session* | 1T | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
