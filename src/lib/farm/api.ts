@@ -13,6 +13,11 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
 	AgentDefinition,
+	Brief,
+	GoalSource,
+	LedgerEntry,
+	PastFarm,
+	Setup,
 	AgentStatus,
 	Farm,
 	FarmFailure,
@@ -60,8 +65,43 @@ export function removeAgent(id: string): Promise<void> {
 	return invoke('farm_remove_agent', { id });
 }
 
-export function create(title: string, description: string): Promise<Farm> {
-	return invoke('farm_create', { title, description });
+export function create(title: string, description: string, sources: GoalSource[] = []): Promise<Farm> {
+	return invoke('farm_create', { title, description, sources });
+}
+
+/** The crew and rules the last farm here started with, if any (FEAT-141). */
+export function remembered(): Promise<Setup | null> {
+	return invoke('farm_remembered');
+}
+
+/** Remember the open farm's crew and rules for the next one. */
+export function remember(): Promise<Setup> {
+	return invoke('farm_remember');
+}
+
+/** Every branch move the farm made, oldest first (FEAT-144). */
+export function ledger(): Promise<LedgerEntry[]> {
+	return invoke('farm_ledger');
+}
+
+/** The earlier farms in this repository, newest first. */
+export function past(): Promise<PastFarm[]> {
+	return invoke('farm_past');
+}
+
+/** Put an earlier farm back, keeping the open one in its place. */
+export function resume(id: string): Promise<Farm> {
+	return invoke('farm_resume', { id });
+}
+
+/** The repository's tracked Markdown files, for the brief picker. */
+export function briefs(): Promise<string[]> {
+	return invoke('farm_briefs');
+}
+
+/** Read one brief: a path in the repository, or a file the person picked. */
+export function brief(path: string): Promise<Brief> {
+	return invoke('farm_brief', { path });
 }
 
 export function configure(settings: FarmSettings): Promise<Farm> {

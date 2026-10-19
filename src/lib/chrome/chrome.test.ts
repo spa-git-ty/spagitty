@@ -1264,6 +1264,8 @@ describe('NavRail', () => {
 		const view = render(NavRail, {});
 
 		expect(view.all('.item').map((i) => i.getAttribute('aria-label'))).toEqual([
+			// FEAT-140.
+			'Home',
 			'Farm',
 			'Graph',
 			'Working copy',
@@ -1468,12 +1470,14 @@ describe('NavRail', () => {
 		view.destroy();
 	});
 
-	/** The rail's top slot is the farm (FEAT-073). */
-	it('puts the farm first among the screens', () => {
+	/** The rail's top slot is Home (FEAT-140), and the farm is under a divider. */
+	it('puts Home first among the screens, and the farm under a divider', () => {
 		const view = render(NavRail, {});
 
 		const screens = view.all('.item').filter((item) => !item.classList.contains('open-repository'));
-		expect(screens[0].textContent).toContain('Farm');
+		expect(screens[0].textContent).toContain('Home');
+		expect(screens[1].textContent).toContain('Farm');
+		expect(screens[1].previousElementSibling?.classList.contains('hr')).toBe(true);
 
 		view.destroy();
 	});

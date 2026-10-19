@@ -5,7 +5,10 @@ import { play } from '$lib/delight/sound';
 import { settings } from '$lib/settings/store.svelte';
 import { describe, notice } from '$lib/ui/notice.svelte';
 import type { Watched } from '$lib/types';
+import { repo } from '$lib/repo.svelte';
+import { center } from './center.svelte';
 import { changes, type News } from './changes';
+import { fromNews } from './feeds';
 
 /**
  * The pull request watcher (FEAT-114).
@@ -73,9 +76,23 @@ function writeSeen(rows: Watched[]): void {
 	}
 }
 
+/**
+ * Keep one piece of news (FEAT-142). A pull request is on a host, not in a
+ * checkout, so it is filed under the open repository only when that is the
+ * one it is in.
+ */
+function keep(item: News): void {
+	const name = item.pr.repository ?? '';
+	const here = repo.info && name.split('/').pop() === repo.info.name ? repo.info : null;
+	void center.add({ ...fromNews(item), repository: here?.path ?? '', repositoryName: name });
+}
+
 /** Say it: one notice, one sound, and the operating system when asked. */
-function announce(news: News[]): void {
+function announce(news: News[], kept = true): void {
 	if (!news.length) return;
+	// Every one is kept in the notification center. The corner still says the
+	// latest; the drawer is where the rest are. A test from Settings is not.
+	if (kept) for (const item of news) keep(item);
 	const latest = news[news.length - 1];
 	const more = news.length > 1 ? ` (+${news.length - 1} more)` : '';
 	notice.ok(`${latest.title}${more}`, latest.body);
@@ -167,6 +184,6 @@ export const watcher = {
 				title: 'Your pull request was merged',
 				body: 'This is how Spagitty will tell you'
 			}
-		]);
+		], false);
 	}
 };

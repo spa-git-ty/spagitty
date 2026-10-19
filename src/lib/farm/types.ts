@@ -129,6 +129,8 @@ export interface Task {
 	assignedAgent: string | null;
 	implementedBy: string | null;
 	allowedPaths: string[];
+	/** What the task reads and may not change (FEAT-143). */
+	reads?: string[];
 	acceptanceCriteria: string[];
 	verification: string[];
 	verificationOverrides: boolean;
@@ -169,7 +171,63 @@ export interface Goal {
 	title: string;
 	description: string;
 	constraints: string[];
+	/** What the farm starts from besides the goal (FEAT-141). */
+	sources?: GoalSource[];
 	createdMs: number;
+}
+
+/** One thing a farm starts from (FEAT-141). Mirrors `model::GoalSource`. */
+export type GoalSource =
+	| { kind: 'issue'; number: number; title: string; body: string; labels: string[]; url: string }
+	| { kind: 'brief'; path: string; text: string }
+	| { kind: 'branch'; name: string };
+
+/** Where each task works (FEAT-143). */
+export type WorkspaceMode = 'worktree' | 'slice';
+
+/** The crew and rules the last farm here started with (FEAT-141). */
+export interface Setup {
+	agents: string[];
+	autonomy: Autonomy;
+	permissions: Permissions;
+	maxParallel: number;
+	maxAttempts: number;
+	verification: string[];
+	supplemental: SupplementalPolicy;
+	workspace: WorkspaceMode;
+	fromTitle: string;
+	fromMs: number;
+}
+
+/** An earlier farm in this repository, as the wizard lists it. */
+export interface PastFarm {
+	id: string;
+	goal: Goal;
+	status: FarmStatus;
+	merged: number;
+	total: number;
+	updatedMs: number;
+	setup: Setup;
+}
+
+/** One branch move the farm made (FEAT-144). Mirrors `model::LedgerEntry`. */
+export interface LedgerEntry {
+	seq: number;
+	atMs: number;
+	ref: string;
+	old: string | null;
+	new: string;
+	kind: 'land' | 'retryLost' | 'merger';
+	tasks: string[];
+	by: { task: string; agent: string | null; reviewer: string | null }[];
+	checks: string;
+}
+
+/** A written brief, read for the wizard. */
+export interface Brief {
+	path: string;
+	text: string;
+	bytes: number;
 }
 
 export interface SupplementalPolicy { mode: 'off' | 'advisory' | 'required'; provider: string; threshold: 'critical' | 'high' | 'medium' | 'low'; maxRepairs: number; revision: number; }
@@ -190,6 +248,8 @@ export interface Farm {
 	maxParallel: number;
 	/** How many times a task may be sent back before it needs a person. */
 	maxAttempts: number;
+	/** Where each task works (FEAT-143). Absent from a farm written before. */
+	workspace?: WorkspaceMode;
 	createdMs: number;
 	updatedMs: number;
 }
@@ -382,6 +442,7 @@ export interface TaskDraft {
 	priority: TaskPriority;
 	dependsOn: string[];
 	allowedPaths: string[];
+	reads?: string[];
 	acceptanceCriteria: string[];
 	verification: string[];
 	verificationOverrides: boolean;
@@ -399,6 +460,7 @@ export interface FarmSettings {
 	agents?: string[];
 	goalTitle?: string;
 	goalDescription?: string;
+	workspace?: WorkspaceMode;
 }
 
 /** The shape a farm command rejects with. */

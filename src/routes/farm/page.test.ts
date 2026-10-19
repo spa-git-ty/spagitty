@@ -97,9 +97,9 @@ describe('Farm journey routes and actions', () => {
 		expect(calls.chosen).toBe(1);
 		expect(api.open).not.toHaveBeenCalled();
 	});
-	it('renders the five phases and a six-step track on each board card', async () => {
+	it('renders Plan, Build and Wrap up, and a six-step track on each board card', async () => {
 		await show([sampleTask('T1')]);
-		expect(view.all('.farm-phases li')).toHaveLength(5);
+		expect(view.all('.farm-phases li')).toHaveLength(3);
 		expect(view.all('.task-track span')).toHaveLength(6);
 		expect(view.get('[aria-current="step"]').textContent).toContain('Build');
 	});
@@ -220,44 +220,70 @@ describe('Farm journey routes and actions', () => {
 			expect(api.addTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Test the farm' }))
 		);
 	});
-	it('creates, configures and then plans from Setup', async () => {
+	/** From the goal to step 3, the way a person gets there (FEAT-141). */
+	function toCrew(goal = 'Ship it') {
+		type(view.get('input.goal'), goal);
+		click(button('Continue'));
+		click(button('Skip'));
+		flushSync();
+	}
+
+	it('creates, configures, remembers and then plans from the wizard (FEAT-141)', async () => {
 		await show([], '', (s) => (s.farm = null));
-		type(view.get('.setup input:not([type="checkbox"])'), '  Ship the goal  ');
+		expect(view.text()).toContain('What should be true when it’s done?');
+		type(view.get('input.goal'), '  Ship the goal  ');
+		click(button('Skip to start'));
+		expect(view.text()).toContain('How should the tasks be made?');
 		click(button('Plan it with Claude Code'));
 		await vi.waitFor(() => expect(api.plan).toHaveBeenCalledWith('claude-1'));
-		expect(api.create).toHaveBeenCalledWith('Ship the goal', '');
-		expect(vi.mocked(api.create).mock.invocationCallOrder[0]).toBeLessThan(
-			vi.mocked(api.configure).mock.invocationCallOrder[0]
+		expect(api.create).toHaveBeenCalledWith('Ship the goal', '', []);
+		const order = [api.create, api.configure, api.remember, api.plan].map(
+			(call) => vi.mocked(call).mock.invocationCallOrder[0]
 		);
-		expect(vi.mocked(api.configure).mock.invocationCallOrder[0]).toBeLessThan(
-			vi.mocked(api.plan).mock.invocationCallOrder[0]
-		);
+		expect([...order].sort((a, b) => a - b)).toEqual(order);
 	});
-	it('plans on Enter in the goal field, and not while the goal is empty', async () => {
+
+	it('goes on with Enter in the goal field, and not while the goal is empty', async () => {
 		await show([], '', (s) => (s.farm = null));
 		const goal = view.get('input.goal');
 		press(goal, 'Enter');
-		expect(api.create).not.toHaveBeenCalled();
+		expect(view.text()).toContain('Step 1 of 4');
 		type(goal, 'Ship it');
 		press(goal, 'Enter');
-		await vi.waitFor(() => expect(api.plan).toHaveBeenCalledWith('claude-1'));
-		expect(api.create).toHaveBeenCalledWith('Ship it', '');
+		flushSync();
+		expect(view.text()).toContain('Anything to start from?');
+		expect(api.create).not.toHaveBeenCalled();
 	});
 
-	it('refuses to start a farm with no goal', async () => {
+	it('asks only for the goal, and refuses to go on without one', async () => {
 		await show([], '', (s) => (s.farm = null));
-		expect((button("I'll write the tasks myself") as HTMLButtonElement).disabled).toBe(true);
-		expect((button('Plan it with Claude Code') as HTMLButtonElement).disabled).toBe(true);
+		expect((button('Continue') as HTMLButtonElement).disabled).toBe(true);
+		expect((button('Skip to start') as HTMLButtonElement).disabled).toBe(true);
+		type(view.get('input.goal'), 'Ship it');
+		expect((button('Continue') as HTMLButtonElement).disabled).toBe(false);
+	});
+
+	it('opens an empty plan when the person will write the tasks', async () => {
+		await show([], '', (s) => (s.farm = null));
+		type(view.get('input.goal'), 'Ship it');
+		click(button('Skip to start'));
+		click(view.all('[role="radio"]').find((b) => b.textContent?.includes('I’ll write the tasks'))!);
+		click(button('Open an empty plan'));
+		await vi.waitFor(() => expect(api.configure).toHaveBeenCalled());
+		expect(api.plan).not.toHaveBeenCalled();
 	});
 
 	it('names the agents it did not find in one quiet line', async () => {
 		await show([], '', (s) => (s.farm = null));
+		toCrew();
+		expect(view.text()).toContain('Who works on it, and by which rules?');
 		expect(view.text()).toContain('Not found: Cursor, Oh My Pi.');
 		expect(view.all('.tile')).toHaveLength(2);
 	});
 
 	it('offers to write AGENTS.md only when there is none', async () => {
 		await show([], '', (s) => (s.farm = null));
+		toCrew();
 		expect(view.text()).toContain('AGENTS.md is attached to every prompt');
 		expect(view.text()).not.toContain('Write the starter AGENTS.md');
 		view.destroy();
@@ -266,6 +292,7 @@ describe('Farm journey routes and actions', () => {
 			s.farm = null;
 			s.policy = { sources: [], text: '' };
 		});
+		toCrew();
 		click(button('Write the starter AGENTS.md'));
 		await vi.waitFor(() => expect(api.writePolicy).toHaveBeenCalledOnce());
 	});
@@ -273,7 +300,7 @@ describe('Farm journey routes and actions', () => {
 	it('grants the merge permission with a level that merges by itself', async () => {
 		await show([sampleTask('T1')]);
 		click(button('Rules'));
-		click(view.all('[role="radio"]').find((b) => b.textContent?.includes('Automatic'))!);
+		click(view.all('[role="radio"]').find((b) => b.textContent?.trim() === 'Auto')!);
 		click(button('Save rules'));
 		await vi.waitFor(() =>
 			expect(api.configure).toHaveBeenCalledWith(
@@ -295,8 +322,9 @@ describe('Farm journey routes and actions', () => {
 			s.farm = null;
 			s.agents.forEach((a) => (a.definition.enabled = false));
 		});
-		type(view.get('.setup input:not([type="checkbox"])'), 'Goal');
-		expect((view.all('.setup button').at(-1) as HTMLButtonElement).disabled).toBe(true);
+		type(view.get('input.goal'), 'Goal');
+		click(button('Skip to start'));
+		expect((button('Plan it') as HTMLButtonElement).disabled).toBe(true);
 	});
 	it('shows planning output and stops only planning', async () => {
 		await show([], '', (s) => (s.runs = [run('planning', 'planning')]));
@@ -413,6 +441,19 @@ describe('Farm journey routes and actions', () => {
 			)
 		);
 	});
+	it('lists every branch move in Activity, newest first (FEAT-144)', async () => {
+		vi.mocked(api.ledger).mockResolvedValue([
+			{ seq: 1, atMs: Date.now() - 60000, ref: 'refs/heads/main', old: 'aaaaaaa1', new: 'bbbbbbb2', kind: 'land', tasks: ['T1'], by: [{ task: 'T1', agent: 'claude-1', reviewer: null }], checks: 'before:skipped' },
+			{ seq: 2, atMs: Date.now(), ref: 'refs/heads/main', old: null, new: 'ccccccc3', kind: 'merger', tasks: ['T2'], by: [], checks: 'merger' }
+		]);
+		await show([sampleTask('T1')], '?pane=activity');
+		await vi.waitFor(() => expect(view.text()).toContain('Branch moves'));
+		const moves = view.all('.move').map((m) => m.textContent?.replace(/\s+/g, ' ').trim());
+		expect(moves[0]).toContain('T2 merged into main in Merger');
+		expect(moves[1]).toContain('T1 merged into main');
+		expect(moves[1]).toContain('aaaaaaa → bbbbbbb');
+		vi.mocked(api.ledger).mockReset();
+	});
 	it('filters Activity failures and links their tasks', async () => {
 		await show(
 			[sampleTask('T1')],
@@ -458,7 +499,7 @@ describe('Farm journey routes and actions', () => {
 		expect(view.text()).toContain('abcdef1');
 		expect(view.text()).toContain('Needs follow-up');
 		click(button('Start a new goal'));
-		expect(view.text()).toContain('Put a crew of agents on one goal');
+		expect(view.text()).toContain('What should be true when it’s done?');
 	});
 	it('says so when a task has no branch to open in Merger', async () => {
 		evidence.T1 = {

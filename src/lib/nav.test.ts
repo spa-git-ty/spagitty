@@ -82,11 +82,13 @@ describe('NAV_ITEMS', () => {
 	 * place in the window a person does not have to look for. The Graph follows
 	 * it, and still owns `/`.
 	 */
-	it('starts at the farm, with the graph immediately after it', () => {
-		expect(NAV_ITEMS[0].href).toBe('/farm');
-		expect(NAV_ITEMS[0].code).toBe('1Q');
-		expect(NAV_ITEMS[1].href).toBe('/');
-		expect(NAV_ITEMS[1].code).toBe('1A');
+	it('starts at Home, then the farm, with the graph immediately after it', () => {
+		expect(NAV_ITEMS[0].href).toBe('/home');
+		expect(NAV_ITEMS[0].code).toBe('2A');
+		expect(NAV_ITEMS[1].href).toBe('/farm');
+		expect(NAV_ITEMS[1].code).toBe('1Q');
+		expect(NAV_ITEMS[2].href).toBe('/');
+		expect(NAV_ITEMS[2].code).toBe('1A');
 	});
 
 	/**
@@ -96,7 +98,9 @@ describe('NAV_ITEMS', () => {
 	 */
 	it('runs the screens in the order they are worked through', () => {
 		expect(NAV_ITEMS.map((item) => item.href)).toEqual([
-			// FEAT-073. First, because supervising the farm is the day's work
+			// FEAT-140. Home, above everything: what the repository needs from you.
+			'/home',
+			// FEAT-073. Next, because supervising the farm is the day's work
 			// and everything below it is where the farm's output is read.
 			'/farm',
 			'/',
@@ -168,20 +172,29 @@ describe('grouping', () => {
 	});
 
 	/** Grouping must not move anything. Whatever a hand has learned still holds. */
-	it('leaves the Farm first and the Graph second', () => {
-		expect(rows[0].item.href).toBe('/farm');
-		expect(rows[1].item.href).toBe('/');
+	it('puts Home first, then the Farm, then the Graph', () => {
+		expect(rows[0].item.href).toBe('/home');
+		expect(rows[1].item.href).toBe('/farm');
+		expect(rows[2].item.href).toBe('/');
 	});
 
 	it('gives the Farm a group of its own', () => {
 		expect(NAV_ITEMS.filter((item) => item.group === 'farm')).toHaveLength(1);
 		// And no heading: a heading over a single row is a label for nothing.
+		expect(rows[1].heading).toBeNull();
+	});
+
+	/** FEAT-140: Home, a divider, then the Farm. The divider has no heading. */
+	it('gives Home a group of its own, and the Farm a divider under it', () => {
+		expect(NAV_ITEMS.filter((item) => item.group === 'home').map((item) => item.href)).toEqual(['/home']);
 		expect(rows[0].heading).toBeNull();
+		expect(rows[1].startsGroup).toBe(true);
+		expect(rows[1].item.dividerBefore).toBe(true);
 	});
 
 	it('starts a group exactly at each boundary', () => {
 		const starts = rows.filter((row) => row.startsGroup).map((row) => row.item.href);
-		expect(starts).toEqual(['/farm', '/', '/rebase', '/settings']);
+		expect(starts).toEqual(['/home', '/farm', '/', '/rebase', '/settings']);
 	});
 
 	it('heads every group but the first', () => {
@@ -227,6 +240,7 @@ describe('isShown', () => {
 
 	it('shows the everyday rows and Settings on a quiet day', () => {
 		expect(shown(quiet)).toEqual([
+			'/home',
 			'/farm',
 			'/',
 			'/changes',
@@ -361,7 +375,7 @@ describe('the rail a person chose', () => {
 
 			expect(free).toEqual(
 				NAV_ITEMS.map((item) => item.href).filter(
-					(href) => !['/farm', '/settings', '/conflicts', '/badges'].includes(href)
+					(href) => !['/home', '/farm', '/settings', '/conflicts', '/badges'].includes(href)
 				)
 			);
 		});
@@ -478,6 +492,7 @@ describe('the rail a person chose', () => {
 			const groups = inOrder(NAV_ITEMS, scrambled).map((item) => item.group);
 
 			expect(groups.filter((group, index) => group !== groups[index - 1])).toEqual([
+				'home',
 				'farm',
 				'work',
 				'tools',

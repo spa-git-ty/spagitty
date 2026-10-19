@@ -70,6 +70,9 @@ pub struct PlannedTask {
     pub depends_on: Vec<String>,
     #[serde(default)]
     pub allowed_paths: Vec<String>,
+    /// What the task needs to read and may not change (FEAT-143).
+    #[serde(default)]
+    pub reads: Vec<String>,
     #[serde(default)]
     pub acceptance_criteria: Vec<String>,
 }
@@ -128,6 +131,7 @@ impl Plan {
              \"priority\": \"high\" | \"normal\" | \"low\",\n      \
              \"dependsOn\": [\"t1\"],\n      \
              \"allowedPaths\": [\"src/auth/**\"],\n      \
+             \"reads\": [\"src/session/**\"],\n      \
              \"acceptanceCriteria\": [\"what must be true when this is done\"]\n    \
              }}\n  \
              ],\n  \
@@ -136,7 +140,8 @@ impl Plan {
              ```\n\
              \n\
              `allowedPaths` matters: two tasks whose paths overlap cannot run at the \
-             same time, so keep them disjoint where the work allows it."
+             same time, so keep them disjoint where the work allows it. `reads` lists \
+             what a task needs to read but not change; it may overlap freely."
         )
     }
 }
@@ -196,6 +201,7 @@ pub fn adopt_under(
         task.kind = planned.kind;
         task.priority = planned.priority;
         task.allowed_paths = planned.allowed_paths.clone();
+        task.reads = planned.reads.clone();
         task.acceptance_criteria = planned.acceptance_criteria.clone();
         task.depends_on = planned
             .depends_on

@@ -14,9 +14,11 @@
 		eventColour,
 		eventTask,
 		filterEvents,
+		ledgerLine,
 		type ActivityFilter
 	} from '../describe';
-	import type { AgentRun } from '../types';
+	import * as api from '../api';
+	import type { AgentRun, LedgerEntry } from '../types';
 
 	/**
 	 * Who did what, and when (FEAT-112).
@@ -37,6 +39,16 @@
 	const TICKS = [0, 0.25, 0.5, 0.75, 1];
 
 	let filter = $state<ActivityFilter>('All');
+	/** Every branch move the farm made, newest first (FEAT-144). */
+	let moves = $state<LedgerEntry[]>([]);
+
+	// Read again whenever the farm says something: a land is always said.
+	$effect(() => {
+		void farmStore.activity.length;
+		void Promise.resolve(api.ledger())
+			.then((entries) => (moves = [...(entries ?? [])].reverse()))
+			.catch(() => {});
+	});
 
 	const runs = $derived(farmStore.runs);
 	const events = $derived(farmStore.activity.filter((e) => e.atMs > 0));
@@ -167,6 +179,26 @@
 			{/each}
 		</div>
 	</section>
+
+	<!-- Every branch move the farm made, from the ledger (FEAT-144): who made
+	     the work, who passed it, and how the result was checked. -->
+	{#if moves.length}
+		<section class="section">
+			<div class="spread log-head">
+				<h3>Branch moves</h3>
+				<span class="muted">{C.newestFirst}</span>
+			</div>
+			<div class="card log">
+				{#each moves as move (move.seq)}
+					<div class="move" class:lost={move.kind === 'retryLost'}>
+						<time class="mono muted">{clockTime(move.atMs)}</time>
+						<span class="move-text">{ledgerLine(move, farmStore.agents)}</span>
+						<span class="mono muted">{move.old ? `${move.old.slice(0, 7)} → ` : ''}{move.new.slice(0, 7)}</span>
+					</div>
+				{/each}
+			</div>
+		</section>
+	{/if}
 </div>
 
 <style>
@@ -300,6 +332,23 @@
 
 	.log-head h3 {
 		margin: 0 8px 0 0;
+	}
+
+	.move {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--soft);
+	}
+
+	.move-text {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.move.lost {
+		color: var(--muted);
 	}
 
 	.log {

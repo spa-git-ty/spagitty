@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Notifications</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#120d0b}
+a{color:#f2715a;text-decoration:none}a:hover{color:#ff9a86}
+button,input{font:inherit}
+button{cursor:pointer}
+input::placeholder{color:rgba(243,233,221,0.42)}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div style="position: relative; height: 900px; overflow: hidden; background: #120d0b; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px">
+  <dc-import name="Main" notifications-open="{{ true }}" hint-size="100%,1180px"></dc-import>
+
+  <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 50px; bottom: 0; background: rgba(8,5,4,0.5)"></div>
+
+  <section role="dialog" aria-labelledby="ntitle" style="position: absolute; top: 52px; right: 16px; bottom: 16px; width: min(470px, calc(100% - 32px)); box-sizing: border-box; display: flex; flex-direction: column; border-radius: 22px; background: rgba(38,31,27,0.96); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.09); border-top-color: rgba(255,255,255,0.16); box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)">
+
+    <header style="padding: 18px 18px 12px 22px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <h2 id="ntitle" style="margin: 0; font-size: 19px; font-weight: 600">Notifications</h2>
+          <span style="font-size: 13px; color: #f2715a">{{ unreadLabel }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px">
+          <button type="button" onClick="{{ readAll }}" style="height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: transparent; color: rgba(243,233,221,0.8); font-size: 13px">Mark all read</button>
+          <button type="button" aria-label="Notification settings" title="Notification settings" style="width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; color: rgba(243,233,221,0.7); display: grid; place-items: center">
+            <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z"></path></svg>
+          </button>
+          <button type="button" aria-label="Close" title="Close" style="width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; color: rgba(243,233,221,0.7); display: grid; place-items: center">
+            <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px">
+        <label style="flex: 1; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.09); background: rgba(18,14,13,0.7)">
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(243,233,221,0.62)" stroke-width="1.7" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"></path><path d="M16.5 16.5 21 21"></path></svg>
+          <input type="search" aria-label="Search notifications" placeholder="Search notifications" style="flex: 1; min-width: 0; border: 0; background: transparent; color: #f3e9dd; outline: none; font-size: 13.2px">
+        </label>
+        <div role="radiogroup" aria-label="Which repositories" style="display: flex; padding: 3px; border-radius: 999px; background: rgba(18,14,13,0.7); border: 1px solid rgba(255,255,255,0.09)">
+          <sc-for list="{{ scopes }}" as="sc" hint-placeholder-count="2">
+            <button type="button" role="radio" aria-checked="{{ sc.on }}" onClick="{{ sc.pick }}" style="{{ sc.style }}">{{ sc.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div role="tablist" aria-label="Kind" style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="6">
+          <button type="button" role="tab" aria-selected="{{ f.on }}" onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}<sc-if value="{{ f.hasCount }}" hint-placeholder-val="{{ false }}"><span style="{{ f.countStyle }}">{{ f.count }}</span></sc-if></button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 10px 10px">
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column">
+          <div style="position: sticky; top: 0; z-index: 1; padding: 12px 12px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: rgba(243,233,221,0.62); background: rgba(38,31,27,0.98)">{{ g.label }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <div onMouseEnter="{{ it.hover }}" style="{{ it.rowStyle }}">
+              <span style="{{ it.iconStyle }}">
+                <sc-if value="{{ it.isRequest }}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v14"></path><path d="M7 5.5a2.5 2.5 0 1 0 0-.02"></path><path d="M7 19.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 19V9a3 3 0 0 0-3-3h-3"></path><path d="M14 3l-3 3 3 3"></path></svg></sc-if>
+                <sc-if value="{{ it.isComment }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path></svg></sc-if>
+                <sc-if value="{{ it.isMerge }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><path d="M12 12v9"></path><path d="M9 18l3 3 3-3"></path></svg></sc-if>
+                <sc-if value="{{ it.isFarm }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path><path d="M12 7.5v3.5"></path><path d="M5 11h14"></path><path d="M5 11v3"></path><path d="M12 11v3"></path><path d="M19 11v3"></path><path d="M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path><path d="M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path><path d="M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path></svg></sc-if>
+                <sc-if value="{{ it.isWarn }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 21.5 20h-19z"></path><path d="M12 10v4.5"></path><path d="M12 17.5v.01"></path></svg></sc-if>
+                <sc-if value="{{ it.isOk }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z"></path><path d="M8.3 12.4l2.6 2.6 5-5.4"></path></svg></sc-if>
+                <sc-if value="{{ it.isRelease }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9L12 3z"></path><path d="m3.5 7.5 8.5 4.5 8.5-4.5"></path><path d="M12 12v9"></path><path d="m7.5 5.4 8.5 4.5"></path></svg></sc-if>
+                <sc-if value="{{ it.isPush }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg></sc-if>
+              </span>
+              <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+                  <span style="{{ it.titleStyle }}">{{ it.title }}</span>
+                  <span style="flex: none; font-size: 12px; color: rgba(243,233,221,0.55)">{{ it.time }}</span>
+                </div>
+                <span style="font-size: 13px; line-height: 1.4; color: rgba(243,233,221,0.68)">{{ it.body }}</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 3px; min-height: 28px">
+                  <span class="mono" style="font-size: 11.5px; padding: 2px 8px; border-radius: 6px; background: rgba(243,233,221,0.07); color: rgba(243,233,221,0.7)">{{ it.repo }}</span>
+                  <div style="{{ it.actionsStyle }}">
+                    <sc-if value="{{ it.unread }}" hint-placeholder-val="{{ true }}">
+                      <button type="button" onClick="{{ it.read }}" style="height: 28px; padding: 0 10px; border-radius: 999px; border: 0; background: transparent; color: rgba(243,233,221,0.75); font-size: 12.5px">Mark read</button>
+                    </sc-if>
+                    <button type="button" style="height: 28px; padding: 0 12px; border-radius: 999px; border: 0; background: #f2715a; color: #2a0e07; font-weight: 600; font-size: 12.5px">{{ it.action }}</button>
+                  </div>
+                </div>
+              </div>
+              <span aria-hidden="true" style="{{ it.dotStyle }}"></span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 48px 20px; text-align: center; color: rgba(243,233,221,0.62); font-size: 14px">Nothing here. You’re caught up.</div>
+      </sc-if>
+      <div style="padding: 18px 12px 8px; text-align: center; font-size: 12px; color: rgba(243,233,221,0.5)">Every notification is kept · scroll for older</div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', scope: 'all', read: {}, hover: 1 };
+  }
+  renderVals() {
+    const s = this.state;
+    const C = { blue: '#6aa7e0', accent: '#f2715a', red: '#ff5c7c', ok: '#7cc68d', warn: '#f0b54a', purple: '#a58bd8', muted: '#c9bfb4' };
+    const tint = (c, a) => {
+      const h = c.replace('#', '');
+      return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+    };
+    // [id, group, icon, colour, category, title, body, repo, time, unread, action]
+    const raw = [
+      [1, 'Today', 'farm', C.ok, 'farm', 'T-02 is ready to merge', 'Checks passed · Codex approved · +412 −18', 'spagitty', '6 min', true, 'Approve merge'],
+      [2, 'Today', 'warn', C.red, 'farm', 'T-09 is stuck after 3 tries', 'libsecret-1 is missing on this machine', 'spagitty', '9 min', true, 'Open task'],
+      [3, 'Today', 'request', C.blue, 'pr', 'Review requested', 'Issues: a GitLab provider · #66', 'spagitty', '12 min', true, 'Review'],
+      [4, 'Today', 'warn', C.red, 'checks', 'Checks failed', 'check on feature/hooks-tab · bun run check, step 4', 'spagitty', '21 min', true, 'See the run'],
+      [5, 'Today', 'comment', C.warn, 'pr', 'karim commented', 'Files: the blame column resizes · #63', 'spagitty', '1 h', false, 'Open'],
+      [6, 'Today', 'warn', C.muted, 'git', 'Fetch failed', 'origin: could not resolve host github.com', 'quiblo', '2 h', false, 'Fetch again'],
+      [7, 'Yesterday', 'merge', C.purple, 'pr', 'Your pull request was merged', 'Merger waits for git on a push · #62', 'spagitty', '18:40', false, 'Open'],
+      [8, 'Yesterday', 'farm', C.warn, 'farm', 'Farm stopped', 'Hooks tab, step by step · 4 of 7 merged', 'spagitty', '16:05', false, 'Resume'],
+      [9, 'Yesterday', 'release', C.warn, 'git', 'v0.8.1 published', '3 files · 22 changelog entries', 'spagitty', '11:30', false, 'Open'],
+      [10, 'Yesterday', 'ok', C.ok, 'checks', 'Checks passing again', 'check on main', 'spagitty', '10:12', false, 'See the run'],
+      [11, 'Wednesday, Oct 14', 'request', C.blue, 'pr', 'Review requested', 'EPG grid: virtualise the rows · #21', 'quiblo', '20:15', false, 'Review'],
+      [12, 'Wednesday, Oct 14', 'push', C.muted, 'git', 'Push rejected', 'main is 2 behind origin/main', 'quiblo', '14:02', false, 'Pull'],
+      [13, 'Wednesday, Oct 14', 'merge', C.muted, 'pr', 'Your pull request was closed', 'Try GPUI for the diff view · #58', 'spagitty', '09:48', false, 'Open']
+    ];
+    const isUnread = (r) => r[9] && !s.read[r[0]];
+    const unread = raw.filter(isUnread).length;
+    const passes = (r) =>
+      (s.scope === 'all' || r[7] === 'spagitty') &&
+      (s.filter === 'all' || (s.filter === 'unread' ? isUnread(r) : r[4] === s.filter));
+
+    const groups = [];
+    raw.filter(passes).forEach((r) => {
+      const [id, group, icon, c, , title, body, repo, time, , action] = r;
+      const un = isUnread(r);
+      const hovered = s.hover === id;
+      let g = groups.find((x) => x.label === group);
+      if (!g) { g = { label: group, items: [] }; groups.push(g); }
+      g.items.push({
+        title, body, repo, time, action, unread: un,
+        isRequest: icon === 'request', isComment: icon === 'comment', isMerge: icon === 'merge', isFarm: icon === 'farm',
+        isWarn: icon === 'warn', isOk: icon === 'ok', isRelease: icon === 'release', isPush: icon === 'push',
+        hover: () => this.setState({ hover: id }),
+        read: () => this.setState({ read: Object.assign({}, s.read, { [id]: true }) }),
+        rowStyle: 'display: grid; grid-template-columns: 36px minmax(0, 1fr) 8px; gap: 12px; align-items: start; padding: 12px; border-radius: 14px; ' +
+          (hovered ? 'background: rgba(243,233,221,0.06)' : un ? 'background: rgba(242,113,90,0.05)' : 'background: transparent'),
+        iconStyle: 'width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: ' + c + '; background: ' + tint(c, 0.14),
+        titleStyle: 'font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ' + (un ? 'font-weight: 600; color: #f3e9dd' : 'font-weight: 500; color: rgba(243,233,221,0.88)'),
+        actionsStyle: 'display: flex; gap: 4px; transition: opacity 0.15s; opacity: ' + (hovered ? 1 : 0),
+        dotStyle: 'width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: ' + (un ? '#f2715a' : 'transparent')
+      });
+    });
+
+    const defs = [['all', 'All'], ['unread', 'Unread'], ['pr', 'Pull requests'], ['farm', 'Farm'], ['checks', 'Checks'], ['git', 'Git']];
+    const filters = defs.map(([id, label]) => {
+      const on = s.filter === id;
+      return {
+        label, on, hasCount: id === 'unread' && unread > 0, count: unread,
+        pick: () => this.setState({ filter: id }),
+        style: 'display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 13px; ' +
+          (on ? 'border: 1px solid rgba(242,113,90,0.55); background: rgba(242,113,90,0.16); color: #f3e9dd' : 'border: 1px solid rgba(255,255,255,0.09); background: transparent; color: rgba(243,233,221,0.75)'),
+        countStyle: 'min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; background: #f2715a; color: #2a0e07'
+      };
+    });
+    const scopes = [['all', 'All repos'], ['here', 'spagitty']].map(([id, label]) => ({
+      label, on: s.scope === id,
+      pick: () => this.setState({ scope: id }),
+      style: 'height: 28px; padding: 0 11px; border-radius: 999px; border: 0; font-size: 12.5px; ' +
+        (s.scope === id ? 'background: rgba(243,233,221,0.12); color: #f3e9dd; font-weight: 600' : 'background: transparent; color: rgba(243,233,221,0.65)')
+    }));
+
+    return {
+      groups, filters, scopes, empty: groups.length === 0,
+      unreadLabel: unread ? unread + ' new' : 'all read',
+      readAll: () => {
+        const all = {};
+        raw.forEach((r) => { all[r[0]] = true; });
+        this.setState({ read: all });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

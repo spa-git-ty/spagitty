@@ -1375,18 +1375,13 @@ fn a_branch_switch_does_not_redirect_a_task_merge() {
     harness.repo.git(&["switch", "-c", "unrelated"]);
     let before = harness.repo.git(&["rev-parse", "HEAD"]);
     harness.service.approve(&task).unwrap();
+    // The person's branch is left where it was (FEAT-144): the work lands on
+    // the branch the task recorded, without the person going back to it.
     assert_eq!(harness.repo.git(&["rev-parse", "HEAD"]), before);
-    assert_eq!(harness.status(&task), TaskStatus::Review);
-    assert!(harness
-        .service
-        .farm()
-        .unwrap()
-        .task(&task)
-        .unwrap()
-        .note
-        .as_deref()
-        .unwrap()
-        .contains("Switch back"));
+    assert_eq!(harness.status(&task), TaskStatus::Done);
+    let main = harness.repo.git(&["ls-tree", "--name-only", "main"]);
+    assert!(main.lines().any(|file| file == "agent-output.txt"));
+    assert!(!harness.repo.path().join("agent-output.txt").exists());
 }
 
 #[test]
@@ -1437,4 +1432,54 @@ fn a_failed_reviewer_cannot_approve_with_its_partial_output() {
     assert_eq!(harness.status(&task), TaskStatus::Blocked);
     assert!(!harness.repo.path().join("agent-output.txt").exists());
     assert!(harness.service.review_of(&task).is_none());
+}
+
+/// FEAT-143: on a slice farm the agent stands in its paths and the top-level
+/// files, and the checks see the whole tree.
+#[test]
+fn a_slice_farm_narrows_the_agent_and_checks_the_whole_tree() {
+    let harness = Harness::new();
+    arrange(&harness);
+    harness.service.create("Ship it", "").unwrap();
+    harness
+        .service
+        .configure(|farm| {
+            farm.workspace = WorkspaceMode::Slice;
+            // Only true once the worktree is whole again.
+            farm.verification = vec!["/bin/sh -c 'test -f src/deep/nested/main.rs'".into()];
+        })
+        .unwrap();
+    let definition = scripted_agent(
+        harness.bin(),
+        "worker-slice",
+        r#"if test -e src; then echo seen > saw-src.txt; else echo none > saw-src.txt; fi
+mkdir -p docs && echo "notes" > docs/notes.md
+git add -A >/dev/null 2>&1
+git -c user.name=Agent -c user.email=agent@example.com commit -q -m "TASK slice work" >/dev/null 2>&1
+echo '```spagitty-handoff'
+echo '{"status":"completed","summary":"wrote docs/notes.md","filesChanged":["docs/notes.md"]}'
+echo '```'"#,
+    );
+    let agent = definition.id.clone();
+    harness.service.save_agent(definition).unwrap();
+    let mut task = Task::new(TaskId::new("unset"), "Write the docs", 0);
+    task.status = TaskStatus::Ready;
+    task.allowed_paths = vec!["docs/**".into()];
+    let task = harness.service.add_task(task).unwrap().id;
+
+    harness.run(&task, &agent);
+
+    let worktree = harness.worktree(&task);
+    assert_eq!(
+        std::fs::read_to_string(worktree.join("saw-src.txt"))
+            .unwrap()
+            .trim(),
+        "none",
+        "the agent was given the whole tree"
+    );
+    assert!(
+        harness.service.verification_of(&task).unwrap().passed,
+        "the checks did not see the whole tree"
+    );
+    assert_eq!(harness.status(&task), TaskStatus::Review);
 }

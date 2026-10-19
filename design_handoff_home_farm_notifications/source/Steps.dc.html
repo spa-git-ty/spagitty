@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Farm start — steps</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<ol aria-label="Starting a farm" style="list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 10px; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px">
+  <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+    <li style="display: flex; align-items: center; gap: 10px">
+      <sc-if value="{{ s.notFirst }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="{{ s.barStyle }}"></span></sc-if>
+      <span style="{{ s.dotStyle }}">
+        <sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg></sc-if>
+        <sc-if value="{{ s.notDone }}" hint-placeholder-val="{{ true }}">{{ s.n }}</sc-if>
+      </span>
+      <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+    </li>
+  </sc-for>
+</ol>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"int","min":1,"max":4,"default":1},"$preview":{"width":560,"height":48}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const step = this.props.step ?? 1;
+    const labels = ['Goal', 'Context', 'Crew & rules', 'Start'];
+    const steps = labels.map((label, i) => {
+      const n = i + 1, done = n < step, cur = n === step;
+      return {
+        n, label, done, notDone: !done, notFirst: i > 0,
+        barStyle: 'display: block; width: 28px; height: 2px; border-radius: 1px; background: ' + (n <= step ? '#7cc68d' : 'rgba(243,233,221,0.16)'),
+        dotStyle: 'width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600; ' +
+          (done ? 'color: #7cc68d; border: 2px solid #7cc68d' : cur ? 'color: #f2715a; border: 2px solid #f2715a; box-shadow: 0 0 0 5px rgba(242,113,90,0.18)' : 'color: rgba(243,233,221,0.62); border: 1.5px solid rgba(243,233,221,0.3)'),
+        labelStyle: cur ? 'font-weight: 600' : done ? 'color: #f3e9dd' : 'color: rgba(243,233,221,0.62)'
+      };
+    });
+    return { steps };
+  }
+}
+</script>
+</body>
+</html>

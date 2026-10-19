@@ -192,6 +192,14 @@ rather than an audit.
 | [FEAT-137](items/FEAT-137-hooks.md) | Hooks that run in steps and are built from blocks | 1X | Done |
 | [FEAT-138](items/FEAT-138-pipelines.md) | Preview workflows and follow their runs | 1Y | Done |
 | [FEAT-139](items/FEAT-139-releases.md) | Draft and publish releases with their files | 1Z | Done |
+| [FEAT-140](items/FEAT-140-home.md) | Home: what this repository needs from you | 2A, chrome | Done |
+| [FEAT-141](items/FEAT-141-starting-a-farm-one-step-at-a-time.md) | Starting a farm, one step at a time | 1Q | Done |
+| [FEAT-142](items/FEAT-142-a-notification-center.md) | A notification center that keeps what it said | chrome, 1K | Done |
+| [FEAT-143](items/FEAT-143-a-slice-per-task.md) | A slice per task | 1Q | Done |
+| [FEAT-144](items/FEAT-144-the-landing-lane.md) | The landing lane: merging without a queue, and a log of every branch move | 1Q | Done |
+| [FEAT-145](items/FEAT-145-history-as-tools-for-agents.md) | History as tools for agents | 1Q | Backlog |
+| [FEAT-146](items/FEAT-146-a-conflict-resolver-chosen-in-rules.md) | A conflict resolver chosen in Rules | 1Q, 1S | Backlog |
+| [FEAT-147](items/FEAT-147-own-copies-and-intake.md) | Own copies, and intake at the door | 1Q, 1K | Backlog |
 
 ## Bugs
 

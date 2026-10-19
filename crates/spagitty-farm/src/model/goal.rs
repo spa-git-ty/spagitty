@@ -22,7 +22,46 @@ pub struct Goal {
     /// Extra rules for this goal only, on top of the repository's `AGENTS.md`.
     #[serde(default)]
     pub constraints: Vec<String>,
+    /// What the farm starts from, besides the goal (FEAT-141): issues, briefs
+    /// and a branch in progress. Read by the planner; a farm written before
+    /// has none.
+    #[serde(default)]
+    pub sources: Vec<GoalSource>,
     pub created_ms: u64,
+}
+
+/// One thing a farm starts from (FEAT-141).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum GoalSource {
+    /// An issue on the repository's host, as the Issues screen read it.
+    #[serde(rename_all = "camelCase")]
+    Issue {
+        number: u64,
+        title: String,
+        #[serde(default)]
+        body: String,
+        #[serde(default)]
+        labels: Vec<String>,
+        #[serde(default)]
+        url: String,
+    },
+    /// A written brief: a Markdown file's path and what it said when the farm
+    /// started. The text is kept, so the plan reads what the person picked even
+    /// if the file changes.
+    Brief { path: String, text: String },
+    /// A branch in progress. The farm's tasks start from it and merge into it.
+    Branch { name: String },
+}
+
+impl GoalSource {
+    /// The branch in progress, when this is one.
+    pub fn branch(&self) -> Option<&str> {
+        match self {
+            GoalSource::Branch { name } => Some(name),
+            _ => None,
+        }
+    }
 }
 
 impl Goal {
@@ -32,6 +71,7 @@ impl Goal {
             title: title.into(),
             description: String::new(),
             constraints: Vec::new(),
+            sources: Vec::new(),
             created_ms: now,
         }
     }
@@ -58,6 +98,11 @@ impl Goal {
             }
         }
         out.trim_end().to_string()
+    }
+
+    /// The branch the farm finishes, when it was started from one.
+    pub fn branch(&self) -> Option<&str> {
+        self.sources.iter().find_map(GoalSource::branch)
     }
 }
 

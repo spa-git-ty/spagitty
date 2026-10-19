@@ -18,6 +18,9 @@
 
 import type { Place } from './workspace.svelte';
 
+/** Where a launch lands (FEAT-140). */
+export const HOME_ROUTE = '/home';
+
 /**
  * The operations a resume performs. Everything here is asynchronous or a
  * side effect; none of it is a decision, and that is the split.
@@ -46,8 +49,8 @@ export interface ResumePort {
  *
  * A path on the command line wins: it is what the person just asked for, and it
  * is more specific than what they were doing last time. Otherwise the last
- * session's active tab comes back, and with it the screen and the commit it was
- * left on.
+ * session's active tab comes back, and with it the commit it was left on; the
+ * screen is Home.
  *
  * A tab that fails to open stops the sequence but keeps the tab: `repo.error`
  * says what happened and All repositories marks it missing, because silently
@@ -57,21 +60,35 @@ export interface ResumePort {
 export async function resumeSession(port: ResumePort): Promise<void> {
 	if (port.cancelled()) return;
 
+	/*
+	 * Every launch lands on Home (FEAT-140), which the author chose as the screen
+	 * the window opens on. The tab and its selected commit still come back; the
+	 * stored route is still where a tab switch goes, but not where a launch does.
+	 */
+	const land = async () => {
+		if (!port.cancelled() && port.route() !== HOME_ROUTE) await port.goto(HOME_ROUTE);
+	};
+
 	const launch = await port.launchPath();
 	if (launch) {
 		await port.open(launch);
+		await land();
 		return;
 	}
 
 	const resume = port.active();
-	if (!resume || port.cancelled()) return;
-
-	const place = port.placeOf(resume);
-	if (!(await port.open(resume))) return;
+	if (!resume) {
+		await land();
+		return;
+	}
 	if (port.cancelled()) return;
 
-	if (place?.route && place.route !== port.route()) await port.goto(place.route);
+	const place = port.placeOf(resume);
+	const opened = await port.open(resume);
+	if (port.cancelled()) return;
+
+	await land();
 	// After the route: the graph store holds a wanted id across a walk it cannot
 	// see the end of, the same way a tab switch does.
-	if (place?.selected) port.want(place.selected);
+	if (opened && place?.selected) port.want(place.selected);
 }

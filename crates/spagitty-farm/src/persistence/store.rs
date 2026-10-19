@@ -45,7 +45,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::Result;
-use crate::model::{Farm, Recorded};
+use crate::model::{Farm, LedgerEntry, PastFarm, Recorded, Setup};
 use crate::workspace::worktree::FARM_DIR;
 
 /// How many events are kept.
@@ -58,6 +58,13 @@ pub const MAX_EVENTS: usize = 2_000;
 const FARM_FILE: &str = "farm.json";
 const EVENTS_FILE: &str = "events.jsonl";
 const REGISTRY_FILE: &str = "agents.json";
+const SETUP_FILE: &str = "setup.json";
+const LEDGER_FILE: &str = "ledger.jsonl";
+const PAST_DIR: &str = "past";
+
+/// How many earlier farms are kept. The wizard offers the newest few; a
+/// repository that has run a hundred farms does not need all hundred on disk.
+pub const MAX_PAST: usize = 20;
 
 /// The directory a repository's farm state lives in.
 pub fn directory(repo: &Path) -> PathBuf {
@@ -95,6 +102,112 @@ pub fn load_farm(repo: &Path) -> Option<Farm> {
 
 pub fn save_farm(repo: &Path, farm: &Farm) -> Result<()> {
     write_json(&farm_path(repo), farm)
+}
+
+/// Every branch move the farm made, oldest first (FEAT-144). A line that
+/// does not parse — the last one, when the process died writing it — is
+/// dropped, as the event log drops it.
+pub fn load_ledger(repo: &Path) -> Vec<LedgerEntry> {
+    let Ok(text) = std::fs::read_to_string(directory(repo).join(LEDGER_FILE)) else {
+        return Vec::new();
+    };
+    text.lines()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect()
+}
+
+/// Append one move. The sequence number is the next after the last one read.
+/// Appended, never rewritten.
+pub fn append_ledger(repo: &Path, mut entry: LedgerEntry) -> Result<LedgerEntry> {
+    entry.seq = load_ledger(repo)
+        .last()
+        .map(|last| last.seq + 1)
+        .unwrap_or(1);
+    let path = directory(repo).join(LEDGER_FILE);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let line = serde_json::to_string(&entry)?;
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
+    writeln!(file, "{line}")?;
+    Ok(entry)
+}
+
+/// The crew and rules the last farm here started with (FEAT-141).
+pub fn load_setup(repo: &Path) -> Option<Setup> {
+    read_json(&directory(repo).join(SETUP_FILE))
+}
+
+pub fn save_setup(repo: &Path, setup: &Setup) -> Result<()> {
+    write_json(&directory(repo).join(SETUP_FILE), setup)
+}
+
+fn past_dir(repo: &Path) -> PathBuf {
+    directory(repo).join(PAST_DIR)
+}
+
+/// A file name for a farm id, with nothing in it a file system would refuse.
+fn past_file(repo: &Path, id: &str) -> PathBuf {
+    let safe: String = id
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    past_dir(repo).join(format!("{safe}.json"))
+}
+
+/// Keep a farm that a new one is replacing, so it can be resumed or started
+/// from again (FEAT-141). The oldest go once there are more than [`MAX_PAST`].
+pub fn archive_farm(repo: &Path, farm: &Farm) -> Result<()> {
+    write_json(&past_file(repo, farm.id.as_str()), farm)?;
+    let mut kept = past_farms(repo);
+    if kept.len() > MAX_PAST {
+        kept.sort_by(|a, b| {
+            b.updated_ms
+                .max(b.created_ms)
+                .cmp(&a.updated_ms.max(a.created_ms))
+        });
+        for old in &kept[MAX_PAST..] {
+            let _ = std::fs::remove_file(past_file(repo, old.id.as_str()));
+        }
+    }
+    Ok(())
+}
+
+/// Every kept farm, as saved. One that does not parse is skipped.
+fn past_farms(repo: &Path) -> Vec<Farm> {
+    let Ok(entries) = std::fs::read_dir(past_dir(repo)) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "json"))
+        .filter_map(|entry| read_json(&entry.path()))
+        .collect()
+}
+
+/// The earlier farms, newest first.
+pub fn list_past(repo: &Path) -> Vec<PastFarm> {
+    let mut past: Vec<PastFarm> = past_farms(repo).iter().map(PastFarm::of).collect();
+    past.sort_by_key(|p| std::cmp::Reverse(p.updated_ms));
+    past
+}
+
+/// Take one earlier farm out of the archive, to put it back.
+pub fn take_past(repo: &Path, id: &str) -> Option<Farm> {
+    let path = past_file(repo, id);
+    let farm: Farm = read_json(&path)?;
+    let _ = std::fs::remove_file(path);
+    Some(farm)
 }
 
 /// Forget the farm, leaving its events and worktrees alone.
@@ -235,6 +348,92 @@ mod tests {
         );
         farm.tasks.push(Task::new(task_id(1), "Investigate", 1_000));
         farm
+    }
+
+    #[test]
+    fn the_ledger_is_appended_in_sequence_and_a_torn_line_is_dropped() {
+        use crate::model::{LedgerAgent, LedgerKind};
+        let dir = tempfile::tempdir().unwrap();
+        let entry = |new: &str| LedgerEntry {
+            seq: 0,
+            at_ms: 1,
+            reference: "refs/heads/main".into(),
+            old: Some("a".into()),
+            new: new.into(),
+            kind: LedgerKind::Land,
+            tasks: vec![task_id(1)],
+            by: vec![LedgerAgent {
+                task: task_id(1),
+                agent: None,
+                reviewer: None,
+            }],
+            checks: "before:pass".into(),
+        };
+        assert_eq!(append_ledger(dir.path(), entry("b")).unwrap().seq, 1);
+        assert_eq!(append_ledger(dir.path(), entry("c")).unwrap().seq, 2);
+        // A crash mid-write.
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(dir.path().join(".spagitty/farm/ledger.jsonl"))
+            .unwrap();
+        write!(file, "{{\"seq\":3,\"at").unwrap();
+        let read = load_ledger(dir.path());
+        assert_eq!(
+            read.iter().map(|e| e.new.as_str()).collect::<Vec<_>>(),
+            ["b", "c"]
+        );
+        let json = serde_json::to_value(&read[0]).unwrap();
+        assert_eq!(json["ref"], "refs/heads/main");
+        assert_eq!(json["kind"], "land");
+    }
+
+    #[test]
+    fn the_remembered_setup_reads_back_as_it_was_written() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(load_setup(dir.path()).is_none());
+        let mut setup = Setup::of(&farm());
+        setup.verification = vec!["cargo test".into()];
+        save_setup(dir.path(), &setup).unwrap();
+        assert_eq!(load_setup(dir.path()), Some(setup));
+    }
+
+    #[test]
+    fn a_replaced_farm_is_kept_and_can_be_taken_back() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut first = farm();
+        first.updated_ms = 5_000;
+        let mut second = farm();
+        second.id = FarmId::new("f2");
+        second.goal.title = "Gitea".into();
+        second.updated_ms = 9_000;
+        archive_farm(dir.path(), &first).unwrap();
+        archive_farm(dir.path(), &second).unwrap();
+
+        let listed: Vec<_> = list_past(dir.path())
+            .into_iter()
+            .map(|p| p.goal.title)
+            .collect();
+        assert_eq!(listed, vec!["Gitea".to_string(), "Add OAuth".to_string()]);
+
+        let back = take_past(dir.path(), "f1").expect("kept");
+        assert_eq!(back, first);
+        assert_eq!(list_past(dir.path()).len(), 1);
+        assert!(take_past(dir.path(), "f1").is_none());
+    }
+
+    #[test]
+    fn only_the_newest_past_farms_are_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        for n in 0..(MAX_PAST + 3) {
+            let mut kept = farm();
+            kept.id = FarmId::new(format!("f{n}"));
+            kept.updated_ms = 1_000 + n as u64;
+            archive_farm(dir.path(), &kept).unwrap();
+        }
+        let past = list_past(dir.path());
+        assert_eq!(past.len(), MAX_PAST);
+        assert_eq!(past[0].id.as_str(), format!("f{}", MAX_PAST + 2));
     }
 
     #[test]

@@ -9,7 +9,9 @@
 	import * as farmDelight from '$lib/farm/delight';
 	import type { FarmSettings, Task, TaskDraft, TaskStatus } from '$lib/farm/types';
 	import FarmPhases from '$lib/farm/components/FarmPhases.svelte';
-	import Setup from '$lib/farm/components/Setup.svelte';
+	import Wizard from '$lib/farm/components/wizard/Wizard.svelte';
+	import WizardSteps from '$lib/farm/components/wizard/WizardSteps.svelte';
+	import type { Step } from '$lib/farm/wizard';
 	import Planning from '$lib/farm/components/Planning.svelte';
 	import PlanReview from '$lib/farm/components/PlanReview.svelte';
 	import Building from '$lib/farm/components/Building.svelte';
@@ -29,10 +31,11 @@
 	import '$lib/farm/farm.css';
 
 	/*
-	 * The Farm (1Q), as a journey: Crew → Goal → Plan → Build → Wrap up
-	 * (FEAT-108 to FEAT-113).
+	 * The Farm (1Q), as a journey: the wizard, then Plan → Build → Wrap up
+	 * (FEAT-108 to FEAT-113, FEAT-141).
 	 *
-	 * The screen follows the farm's state rather than a tab: no farm is Setup,
+	 * The screen follows the farm's state rather than a tab: no farm is the
+	 * wizard, one step at a time,
 	 * a planner running is Planning, drafts alone are Plan review, anything
 	 * beyond a draft is Building — with Crew and Activity as its views, kept in
 	 * `?pane=` — and a completed farm is Wrap up. `?task=` is a task's own
@@ -51,6 +54,8 @@
 	let holdPlanning = $state(false);
 	let wasPlanning = false;
 	let now = $state(Date.now());
+	/** The wizard's step, for the header's steps (FEAT-141). */
+	let wizardStep = $state<Step>(1);
 
 	const farm = $derived(farmStore.farm);
 	const taskId = $derived(page.url.searchParams.get('task'));
@@ -67,15 +72,15 @@
 		farmStore.drafts.length > 0 &&
 			!farmStore.tasks.some((t) => t.status !== 'draft' && t.status !== 'cancelled')
 	);
-	const phase = $derived(phaseFor(newGoal ? null : farm, planning, farmStore.usable.length));
+	const phase = $derived(phaseFor(newGoal ? null : farm, planning));
+	const starting = $derived(!farm || newGoal);
 
 	/** Building and its views: the only screens that offer Board · Crew · Activity. */
 	const building = $derived(!!farm && !newGoal && !planning && !holdPlanning && !onlyDrafts);
 
 	/** The line under each phase: what it holds, or what it is doing. */
 	const phaseSubtitles = $derived.by(() => {
-		const crew = `${farmStore.usable.length} ${farmStore.usable.length === 1 ? 'agent' : 'agents'}`;
-		if (!farm || newGoal) return [crew, newTitle];
+		if (!farm || newGoal) return [];
 		const tasks = farmStore.tasks.filter((t) => t.status !== 'cancelled');
 		const left = tasks.filter((t) => t.status !== 'done').length;
 		const plan = planning
@@ -84,8 +89,8 @@
 				? `${farmStore.drafts.length} proposed`
 				: `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
 		const done = farm.status === 'completed';
-		const build = done ? `${tasks.length} merged` : phase === 3 ? `${left} to go` : '';
-		return [crew, farm.goal.title, plan, build, done ? 'tidy up' : ''];
+		const build = done ? `${tasks.length} merged` : phase === 1 ? `${left} to go` : '';
+		return [plan, build, done ? 'tidy up' : ''];
 	});
 
 	// The one clock (FEAT-077): five seconds, and only while something runs.
@@ -118,6 +123,14 @@
 			wasPlanning = false;
 			holdPlanning =
 				typeof document !== 'undefined' && !document.hasFocus() && farmStore.drafts.length > 0;
+		}
+	});
+
+	// `?start=1` is a new farm: Home's *New farm* and *Start a farm* (FEAT-140).
+	$effect(() => {
+		if (page.url.searchParams.get('start') === '1') {
+			startNew();
+			void goto('/farm', { replaceState: true });
 		}
 	});
 
@@ -180,7 +193,8 @@
 					maxParallel: farm.maxParallel,
 					maxAttempts: farm.maxAttempts,
 					permissions: { ...farm.permissions },
-					supplemental: farm.supplemental
+					supplemental: farm.supplemental,
+					workspace: farm.workspace ?? 'worktree'
 				}
 			: {};
 		rules = true;
@@ -237,7 +251,7 @@
 				{:else if repo.info && farmStore.loaded}
 					<span class="farm-context">
 						{#if !farm || newGoal}
-							{repo.info.name} · no farm yet
+							{repo.info.name} · new farm
 						{:else if onlyDrafts && !planning && !holdPlanning}
 							The plan for <strong>{farm.goal.title}</strong>
 						{:else}
@@ -246,7 +260,9 @@
 					</span>
 				{/if}
 			</div>
-			{#if repo.info}
+			{#if repo.info && starting}
+				<WizardSteps current={wizardStep} />
+			{:else if repo.info}
 				<FarmPhases current={phase} subtitles={phaseSubtitles} />
 			{/if}
 		</header>
@@ -291,11 +307,12 @@
 					</div>
 				{/if}
 			{:else if newGoal || !farm}
-				<Setup
+				<Wizard
 					{busy}
 					{act}
 					title={newTitle}
 					description={newDescription}
+					bind:step={wizardStep}
 					oncreated={() => (newGoal = false)}
 				/>
 			{:else if planning || holdPlanning}
@@ -339,7 +356,7 @@
 
 	{#if rules}
 		<FarmSheet title={C.rules} onclose={() => (rules = false)}>
-			<RulesEditor bind:settings {busy} {act} />
+			<RulesEditor bind:settings {busy} {act} workspaces />
 			<div class="actions">
 				<Btn onclick={() => (rules = false)}>{C.close}</Btn>
 				<Btn primary disabled={busy || !farm} onclick={saveRules}>{C.saveRules}</Btn>

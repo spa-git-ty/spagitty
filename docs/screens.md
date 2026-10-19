@@ -12,6 +12,7 @@ defect.
 
 | Code | Screen | Route | Rail | State | Item |
 | --- | --- | --- | --- | --- | --- |
+| 2A | Home | `/home` | yes, top | Built | FEAT-140 |
 | 1A | Graph | `/` | yes | Built | FEAT-001 |
 | 1B | Diff | `/diff` | no | Built | FEAT-002 |
 | 1C | Working copy | `/changes` | yes | Built | FEAT-003 |
@@ -66,6 +67,14 @@ not reach and the accounts Settings had no client for, were closed by FEAT-017.
 because it is how the next unbuilt screen says what it will be rather than
 pretending to be it: a half-built screen that looks real is harder to read than
 an honest empty one.
+
+## 2A — Home
+
+**Item:** [FEAT-140](../agile/items/FEAT-140-home.md). **Route:** `/home`.
+
+The top of the rail, above a divider and the Farm, and the screen a launch opens on: the last session's tab and selected commit come back, the screen is Home. The header names the repository, the branch against its upstream, when it was last fetched, and the remote, licence and version; `Fetch all` and `New farm`.
+
+**Needs you** lists what waits on the person now, most urgent first — merge ready, review requested, task stuck, checks failed, changes requested, assigned to you — with All, Reviews, Failing and Farm chips. A row leaves when its thing is done. Each kind's colour, icon and button come from `src/lib/notifications/kinds.ts`, which the notification center reads too. Beside it, the Farm card and Working copy; below, Branches, Pull requests and Latest commits, then sixteen weeks of commits, Pipelines and Releases. The git half is one read (`home_overview`); the forge half rides the watcher's clock and Home adds no timer.
 
 ## 1Z — Releases
 
@@ -916,8 +925,14 @@ rather than by volume, because volume ranks whoever was given the most work.
 **Built.** `src/routes/farm/+page.svelte`, `src/lib/farm/` and
 `crates/spagitty-farm` (FEAT-073, redesigned in FEAT-108–113).
 
-A farm follows five phases: **Crew → Goal → Plan → Build → Wrap up**.
-The phase tracker stays in the header. Farm remains at 1Q on the rail; its
+A farm starts with a wizard, one step at a time (FEAT-141): **Goal → Start
+from → Crew & rules → Start**. Only a one-line goal is required; the crew and
+rules come back as the last farm in the repository had them, and earlier farms
+can be resumed or started from. The farm can start from issues, briefs and a
+branch in progress, all of which go into the planning prompt with a map of the
+repository. After it, the farm follows three phases: **Plan → Build → Wrap up**.
+The tracker stays in the header; while the wizard is open it shows the
+wizard's steps. Farm remains at 1Q on the rail; its
 dot means a task needs the person, including checked, approved work waiting
 to merge, in the repository the farm belongs to. So the dot works before the
 screen is visited, the shell opens a repository's farm when it already has one

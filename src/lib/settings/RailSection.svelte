@@ -49,7 +49,7 @@
 
 	/** Two columns, as the day goes: the work on the left, the rest beside it. */
 	const COLUMNS: NavGroup[][] = [
-		['farm', 'work'],
+		['home', 'farm', 'work'],
 		['tools', 'app']
 	];
 
@@ -57,7 +57,7 @@
 		return items.filter((item) => item.group === group);
 	}
 
-	/** `farm` has no heading on the rail, being one row. Here every card has one. */
+	/** `home` and `farm` have no heading on the rail, being one row each. Here every card has one. */
 	function nameOf(group: NavGroup): string {
 		return GROUP_LABELS[group] ?? members(group)[0]?.label ?? '';
 	}

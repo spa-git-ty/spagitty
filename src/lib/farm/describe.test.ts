@@ -28,9 +28,10 @@ import {
 	taskStatusLabel,
 	tone,
 	verificationLine,
-	waitingOn
+	waitingOn,
+	ledgerLine
 } from './describe';
-import type { AgentProvider, FarmEvent, FarmStatus, TaskKind, TaskStatus, Verification } from './types';
+import type { AgentProvider, FarmEvent, LedgerEntry, FarmStatus, TaskKind, TaskStatus, Verification } from './types';
 
 /** Every member of each closed set, so a new one cannot arrive unlabelled. */
 const ALL_TASK_STATUSES: TaskStatus[] = [
@@ -417,5 +418,40 @@ describe('who asked for a task (FEAT-078)', () => {
 		] as const) {
 			expect(originMark(origin)).not.toBeNull();
 		}
+	});
+});
+
+describe('the ledger, in sentences (FEAT-144)', () => {
+	const agents = [
+		{ definition: { id: 'codex', displayName: 'Codex' }, availability: { state: 'missing' } },
+		{ definition: { id: 'claude', displayName: 'Claude Code' }, availability: { state: 'missing' } }
+	] as never;
+	const entry = (over: Partial<LedgerEntry>): LedgerEntry => ({
+		seq: 1,
+		atMs: 0,
+		ref: 'refs/heads/main',
+		old: 'a',
+		new: 'b',
+		kind: 'land',
+		tasks: ['T-02'],
+		by: [{ task: 'T-02', agent: 'codex', reviewer: 'claude' }],
+		checks: 'before:pass',
+		...over
+	});
+
+	it('says who made it, who passed it and how it was checked', () => {
+		expect(ledgerLine(entry({}), agents)).toBe(
+			'T-02 merged into main: Codex, passed by Claude Code · checked as merged with main'
+		);
+		expect(ledgerLine(entry({ checks: 'before:skipped' }), agents)).toBe(
+			'T-02 merged into main: Codex, passed by Claude Code · its own checks stood'
+		);
+	});
+
+	it('names a merge made in Merger and a land that lost the race', () => {
+		expect(ledgerLine(entry({ kind: 'merger', checks: 'merger', by: [{ task: 'T-02', agent: null, reviewer: null }] }), agents)).toBe(
+			'T-02 merged into main in Merger'
+		);
+		expect(ledgerLine(entry({ kind: 'retryLost' }), agents)).toContain('main moved while T-02 was merging');
 	});
 });

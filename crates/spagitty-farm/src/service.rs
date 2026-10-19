@@ -50,7 +50,7 @@ use crate::persistence::store;
 use crate::policy::{self, Policy};
 use crate::review::{reviewer, Review};
 use crate::verification::{evidence, verifier, CommandResult, Verification};
-use crate::workspace::{self, Leases};
+use crate::workspace::{self, Leases, SliceProvider};
 
 /// Where farm events go.
 ///
@@ -377,12 +377,37 @@ impl FarmService {
 
     /// Start a new farm against a goal, replacing any previous one.
     pub fn create(&self, goal_title: &str, description: &str) -> Result<Farm> {
+        self.create_from(goal_title, description, Vec::new())
+    }
+
+    /// Start a new farm against a goal and what it starts from (FEAT-141).
+    ///
+    /// The farm it replaces is kept under `past/` when it had any work in it,
+    /// so the wizard can offer to resume it or start from it. A farm that was
+    /// set up and never planned is nothing to come back to.
+    pub fn create_from(
+        &self,
+        goal_title: &str,
+        description: &str,
+        sources: Vec<GoalSource>,
+    ) -> Result<Farm> {
+        if !self.sessions.lock().expect("sessions lock").is_empty() {
+            return Err(Error::Refused(
+                "Agents are still running in this farm. Stop them before starting another.".into(),
+            ));
+        }
         let now = now_ms();
         let mut goal = Goal::new(GoalId::new(format!("goal-{now}")), goal_title, now);
         goal.description = description.to_string();
+        goal.sources = sources;
+        if let Some(previous) = self.farm() {
+            if !previous.tasks.is_empty() {
+                store::archive_farm(&self.repo, &previous)?;
+            }
+        }
 
         let mut farm = Farm::new(
-            FarmId::new(format!("farm-{now}")),
+            self.fresh_farm_id(now),
             self.repo.to_string_lossy(),
             goal,
             now,
@@ -401,6 +426,75 @@ impl FarmService {
             status: FarmStatus::Idle,
         });
         Ok(farm)
+    }
+
+    /// An id no farm here has had (FEAT-141). Two farms started in the same
+    /// millisecond would otherwise share one, and the second would overwrite
+    /// the first in the archive of past farms.
+    fn fresh_farm_id(&self, now: u64) -> FarmId {
+        let taken: Vec<String> = self
+            .farm()
+            .into_iter()
+            .map(|farm| farm.id.as_str().to_string())
+            .chain(
+                store::list_past(&self.repo)
+                    .into_iter()
+                    .map(|past| past.id.as_str().to_string()),
+            )
+            .collect();
+        let mut id = format!("farm-{now}");
+        let mut n = 1;
+        while taken.contains(&id) {
+            n += 1;
+            id = format!("farm-{now}-{n}");
+        }
+        FarmId::new(id)
+    }
+
+    /// The crew and rules the last farm here started with (FEAT-141).
+    pub fn remembered(&self) -> Option<Setup> {
+        store::load_setup(&self.repo)
+    }
+
+    /// Remember this farm's crew and rules for the next one.
+    pub fn remember(&self) -> Result<Setup> {
+        let farm = self.farm().ok_or(Error::NoFarm)?;
+        let setup = Setup::of(&farm);
+        store::save_setup(&self.repo, &setup)?;
+        Ok(setup)
+    }
+
+    /// The farms that came before in this repository, newest first.
+    pub fn past(&self) -> Vec<PastFarm> {
+        store::list_past(&self.repo)
+    }
+
+    /// Put an earlier farm back, keeping the one it replaces (FEAT-141).
+    ///
+    /// Refused while an agent is running: the running task belongs to the farm
+    /// on screen, and swapping the farm out from under it would orphan it.
+    pub fn resume(&self, id: &FarmId) -> Result<Farm> {
+        if !self.sessions.lock().expect("sessions lock").is_empty() {
+            return Err(Error::Refused(
+                "Agents are still running in this farm. Stop them before resuming another.".into(),
+            ));
+        }
+        let past = store::take_past(&self.repo, id.as_str())
+            .ok_or_else(|| Error::Refused("That farm is no longer kept.".into()))?;
+        let mut state = self.state.lock().expect("farm lock");
+        if let Some(current) = state.farm.take() {
+            if !current.tasks.is_empty() {
+                store::archive_farm(&self.repo, &current)?;
+            }
+        }
+        state.farm = Some(past.clone());
+        state.leases = Leases::default();
+        self.persist(&state)?;
+        drop(state);
+        self.emit(FarmEvent::FarmStatusChanged {
+            status: past.status,
+        });
+        Ok(past)
     }
 
     /// Replace the farm's settings — autonomy, permissions, parallelism,
@@ -1011,9 +1105,15 @@ impl FarmService {
             (task, prompt, unattended)
         };
 
+        // A farm started from a branch in progress finishes that branch: its
+        // tasks start from it and merge into it (FEAT-141).
+        let in_progress = self
+            .farm()
+            .and_then(|farm| farm.goal.branch().map(str::to_string));
         let destination = task
             .merge_target
             .clone()
+            .or(in_progress)
             .map(Ok)
             .unwrap_or_else(|| evidence::branch(&self.repo))?;
         self.set_status(id, TaskStatus::Assigned, None)?;
@@ -1021,7 +1121,22 @@ impl FarmService {
         // The worktree is cut from the branch the user is on, so a farm run
         // starts from what they can see rather than from `main` on a checkout
         // that has moved on.
-        let workspace = match workspace::create(&self.repo, id, definition.provider, &destination) {
+        // A slice farm narrows the worktree every time a run starts — the first
+        // run, and each one after a send-back widened it for the checks
+        // (FEAT-143). A whole-worktree farm cuts it as it always did.
+        let sliced = self
+            .farm()
+            .is_some_and(|farm| farm.workspace == WorkspaceMode::Slice);
+        let opened = if sliced {
+            workspace::WorktreeSlice {
+                repo: self.repo.clone(),
+                provider: definition.provider,
+            }
+            .open(id, &destination, &workspace::slice::patterns(&task))
+        } else {
+            workspace::create(&self.repo, id, definition.provider, &destination)
+        };
+        let workspace = match opened {
             Ok(workspace) => workspace,
             Err(error) => {
                 self.state.lock().expect("farm lock").leases.release(id);
@@ -1385,6 +1500,10 @@ impl FarmService {
                 .unwrap_or_else(|| workspace::worktree_path(&self.repo, id));
             (workdir, verifier::commands_for(&farm.verification, task))
         };
+
+        // The checks see the whole tree, whatever the agent worked in
+        // (FEAT-143). A worktree that was never narrowed is left as it is.
+        workspace::slice::widen(&workdir)?;
 
         self.set_status(id, TaskStatus::Verification, None)?;
         let before = evidence::clean_commit(&workdir).ok();
@@ -2017,12 +2136,23 @@ impl FarmService {
                 "{branch} is not in {destination} yet, so the task is not merged."
             )));
         }
+        let sha = shell::commit_id(&self.repo, &destination).ok();
+        if let Some(new) = &sha {
+            self.write_ledger(
+                LedgerKind::Merger,
+                &task,
+                &destination,
+                None,
+                new.clone(),
+                "merger",
+            );
+        }
         self.emit(FarmEvent::MergeCompleted {
             task: id.clone(),
             branch,
             ok: true,
             error: None,
-            sha: shell::commit_id(&self.repo, &destination).ok(),
+            sha,
         });
         self.set_status(id, TaskStatus::Done, None)?;
         let _ = workspace::remove(&self.repo, id, provider, false);
@@ -2038,6 +2168,12 @@ impl FarmService {
         Ok(())
     }
 
+    /// Land a task through the lane (FEAT-144).
+    ///
+    /// The person no longer has to stand on the destination, and nothing is
+    /// merged in their working copy: the lane builds the merge commit, checks
+    /// it when the destination moved since the task started, and moves the
+    /// branch by compare-and-swap.
     fn merge_checked(&self, id: &TaskId, automatic: bool) -> Result<()> {
         let merge_guard = self.merge_lock.lock().expect("merge lock");
         let (task, provider) = self.awaiting_merge(id)?;
@@ -2051,18 +2187,15 @@ impl FarmService {
             .map(Path::new)
             .ok_or_else(|| Error::Refused("This task has no worktree.".into()))?;
         let commit = evidence::clean_commit(workdir)?;
-        let destination = evidence::branch(&self.repo)?;
-        if let Some(expected) = &task.merge_target {
-            if expected != &destination {
-                return Err(Error::Refused(format!(
-                    "Switch back to {expected} before merging this task."
-                )));
+        let destination = match &task.merge_target {
+            Some(target) => target.clone(),
+            None if automatic => {
+                return Err(Error::Refused(
+                    "This older task has no recorded merge destination; merge it by hand.".into(),
+                ))
             }
-        } else if automatic {
-            return Err(Error::Refused(
-                "This older task has no recorded merge destination; merge it by hand.".into(),
-            ));
-        }
+            None => evidence::branch(&self.repo)?,
+        };
         self.check_supplemental(&task)?;
         if automatic {
             self.check_merge_evidence(&task, &commit)?;
@@ -2073,16 +2206,14 @@ impl FarmService {
             branch: branch.clone(),
         });
 
-        // `--no-ff`, always. A farm branch that fast-forwards disappears from
-        // the history, and "which agent wrote this" stops having an answer.
-        match shell::merge_into(&self.repo, &commit, &destination) {
-            Ok(()) => {
+        match self.land(&task, &branch, &commit, &destination) {
+            Ok(landed) => {
                 self.emit(FarmEvent::MergeCompleted {
                     task: id.clone(),
                     branch: branch.clone(),
                     ok: true,
                     error: None,
-                    sha: shell::commit_id(&self.repo, "HEAD").ok(),
+                    sha: Some(landed),
                 });
                 self.set_status(id, TaskStatus::Done, None)?;
                 let _ = workspace::remove(&self.repo, id, provider, false);
@@ -2097,8 +2228,8 @@ impl FarmService {
                 self.tick();
                 Ok(())
             }
-            Err(error) => {
-                let message = error.to_string();
+            Err(stop) => {
+                let message = stop.to_string();
                 self.emit(FarmEvent::MergeCompleted {
                     task: id.clone(),
                     branch,
@@ -2106,16 +2237,227 @@ impl FarmService {
                     error: Some(message.clone()),
                     sha: None,
                 });
-                // A conflict is never resolved silently by an agent. The task
-                // is blocked, the conflict is in the working copy, and the
-                // Conflicts screen is where it is dealt with.
-                self.set_status(
-                    id,
-                    TaskStatus::Blocked,
-                    Some(format!("The merge did not apply cleanly. {message}")),
-                )
+                drop(merge_guard);
+                match stop {
+                    // Merged with the destination, the work fails its checks:
+                    // back to its agent, as a red check on its own commit is.
+                    LaneStop::Red(why) => self.after_rejection(id, why),
+                    // A conflict is never resolved silently by an agent, and
+                    // finding one touched no files. Merger is where it is
+                    // resolved, as a person's merge is (FEAT-117).
+                    LaneStop::Conflict(_) | LaneStop::Failed(_) => {
+                        self.set_status(id, TaskStatus::Blocked, Some(message))
+                    }
+                }
             }
         }
+    }
+
+    /// Every branch move the farm made, oldest first (FEAT-144).
+    pub fn ledger(&self) -> Vec<LedgerEntry> {
+        store::load_ledger(&self.repo)
+    }
+
+    /// Who did a task's work and who passed it, for the ledger.
+    fn credits(&self, task: &Task) -> LedgerAgent {
+        let reviewer = self
+            .state
+            .lock()
+            .expect("farm lock")
+            .runs
+            .iter()
+            .rfind(|run| run.task == task.id && run.phase == RunPhase::Review)
+            .map(|run| run.agent.clone());
+        LedgerAgent {
+            task: task.id.clone(),
+            agent: task.implemented_by.clone(),
+            reviewer,
+        }
+    }
+
+    fn write_ledger(
+        &self,
+        kind: LedgerKind,
+        task: &Task,
+        destination: &str,
+        old: Option<String>,
+        new: String,
+        checks: &str,
+    ) {
+        let _ = store::append_ledger(
+            &self.repo,
+            LedgerEntry {
+                seq: 0,
+                at_ms: now_ms(),
+                reference: format!("refs/heads/{destination}"),
+                old,
+                new,
+                kind,
+                tasks: vec![task.id.clone()],
+                by: vec![self.credits(task)],
+                checks: checks.to_string(),
+            },
+        );
+    }
+
+    /// The lane for one task: read the tip, build the candidate, check it when
+    /// the tip is not already in the task's commit, and move the branch only if
+    /// it is still where it was read. A tip that moved is a rebuild.
+    fn land(
+        &self,
+        task: &Task,
+        branch: &str,
+        commit: &str,
+        destination: &str,
+    ) -> std::result::Result<String, LaneStop> {
+        let failed = |error: &dyn std::fmt::Display| LaneStop::Failed(error.to_string());
+        let repo = spagitty_core::repo::open(&self.repo).map_err(|e| failed(&e))?;
+        let message = format!("Merge branch '{branch}' into {destination}");
+        let reason = format!("spagitty farm: land {} into {destination}", task.id);
+        for _ in 0..LANE_TRIES {
+            let tip = shell::commit_id(&self.repo, destination).map_err(|e| failed(&e))?;
+            if shell::is_ancestor(&self.repo, commit, &tip).map_err(|e| failed(&e))? {
+                // Already there: merged by a person, or by an earlier try.
+                return Ok(tip);
+            }
+            // `--no-ff`, always. A farm branch that fast-forwards disappears
+            // from the history, and "which agent wrote this" stops having an
+            // answer.
+            let candidate = match spagitty_core::merger::land::candidate(&repo, &tip, commit, &message) {
+                Ok(candidate) => candidate,
+                Err(spagitty_core::Error::NotStageable(why)) => {
+                    return Err(LaneStop::Conflict(format!(
+                        "Conflicts with {destination} ({why}). Resolve it in Merger; nothing was written."
+                    )))
+                }
+                Err(error) => return Err(failed(&error)),
+            };
+            let started_from_tip =
+                shell::is_ancestor(&self.repo, &tip, commit).map_err(|e| failed(&e))?;
+            let checks = if started_from_tip {
+                // The candidate's tree is the task's own, which was checked.
+                "before:skipped"
+            } else {
+                self.check_candidate(task, &candidate, destination)?;
+                "before:pass"
+            };
+            match spagitty_core::merger::land::advance(
+                &repo,
+                destination,
+                &candidate,
+                &tip,
+                &reason,
+            ) {
+                Ok(()) => {
+                    self.write_ledger(
+                        LedgerKind::Land,
+                        task,
+                        destination,
+                        Some(tip),
+                        candidate.clone(),
+                        checks,
+                    );
+                    return Ok(candidate);
+                }
+                Err(spagitty_core::Error::Stale(_)) => {
+                    self.write_ledger(
+                        LedgerKind::RetryLost,
+                        task,
+                        destination,
+                        Some(tip),
+                        candidate,
+                        checks,
+                    );
+                    continue;
+                }
+                Err(error) => return Err(failed(&error)),
+            }
+        }
+        Err(LaneStop::Failed(format!(
+            "{destination} kept moving while this task was landing. Try again when it is quiet."
+        )))
+    }
+
+    /// Run the task's checks on a candidate, in a scratch worktree of the
+    /// lane's own, so a red result is known before the branch moves.
+    fn check_candidate(
+        &self,
+        task: &Task,
+        candidate: &str,
+        destination: &str,
+    ) -> std::result::Result<(), LaneStop> {
+        let commands = {
+            let state = self.state.lock().expect("farm lock");
+            let Some(farm) = state.farm.as_ref() else {
+                return Err(LaneStop::Failed("The farm is gone.".into()));
+            };
+            verifier::commands_for(&farm.verification, task)
+        };
+        if commands.is_empty() {
+            return Ok(());
+        }
+        let safe: String = destination
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '-' || c == '.' {
+                    c
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let dir = self
+            .repo
+            .join(workspace::FARM_DIR)
+            .join("farm")
+            .join("lane")
+            .join(safe);
+        if dir.exists() {
+            let _ = shell::worktree_remove(&self.repo, &dir, true);
+            let _ = std::fs::remove_dir_all(&dir);
+        }
+        if let Some(parent) = dir.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        shell::worktree_add(&self.repo, &dir, Some(candidate), None, true)
+            .map_err(|e| LaneStop::Failed(e.to_string()))?;
+
+        let task_id = task.id.clone();
+        let mut starting = |command: &str| {
+            self.emit(FarmEvent::VerificationStarted {
+                task: task_id.clone(),
+                command: format!("{command} (merged with {destination})"),
+            });
+        };
+        let mut report = |result: &CommandResult| {
+            self.emit(FarmEvent::VerificationFinished {
+                task: task_id.clone(),
+                command: format!("{} (merged with {destination})", result.command),
+                passed: result.passed,
+                output: result.output.clone(),
+            });
+        };
+        let never = AtomicBool::new(false);
+        let verification =
+            verifier::run_cancellable(&dir, &commands, &never, &mut starting, &mut report);
+        let _ = shell::worktree_remove(&self.repo, &dir, true);
+        let _ = std::fs::remove_dir_all(&dir);
+
+        if verification.passed {
+            return Ok(());
+        }
+        let failure = verification
+            .failures()
+            .first()
+            .map(|result| {
+                let tail: Vec<&str> = result.output.lines().rev().take(12).collect();
+                let tail: Vec<&str> = tail.into_iter().rev().collect();
+                format!("{} failed:\n{}", result.command, tail.join("\n"))
+            })
+            .unwrap_or_default();
+        Err(LaneStop::Red(format!(
+            "Merged with {destination}, the checks fail. {failure}"
+        )))
     }
 
     fn check_merge_evidence(&self, task: &Task, commit: &str) -> Result<()> {
@@ -2187,7 +2529,11 @@ impl FarmService {
         let prompt = {
             let state = self.state.lock().expect("farm lock");
             let farm = state.farm.as_ref().ok_or(Error::NoFarm)?;
-            context::planning(farm, &policy::read(&self.repo))
+            context::planning(
+                farm,
+                &policy::read(&self.repo),
+                &context::repository_map(&tracked_paths(&self.repo)),
+            )
         };
         self.start_planning(prompt, None, agent)
     }
@@ -2670,6 +3016,47 @@ impl FarmService {
             })
             .unwrap_or(AgentProvider::Custom)
     }
+}
+
+/// How many times the lane rebuilds a candidate when the branch moved
+/// under it, before it gives up for now (FEAT-144).
+const LANE_TRIES: usize = 3;
+
+/// Why the lane stopped without landing (FEAT-144).
+#[derive(Debug)]
+enum LaneStop {
+    /// The task does not merge cleanly into the destination.
+    Conflict(String),
+    /// Merged with the destination, the checks fail.
+    Red(String),
+    /// Anything else: git refused, the branch kept moving.
+    Failed(String),
+}
+
+impl std::fmt::Display for LaneStop {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LaneStop::Conflict(why) | LaneStop::Red(why) | LaneStop::Failed(why) => {
+                f.write_str(why)
+            }
+        }
+    }
+}
+
+/// Every tracked path, from the index, for the planner's map (FEAT-141).
+/// A repository that cannot be read gives an empty map, never a failed plan.
+fn tracked_paths(repo: &Path) -> Vec<String> {
+    let Ok(repository) = spagitty_core::repo::open(repo) else {
+        return Vec::new();
+    };
+    let Ok(index) = repository.index_or_empty() else {
+        return Vec::new();
+    };
+    index
+        .entries()
+        .iter()
+        .map(|entry| entry.path(&index).to_string())
+        .collect()
 }
 
 #[cfg(test)]

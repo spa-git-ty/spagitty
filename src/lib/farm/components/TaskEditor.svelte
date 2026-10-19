@@ -47,6 +47,7 @@
 	let priority = $state<TaskPriority>(untrack(() => task?.priority ?? 'normal'));
 	let dependsOn = $state<string[]>(untrack(() => task?.dependsOn ?? []));
 	let paths = $state(untrack(() => text(task?.allowedPaths ?? [])));
+	let reads = $state(untrack(() => text(task?.reads ?? [])));
 	let criteria = $state(untrack(() => text(task?.acceptanceCriteria ?? [])));
 	let checks = $state(untrack(() => text(task?.verification ?? [])));
 	let overrides = $state(untrack(() => task?.verificationOverrides ?? false));
@@ -68,6 +69,7 @@
 			priority,
 			dependsOn,
 			allowedPaths: lines(paths),
+			reads: lines(reads),
 			acceptanceCriteria: lines(criteria),
 			verification: lines(checks),
 			verificationOverrides: overrides,
@@ -141,6 +143,13 @@
 				With no paths, this task runs on its own — nothing else can run beside it.
 			</span>
 		{/if}
+	</label>
+
+	<!-- FEAT-143: what the task reads and may not change. A slice holds these
+	     as well as the allowed paths. -->
+	<label class="field">
+		<span class="note">Reads, one per line · may not change</span>
+		<textarea bind:value={reads} rows="2" placeholder="backend/src/session/**"></textarea>
 	</label>
 
 	<label class="field">

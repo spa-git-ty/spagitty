@@ -22,7 +22,7 @@
 //! has no content teaches the agent nothing; a section that says "Allowed
 //! files: the whole repository" tells it something true and important.
 
-use crate::model::{Farm, Goal, Handoff, Task};
+use crate::model::{Farm, Goal, GoalSource, Handoff, Task, WorkspaceMode};
 use crate::policy::Policy;
 use crate::review::Review;
 
@@ -68,6 +68,8 @@ pub fn implementation(context: &Context<'_>) -> String {
             ),
         );
     }
+
+    slice_section(&mut out, context.farm, context.task);
 
     section(
         &mut out,
@@ -118,10 +120,23 @@ pub fn review(context: &Context<'_>, diff_summary: &str) -> String {
 }
 
 /// The prompt for a planning run.
-pub fn planning(farm: &Farm, policy: &Policy) -> String {
+///
+/// `map` is the repository's layout, from [`repository_map`]: the planner
+/// reads the repository itself, and the map tells it where to start (FEAT-141).
+pub fn planning(farm: &Farm, policy: &Policy, map: &str) -> String {
     let mut out = String::new();
     goal_section(&mut out, &farm.goal);
+    sources_section(&mut out, &farm.goal.sources);
     rules_section(&mut out, policy);
+    section(
+        &mut out,
+        "REPOSITORY MAP",
+        if map.trim().is_empty() {
+            "No files are tracked yet."
+        } else {
+            map.trim_end()
+        },
+    );
     section(
         &mut out,
         "YOUR JOB",
@@ -183,8 +198,130 @@ pub fn decomposition(farm: &Farm, task: &Task, policy: &Policy) -> String {
     out.trim_end().to_string()
 }
 
+/// Where the agent is standing, when the farm works in slices (FEAT-143):
+/// which paths are checked out, and that the rest is in the repository, only
+/// not here. Absent for a whole worktree, which needs no explaining.
+fn slice_section(out: &mut String, farm: &Farm, task: &Task) {
+    if farm.workspace != WorkspaceMode::Slice {
+        return;
+    }
+    let mut shown: Vec<String> = task
+        .allowed_paths
+        .iter()
+        .chain(task.reads.iter())
+        .filter(|path| !path.trim().is_empty())
+        .cloned()
+        .collect();
+    shown.dedup();
+    if shown.is_empty() {
+        return;
+    }
+    section(
+        out,
+        "YOUR SLICE",
+        &format!(
+            "This worktree is a slice: only the repository's top-level files and these \
+             paths are checked out.\n{}\n\nEverything else is still in the repository, \
+             only not here. Read it with `git show HEAD:<path>` if you need to; do not \
+             create files outside these paths. The checks run on the whole tree.",
+            bullets(&shown)
+        ),
+    );
+}
+
 fn goal_section(out: &mut String, goal: &Goal) {
     section(out, "GOAL", &goal.brief());
+}
+
+/// What the person picked to start from (FEAT-141): each issue, each brief and
+/// the branch in progress, in full. Absent when nothing was picked, because
+/// here "none" would only repeat the goal.
+fn sources_section(out: &mut String, sources: &[GoalSource]) {
+    if sources.is_empty() {
+        return;
+    }
+    let mut text = String::from(
+        "The person picked these to start from. Plan from them as well as from the goal.",
+    );
+    for source in sources {
+        text.push_str("\n\n");
+        match source {
+            GoalSource::Issue {
+                number,
+                title,
+                body,
+                labels,
+                url,
+            } => {
+                text.push_str(&format!("## Issue #{number}: {title}"));
+                if !labels.is_empty() {
+                    text.push_str(&format!("\nLabels: {}", labels.join(", ")));
+                }
+                if !url.is_empty() {
+                    text.push_str(&format!("\n{url}"));
+                }
+                if !body.trim().is_empty() {
+                    text.push_str("\n\n");
+                    text.push_str(body.trim());
+                }
+            }
+            GoalSource::Brief { path, text: brief } => {
+                text.push_str(&format!("## Brief: {path}\n\n{}", brief.trim()));
+            }
+            GoalSource::Branch { name } => {
+                text.push_str(&format!(
+                    "## Branch in progress: {name}\n\nThis work has started on {name}. \
+                     Read what it already has (its commits since it left the default \
+                     branch), then plan what finishes it. Every task starts from {name} \
+                     and is merged back into it."
+                ));
+            }
+        }
+    }
+    section(out, "STARTING POINTS", &text);
+}
+
+/// How many lines the repository map may take.
+const MAP_LINES: usize = 80;
+
+/// The repository's layout in a few dozen lines: every top-level file, and
+/// every folder to two levels with how many tracked files it holds.
+///
+/// From the tracked paths alone, so it is the same on every machine and says
+/// nothing about build output.
+pub fn repository_map(paths: &[String]) -> String {
+    use std::collections::BTreeMap;
+    let mut files: Vec<&str> = Vec::new();
+    let mut folders: BTreeMap<String, usize> = BTreeMap::new();
+    for path in paths {
+        let parts: Vec<&str> = path.split('/').collect();
+        match parts.len() {
+            0 | 1 => files.push(path),
+            2 => *folders.entry(format!("{}/", parts[0])).or_default() += 1,
+            _ => {
+                *folders.entry(format!("{}/", parts[0])).or_default() += 1;
+                *folders
+                    .entry(format!("{}/{}/", parts[0], parts[1]))
+                    .or_default() += 1;
+            }
+        }
+    }
+    let mut lines: Vec<String> = files.iter().map(|f| f.to_string()).collect();
+    for (folder, count) in &folders {
+        let indent = if folder.matches('/').count() > 1 {
+            "  "
+        } else {
+            ""
+        };
+        let noun = if *count == 1 { "file" } else { "files" };
+        lines.push(format!("{indent}{folder} ({count} {noun})"));
+    }
+    if lines.len() > MAP_LINES {
+        let rest = lines.len() - MAP_LINES;
+        lines.truncate(MAP_LINES);
+        lines.push(format!("… and {rest} more"));
+    }
+    lines.join("\n")
 }
 
 fn task_section(out: &mut String, task: &Task) {
@@ -458,8 +595,11 @@ mod tests {
 
     #[test]
     fn a_planning_prompt_asks_for_disjoint_paths() {
-        let prompt = planning(&farm(), &Policy::default());
+        let prompt = planning(&farm(), &Policy::default(), "src/ (3 files)");
         assert!(prompt.contains("# GOAL"));
+        assert!(prompt.contains("# REPOSITORY MAP\n\nsrc/ (3 files)"));
+        // Nothing was picked to start from, so the section is not there.
+        assert!(!prompt.contains("STARTING POINTS"));
         assert!(prompt.contains("do not overlap"));
         assert!(prompt.contains("Do not change any files"));
         assert!(prompt.contains("cargo test"));
@@ -469,7 +609,78 @@ mod tests {
     fn a_planning_prompt_for_an_unverified_farm_says_so() {
         let mut farm = farm();
         farm.verification.clear();
-        assert!(planning(&farm, &Policy::default()).contains("no verification commands"));
+        assert!(planning(&farm, &Policy::default(), "").contains("no verification commands"));
+    }
+
+    #[test]
+    fn a_planning_prompt_carries_every_starting_point_in_full() {
+        let mut farm = farm();
+        farm.goal.sources = vec![
+            GoalSource::Issue {
+                number: 142,
+                title: "Gitea: list and open pull requests".into(),
+                body: "Same Host trait as GitHub.".into(),
+                labels: vec!["feature".into()],
+                url: "https://host/142".into(),
+            },
+            GoalSource::Brief {
+                path: "docs/specs/gitea.md".into(),
+                text: "# Gitea\n\nUse the v1 API.".into(),
+            },
+            GoalSource::Branch {
+                name: "feature/gitea".into(),
+            },
+        ];
+        let prompt = planning(&farm, &Policy::default(), "");
+        assert!(prompt.contains("# STARTING POINTS"));
+        assert!(
+            prompt.contains("## Issue #142: Gitea: list and open pull requests\nLabels: feature")
+        );
+        assert!(prompt.contains("Same Host trait as GitHub."));
+        assert!(prompt.contains("## Brief: docs/specs/gitea.md\n\n# Gitea\n\nUse the v1 API."));
+        assert!(prompt.contains("Every task starts from feature/gitea"));
+        assert!(prompt.contains("No files are tracked yet."));
+    }
+
+    #[test]
+    fn a_slice_farm_tells_the_agent_what_is_checked_out() {
+        let (mut farm, mut task, policy) = (farm(), task(), Policy::default());
+        task.reads = vec!["backend/src/session/**".into()];
+        let whole = implementation(&context(&farm, &task, &policy));
+        assert!(!whole.contains("YOUR SLICE"));
+
+        farm.workspace = WorkspaceMode::Slice;
+        let sliced = implementation(&context(&farm, &task, &policy));
+        assert!(sliced.contains("# YOUR SLICE"));
+        assert!(sliced.contains("- backend/src/auth/**\n- backend/src/session/**"));
+        assert!(sliced.contains("The checks run on the whole tree."));
+    }
+
+    #[test]
+    fn the_map_lists_top_level_files_and_two_levels_of_folders() {
+        let paths: Vec<String> = [
+            "Cargo.toml",
+            "README.md",
+            "src/lib.rs",
+            "src/home/needs.ts",
+            "src/home/shape.ts",
+            "src/home/deep/x.ts",
+        ]
+        .iter()
+        .map(|p| p.to_string())
+        .collect();
+        assert_eq!(
+            repository_map(&paths),
+            "Cargo.toml\nREADME.md\nsrc/ (4 files)\n  src/home/ (3 files)"
+        );
+    }
+
+    #[test]
+    fn a_long_map_is_cut_and_says_so() {
+        let paths: Vec<String> = (0..200).map(|i| format!("f{i}.txt")).collect();
+        let map = repository_map(&paths);
+        assert_eq!(map.lines().count(), MAP_LINES + 1);
+        assert!(map.ends_with("… and 120 more"));
     }
 
     #[test]

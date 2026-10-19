@@ -100,6 +100,7 @@ describe('Settings › Rail', () => {
 		const shown = NAV_ITEMS.filter((item) => !item.delight);
 		expect(view.all('.row').map((row) => row.dataset.code)).toEqual(shown.map((item) => item.code));
 		expect(view.all('.card').map((card) => card.getAttribute('aria-label'))).toEqual([
+			'Home',
 			'Farm',
 			'Repository',
 			'Tools',

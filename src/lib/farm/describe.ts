@@ -23,6 +23,7 @@ import type {
 	Farm,
 	FarmEvent,
 	FarmStatus,
+	LedgerEntry,
 	RecordedEvent,
 	Task,
 	TaskDetail,
@@ -313,7 +314,11 @@ export function duration(ms: number | null | undefined): string {
 }
 
 /** Farm's journey vocabulary and presentation rules (FEAT-108). */
-export const PHASES = ['Crew', 'Goal', 'Plan', 'Build', 'Wrap up'] as const;
+/**
+ * The tracker once a farm exists (FEAT-141). The crew and the goal are the
+ * wizard's steps now, so the tracker starts at Plan.
+ */
+export const PHASES = ['Plan', 'Build', 'Wrap up'] as const;
 export const STEPS = ['Queued', 'Worktree', 'Working', 'Checks', 'Review', 'Merged'] as const;
 export const PANES = ['Board', 'Crew', 'Activity'] as const;
 export const TASK_TABS = ['Output', 'Changes', 'Checks', 'Review', 'Hand-off'] as const;
@@ -435,6 +440,36 @@ export const FARM_COPY = {
 	input: 'Prompt input'
 } as const;
 
+/**
+ * One branch move, in a sentence (FEAT-144): `T-02 merged into main: Codex,
+ * passed by Claude Code · checked merged with main`.
+ */
+export function ledgerLine(entry: LedgerEntry, agents: AgentStatus[]): string {
+	const branch = entry.ref.replace(/^refs\/heads\//, '');
+	const tasks = entry.tasks.join(', ');
+	const who = entry.by
+		.map((credit) => {
+			const made = credit.agent ? agentName(credit.agent, agents) : null;
+			const passed = credit.reviewer ? `passed by ${agentName(credit.reviewer, agents)}` : null;
+			return [made, passed].filter(Boolean).join(', ');
+		})
+		.filter(Boolean)
+		.join('; ');
+	const what =
+		entry.kind === 'land'
+			? `${tasks} merged into ${branch}`
+			: entry.kind === 'merger'
+				? `${tasks} merged into ${branch} in Merger`
+				: `${branch} moved while ${tasks} was merging; it was merged again`;
+	const checked =
+		entry.checks === 'before:pass'
+			? 'checked as merged with ' + branch
+			: entry.checks === 'before:skipped'
+				? 'its own checks stood'
+				: '';
+	return [who ? `${what}: ${who}` : what, checked].filter(Boolean).join(' · ');
+}
+
 export function agentName(id: string | null | undefined, agents: AgentStatus[]): string {
 	return (
 		agents.find((a) => a.definition.id === id)?.definition.displayName ?? id ?? FARM_COPY.firstFree
@@ -458,7 +493,7 @@ export function agentMonogram(agent: AgentDefinition | undefined): string {
 /** "You come in:" — the handoff's table, one line per autonomy level. */
 export function whereYouComeIn(autonomy: Autonomy): string {
 	return {
-		manual: 'you start every task and every merge yourself.',
+		manual: 'to start every task and every merge yourself.',
 		assisted: 'after each task, before it is reviewed or merged.',
 		semiAuto: 'only to approve merges, and when a task is stuck.',
 		auto: 'only when a task is stuck after its tries.',
@@ -792,11 +827,11 @@ export function attention(
 		!runs.some((r) => r.task === task.id && r.outcome.state === 'running')
 	);
 }
-export function phaseFor(farm: Farm | null, planning: AgentRun | null, crew: number): number {
-	if (!farm) return crew ? 1 : 0;
-	if (farm.status === 'completed') return 4;
-	if (planning || !farm.tasks.some((t) => !['draft', 'cancelled'].includes(t.status))) return 2;
-	return 3;
+export function phaseFor(farm: Farm | null, planning: AgentRun | null): number {
+	if (!farm) return 0;
+	if (farm.status === 'completed') return 2;
+	if (planning || !farm.tasks.some((t) => !['draft', 'cancelled'].includes(t.status))) return 0;
+	return 1;
 }
 const NUMBER_WORDS = [
 	'zero',

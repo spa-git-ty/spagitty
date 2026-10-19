@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Farm start — Crew and rules</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#120d0b}
+a{color:#f2715a;text-decoration:none}a:hover{color:#ff9a86}
+button,input{font:inherit}
+button{cursor:pointer}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 10px; color: #f3e9dd; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 14px; background-color: #120d0b; background-image: radial-gradient(1200px 420px at 30% -10%, rgba(242,113,90,0.16), rgba(18,13,11,0) 70%)">
+  <div style="display: flex; align-items: center; gap: 6px; height: 34px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 10px; background: rgba(243,233,221,0.08); font-weight: 600">spagitty <span aria-hidden="true" style="color: rgba(243,233,221,0.62)">×</span></div>
+    <div style="padding: 6px 14px; color: rgba(243,233,221,0.62)">quiblo</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; flex-grow: 1; align-items: stretch">
+    <dc-import name="Rail" active="farm" hint-size="88px,900px"></dc-import>
+
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; background: #1c1613; border: 1px solid rgba(243,233,221,0.1); border-radius: 22px; padding: 22px 30px 18px; display: flex; flex-direction: column; gap: 22px">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 600">Farm</h1>
+          <span style="color: rgba(243,233,221,0.62)">spagitty · new farm</span>
+        </div>
+        <dc-import name="Steps" step="{{ 3 }}" hint-size="560px,48px"></dc-import>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; flex-grow: 1; align-items: flex-start; justify-content: center">
+        <section style="flex: 999 1 560px; min-width: 0; max-width: 780px; display: flex; flex-direction: column; gap: 18px; padding-top: 18px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: #f2715a; font-weight: 600">Step 3 of 4</span>
+            <h2 style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em">Same crew and rules as last time?</h2>
+            <p style="margin: 0; font-size: 15px; color: rgba(243,233,221,0.62)">From “GitLab support for pull requests”, Oct 7. Change anything, or go on.</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">Crew</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px">
+              <sc-for list="{{ crew }}" as="a" hint-placeholder-count="4">
+                <button type="button" aria-pressed="{{ a.on }}" onClick="{{ a.toggle }}" style="{{ a.tileStyle }}">
+                  <span style="display: flex; align-items: center; gap: 10px; width: 100%">
+                    <span style="{{ a.badgeStyle }}">{{ a.mono }}</span>
+                    <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left">
+                      <span style="font-size: 14px; font-weight: 600">{{ a.name }}</span>
+                      <span style="font-size: 12px; color: rgba(243,233,221,0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ a.skills }}</span>
+                    </span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">How much it does alone</span>
+            <div role="radiogroup" aria-label="Autonomy" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #120d0b; border: 1px solid rgba(243,233,221,0.12)">
+              <sc-for list="{{ levels }}" as="l" hint-placeholder-count="5">
+                <button type="button" role="radio" aria-checked="{{ l.on }}" onClick="{{ l.pick }}" style="{{ l.style }}">{{ l.name }}</button>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(242,113,90,0.08); font-size: 14px">
+              <span style="color: #f2715a; font-weight: 600">You come in</span>
+              <span>{{ comeIn }}</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+            <div style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 13px; color: rgba(243,233,221,0.62)">Checks on every task</span>
+              <span class="mono" style="font-size: 13px">$ cargo test --workspace</span>
+              <span class="mono" style="font-size: 13px">$ bun run check</span>
+              <button type="button" style="align-self: flex-start; padding: 0; border: 0; background: transparent; color: #f2715a; font-size: 13px">+ Add a check</button>
+            </div>
+            <div style="background: #231c18; border: 1px solid rgba(243,233,221,0.09); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
+              <div style="display: flex; align-items: center; justify-content: space-between">
+                <span style="font-size: 14px">Agents at once</span>
+                <span style="display: inline-flex; align-items: center; gap: 4px"><button type="button" aria-label="Fewer" style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(243,233,221,0.16); background: transparent; color: #f3e9dd">−</button><span class="mono" style="width: 26px; text-align: center">3</span><button type="button" aria-label="More" style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(243,233,221,0.16); background: transparent; color: #f3e9dd">+</button></span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between">
+                <span style="font-size: 14px">Tries before it needs you</span>
+                <span style="display: inline-flex; align-items: center; gap: 4px"><button type="button" aria-label="Fewer" style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(243,233,221,0.16); background: transparent; color: #f3e9dd">−</button><span class="mono" style="width: 26px; text-align: center">3</span><button type="button" aria-label="More" style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(243,233,221,0.16); background: transparent; color: #f3e9dd">+</button></span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: rgba(243,233,221,0.62)">Where each task works</span>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+              <sc-for list="{{ spaces }}" as="s" hint-placeholder-count="2">
+                <button type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}" style="{{ s.style }}">
+                  <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600">{{ s.name }}<sc-if value="{{ s.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: rgba(165,139,216,0.18); color: #c6b3ee">new</span></sc-if></span>
+                  <span style="font-size: 12.5px; color: rgba(243,233,221,0.62); line-height: 1.4">{{ s.desc }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px">
+            <span style="display: inline-flex; align-items: center; gap: 8px; color: rgba(243,233,221,0.62)"><span style="color: #7cc68d">✓</span> <span class="mono">AGENTS.md</span> found, every agent gets it</span>
+            <button type="button" style="padding: 0; border: 0; background: transparent; color: rgba(243,233,221,0.75); font-size: 13px">More rules ▾</button>
+          </div>
+        </section>
+
+        <div style="flex: 1 1 280px; max-width: 340px; padding-top: 18px">
+          <dc-import name="SoFar" step="{{ 3 }}" hint-size="100%,520px"></dc-import>
+        </div>
+      </div>
+
+      <footer style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 12px 20px; border-radius: 18px; background: rgba(36,29,25,0.9); border: 1px solid rgba(243,233,221,0.1)">
+        <a href="FarmContext.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 6px; color: rgba(243,233,221,0.75)">← Start from</a>
+        <a href="FarmStart.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 22px; border-radius: 12px; background: #f2715a; color: #2a0e07; font-weight: 600">Continue</a>
+      </footer>
+    </main>
+  </div>
+  <dc-import name="Dock" status="Repository ready · no farm yet" hint-size="100%,64px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { level: 2, off: {}, space: 0 };
+  }
+  renderVals() {
+    const s = this.state;
+    const tint = (c, a) => {
+      const h = c.replace('#', '');
+      return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+    };
+    const agents = [
+      ['cc', 'CC', 'Claude Code', 'Plans · backend · review', '#f2715a'],
+      ['cx', 'CX', 'Codex', 'Review · research', '#6aa7e0'],
+      ['cu', 'CU', 'Cursor', 'Frontend · long context', '#a58bd8'],
+      ['pi', 'PI', 'Oh My Pi', 'Testing · tool use', '#f0b54a']
+    ];
+    const crew = agents.map(([id, mono, name, skills, c]) => {
+      const on = !s.off[id];
+      return {
+        mono, name, skills, on,
+        toggle: () => this.setState({ off: Object.assign({}, s.off, { [id]: on }) }),
+        tileStyle: 'display: flex; padding: 12px 14px; border-radius: 14px; color: #f3e9dd; background: ' + (on ? tint(c, 0.1) : '#1c1613') + '; border: 1.5px solid ' + (on ? tint(c, 0.55) : 'rgba(243,233,221,0.12)') + '; opacity: ' + (on ? 1 : 0.55),
+        badgeStyle: 'flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: ' + c + '; background: ' + tint(c, 0.18)
+      };
+    });
+    const names = ['Manual', 'Assisted', 'Semi-auto', 'Auto', 'YOLO'];
+    const come = [
+      'to start every task and every merge yourself.',
+      'after each task, before it is reviewed or merged.',
+      'only to approve merges, and when a task is stuck.',
+      'only when a task is stuck after its tries.',
+      'at the end. Nothing waits for you.'
+    ];
+    const levels = names.map((name, i) => ({
+      name, on: s.level === i,
+      pick: () => this.setState({ level: i }),
+      style: 'height: 40px; border-radius: 10px; border: 0; font-size: 13.5px; ' + (s.level === i ? 'background: #f2715a; color: #2a0e07; font-weight: 600' : 'background: transparent; color: rgba(243,233,221,0.75)')
+    }));
+    const spaceDefs = [
+      ['A worktree per task', 'The whole repository, checked out for the task. What you have today.', false],
+      ['A slice per task', 'Only the paths the task may touch. Checks still run on the whole tree.', true]
+    ];
+    const spaces = spaceDefs.map(([name, desc, isNew], i) => ({
+      name, desc, isNew, on: s.space === i,
+      pick: () => this.setState({ space: i }),
+      style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px 16px; border-radius: 14px; color: #f3e9dd; background: ' + (s.space === i ? 'rgba(242,113,90,0.08)' : '#1c1613') + '; border: 1.5px solid ' + (s.space === i ? '#f2715a' : 'rgba(243,233,221,0.12)')
+    }));
+    return { crew, levels, comeIn: come[s.level], spaces };
+  }
+}
+</script>
+</body>
+</html>

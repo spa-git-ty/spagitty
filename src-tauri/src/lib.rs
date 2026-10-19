@@ -19,6 +19,7 @@ mod forge_bridge;
 mod forge_views;
 mod graph_worker;
 mod hooks;
+mod inbox;
 mod issues;
 mod merger_state;
 mod network_worker;
@@ -53,6 +54,8 @@ pub fn run() {
         .manage(commands::AppState::default())
         // Terminals belong to the window, not to the repository that is open.
         .manage(terminal::TerminalState::default())
+        // The notification center's record, opened on first use (FEAT-142).
+        .manage(inbox::InboxState::default())
         .invoke_handler(tauri::generate_handler![
             commands::open_repo,
             commands::close_repo,
@@ -230,6 +233,7 @@ pub fn run() {
             commands::launch_external_merge,
             commands::network_release,
             commands::stashes,
+            commands::home_overview,
             commands::stash_push,
             commands::recent_repos,
             commands::forget_repo,
@@ -262,6 +266,11 @@ pub fn run() {
             commands::involved_pull_requests,
             notifications::watch_pull_requests,
             notifications::notify_desktop,
+            inbox::inbox_list,
+            inbox::inbox_add,
+            inbox::inbox_read,
+            inbox::inbox_read_all,
+            inbox::inbox_clear,
             commands::local_clone_of,
             commands::review_summaries,
             commands::review_checkout,
@@ -325,6 +334,13 @@ pub fn run() {
             farm::farm_save_agent,
             farm::farm_remove_agent,
             farm::farm_create,
+            farm::farm_remembered,
+            farm::farm_remember,
+            farm::farm_past,
+            farm::farm_ledger,
+            farm::farm_resume,
+            farm::farm_briefs,
+            farm::farm_brief,
             farm::farm_configure,
             farm::farm_start,
             farm::farm_pause,

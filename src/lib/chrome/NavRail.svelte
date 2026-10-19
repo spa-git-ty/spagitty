@@ -161,7 +161,7 @@
 					<span class="label">More</span>
 				</button>
 			{:else}
-				{#if row.startsGroup && row.heading}
+				{#if row.startsGroup && (row.heading || row.item.dividerBefore)}
 					<div class="hr" aria-hidden="true"></div>
 				{/if}
 				<button

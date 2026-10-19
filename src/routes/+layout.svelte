@@ -22,6 +22,8 @@
 	import RewardOverlay from '$lib/delight/RewardOverlay.svelte';
 	import { delight } from '$lib/delight/store.svelte';
 	import { watcher } from '$lib/notifications/watcher.svelte';
+	import { attach as attachNotifications } from '$lib/notifications/feed.svelte';
+	import NotificationCenter from '$lib/notifications/NotificationCenter.svelte';
 	import NavRail from '$lib/chrome/NavRail.svelte';
 	import ResizeEdges from '$lib/chrome/ResizeEdges.svelte';
 	import { appWindow } from '$lib/chrome/window';
@@ -140,6 +142,9 @@
 			// Recording starts with the app, not with the panel: turning the
 			// toggle on mid-session should show what has already run.
 			cleanups.push(await commandLog.attach());
+			// What the notification center keeps: failures, the farm, the
+			// checks. Up before anything can say something (FEAT-142).
+			cleanups.push(await attachNotifications());
 
 			/*
 			 * The desktop's own palette (FEAT-080).
@@ -496,6 +501,8 @@
 <DialogHost />
 <HookRunWindow />
 <NoticeToast />
+<!-- Over any screen, from the title bar's bell (FEAT-142). -->
+<NotificationCenter />
 
 <!--
 	The reward moment (FEAT-072). Mounted by the shell for the same reason as

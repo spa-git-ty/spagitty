@@ -74,6 +74,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.tags', title: 'Go to Tags', path: '/tags', keywords: ['refs', 'release'] },
 	{ id: 'go.reflog', title: 'Go to Reflog', path: '/reflog', keywords: ['undo', 'recover', 'lost'] },
 	{ id: 'go.rebase', title: 'Go to Interactive rebase', path: '/rebase', keywords: ['reorder', 'squash'] },
+	{ id: 'go.home', title: 'Go to Home', path: '/home', keywords: ['needs', 'dashboard', 'overview', 'waiting'] },
 	{ id: 'go.farm', title: 'Go to Farm', path: '/farm', keywords: ['tasks', 'dag', 'goal'] },
 	{ id: 'go.farm.agents', title: 'Go to Farm agents', path: '/farm?pane=agents', keywords: ['agents', 'installed', 'claude', 'codex', 'cursor', 'farm'] },
 	{ id: 'go.farm.settings', title: 'Go to Farm settings', path: '/farm?pane=settings', keywords: ['farm', 'settings', 'goal', 'policy', 'agents.md'] },

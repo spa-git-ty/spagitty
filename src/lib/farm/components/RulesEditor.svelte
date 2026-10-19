@@ -4,10 +4,11 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import { AUTONOMY_LEVELS, FARM_COPY as C } from '../describe';
+	import { FARM_COPY as C, whereYouComeIn } from '../describe';
+	import { LEVELS } from '../wizard';
 	import { farmStore } from '../store.svelte';
 	import * as api from '../api';
-	import type { Autonomy, FarmSettings, Permissions, SupplementalPolicy } from '../types';
+	import type { Autonomy, FarmSettings, Permissions, SupplementalPolicy, WorkspaceMode } from '../types';
 
 	/**
 	 * The farm's rules, in Setup and in the Rules sheet (FEAT-111, FEAT-109).
@@ -23,9 +24,16 @@
 		settings?: FarmSettings;
 		busy?: boolean;
 		act: (message: string, run: () => Promise<unknown>) => Promise<boolean>;
+		/** Offer *Where each task works* (FEAT-143). */
+		workspaces?: boolean;
 	}
 
-	let { settings = $bindable({}), busy = false, act }: Props = $props();
+	let { settings = $bindable({}), busy = false, act, workspaces = false }: Props = $props();
+
+	const SPACES: { id: WorkspaceMode; name: string; detail: string; isNew: boolean }[] = [
+		{ id: 'worktree', name: 'A worktree per task', detail: 'The whole repository, checked out for the task. What you have today.', isNew: false },
+		{ id: 'slice', name: 'A slice per task', detail: 'Only the paths the task may touch. Checks still run on the whole tree.', isNew: true }
+	];
 
 	const AT_ONCE = [1, 2, 3, 4];
 	const TRIES = [1, 2, 3, 5];
@@ -68,6 +76,7 @@
 	let supplemental = $state<SupplementalPolicy>(
 		untrack(() => ({ ...DEFAULT_SUPPLEMENTAL, ...settings.supplemental }))
 	);
+	let workspace = $state<WorkspaceMode>(untrack(() => settings.workspace ?? 'worktree'));
 
 	$effect(() => {
 		settings = {
@@ -77,7 +86,8 @@
 			supplemental: { ...supplemental },
 			verification: checks.map((check) => check.trim()).filter(Boolean),
 			maxParallel: parallel,
-			maxAttempts: attempts
+			maxAttempts: attempts,
+			workspace
 		};
 	});
 
@@ -99,8 +109,10 @@
 <div class="rules">
 	<section>
 		<h4>{C.howMuch}</h4>
+		<!-- One segmented row, and the line under it says where the person
+		     comes in at the level chosen (FEAT-141). -->
 		<div class="levels" role="radiogroup" aria-label={C.howMuch}>
-			{#each AUTONOMY_LEVELS as level (level.id)}
+			{#each LEVELS as level (level.id)}
 				<button
 					class="level"
 					class:on={autonomy === level.id}
@@ -109,11 +121,11 @@
 					disabled={busy}
 					onclick={() => choose(level.id)}
 				>
-					<strong>{level.label}</strong>
-					<span>{level.detail}</span>
+					{level.label}
 				</button>
 			{/each}
 		</div>
+		<p class="come-in"><strong>You come in</strong> <span>{whereYouComeIn(autonomy)}</span></p>
 	</section>
 
 	<section>
@@ -171,6 +183,27 @@
 			</div>
 		</section>
 	</div>
+
+	{#if workspaces}
+		<section>
+			<h4>Where each task works</h4>
+			<div class="spaces" role="radiogroup" aria-label="Where each task works">
+				{#each SPACES as space (space.id)}
+					<button
+						class="space"
+						class:on={workspace === space.id}
+						role="radio"
+						aria-checked={workspace === space.id}
+						disabled={busy}
+						onclick={() => (workspace = space.id)}
+					>
+						<strong>{space.name}{#if space.isNew}<span class="new">new</span>{/if}</strong>
+						<span>{space.detail}</span>
+					</button>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 	<p class="policy muted">
 		{#if hasPolicy}
@@ -285,35 +318,95 @@
 	.levels {
 		display: grid;
 		grid-template-columns: repeat(5, minmax(0, 1fr));
-		gap: 8px;
+		gap: 4px;
+		padding: 4px;
+		border: 1px solid var(--soft);
+		border-radius: var(--r-floating);
+		background: var(--sunken);
 	}
 
 	.level {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		padding: 12px;
-		text-align: left;
-		color: var(--ink);
-		border: 1px solid var(--soft);
+		height: 40px;
+		border: 0;
 		border-radius: var(--r-button);
-		background: var(--surface-veil);
+		background: transparent;
+		color: var(--muted);
+		font: inherit;
+		font-size: var(--fs-secondary);
 		cursor: pointer;
 	}
 
-	.level span {
+	.level:hover:not(:disabled):not(.on) {
+		color: var(--ink);
+		background: var(--hover);
+	}
+
+	.level.on {
+		background: var(--accent);
+		color: var(--on-accent);
+		font-weight: 600;
+	}
+
+	.come-in {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		margin: 10px 0 0;
+		padding: 10px 14px;
+		border-radius: var(--r-panel);
+		background: color-mix(in srgb, var(--accent) 8%, transparent);
+	}
+
+	.come-in strong {
+		flex: none;
+		color: var(--accent);
+	}
+
+	.spaces {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.space {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+		padding: 14px 16px;
+		text-align: left;
+		color: var(--ink);
+		border: 1.5px solid var(--soft);
+		border-radius: var(--r-floating);
+		background: var(--surface-veil);
+		font: inherit;
+		cursor: pointer;
+	}
+
+	.space strong {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.space span {
 		color: var(--muted);
 		font-size: var(--fs-secondary);
 		line-height: 1.4;
 	}
 
-	.level:hover:not(:disabled) {
-		border-color: var(--line);
+	.space.on {
+		border-color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 8%, transparent);
 	}
 
-	.level.on {
-		border-color: var(--accent);
-		background: var(--accent-soft);
+	.new {
+		padding: 2px 8px;
+		border-radius: var(--r-pill);
+		background: color-mix(in srgb, var(--lane-4) 18%, transparent);
+		color: var(--lane-4);
+		font-size: calc(var(--fs-mono) * 0.92);
+		font-weight: 500;
 	}
 
 	.checks {
@@ -406,9 +499,9 @@
 		padding-top: 14px;
 	}
 
-	@media (max-width: 900px) {
-		.levels {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+	@media (max-width: 700px) {
+		.spaces {
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 </style>

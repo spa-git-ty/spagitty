@@ -20,6 +20,7 @@ use spagitty_core::forge::review::ReviewVerdict;
 use spagitty_core::forge::{self, Account, Kind, MergeMethod, PullRequest, Repo};
 use spagitty_core::graph::{GraphOrder, ROW_PITCH};
 use spagitty_core::highlight;
+use spagitty_core::home::{self, Overview};
 use spagitty_core::identity::{self, Identity, Key, Scope};
 use spagitty_core::investigate;
 use spagitty_core::merger;
@@ -650,6 +651,19 @@ pub fn create_branch(
 ) -> Result<()> {
     state.with_session("create_branch", |session| {
         branches::create(&session.repo.to_thread_local(), &name, &start, checkout)
+    })
+}
+
+/// What Home shows that only git knows (FEAT-140): the header, the recent
+/// branches, the heatmap and the changelog's unreleased entries, in one read.
+#[tauri::command(async)]
+pub fn home_overview(state: State<'_, AppState>) -> Result<Overview> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs() as i64)
+        .unwrap_or(0);
+    state.with_session("home_overview", |session| {
+        Ok(home::overview(&session.repo.to_thread_local(), now))
     })
 }
 

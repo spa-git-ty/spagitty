@@ -87,7 +87,10 @@ export type IconName =
 	| 'issues'
 	| 'pipelines'
 	| 'split-right'
-	| 'split-down';
+	| 'split-down'
+	| 'home'
+	| 'bell'
+	| 'comment';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -251,5 +254,10 @@ export const ICONS: Record<IconName, string[]> = {
 		'M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
 		'M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
 		'M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'
-	]
+	],
+	// FEAT-140 to FEAT-142, from the handoff: a house for Home, a bell for the
+	// notification center, a speech bubble for a review that asks for changes.
+	home: ['M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z'],
+	bell: ['M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z', 'M10 20.5a2 2 0 0 0 4 0'],
+	comment: ['M4 5h16v11H9l-5 4z']
 };

@@ -34,6 +34,7 @@ pub mod files;
 pub mod forge;
 pub mod graph;
 pub mod highlight;
+pub mod home;
 pub mod hooks;
 pub mod identity;
 pub mod ignore;
