@@ -13,18 +13,27 @@
  * not committed: screenshots and recordings would make the repository heavy
  * for everybody who clones it. The result links them.
  *
+ * With `--phone` it is also on the network this machine is on, for a sweep
+ * run from a phone on the same Wi-Fi or hotspot. Anybody on that network
+ * could reach it then, so it answers only a request that carries a key made
+ * when it starts: the address it prints has the key in it, and the page,
+ * once opened with it, keeps it in a cookie.
+ *
  * Usage:
- *   bun tools/sweep/serve.ts [--port 5199] [--no-open]
+ *   bun tools/sweep/serve.ts [--port 5199] [--no-open] [--phone]
  */
 
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { networkInterfaces } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 import { INDEX, TESTING, current, listed, readAll } from './index';
 import { STATES, parse, resultText, write, type State } from './sweeps';
 
 const EVIDENCE = join(TESTING, 'evidence');
-const PAGE = join(import.meta.dir, 'portal.html');
+/** From the repository's root, as `TESTING` is. */
+const PAGE = join('tools', 'sweep', 'portal.html');
 /** A recording of a few minutes fits; a film does not. */
 const LARGEST = 500 * 1024 * 1024;
 const KINDS: Record<string, string> = {
@@ -124,6 +133,62 @@ function served(path: string): Response {
 	return new Response(Bun.file(wanted), { headers: { 'content-type': kind } });
 }
 
+const COOKIE = 'sweep-key';
+
+function same(a: string, b: string): boolean {
+	const left = Buffer.from(a);
+	const right = Buffer.from(b);
+	return left.length === right.length && timingSafeEqual(left, right);
+}
+
+export type Let = { pass: true } | { pass: false; to: string } | { pass: false; to: null };
+
+/**
+ * With `--phone`, the key or nothing. A request with the key in its
+ * address is sent back to the same address without it (`to`), holding the
+ * key in a cookie, so the key does not stay in the address bar or in a link
+ * copied from it. `to: null` turns it away.
+ */
+export function admit(address: string, cookies: string | null, key: string): Let {
+	const url = new URL(address);
+	const given = url.searchParams.get('key');
+	if (given !== null && same(given, key)) {
+		url.searchParams.delete('key');
+		return { pass: false, to: url.pathname + url.search };
+	}
+	const held = (cookies ?? '')
+		.split(';')
+		.map((part) => part.trim().split('='))
+		.find(([name]) => name === COOKIE)?.[1];
+	return held !== undefined && same(held, key) ? { pass: true } : { pass: false, to: null };
+}
+
+function gate(request: Request, key: string): Response | null {
+	const answer = admit(request.url, request.headers.get('cookie'), key);
+	if (answer.pass) return null;
+	if (answer.to !== null) {
+		return new Response(null, {
+			status: 303,
+			headers: {
+				location: answer.to,
+				'set-cookie': `${COOKIE}=${key}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`
+			}
+		});
+	}
+	return new Response('Open the address the sweep portal printed, with its key.', {
+		status: 401,
+		headers: { 'content-type': 'text/plain; charset=utf-8' }
+	});
+}
+
+/** This machine's addresses on the networks it is on, for the phone to use. */
+function addresses(): string[] {
+	return Object.values(networkInterfaces())
+		.flat()
+		.filter((one) => one && one.family === 'IPv4' && !one.internal)
+		.map((one) => one!.address);
+}
+
 function json(value: unknown, status = 200): Response {
 	return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
 }
@@ -171,9 +236,20 @@ if (import.meta.main) {
 		process.exit(1);
 	}
 	writeFileSync(INDEX, current());
-	// This machine only: what it writes is the working record.
-	const server = Bun.serve({ hostname: '127.0.0.1', port, fetch: handle, maxRequestBodySize: LARGEST });
-	const url = `http://127.0.0.1:${server.port}/`;
+	const phone = argv.includes('--phone');
+	const key = phone ? randomBytes(18).toString('base64url') : '';
+	// This machine only, unless asked: what it writes is the working record.
+	const server = Bun.serve({
+		hostname: phone ? '0.0.0.0' : '127.0.0.1',
+		port,
+		fetch: phone ? (request) => gate(request, key) ?? handle(request) : handle,
+		maxRequestBodySize: LARGEST
+	});
+	const url = `http://127.0.0.1:${server.port}/${phone ? `?key=${key}` : ''}`;
 	console.log(`Sweep portal: ${url}  (Ctrl+C to stop)`);
+	if (phone) {
+		console.log('On a phone on the same network, open one of these:');
+		for (const address of addresses()) console.log(`  http://${address}:${server.port}/?key=${key}`);
+	}
 	if (!argv.includes('--no-open')) opened(url);
 }

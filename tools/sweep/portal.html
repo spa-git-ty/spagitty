@@ -338,7 +338,7 @@
 				<textarea data-note placeholder="What you saw — what happened, what differed, which machine and theme">${escape(draft.note)}</textarea>
 				<div class="row">
 					<button type="button" class="btn" data-attach>Attach a file</button>
-					<button type="button" class="btn${recorder && isActive ? ' rec' : ''}" data-record>${recorder && isActive ? '■ Stop recording' : '● Record the screen'}</button>
+					${navigator.mediaDevices?.getDisplayMedia ? `<button type="button" class="btn${recorder && isActive ? ' rec' : ''}" data-record>${recorder && isActive ? '■ Stop recording' : '● Record the screen'}</button>` : ''}
 					<span class="hint">or paste a screenshot here</span>
 					<span class="spacer"></span>
 					<button type="button" class="btn primary" data-save ${draft.state ? '' : 'disabled'}>Save result</button>

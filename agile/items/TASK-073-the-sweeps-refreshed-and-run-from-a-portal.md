@@ -2,8 +2,8 @@
 
 # TASK-073 — The sweeps, refreshed and run from a portal
 
-**Status:** Done — on `release/3.4.0`; unmerged. The portal is covered by tests and was driven through its API; the page has not been looked at in a browser (the author is checking it). The refresh read every ticket of the items before the revamp and ran its rules over the rest; the sweeps written since 2026-09-29 were not read ticket by ticket.
-**Branch:** `release/3.4.0`.
+**Status:** Done — on `task/TASK-073-sweep-portal-2`; unmerged. The portal is covered by tests and was driven through its API; the page has not been looked at in a browser (the author is checking it). The refresh read every ticket of the items before the revamp and ran its rules over the rest; the sweeps written since 2026-09-29 were not read ticket by ticket.
+**Branch:** `task/TASK-073-sweep-portal-2`.
 **Screens:** none in the application; `tools/sweep/`, `agile/testing/`.
 **Raised by:** the author, 2026-10-19: "i tried to run sweep test from starting with first document but it felt outdated, so (don't delete them just update them if the sweep element is obsolete or deprecated) and create a document with index to all of them with html portal (maybe small server i can run with one command) to check sweep test done, or record behaviour or attach screen or video".
 
@@ -19,7 +19,7 @@ There are 286 sweep documents and about 1,900 tickets, written over two months i
 
 ## Acceptance criteria
 
-- One command opens the portal; it binds to this machine only.
+- One command opens the portal; it binds to this machine only. With `--phone` it is also on the local network, and answers only a request holding the key it printed.
 - A result set in the portal lands in the right ticket in every one of the four shapes, and the file is otherwise unchanged.
 - Evidence files are stored outside git and linked from the result.
 - `agile/testing/sweeps.md` exists and a test keeps it current.
