@@ -1,8 +1,12 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import * as api from '$lib/api';
 	import Icon from '$lib/ui/Icon.svelte';
 	import FileGlyph from './FileGlyph.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
+	import Menu from '$lib/ui/Menu.svelte';
+	import type { MenuItem } from '$lib/ui/menu';
+	import { notice } from '$lib/ui/notice.svelte';
 	import type { FilesEntry, FilesHit } from '$lib/types';
 	import { optionKey } from './keys';
 	import SearchToggles from './SearchToggles.svelte';
@@ -85,6 +89,61 @@
 		const cut = path.lastIndexOf('/');
 		return cut === -1 ? { dir: '', name: path } : { dir: path.slice(0, cut + 1), name: path.slice(cut + 1) };
 	}
+
+	/**
+	 * Right-click a row (FEAT-152): its name, its path from the top of the
+	 * repository, or a file's text at the revision, onto the clipboard.
+	 */
+	let menu = $state<{ x: number; y: number; anchor: HTMLElement; path: string; folder: boolean } | null>(null);
+
+	function context(event: MouseEvent, path: string, folder = false) {
+		event.preventDefault();
+		menu = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, path, folder };
+	}
+
+	async function copy(what: string, shown: string, text: () => string | Promise<string>) {
+		try {
+			await navigator.clipboard.writeText(await text());
+			notice.ok(`Copied the ${what}`, shown);
+		} catch (error) {
+			notice.failed(`Could not copy the ${what}`, error);
+		}
+	}
+
+	/** The tree holds no text, so the file is read, at the revision the tree shows. */
+	async function textOf(path: string): Promise<string> {
+		const read = await api.filesRead(files.resolved?.id ?? files.rev, path);
+		if (read.content.kind !== 'text') throw new Error(`${path} is not text`);
+		return read.content.text;
+	}
+
+	const items = $derived.by((): MenuItem[] => {
+		if (!menu) return [];
+		const { path, folder } = menu;
+		const name = nameOf(path).name;
+		const out: MenuItem[] = [
+			{
+				id: 'copy-name',
+				label: folder ? 'Copy folder name' : 'Copy file name',
+				note: name,
+				run: () => void copy('name', name, () => name)
+			},
+			{
+				id: 'copy-path',
+				label: 'Copy relative path',
+				note: path,
+				run: () => void copy('path', path, () => path)
+			}
+		];
+		if (!folder) {
+			out.push({
+				id: 'copy-content',
+				label: 'Copy file content',
+				run: () => void copy('content', path, () => textOf(path))
+			});
+		}
+		return out;
+	});
 </script>
 
 <aside class="tree" class:wide={files.lookFor === 'text'} aria-label="Files at {files.rev}">
@@ -144,7 +203,12 @@
 				</span>
 				{#each groups as group (group.path)}
 					{@const parts = nameOf(group.path)}
-					<div class="row found file" title={group.path}>
+					<div
+						class="row found file"
+						title={group.path}
+						role="presentation"
+						oncontextmenu={(event) => context(event, group.path)}
+					>
 						<FileGlyph path={group.path} />
 						<span class="name">{parts.name}</span>
 						<span class="dir note">{parts.dir}</span>
@@ -168,7 +232,13 @@
 		{:else if files.found}
 			{#each files.found.paths as path (path)}
 				{@const parts = nameOf(path)}
-				<button class="row found" class:here={path === here} title={path} onclick={() => files.openFile(path)}>
+				<button
+					class="row found"
+					class:here={path === here}
+					title={path}
+					onclick={() => files.openFile(path)}
+					oncontextmenu={(event) => context(event, path)}
+				>
 					<FileGlyph {path} />
 					<span class="name">{parts.name}</span>
 					<span class="dir note">{parts.dir}</span>
@@ -194,6 +264,7 @@
 					disabled={entry.kind === 'submodule'}
 					title={entry.kind === 'submodule' ? `${entry.path} — a submodule` : entry.path}
 					onclick={() => press(entry)}
+					oncontextmenu={(event) => context(event, entry.path, entry.kind !== 'file')}
 				>
 					<span class="arrow" aria-hidden="true"
 						>{entry.kind === 'folder' ? (opened ? '▾' : '▸') : ''}</span
@@ -209,10 +280,22 @@
 	</div>
 </aside>
 
+{#if menu}
+	<Menu
+		x={menu.x}
+		y={menu.y}
+		anchor={menu.anchor}
+		{items}
+		label="Copy"
+		onclose={() => (menu = null)}
+	/>
+{/if}
+
 <style>
+	/* As wide as it was dragged (FEAT-152); the file gives way. */
 	.tree {
-		flex: 1 1 220px;
-		max-width: 250px;
+		flex: none;
+		width: var(--files-tree-w);
 		min-width: 180px;
 		min-height: 0;
 		display: flex;
@@ -336,8 +419,7 @@
 
 	/* Lines of text need more room than names do. */
 	.tree.wide {
-		flex-basis: 340px;
-		max-width: 380px;
+		width: max(var(--files-tree-w), 340px);
 	}
 
 	.look {

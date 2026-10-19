@@ -37,9 +37,16 @@
 		 * drawn and for no other.
 		 */
 		onrange?: (start: number, end: number) => void;
+		/**
+		 * Rows `[first, last]` kept drawn wherever the scroll is (FEAT-152).
+		 * A selection being made lives in its rows: when the row under one of
+		 * its ends is dropped, the browser loses that end, and what scrolled
+		 * away is no longer selected.
+		 */
+		hold?: [number, number] | null;
 	}
 
-	let { items, key, estimate, row, overscan = 600, tail = 0, label, onrange }: Props = $props();
+	let { items, key, estimate, row, overscan = 600, tail = 0, label, onrange, hold = null }: Props = $props();
 
 	/**
 	 * Drawn when the viewport has no height to go by — before layout, or in a
@@ -83,7 +90,8 @@
 		if (height <= 0) return [0, Math.min(items.length, BLIND)];
 		const start = rowAt(Math.max(0, scrollTop - overscan));
 		const end = Math.min(items.length, rowAt(scrollTop + height + overscan) + 1);
-		return [start, end];
+		if (!hold) return [start, end];
+		return [Math.min(start, hold[0]), Math.min(items.length, Math.max(end, hold[1] + 1))];
 	});
 
 	const shown = $derived(items.slice(range[0], range[1]));

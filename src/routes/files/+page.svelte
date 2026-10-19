@@ -13,6 +13,7 @@
 	import Chip from '$lib/ui/Chip.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Splitter from '$lib/ui/Splitter.svelte';
 
 	/**
 	 * Files (1U, FEAT-131): any file at any branch, tag or commit, coloured by
@@ -143,6 +144,7 @@
 
 		<div class="body">
 			<FileTree />
+			<Splitter panel="filesTree" label="Resize the tree" />
 			<FileView onreveal={reveal} />
 		</div>
 	{/if}
@@ -240,6 +242,11 @@
 		display: flex;
 		gap: 10px;
 		padding: 0 12px 12px;
+	}
+
+	/* On the gap, not beside it: the divider takes one gap's room back. */
+	.body :global(.splitter.filesTree) {
+		margin-inline: -8.5px;
 	}
 
 	.error {

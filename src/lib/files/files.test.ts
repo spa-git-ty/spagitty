@@ -751,3 +751,79 @@ describe('the tree', () => {
 		expect(view!.text()).toContain('No file by that name');
 	});
 });
+
+describe('the tree’s right-click (FEAT-152)', () => {
+	async function menuOn(name: string): Promise<HTMLElement[]> {
+		await files.enter('/repos/thing', 'main');
+		await settle();
+		view = render(FileTree, {});
+		await settle();
+		const row = view.all('.rows .row').find((each) => each.textContent?.includes(name))!;
+		row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+		flushSync();
+		return [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+	}
+
+	const chosen = (items: HTMLElement[], label: string) => items.find((item) => item.textContent?.includes(label))!;
+
+	it('copies a file’s name, its path from the top, and its text at the revision', async () => {
+		const writeText = vi.fn(() => Promise.resolve());
+		vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+
+		click(chosen(await menuOn('README.md'), 'Copy file name'));
+		await settle();
+		expect(writeText).toHaveBeenLastCalledWith('README.md');
+
+		view?.destroy();
+		click(chosen(await menuOn('README.md'), 'Copy relative path'));
+		await settle();
+		expect(writeText).toHaveBeenLastCalledWith('README.md');
+
+		view?.destroy();
+		click(chosen(await menuOn('README.md'), 'Copy file content'));
+		await settle();
+		expect(read).toHaveBeenLastCalledWith(MAIN, 'README.md');
+		expect(writeText).toHaveBeenLastCalledWith(BODY);
+	});
+
+	it('offers a folder its name and path, and no content', async () => {
+		const items = await menuOn('src');
+
+		expect(items.map((item) => item.textContent)).toEqual([
+			expect.stringContaining('Copy folder name'),
+			expect.stringContaining('Copy relative path')
+		]);
+	});
+});
+
+describe('a selection longer than the screen (FEAT-152)', () => {
+	it('keeps the rows it runs between drawn when they scroll away', async () => {
+		const tall = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+		try {
+			const text = Array.from({ length: 3000 }, (_, i) => `line ${i + 1}`).join('\n') + '\n';
+			read.mockResolvedValue(
+				aFile('long.txt', { grammar: null, colour: false, size: text.length, content: { kind: 'text', text } })
+			);
+			await opened('long.txt');
+
+			const selection = document.getSelection()!;
+			selection.setBaseAndExtent(code(1), 0, code(3), 1);
+			document.dispatchEvent(new Event('selectionchange'));
+			flushSync();
+
+			keys().scrollTop = 40_000;
+			fire(keys(), 'scroll');
+			await settle();
+			// Both ends, and what runs between them, though line 1 is far above the screen.
+			expect(view!.find('.line[data-line="1"]')).not.toBeNull();
+			expect(view!.find('.line[data-line="1000"]')).not.toBeNull();
+
+			selection.removeAllRanges();
+			document.dispatchEvent(new Event('selectionchange'));
+			await settle();
+			expect(view!.find('.line[data-line="1"]')).toBeNull();
+		} finally {
+			tall.mockRestore();
+		}
+	});
+});
