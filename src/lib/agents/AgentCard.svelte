@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
+	import { fileAttrs } from '$lib/files/open';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -268,7 +269,7 @@
 								{#each files as item (item.path)}
 									<li>
 										<span class="what">
-											<span class="mono">{item.path}</span>
+											<span class="mono" {...fileAttrs(item.path, 'HEAD', undefined, { click: true })}>{item.path}</span>
 											{#if item.why}<span class="note">{item.why}</span>{/if}
 										</span>
 										<Chip title="Leave {item.path} out" onclick={() => dropFromPlan(files.map((f) => f.path), item.path)}>

@@ -62,6 +62,7 @@ fetchAvatars: false,
 			notifyChecks: true,
 			notifyEveryMinutes: 2,
 			rail: { hidden: [], order: [], where: 'more' },
+			home: { hidden: [], order: [] },
 			terminalShell: '',
 			terminalMultiplexer: true
 };
@@ -500,6 +501,7 @@ describe('checking for a newer Spagitty', () => {
 			notifyChecks: true,
 			notifyEveryMinutes: 2,
 			rail: { hidden: [], order: [], where: 'more' },
+			home: { hidden: [], order: [] },
 			terminalShell: '',
 			terminalMultiplexer: true
 		});

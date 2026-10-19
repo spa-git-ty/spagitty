@@ -11,9 +11,11 @@
 	/**
 	 * Home's last row (FEAT-140): the last sixteen weeks, the pipelines and
 	 * the releases. One component, because
-	 * each is small and they share the overview they are drawn from.
+	 * each is small and they share the overview they are drawn from. `card`
+	 * picks one, since Home places each where its settings say (FEAT-148).
 	 */
 	interface Props {
+		card: 'heat' | 'pipelines' | 'releases';
 		overview: Overview | null;
 		runs: Run[];
 		latest: Release | null;
@@ -22,7 +24,7 @@
 		now: number;
 	}
 
-	let { overview, runs, latest, pipelinesError, hasHost, now }: Props = $props();
+	let { card, overview, runs, latest, pipelinesError, hasHost, now }: Props = $props();
 
 	const map = $derived(heatmap(overview?.commitTimes ?? [], now));
 	const pipes = $derived(workflows(runs));
@@ -34,7 +36,7 @@
 	const versionAge = $derived(overview?.versionTime ? age(overview.versionTime * 1000, now) : null);
 </script>
 
-
+{#if card === 'heat'}
 	<section class="card home-card roomy" aria-labelledby="home-heat">
 		<div class="home-card-head">
 			<h2 id="home-heat">Commits, last 16 weeks</h2>
@@ -54,7 +56,7 @@
 			<span class="steps">less <span class="day l0"></span><span class="day l1"></span><span class="day l2"></span><span class="day l3"></span><span class="day l4"></span> more</span>
 		</div>
 	</section>
-
+{:else if card === 'pipelines'}
 	<section class="card home-card roomy" aria-labelledby="home-pipes">
 		<div class="home-card-head">
 			<h2 id="home-pipes">Pipelines</h2>
@@ -84,7 +86,7 @@
 		{/if}
 		<button class="home-link left" onclick={() => goto('/pipelines/live')}>Open Pipelines</button>
 	</section>
-
+{:else}
 	<section class="card home-card roomy" aria-labelledby="home-releases">
 		<div class="home-card-head">
 			<h2 id="home-releases">Releases</h2>
@@ -110,6 +112,7 @@
 			<div><Btn onclick={() => goto('/releases')}>Draft {next}</Btn></div>
 		{/if}
 	</section>
+{/if}
 
 <style>
 	.heat {

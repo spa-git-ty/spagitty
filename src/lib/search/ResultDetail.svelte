@@ -52,7 +52,7 @@
 		</div>
 		<ul class="filelist mono">
 			{#each detail.files as file (file.path)}
-				<li title={file.path} {...fileAttrs(file.path, revOfChange(detail.id, file.status))}>
+				<li title={file.path} {...fileAttrs(file.path, revOfChange(detail.id, file.status), undefined, { click: true })}>
 					{file.path}
 				</li>
 			{/each}

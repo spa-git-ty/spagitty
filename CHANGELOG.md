@@ -14,6 +14,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Settings › Home** arranges Home's cards: show or hide each one, and drag it, or move it with Alt and the arrows, into the order you want. *Needs you* keeps its double width wherever it goes.
+- **Files tags each file with its kind**: a small coloured `TS`, `RS`, `{}`, `MD` and so on in front of its name, and a folder for each folder, so the tree is quicker to scan.
+- **Open any file from anywhere.** Double-click a file, or Ctrl-click it (⌘ on a Mac), on any screen to open it in Files at the version that screen shows. Where clicking a file name did nothing before — Home's working copy, an agent's plan, CodeRabbit's findings, search results, a farm task's changes — a plain click opens it.
+
+### Fixed
+
+- **Dragging rows into place works on Windows**: the Rail in Settings, the rebase plan, Hooks' blocks and the Graph's column headings. Dropping did nothing there before; Alt with the arrows was the only way.
+- **A fetch or push no longer leaves git's line beside the branch.** It used to stay there, two hashes and an arrow, until the next one. A notice now says what happened in words, such as *Pushed chore/fix-sonar-scan*, and goes away. A failed fetch or push still says why beside the branch.
+
 ## [3.2.0] - 2026-10-18
 
 ### Added

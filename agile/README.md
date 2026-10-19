@@ -200,6 +200,9 @@ rather than an audit.
 | [FEAT-145](items/FEAT-145-history-as-tools-for-agents.md) | History as tools for agents | 1Q | Backlog |
 | [FEAT-146](items/FEAT-146-a-conflict-resolver-chosen-in-rules.md) | A conflict resolver chosen in Rules | 1Q, 1S | Backlog |
 | [FEAT-147](items/FEAT-147-own-copies-and-intake.md) | Own copies, and intake at the door | 1Q, 1K | Backlog |
+| [FEAT-148](items/FEAT-148-arrange-home-s-cards-in-settings.md) | Arrange Home's cards in Settings | Settings, 2A | Done |
+| [FEAT-149](items/FEAT-149-a-coloured-tag-for-each-kind-of-file.md) | A coloured tag for each kind of file | 1U | Done |
+| [FEAT-150](items/FEAT-150-open-a-file-from-anywhere-with-a-click.md) | Open a file from anywhere with a click | every screen | Done |
 
 ## Bugs
 
@@ -296,6 +299,8 @@ rather than an audit.
 | [BUG-088](items/BUG-088-ci-problem-file-badge-wraps-on-hyphen.md) | CI problem file badge wraps awkwardly on the hyphen | 1Y | Fixed |
 | [BUG-089](items/BUG-089-releases-misleading-empty-state-on-api-error.md) | Releases on GitLab is always empty: "responded 302" | 1Z | Fixed |
 | [BUG-090](items/BUG-090-pipelines-screen-does-not-match-its-artboards.md) | Pipelines does not look like its artboards, and Preview takes half a minute | 1Y | Fixed |
+| [BUG-091](items/BUG-091-git-s-push-line-stays-beside-the-branch.md) | git's push line stays beside the branch, hashes and all | chrome | Fixed |
+| [BUG-092](items/BUG-092-nothing-can-be-dragged-into-place-on-windows.md) | Nothing can be dragged into place on Windows | Settings, 1E, 1X, 1A | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -412,3 +417,8 @@ missing documents are not listed here, and fails again if a row here is stale.
 | BUG-088 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
 | BUG-089 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
 | BUG-090 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-091 | plan, automated, sweep | Fixed in one session from a report; covered by `network/plain.test.ts` and the store tests. Verification records owed. |
+| BUG-092 | plan, automated, sweep | Fixed in one session from a report; covered by the Rail and rebase plan drag tests. The sweep on Windows, with a real pointer, is owed. |
+| FEAT-148 | plan, automated, sweep | Built in one session from a request, with no plan written ahead. Covered by `settings/home-section.test.ts`, the layout and screen cases in `home/home.test.ts` and `settings.rs`. The sweep is owed: the author is checking it. |
+| FEAT-149 | plan, automated, sweep | Built in one session from a request, with no plan written ahead. Covered by `files/kind.test.ts`. The sweep, in light and dark, is owed: the author is checking it. |
+| FEAT-150 | plan, automated, sweep | Built in one session from a request, with no plan written ahead. Covered by the click and double-click cases in `files/open.test.ts`. The sweep across the screens is owed: the author is checking it. |

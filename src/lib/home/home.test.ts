@@ -280,4 +280,48 @@ describe('the screen', { timeout: 30_000 }, () => {
 		expect(text).toContain('Start a farm');
 		view.destroy();
 	});
+
+	it('draws the cards in the order Settings › Home chose, without the hidden ones (FEAT-148)', async () => {
+		const { control } = await import('../../testing/repo-store.svelte');
+		const { render } = await import('../../testing/mount');
+		const { settings } = await import('$lib/settings/store.svelte');
+		const { default: HomeScreen } = await import('./HomeScreen.svelte');
+		control.setInfo(info);
+		settings.settings.home = { hidden: ['heat', 'pipelines'], order: ['releases', 'farm'] };
+		const view = render(HomeScreen, {});
+
+		const cards = view.all('.slot').map((slot) => slot.dataset.card);
+		// A card the order does not name keeps its designed place: Needs you first.
+		expect(cards.slice(0, 3)).toEqual(['needs', 'releases', 'farm']);
+		expect(cards).not.toContain('heat');
+		expect(cards).not.toContain('pipelines');
+		expect(cards).toHaveLength(7);
+		settings.settings.home = { hidden: [], order: [] };
+		view.destroy();
+	});
+});
+
+describe('the layout (FEAT-148)', () => {
+	it('keeps the designed order until somebody moves a card', async () => {
+		const { HOME_CARDS, inHomeOrder, moveCardBy, moveCardOnto, shownCards } = await import('./layout');
+
+		expect(inHomeOrder([])).toBe(HOME_CARDS);
+		expect(shownCards({ hidden: ['needs'], order: [] })[0].id).toBe('farm');
+
+		const order = moveCardOnto('releases', 'needs', []);
+		expect(order[0]).toBe('releases');
+		// Moving it back is the designed order again, stored as nothing.
+		expect(moveCardBy('releases', 8, order)).toEqual([]);
+		expect(moveCardBy('needs', -1, [])).toEqual([]);
+	});
+
+	it('places a card the stored order does not name after the one it follows', async () => {
+		const { inHomeOrder } = await import('./layout');
+		// Written before `commits` existed, and naming a card from a later build.
+		const ids = inHomeOrder(['later', 'requests', 'branches', 'needs']).map((card) => card.id);
+
+		expect(ids.slice(0, 4)).toEqual(['requests', 'commits', 'heat', 'pipelines']);
+		expect(ids.slice(-4)).toEqual(['branches', 'needs', 'farm', 'working']);
+		expect(ids).toHaveLength(9);
+	});
 });

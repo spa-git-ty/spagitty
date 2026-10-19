@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { fileAttrs } from '$lib/files/open';
 	import Markdown from './Markdown.svelte';
 	import type { ObservedState, ReviewStatusData } from './types';
 
@@ -45,7 +46,7 @@
 					</div>
 					<div class="line muted">
 						{#if item.author}<span>{item.author}{item.authorType === 'bot' ? ' (bot)' : ''}</span>{/if}
-						{#if item.path}<span class="mono">{item.path}{item.line ? `:${item.line}` : ''}</span>{/if}
+						{#if item.path}<span class="mono" {...fileAttrs(item.path, 'HEAD', undefined, { click: true, line: item.line ?? undefined })}>{item.path}{item.line ? `:${item.line}` : ''}</span>{/if}
 					</div>
 					{#if item.body}
 						<details>

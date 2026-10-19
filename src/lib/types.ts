@@ -1402,6 +1402,8 @@ export interface Settings {
 	notifyEveryMinutes: number;
 	/** What is pinned, hidden and reordered on the rail (FEAT-134). */
 	rail: import('./nav').RailSettings;
+	/** Which cards Home shows, and in what order (FEAT-148). */
+	home: import('./home/layout').HomeLayout;
 	/** The shell a terminal runs (FEAT-130). Empty is the platform's own. */
 	terminalShell: string;
 	/** Run the terminal inside tmux, or psmux on Windows, when one can run. */

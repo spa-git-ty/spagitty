@@ -6,6 +6,7 @@
 	import Menu from '$lib/ui/Menu.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { createResizeDrag } from '$lib/ui/resize-drag';
+	import { sortable, type SortState } from '$lib/ui/sortable';
 	import { scale } from '$lib/scale.svelte';
 	import type { MenuItem } from '$lib/ui/menu';
 
@@ -221,16 +222,24 @@
 		}
 	}
 
-	function drop(to: number) {
-		if (dragging !== null) columns.reorder(dragging, to);
-		dragging = null;
-		over = null;
-	}
+	/**
+	 * A heading is moved with the pointer, not HTML drag and drop: on Windows
+	 * the window takes drags for itself and the page never heard the drop
+	 * (BUG-092, see `sortable`).
+	 */
+	const sorting = $derived({
+		onmove: (from: string, to: string) => columns.reorder(Number(from), Number(to)),
+		onstate: (state: SortState) => {
+			dragging = state.dragging === null ? null : Number(state.dragging);
+			over = state.over === null ? null : Number(state.over);
+		}
+	});
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="header-clip"
+	use:sortable={sorting}
 	oncontextmenu={openMenu}
 	role="row"
 	tabindex="-1"
@@ -254,6 +263,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="divider seam"
+				data-sort-ignore
 				title={`Resize ${shown[freezeAt - 1]?.label} — double-click to reset`}
 				onpointerdown={(event) => startResize(event, freezeAt - 1)}
 				onpointermove={moveResize}
@@ -285,20 +295,7 @@
 		aria-label={column.label}
 		title={compact ? column.label : undefined}
 		tabindex="-1"
-		draggable="true"
-		ondragstart={() => (dragging = index)}
-		ondragend={() => {
-			dragging = null;
-			over = null;
-		}}
-		ondragover={(event) => {
-			event.preventDefault();
-			over = index;
-		}}
-		ondrop={(event) => {
-			event.preventDefault();
-			drop(index);
-		}}
+		data-sort-key={index}
 	>
 		{#if compact}
 			<!--
@@ -353,6 +350,7 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="divider"
+			data-sort-ignore
 			class:last={index === shown.length - 1}
 			class:silent={column.id === 'refs'}
 			title={target === 'refs'
@@ -447,6 +445,7 @@
 		min-width: 0;
 		flex: none;
 		cursor: grab;
+		touch-action: none;
 	}
 
 	.cell.compact {

@@ -22,6 +22,7 @@
 	import { alt, shortcut } from '$lib/platform';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { sortable, type SortState } from '$lib/ui/sortable';
 	import { settings } from './store.svelte';
 
 	/**
@@ -97,18 +98,25 @@
 	let over = $state<ScreenCode | null>(null);
 
 	/** A row can be dropped on only by a row of its own group. */
-	function accepts(target: NavItem): boolean {
-		const moving = NAV_ITEMS.find((item) => item.code === dragging);
-		return moving !== undefined && moving.code !== target.code && moving.group === target.group;
+	function accepts(from: string, onto: string): boolean {
+		const moving = NAV_ITEMS.find((item) => item.code === from);
+		const target = NAV_ITEMS.find((item) => item.code === onto);
+		return moving !== undefined && target !== undefined && moving.group === target.group;
 	}
 
-	function drop(target: NavItem) {
-		const moving = dragging;
-		dragging = null;
-		over = null;
-		if (moving === null || moving === target.code) return;
-		reorder(moveOnto(moving, target.code, rail.order));
-	}
+	/**
+	 * Moved with the pointer, not HTML drag and drop: on Windows the window
+	 * takes drags for itself and the rows never heard a drop (see `sortable`).
+	 */
+	const sorting = $derived({
+		accepts,
+		onmove: (from: string, onto: string) =>
+			reorder(moveOnto(from as ScreenCode, onto as ScreenCode, rail.order)),
+		onstate: (state: SortState) => {
+			dragging = state.dragging as ScreenCode | null;
+			over = state.over as ScreenCode | null;
+		}
+	});
 
 	function keydown(item: NavItem, event: KeyboardEvent) {
 		if (!event.altKey) return;
@@ -131,7 +139,7 @@
 				<div class="column">
 					{#each column as group (group)}
 						{@const rows = members(group)}
-						<section class="card" aria-label={nameOf(group)}>
+						<section class="card" aria-label={nameOf(group)} use:sortable={sorting}>
 							<span class="note small name">{nameOf(group)}</span>
 							{#each rows as item (item.code)}
 								{@const choice = railChoice(item)}
@@ -140,29 +148,16 @@
 								<div
 									class="row"
 									class:off
-									class:over={over === item.code && accepts(item)}
+									class:over={over === item.code}
 									class:dragging={dragging === item.code}
 									data-code={item.code}
-									draggable={rows.length > 1}
-									ondragstart={() => (dragging = item.code)}
-									ondragover={(event) => {
-										if (!accepts(item)) return;
-										event.preventDefault();
-										over = item.code;
-									}}
-									ondragleave={() => {
-										if (over === item.code) over = null;
-									}}
-									ondrop={() => drop(item)}
-									ondragend={() => {
-										dragging = null;
-										over = null;
-									}}
+									data-sort-key={rows.length > 1 ? item.code : undefined}
 									onkeydown={(event) => keydown(item, event)}
 								>
 									{#if rows.length > 1}
 										<button
 											class="grip"
+											data-sort-grip
 											aria-label="Move {item.label}"
 											title="Drag to reorder, or {alt()}↑ / {alt()}↓"
 										>
@@ -342,6 +337,7 @@
 		color: var(--muted);
 		border-radius: var(--r-row);
 		cursor: grab;
+		touch-action: none;
 	}
 
 	.label {

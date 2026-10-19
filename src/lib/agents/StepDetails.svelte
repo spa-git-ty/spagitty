@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { fileAttrs } from '$lib/files/open';
 	import Markdown from '$lib/ui/Markdown.svelte';
 	import { stepTime } from './levels';
 	import { KIND_LABELS, blocksOf, lineCount } from './record';
@@ -52,7 +53,7 @@
 						{block.path}
 					</button>
 				{:else}
-					<span class="mono">{block.path}</span>
+					<span class="mono" {...fileAttrs(block.path, 'HEAD', undefined, { click: true })}>{block.path}</span>
 				{/if}
 			{:else if block.kind === 'tool'}
 				<code class="inline mono">{block.text}</code>

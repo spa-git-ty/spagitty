@@ -9,6 +9,10 @@
  * revision. A file Files cannot read, one not in a commit yet, carries
  * `data-file-absent` with the reason, and the entry is shown with it.
  *
+ * Every such row also opens on a double-click, or a click with Ctrl (⌘ on a
+ * Mac), and a row that does nothing else when pressed — a name in a list —
+ * opens on a plain click: it says so with `data-file-open="click"` (FEAT-150).
+ *
  * A screen whose rows already have a menu of their own puts the same entry
  * in it with `openInFiles`.
  */
@@ -55,14 +59,41 @@ export function pullFileAttrs(
 	return fileAttrs(path, status === 'deleted' ? head.mergeBase : head.head);
 }
 
+/** How a marked row opens, beyond the right-click menu (FEAT-150). */
+export interface FileOpening {
+	/** A plain click opens it: the row does nothing else when pressed. */
+	click?: boolean;
+	/** The line to open at, 1-based. */
+	line?: number;
+}
+
 /**
  * The attributes that make a row openable in Files: spread onto the row.
  * Without a revision, `absent` says why there is nothing to read.
  */
-export function fileAttrs(path: string, rev: string | null | undefined, absent?: string) {
+export function fileAttrs(
+	path: string,
+	rev: string | null | undefined,
+	absent?: string,
+	opening: FileOpening = {}
+) {
 	return {
 		'data-file-path': path,
 		'data-file-rev': rev ?? undefined,
-		'data-file-absent': absent || (rev ? undefined : 'Not in a commit')
+		'data-file-absent': absent || (rev ? undefined : 'Not in a commit'),
+		'data-file-open': opening.click ? 'click' : undefined,
+		'data-file-line': opening.line && opening.line > 0 ? String(opening.line) : undefined
+	};
+}
+
+/** What a marked row asks to open, or null when it is not one or cannot be read. */
+export function targetOf(row: HTMLElement): FileTarget | null {
+	const path = row.dataset.filePath;
+	if (!path || row.dataset.fileAbsent) return null;
+	const line = Number(row.dataset.fileLine);
+	return {
+		path,
+		rev: row.dataset.fileRev || undefined,
+		line: Number.isInteger(line) && line > 0 ? line : undefined
 	};
 }

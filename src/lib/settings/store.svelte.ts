@@ -16,6 +16,7 @@
 
 import * as api from '../api';
 import { RAIL_DEFAULT, type RailSettings } from '../nav';
+import { HOME_DEFAULT, type HomeLayout } from '../home/layout';
 import type {
 	About,
 	Identity,
@@ -41,6 +42,7 @@ export type Section =
 	| 'godmode'
 	| 'appearance'
 	| 'rail'
+	| 'home'
 	| 'reading'
 	| 'license';
 
@@ -68,6 +70,8 @@ export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'appearance', label: 'Appearance' },
 	// After Appearance: what is on the rail is how the window looks (FEAT-134).
 	{ id: 'rail', label: 'Rail' },
+	// After Rail: the other place a person arranges what they see (FEAT-148).
+	{ id: 'home', label: 'Home' },
 	{ id: 'reading', label: 'Reading' },
 	{ id: 'license', label: 'License' }
 ];
@@ -95,6 +99,7 @@ const DEFAULTS: Settings = {
 	notifyChecks: true,
 	notifyEveryMinutes: 2,
 	rail: RAIL_DEFAULT,
+	home: HOME_DEFAULT,
 	terminalShell: '',
 	terminalMultiplexer: true
 };
@@ -208,6 +213,10 @@ export const settings = {
 	 */
 	get rail(): RailSettings {
 		return stored.rail ?? RAIL_DEFAULT;
+	},
+	/** Which cards Home shows (FEAT-148). Read as `rail` is, for the same reason. */
+	get home(): HomeLayout {
+		return stored.home ?? HOME_DEFAULT;
 	},
 	get licenses(): Licenses | null {
 		return licenses;

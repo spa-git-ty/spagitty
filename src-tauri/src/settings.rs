@@ -102,6 +102,20 @@ pub struct Rail {
     pub place: RailWhere,
 }
 
+/// Which cards Home shows, and in what order (FEAT-148).
+///
+/// Cards are named by id strings, as the rail's screens are by code, so a
+/// file from a newer build that names a card this one has not got keeps the
+/// rest. The default is every card, in the designed order.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct HomeLayout {
+    /// The cards taken off Home.
+    pub hidden: Vec<String>,
+    /// Every card in the order chosen. Empty means the designed order.
+    pub order: Vec<String>,
+}
+
 /// Read a value that has a default, falling back rather than failing.
 ///
 /// A hand-edited `"personality": "loud"` must cost the personality, not every
@@ -185,6 +199,9 @@ pub struct Settings {
     /// What is pinned, hidden and reordered on the rail (FEAT-134).
     #[serde(deserialize_with = "lenient")]
     pub rail: Rail,
+    /// Which cards Home shows, and in what order (FEAT-148).
+    #[serde(deserialize_with = "lenient")]
+    pub home: HomeLayout,
     /// The shell a terminal runs (FEAT-130). Empty is the platform's own:
     /// `$SHELL`, or PowerShell on Windows.
     #[serde(deserialize_with = "lenient")]
@@ -253,6 +270,8 @@ impl Default for Settings {
             notify_every_minutes: NOTIFY_EVERY_DEFAULT,
             // Every screen pinned, as TASK-056 left the rail.
             rail: Rail::default(),
+            // Every card, as Home was designed.
+            home: HomeLayout::default(),
             // The platform's own shell, inside a multiplexer when one can run.
             terminal_shell: String::new(),
             terminal_multiplexer: true,
@@ -416,6 +435,10 @@ mod tests {
                 order: vec!["1Q".to_string(), "1C".to_string(), "1A".to_string()],
                 place: RailWhere::Palette,
             },
+            home: HomeLayout {
+                hidden: vec!["heat".to_string()],
+                order: vec!["farm".to_string(), "needs".to_string()],
+            },
             terminal_shell: "/usr/bin/fish".to_string(),
             terminal_multiplexer: false,
         };
@@ -476,6 +499,17 @@ mod tests {
             text.contains(r#""rail":{"hidden":["1G"],"order":[],"where":"palette"}"#),
             "{text}"
         );
+    }
+
+    #[test]
+    fn a_home_layout_this_build_cannot_read_costs_only_the_layout() {
+        let settings = parse(r#"{"home": ["farm"], "showGitCommands": true}"#);
+        assert_eq!(settings.home, HomeLayout::default());
+        assert!(settings.show_git_commands);
+
+        let settings = parse(r#"{"home": {"hidden": ["heat", "later"]}}"#);
+        assert_eq!(settings.home.hidden, vec!["heat".to_string(), "later".to_string()]);
+        assert!(settings.home.order.is_empty());
     }
 
     #[test]

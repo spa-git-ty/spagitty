@@ -4,6 +4,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
+	import { sortable, type SortState } from '$lib/ui/sortable';
 	import BlockEditor from './BlockEditor.svelte';
 	import HookRuns from './HookRuns.svelte';
 	import { builder } from './builder.svelte';
@@ -16,15 +17,17 @@
 	const data = $derived(builder.data);
 	let dryStage = $state<Stage>('pre-commit');
 	let dragging = $state<string | null>(null);
+	let over = $state<string | null>(null);
 
-	function dropped(target: string) {
-		if (!dragging || !draft) return;
-		const siblings = draft.blocks.filter((block) => block.stage === draft.blocks.find((block) => block.id === dragging)?.stage);
-		const from = siblings.findIndex((block) => block.id === dragging);
+	/** By the grip, with the pointer: HTML drag and drop never reached the page on Windows (BUG-092). */
+	function dropped(moving: string, target: string) {
+		if (!draft) return;
+		const siblings = draft.blocks.filter((block) => block.stage === draft.blocks.find((block) => block.id === moving)?.stage);
+		const from = siblings.findIndex((block) => block.id === moving);
 		const to = siblings.findIndex((block) => block.id === target);
-		if (from >= 0 && to >= 0) for (let i = 0; i < Math.abs(to - from); i++) builder.move(dragging, to > from ? 1 : -1);
-		dragging = null;
+		if (from >= 0 && to >= 0) for (let i = 0; i < Math.abs(to - from); i++) builder.move(moving, to > from ? 1 : -1);
 	}
+	const sorting = $derived({ disabled: builder.readonly, onmove: dropped, onstate: (state: SortState) => { dragging = state.dragging; over = state.over; } });
 	async function dryRun() {
 		await builder.dryRun(dryStage, () => { void goto('/hooks/runs'); });
 	}
@@ -60,11 +63,11 @@
 			{:else}
 				<aside class="stack" aria-label="Hook stages">
 					{#each STAGES as stage (stage)}
-						<section class="stage" aria-label={stage}>
+						<section class="stage" aria-label={stage} use:sortable={sorting}>
 							<div class="stage-head"><strong class="mono">{stage}</strong><span class="note">{draft.blocks.filter((block) => block.stage === stage).length}</span><span class="grow"></span><input type="checkbox" role="switch" aria-label={`Enable ${stage}`} checked={draft.activeStages.includes(stage)} disabled={builder.readonly || builder.saving} onchange={() => builder.toggleStage(stage)} /></div>
 							{#each draft.blocks.filter((block) => block.stage === stage) as block, index (block.id)}
-								<div class="block" class:selected={builder.block?.id === block.id} class:off={!block.enabled || !draft.activeStages.includes(stage)} draggable={!builder.readonly} role="group" aria-label={block.label} ondragstart={() => { dragging = block.id; }} ondragend={() => { dragging = null; }} ondragover={(event) => event.preventDefault()} ondrop={() => dropped(block.id)}>
-									<button class="block-pick" onclick={() => builder.select(block.id)}><span class="grip" aria-hidden="true">⠿</span><span class="square" style:--tone={CATALOGUE.find((item) => item.kind === block.action.kind)?.tone}></span><span>{block.label}</span></button>
+								<div class="block" class:selected={builder.block?.id === block.id} class:off={!block.enabled || !draft.activeStages.includes(stage)} class:dragging={dragging === block.id} class:over={over === block.id} data-sort-key={block.id} role="group" aria-label={block.label}>
+									<button class="block-pick" onclick={() => builder.select(block.id)}><span class="grip" data-sort-grip aria-hidden="true">⠿</span><span class="square" style:--tone={CATALOGUE.find((item) => item.kind === block.action.kind)?.tone}></span><span>{block.label}</span></button>
 									<div class="order"><button aria-label={`Move ${block.label} up`} title="Move up" disabled={builder.readonly || index === 0} onclick={() => builder.move(block.id, -1)}>↑</button><button aria-label={`Move ${block.label} down`} title="Move down" disabled={builder.readonly || index === draft.blocks.filter((item) => item.stage === stage).length - 1} onclick={() => builder.move(block.id, 1)}>↓</button></div>
 								</div>
 							{:else}<p class="note no-blocks">No blocks at this stage.</p>{/each}
@@ -101,10 +104,12 @@
 	.block { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r-button); background: var(--surface-2); }
 	.block.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
 	.block.off { opacity: 0.5; }
+	.block.dragging { opacity: 0.4; }
+	.block.over { box-shadow: inset 0 2px 0 var(--accent); }
 	.block-pick { display: flex; align-items: center; flex: 1; min-width: 0; gap: 8px; text-align: left; padding: 10px; font-size: var(--fs-secondary); }
 	.block-pick > span:last-child { overflow-wrap: anywhere; }
 	.square { width: 9px; height: 9px; border-radius: 3px; background: var(--tone); flex: none; }
-	.grip { color: var(--muted); cursor: grab; }
+	.grip { color: var(--muted); cursor: grab; touch-action: none; }
 	.order { display: flex; flex-direction: column; padding-right: 5px; }
 	.order button { color: var(--muted); font-size: var(--fs-secondary); padding: 0 3px; }
 	.no-blocks { margin: 2px 0 8px; }

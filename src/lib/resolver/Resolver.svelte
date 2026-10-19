@@ -217,7 +217,7 @@
 		{#if others.length > 0}
 			<span class="label later">Merge on their own</span>
 			{#each others as other (other.path)}
-				<span class="other" title={other.path} {...fileAttrs(other.path, rev)}>
+				<span class="other" title={other.path} {...fileAttrs(other.path, rev, undefined, { click: true })}>
 					<span class="pip tone-{other.tone}"></span>
 					<span class="mono muted">{base(other.path)}</span>
 				</span>

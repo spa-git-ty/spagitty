@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import Icon from '$lib/ui/Icon.svelte';
+	import { sortable, type SortState } from '$lib/ui/sortable';
 	import { ACTION_LOOK, orphanSquash } from './plan';
 	import { ACTIONS, rebase } from './store.svelte';
 	import type { RebaseAction } from '$lib/types';
@@ -34,22 +35,32 @@
 		}
 	}
 
-	function drop(target: string) {
-		const moving = dragging;
-		dragging = null;
-		over = null;
-		if (locked || moving === null || moving === target) return;
+	/**
+	 * Moved by the grip with the pointer, not HTML drag and drop, which the
+	 * window never delivers on Windows (BUG-092, see `sortable`).
+	 */
+	function drop(moving: string, target: string) {
+		if (locked) return;
 		const from = rebase.plan.findIndex((entry) => entry.id === moving);
 		const to = rebase.plan.findIndex((entry) => entry.id === target);
 		if (from !== -1 && to !== -1) void rebase.move(moving, to - from);
 	}
+
+	const sorting = $derived({
+		disabled: locked,
+		onmove: drop,
+		onstate: (state: SortState) => {
+			dragging = state.dragging;
+			over = state.over;
+		}
+	});
 
 	function choose(id: string, action: RebaseAction) {
 		if (!locked) void rebase.setAction(id, action);
 	}
 </script>
 
-<ol class="plan" aria-label="Plan">
+<ol class="plan" aria-label="Plan" use:sortable={sorting}>
 	{#each rebase.rows as { row, action }, index (row.id)}
 		{@const look = ACTION_LOOK[action]}
 		{@const orphan = action === 'squash' && orphanSquash(rebase.plan, row.id)}
@@ -57,24 +68,11 @@
 			class="row tone-{look.tone}"
 			class:dropped={action === 'drop'}
 			class:focused={row.id === rebase.focused}
-			class:over={over === row.id && dragging !== row.id}
+			class:over={over === row.id}
 			class:dragging={dragging === row.id}
-			draggable={!locked}
-			ondragstart={() => (dragging = row.id)}
-			ondragover={(event) => {
-				event.preventDefault();
-				over = row.id;
-			}}
-			ondragleave={() => {
-				if (over === row.id) over = null;
-			}}
-			ondrop={() => drop(row.id)}
-			ondragend={() => {
-				dragging = null;
-				over = null;
-			}}
+			data-sort-key={row.id}
 		>
-			<span class="grip" aria-hidden="true" title="Drag to reorder, or Alt+↑ / Alt+↓">⠿</span>
+			<span class="grip" class:locked data-sort-grip aria-hidden="true" title="Drag to reorder, or Alt+↑ / Alt+↓">⠿</span>
 			<span class="step" aria-hidden="true">{index + 1}</span>
 			<button
 				class="what"
@@ -192,6 +190,12 @@
 		color: var(--muted);
 		cursor: grab;
 		padding: 0 2px;
+		touch-action: none;
+	}
+
+	.grip.locked {
+		cursor: default;
+		opacity: 0.4;
 	}
 
 	.step {

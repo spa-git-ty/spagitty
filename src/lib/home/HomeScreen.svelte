@@ -22,6 +22,8 @@
 	import WorkingCard from './WorkingCard.svelte';
 	import { age, needs, type Need } from './needs';
 	import { home } from './store.svelte';
+	import { shownCards } from './layout';
+	import { settings } from '$lib/settings/store.svelte';
 	import './home.css';
 
 	/**
@@ -113,6 +115,9 @@
 	const fetched = $derived(
 		info?.lastFetched ? `fetched ${age(info.lastFetched * 1000, now)} ago` : 'never fetched'
 	);
+	/** The cards, in the order Settings › Home chose (FEAT-148). */
+	const cards = $derived(shownCards(settings.home));
+
 	const facts = $derived(
 		[overview?.remote, overview?.licence, overview?.version].filter((part): part is string => !!part)
 	);
@@ -159,48 +164,58 @@
 
 		{#if home.errors.overview}<p class="home-error">{home.errors.overview}</p>{/if}
 
-		<div class="top">
-			<NeedsCard {rows} {now} onact={act} />
-			<div class="side">
-				<FarmCard {farm} onstart={startFarm} />
-				<WorkingCard
-					changed={home.changed}
-					stashes={repo.counts.stashes}
-					busy={stashing}
-					oncommit={() => goto('/changes')}
-					onstash={stash}
-				/>
-			</div>
-		</div>
-
+		<!--
+			One grid, packed densely, so any order still fills it: the wide card
+			takes two columns and two rows where there are three, and the next
+			two cards stack beside it as the design drew them.
+		-->
 		<div class="grid">
-			<BranchesCard
-				branches={overview?.branches ?? []}
-				count={overview?.branchCount ?? 0}
-				defaultBranch={overview?.defaultBranch ?? null}
-				prs={requests.all}
-				{failing}
-				{now}
-			/>
-			<RequestsCard
-				prs={requests.all}
-				{me}
-				connected={requests.connected || requests.loading}
-				error={requests.error}
-				onopen={openPullRequest}
-			/>
-			<CommitsCard {now} />
-		</div>
-
-		<div class="grid">
-			<ActivityCards
-				{overview}
-				runs={home.defaultRuns}
-				latest={home.latest}
-				pipelinesError={home.errors.pipelines}
-				hasHost={home.host !== null}
-				{now}
-			/>
+			{#each cards as card (card.id)}
+				<div class="slot" class:wide={card.wide} data-card={card.id}>
+					{#if card.id === 'needs'}
+						<NeedsCard {rows} {now} onact={act} />
+					{:else if card.id === 'farm'}
+						<FarmCard {farm} onstart={startFarm} />
+					{:else if card.id === 'working'}
+						<WorkingCard
+							changed={home.changed}
+							stashes={repo.counts.stashes}
+							busy={stashing}
+							oncommit={() => goto('/changes')}
+							onstash={stash}
+						/>
+					{:else if card.id === 'branches'}
+						<BranchesCard
+							branches={overview?.branches ?? []}
+							count={overview?.branchCount ?? 0}
+							defaultBranch={overview?.defaultBranch ?? null}
+							prs={requests.all}
+							{failing}
+							{now}
+						/>
+					{:else if card.id === 'requests'}
+						<RequestsCard
+							prs={requests.all}
+							{me}
+							connected={requests.connected || requests.loading}
+							error={requests.error}
+							onopen={openPullRequest}
+						/>
+					{:else if card.id === 'commits'}
+						<CommitsCard {now} />
+					{:else}
+						<ActivityCards
+							card={card.id}
+							{overview}
+							runs={home.defaultRuns}
+							latest={home.latest}
+							pipelinesError={home.errors.pipelines}
+							hasHost={home.host !== null}
+							{now}
+						/>
+					{/if}
+				</div>
+			{/each}
 		</div>
 	{/if}
 </div>
@@ -277,26 +292,35 @@
 		gap: 10px;
 	}
 
-	.top {
-		display: flex;
-		flex-wrap: wrap;
+	/* Three across, wrapping on a narrow window. */
+	.grid {
+		container-type: inline-size;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+		grid-auto-flow: row dense;
 		gap: 18px;
-		align-items: stretch;
 	}
 
-	.side {
-		flex: 1 1 320px;
+	.slot {
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 18px;
 	}
 
-	/* Three across, wrapping on a narrow window. */
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-		gap: 18px;
+	.slot > :global(.home-card) {
+		flex: 1;
+	}
+
+	/* The whole width until there are three columns to take two of. */
+	.slot.wide {
+		grid-column: 1 / -1;
+	}
+
+	@container (min-width: 1056px) {
+		.slot.wide {
+			grid-column: span 2;
+			grid-row: span 2;
+		}
 	}
 
 	@media (max-width: 700px) {

@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import Icon from '$lib/ui/Icon.svelte';
+	import FileGlyph from './FileGlyph.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
 	import type { FilesEntry } from '$lib/types';
 	import { files } from './store.svelte';
@@ -74,6 +75,7 @@
 			{#each files.found.paths as path (path)}
 				{@const parts = nameOf(path)}
 				<button class="row found" class:here={path === here} title={path} onclick={() => files.openFile(path)}>
+					<FileGlyph {path} />
 					<span class="name">{parts.name}</span>
 					<span class="dir note">{parts.dir}</span>
 				</button>
@@ -102,6 +104,7 @@
 					<span class="arrow" aria-hidden="true"
 						>{entry.kind === 'folder' ? (opened ? '▾' : '▸') : ''}</span
 					>
+					<FileGlyph path={entry.path} folder={entry.kind === 'folder' || entry.kind === 'submodule'} open={opened} />
 					<span class="name">{entry.name}</span>
 					{#if entry.kind === 'folder' && opened && files.folder(entry.path) === 'loading'}
 						<Loader size="inline" label="" />
@@ -211,13 +214,13 @@
 		text-overflow: ellipsis;
 	}
 
-	.found {
-		justify-content: space-between;
-	}
-
 	.found .name {
 		flex: none;
-		max-width: 70%;
+		max-width: 64%;
+	}
+
+	.found .dir {
+		margin-left: auto;
 	}
 
 	.dir {

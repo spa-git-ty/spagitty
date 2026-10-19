@@ -1,5 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
+	import { fileAttrs } from '$lib/files/open';
+	import { repo } from '$lib/repo.svelte';
 	import type { FileStatus, StatusEntry } from '$lib/types';
 	import Btn from '$lib/ui/Btn.svelte';
 
@@ -21,6 +23,14 @@
 		renamed: { letter: 'R', colour: 'var(--lane-5)' },
 		untracked: { letter: 'U', colour: 'var(--ok)' }
 	};
+
+	/** Files reads commits: a changed path opens as the branch has it (FEAT-150). */
+	const head = $derived(repo.info?.head.branch ?? repo.info?.head.id ?? null);
+
+	function inFiles(entry: StatusEntry) {
+		const fresh = entry.status === 'added' || entry.status === 'untracked';
+		return fileAttrs(entry.path, head, fresh ? 'Not in a commit yet' : undefined, { click: !fresh });
+	}
 </script>
 
 <section class="card home-card roomy" aria-labelledby="home-working">
@@ -33,7 +43,7 @@
 	{#if changed.length}
 		<div class="paths mono">
 			{#each changed.slice(0, 3) as entry (entry.path)}
-				<div class="path">
+				<div class="path" {...inFiles(entry)}>
 					<span class="letter" style:color={LETTERS[entry.status].colour}>{LETTERS[entry.status].letter}</span>
 					<span class="home-ellipsis">{entry.path}</span>
 				</div>
