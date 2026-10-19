@@ -2,7 +2,7 @@
 
 # BUG-074 — A remote agent's token limit is read only between steps
 
-**Status:** Open — found by the TASK-063 audit of pull request #52 (2026-10-12).
+**Status:** Fixed — on `release/3.4.0`; unmerged. Covered by unit tests with a scripted provider; not tried against a real provider.
 **Screens:** 1K, 1R, 1S.
 **Raised by:** CodeRabbit on #52; confirmed in the code on 2026-10-12.
 

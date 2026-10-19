@@ -10,10 +10,12 @@
 //! anything else is refused and said in the timeline.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
-use spagitty_core::models::{self, Endpoint, Message, Part, Role, Stop, Tool};
+use spagitty_core::models::{self, Endpoint, Message, Part, Role, Stop, Tool, Turn};
 
 use super::engine::{Ask, Driver, Reply, World};
 use super::protocol::{Answer, Finding, PlanItem, Resolution, Severity, Side, Verdict};
@@ -26,6 +28,8 @@ const TURNS: usize = 40;
 const ANSWER_TOKENS: u32 = 4096;
 /// How much of a file one read returns.
 const READ_BYTES: usize = 64 * 1024;
+/// How often a step waiting on a provider looks at Stop and the time limit.
+const POLL: Duration = Duration::from_millis(200);
 
 pub struct RemoteDriver {
     endpoint: Endpoint,
@@ -321,6 +325,36 @@ fn narrate(name: &str, input: &Value) -> String {
     }
 }
 
+/// Wait for one exchange's answer, but not past the time limit and not once
+/// the person has stopped the agent (BUG-074). `None` is the time limit
+/// reached while the provider was still answering.
+fn wait(
+    answered: &Receiver<Result<Turn, String>>,
+    deadline: Option<Instant>,
+    cancel: &AtomicBool,
+) -> Result<Option<Turn>, String> {
+    loop {
+        if cancel.load(Ordering::Acquire) {
+            return Err("was stopped".into());
+        }
+        let mut slice = POLL;
+        if let Some(deadline) = deadline {
+            let now = Instant::now();
+            if now >= deadline {
+                return Ok(None);
+            }
+            slice = slice.min(deadline - now);
+        }
+        match answered.recv_timeout(slice) {
+            Ok(turn) => return turn.map(Some),
+            Err(RecvTimeoutError::Timeout) => continue,
+            Err(RecvTimeoutError::Disconnected) => {
+                return Err("could not answer: the request ended without a reply".into())
+            }
+        }
+    }
+}
+
 impl Driver for RemoteDriver {
     fn run(
         &mut self,
@@ -330,105 +364,145 @@ impl Driver for RemoteDriver {
         cancel: &Arc<AtomicBool>,
     ) -> Result<Reply, String> {
         let tools = tools(&ask.kind);
-        let mut gathered = Gathered::default();
-        // What the prompt itself carries leaves the machine too.
-        match &ask.kind {
-            StepKind::File { path } | StepKind::Conflict { path, .. } => gathered.sent(path),
-            _ => {}
-        }
-        let mut messages = vec![Message::user(ask.prompt.clone())];
-        let mut tokens = Tokens::default();
-        let mut last = String::new();
         hear(&format!(
             "$ {} {}",
             self.endpoint.provider.label(),
             self.endpoint.model
         ));
-
-        for _ in 0..TURNS {
-            if cancel.load(Ordering::Acquire) {
-                return Err("was stopped".into());
-            }
-            let turn = models::complete(&self.endpoint, SYSTEM, &messages, &tools, ANSWER_TOKENS)
-                .map_err(|error| format!("could not answer: {error}"))?;
-            tokens.input += turn.input_tokens;
-            tokens.output += turn.output_tokens;
-            let text = turn.text();
-            for line in text.lines().filter(|l| !l.trim().is_empty()) {
-                hear(line);
-            }
-            if !text.trim().is_empty() {
-                last = text.clone();
-            }
-            let calls = turn.calls();
-            messages.push(Message {
-                role: Role::Assistant,
-                parts: turn.parts.clone(),
+        // Each exchange runs on its own thread, so a step waiting on a
+        // provider can still be stopped, by the person or by the time limit.
+        let mut exchange = |messages: &[Message]| {
+            let (endpoint, tools, messages) =
+                (self.endpoint.clone(), tools.clone(), messages.to_vec());
+            let (send, answered) = mpsc::channel();
+            std::thread::spawn(move || {
+                let turn = models::complete(&endpoint, SYSTEM, &messages, &tools, ANSWER_TOKENS)
+                    .map_err(|error| format!("could not answer: {error}"));
+                let _ = send.send(turn);
             });
-            if calls.is_empty() {
-                if turn.stop == Stop::Length {
-                    return Err(format!(
-                        "ran out of room for its answer ({} tokens)",
-                        ANSWER_TOKENS
-                    ));
-                }
-                break;
-            }
-            let mut results = Vec::new();
-            for (id, name, input) in calls {
-                hear(&narrate(&name, &input));
-                let (content, is_error) = answer(&name, &input, world, &ask.kind, &mut gathered);
-                results.push(Part::Result {
-                    id,
-                    name,
-                    content,
-                    is_error,
-                });
-            }
-            messages.push(Message {
-                role: Role::User,
-                parts: results,
-            });
-            if gathered.finished {
-                break;
-            }
-        }
-
-        // A model may answer in the fenced block instead of the tools.
-        let answer = if gathered.answer == Answer::default() {
-            Answer::find(&last)
-        } else {
-            Some(gathered.answer)
+            wait(&answered, ask.budget.deadline, cancel)
         };
-        let answer = match (answer, &ask.kind) {
-            // A file with nothing to say is a finished file.
-            (None, StepKind::File { .. }) if gathered.finished => Some(Answer {
-                findings: Some(Vec::new()),
-                ..Answer::default()
-            }),
-            (answer, StepKind::File { .. }) => answer.map(|mut a| {
-                a.findings.get_or_insert_with(Vec::new);
-                a
-            }),
-            (answer, _) => answer,
-        };
-        Ok(Reply {
-            answer,
-            last_words: last,
-            tokens,
-            command: Some(format!(
-                "{} {} via {}",
-                self.name,
-                self.endpoint.model,
-                self.endpoint.name()
-            )),
-            sent: gathered.sent,
-        })
+        let mut reply = converse(ask, world, hear, cancel, &mut exchange)?;
+        reply.command = Some(format!(
+            "{} {} via {}",
+            self.name,
+            self.endpoint.model,
+            self.endpoint.name()
+        ));
+        Ok(reply)
     }
+}
+
+/// Sends what has been said; answers the model's turn, or `None` when the
+/// time limit came first.
+type Exchange<'a> = dyn FnMut(&[Message]) -> Result<Option<Turn>, String> + 'a;
+
+/// One step's conversation, kept apart from the network so a scripted
+/// provider can drive the loop.
+fn converse(
+    ask: &Ask,
+    world: &dyn World,
+    hear: &mut dyn FnMut(&str),
+    cancel: &AtomicBool,
+    exchange: &mut Exchange<'_>,
+) -> Result<Reply, String> {
+    let mut gathered = Gathered::default();
+    // What the prompt itself carries leaves the machine too.
+    match &ask.kind {
+        StepKind::File { path } | StepKind::Conflict { path, .. } => gathered.sent(path),
+        _ => {}
+    }
+    let mut messages = vec![Message::user(ask.prompt.clone())];
+    let mut tokens = Tokens::default();
+    let mut last = String::new();
+
+    for _ in 0..TURNS {
+        if cancel.load(Ordering::Acquire) {
+            return Err("was stopped".into());
+        }
+        // Checked after every exchange, not only between steps: each one
+        // sends the whole conversation again.
+        if ask.budget.spent(tokens.total()) {
+            hear("· stopped at its limit");
+            break;
+        }
+        let Some(turn) = exchange(&messages)? else {
+            hear("· stopped at its time limit while waiting for an answer");
+            break;
+        };
+        tokens.input += turn.input_tokens;
+        tokens.output += turn.output_tokens;
+        let text = turn.text();
+        for line in text.lines().filter(|l| !l.trim().is_empty()) {
+            hear(line);
+        }
+        if !text.trim().is_empty() {
+            last = text.clone();
+        }
+        let calls = turn.calls();
+        messages.push(Message {
+            role: Role::Assistant,
+            parts: turn.parts.clone(),
+        });
+        if calls.is_empty() {
+            if turn.stop == Stop::Length {
+                return Err(format!(
+                    "ran out of room for its answer ({} tokens)",
+                    ANSWER_TOKENS
+                ));
+            }
+            break;
+        }
+        let mut results = Vec::new();
+        for (id, name, input) in calls {
+            hear(&narrate(&name, &input));
+            let (content, is_error) = answer(&name, &input, world, &ask.kind, &mut gathered);
+            results.push(Part::Result {
+                id,
+                name,
+                content,
+                is_error,
+            });
+        }
+        messages.push(Message {
+            role: Role::User,
+            parts: results,
+        });
+        if gathered.finished {
+            break;
+        }
+    }
+
+    // A model may answer in the fenced block instead of the tools.
+    let answer = if gathered.answer == Answer::default() {
+        Answer::find(&last)
+    } else {
+        Some(gathered.answer)
+    };
+    let answer = match (answer, &ask.kind) {
+        // A file with nothing to say is a finished file.
+        (None, StepKind::File { .. }) if gathered.finished => Some(Answer {
+            findings: Some(Vec::new()),
+            ..Answer::default()
+        }),
+        (answer, StepKind::File { .. }) => answer.map(|mut a| {
+            a.findings.get_or_insert_with(Vec::new);
+            a
+        }),
+        (answer, _) => answer,
+    };
+    Ok(Reply {
+        answer,
+        last_words: last,
+        tokens,
+        command: None,
+        sent: gathered.sent,
+    })
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::engine::Budget;
     use super::*;
 
     struct Tree;
@@ -591,6 +665,131 @@ mod tests {
             (4, Severity::High, false)
         );
         assert!(gathered.finished);
+    }
+
+    fn call(name: &str, input: Value) -> Part {
+        Part::Call {
+            id: name.into(),
+            name: name.into(),
+            input,
+            signature: None,
+        }
+    }
+
+    fn turn(parts: Vec<Part>, input_tokens: u64) -> Turn {
+        Turn {
+            parts,
+            stop: Stop::Tools,
+            input_tokens,
+            output_tokens: 0,
+        }
+    }
+
+    fn file_ask(budget: Budget) -> Ask {
+        Ask {
+            kind: StepKind::File {
+                path: "a.rs".into(),
+            },
+            prompt: "Review a.rs".into(),
+            workdir: std::env::temp_dir(),
+            budget,
+        }
+    }
+
+    #[test]
+    fn a_step_stops_after_the_exchange_that_crosses_its_token_limit() {
+        let mut asked = 0;
+        // Every answer is large and asks for more, as a model reading a big file does.
+        let mut provider = |_: &[Message]| {
+            asked += 1;
+            Ok(Some(turn(
+                vec![
+                    call(
+                        "propose_comment",
+                        json!({"line": asked, "severity": "low", "body": "x", "sure": true}),
+                    ),
+                    call("read_file", json!({"path": "b.rs"})),
+                ],
+                30_000,
+            )))
+        };
+        let budget = Budget {
+            tokens: Some(50_000),
+            deadline: None,
+        };
+        let mut heard = Vec::new();
+        let reply = converse(
+            &file_ask(budget),
+            &Tree,
+            &mut |line| heard.push(line.to_string()),
+            &AtomicBool::new(false),
+            &mut provider,
+        )
+        .unwrap();
+        assert_eq!(asked, 2);
+        assert_eq!(reply.tokens.total(), 60_000);
+        assert!(heard.iter().any(|l| l == "· stopped at its limit"));
+        // What it had gathered is kept.
+        assert_eq!(reply.answer.unwrap().findings.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn no_token_limit_still_means_none() {
+        let mut asked = 0;
+        let mut provider = |_: &[Message]| {
+            asked += 1;
+            let ask_for = if asked < 6 {
+                "read_file"
+            } else {
+                "finish_step"
+            };
+            Ok(Some(turn(
+                vec![call(ask_for, json!({"path": "b.rs"}))],
+                1_000_000,
+            )))
+        };
+        let reply = converse(
+            &file_ask(Budget::default()),
+            &Tree,
+            &mut |_| {},
+            &AtomicBool::new(false),
+            &mut provider,
+        )
+        .unwrap();
+        assert_eq!(asked, 6);
+        assert_eq!(reply.tokens.total(), 6_000_000);
+    }
+
+    #[test]
+    fn the_time_limit_ends_a_step_waiting_on_a_provider() {
+        let (_send, answered) = mpsc::channel::<Result<Turn, String>>();
+        let started = Instant::now();
+        let deadline = Some(started + Duration::from_millis(50));
+        assert_eq!(wait(&answered, deadline, &AtomicBool::new(false)), Ok(None));
+        assert!(started.elapsed() < Duration::from_secs(2));
+        // Stop is heard while waiting too.
+        assert_eq!(
+            wait(&answered, None, &AtomicBool::new(true)),
+            Err("was stopped".into())
+        );
+        // A step whose time is already up asks nothing more.
+        let past = Budget {
+            tokens: None,
+            deadline: Some(Instant::now()),
+        };
+        let mut asked = 0;
+        converse(
+            &file_ask(past),
+            &Tree,
+            &mut |_| {},
+            &AtomicBool::new(false),
+            &mut |_: &[Message]| {
+                asked += 1;
+                Ok(None)
+            },
+        )
+        .unwrap();
+        assert_eq!(asked, 0);
     }
 
     #[test]
