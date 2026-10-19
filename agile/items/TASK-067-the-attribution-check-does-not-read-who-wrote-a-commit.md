@@ -2,7 +2,7 @@
 
 # TASK-067 — The attribution check does not read who wrote a commit
 
-**Status:** Backlog — raised by a review of the 2.0.1 stack, 2026-10-12.
+**Status:** Done — on `release/3.4.0`; unmerged. Covered by unit tests and run on this branch; its sweep is owed until it has run on a real pull request.
 **Screens:** —.
 **Raised by:** the review: one commit in pull request #63, f475d8b, has *Antigravity* as its author, and gate 1 passed it.
 

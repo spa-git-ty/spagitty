@@ -16,8 +16,11 @@
  * a name a person could have, or when the address is one only an agent writes
  * from. "Claude Dupont" is a person; "Claude Opus 5" is not.
  *
+ * A commit can be attributed without a line in its message: its author or its
+ * committer is an agent (TASK-067). The same test of name and address applies.
+ *
  * Usage:
- *   node tools/attribution.mjs commits <range>   every message in `git log <range>`
+ *   node tools/attribution.mjs commits <range>   every message, author and committer in `git log <range>`
  *   node tools/attribution.mjs text <file|->      a pull request description
  */
 
@@ -74,19 +77,37 @@ export function findAttribution(text) {
 	return found;
 }
 
+/** `git log` format for `findAgentWriters`: hash, author, committer. */
+const WRITERS = '%H%x00%an <%ae>%x00%cn <%ce>';
+
+/**
+ * The commits of a `git log --format=${WRITERS}` listing whose author or
+ * committer is an agent or a tool, each as `<hash> author|committer <who>`.
+ */
+export function findAgentWriters(log) {
+	const found = [];
+	for (const line of log.split(/\r?\n/)) {
+		const [hash, author, committer] = line.split('\0');
+		if (!hash || author === undefined) continue;
+		if (isAgent(author)) found.push(`${hash.slice(0, 7)} author ${author}`);
+		if (committer !== undefined && isAgent(committer)) found.push(`${hash.slice(0, 7)} committer ${committer}`);
+	}
+	return found;
+}
+
 function main(argv) {
 	const [mode, target] = argv;
-	let text;
+	let found;
 	if (mode === 'commits' && target) {
-		text = execFileSync('git', ['log', '--format=%B', target], { encoding: 'utf8' });
+		const git = (format) => execFileSync('git', ['log', `--format=${format}`, target], { encoding: 'utf8' });
+		found = [...findAttribution(git('%B')), ...findAgentWriters(git(WRITERS))];
 	} else if (mode === 'text' && target) {
-		text = readFileSync(target === '-' ? 0 : target, 'utf8');
+		found = findAttribution(readFileSync(target === '-' ? 0 : target, 'utf8'));
 	} else {
 		console.error('usage: attribution.mjs commits <range> | text <file|->');
 		return 2;
 	}
 
-	const found = findAttribution(text);
 	if (found.length === 0) return 0;
 	console.error('Agent, tool or session attribution is not allowed (AGENTS.md):');
 	for (const line of found) console.error(`  ${line}`);

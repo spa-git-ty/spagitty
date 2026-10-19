@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { findAttribution } from './attribution.mjs';
+import { findAgentWriters, findAttribution } from './attribution.mjs';
 
 describe('findAttribution', () => {
 	it('refuses a co-author that is an agent or a tool', () => {
@@ -76,5 +76,29 @@ describe('findAttribution', () => {
 
 	it('reads a message with Windows line endings', () => {
 		expect(findAttribution('subject\r\n\r\nCo-Authored-By: Claude <noreply@anthropic.com>\r\n')).toHaveLength(1);
+	});
+});
+
+describe('findAgentWriters (TASK-067)', () => {
+	const commit = (hash: string, author: string, committer: string) => [hash, author, committer].join('\0');
+
+	it('names a commit whose author or committer is an agent', () => {
+		const log = [
+			commit('f475d8b0aa', 'Claude <noreply@anthropic.com>', 'Ada Lovelace <ada@example.com>'),
+			commit('1234567abc', 'Ada Lovelace <ada@example.com>', 'Codex <codex@openai.com>')
+		].join('\n');
+		expect(findAgentWriters(log)).toEqual([
+			'f475d8b author Claude <noreply@anthropic.com>',
+			'1234567 committer Codex <codex@openai.com>'
+		]);
+	});
+
+	it('lets a person who shares a name with an agent write a commit (BUG-078)', () => {
+		const log = [
+			commit('aaaaaaa1', 'Claude Dupont <claude.dupont@example.org>', 'GitHub <noreply@github.com>'),
+			commit('bbbbbbb2', 'Devin Smith <devin@example.io>', 'Devin Smith <devin@example.io>'),
+			''
+		].join('\n');
+		expect(findAgentWriters(log)).toEqual([]);
 	});
 });

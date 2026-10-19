@@ -376,7 +376,7 @@ of its own.
 | [TASK-064](items/TASK-064-refuse-agent-attribution-in-ci.md) | Refuse agent attribution in commits and descriptions, in CI | — | Done |
 | [TASK-065](items/TASK-065-run-the-agents-sweep-where-it-was-skipped.md) | Run the agents sweep that FEAT-115 was closed without | 1K, 1R, 1S | Backlog |
 | [TASK-066](items/TASK-066-style-notes-from-the-2-0-audit.md) | Style notes from the 2.0 audit | — | Backlog |
-| [TASK-067](items/TASK-067-the-attribution-check-does-not-read-who-wrote-a-commit.md) | The attribution check does not read who wrote a commit | — | Backlog |
+| [TASK-067](items/TASK-067-the-attribution-check-does-not-read-who-wrote-a-commit.md) | The attribution check does not read who wrote a commit | — | Done |
 | [TASK-068](items/TASK-068-what-coderabbit-found-on-63-and-64.md) | What CodeRabbit found on pull requests #63 and #64 | 1S, 1R, 1K, 1Q | Done |
 | [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Backlog |
 | [TASK-070](items/TASK-070-the-plans-file-list-scrolls-in-a-card-the-height-of-its-neighbours.md) | The plan's file list scrolls, in a card the height of its neighbours | 1S | Done |
