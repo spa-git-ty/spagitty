@@ -2,7 +2,7 @@
 
 # BUG-067 — Review says the token is invalid until Pull requests has been opened
 
-**Status:** Open — on `bugfix/BUG-067-review-says-the-token-is-invalid`; the cold-start fault was not reproduced, so this removes what could be read from the code and adds a retry and a clearer message.
+**Status:** Fixed — shipped in 2.1.0. The cold-start fault was never reproduced; the fix removes what could be read from the code and adds a retry and a clearer message; the manual sweep is still owed.
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 

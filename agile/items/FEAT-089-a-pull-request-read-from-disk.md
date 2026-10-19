@@ -2,7 +2,7 @@
 
 # FEAT-089 — A pull request read from disk
 
-**Status:** Open — built on `feature/FEAT-089-a-pull-request-read-from-disk`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-089-a-pull-request-read-from-disk`
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-04, as slice 2 of the Review handoff

@@ -2,7 +2,7 @@
 
 # FEAT-103 — A rebase that stops, in Merger
 
-**Status:** Open — built and merged into `main`; the manual sweep is not yet run.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-103-a-rebase-that-stops-in-merger`
 **Screens:** 1S.
 **Raised by:** the author, 2026-10-06, as slice 4 of `design_handoff_merger/`.

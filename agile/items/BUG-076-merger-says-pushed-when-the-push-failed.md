@@ -2,7 +2,7 @@
 
 # BUG-076 — Merger says *Pushed* when the push failed, and no fetch or push works after it
 
-**Status:** Open — fixed on `bugfix/BUG-076-merger-says-pushed-when-the-push-failed` with its tests; Open until the sweep runs against a real host (2026-10-12).
+**Status:** Fixed — shipped in 2.1.0. The sweep against a real host is owed; the manual sweep is still owed.
 **Screens:** 1S.
 **Raised by:** a review of the 2.0.1 stack on 2026-10-12, before FEAT-117 was merged.
 

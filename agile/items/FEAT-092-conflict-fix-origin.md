@@ -2,7 +2,7 @@
 
 # FEAT-092 — Conflict fixes, told apart
 
-**Status:** Open — built on `feature/FEAT-092-conflict-fix-origin`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-092-conflict-fix-origin`
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-04, as slice 4 of the Review handoff

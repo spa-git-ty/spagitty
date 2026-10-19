@@ -2,7 +2,7 @@
 
 # BUG-082 — Saving the git identity clears the fields
 
-**Status:** Open — implemented and tested on `bugfix/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why` for 2.2.3; awaiting merge and the desktop sweep.
+**Status:** Fixed — shipped in 2.2.3; the manual sweep is still owed.
 **Screens:** 1K.
 **Raised by:** the author, 2026-10-12: global and repository name and email disappear after Save.
 

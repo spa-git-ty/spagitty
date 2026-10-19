@@ -2,7 +2,7 @@
 
 # FEAT-095 — Check out a pull request
 
-**Status:** Open — built on `feature/FEAT-095-check-out-a-pull-request`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-095-check-out-a-pull-request`
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-05: "open in working dir does not make

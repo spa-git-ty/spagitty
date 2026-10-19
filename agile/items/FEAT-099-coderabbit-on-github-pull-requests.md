@@ -2,7 +2,7 @@
 
 # FEAT-099 — CodeRabbit on GitHub pull requests
 
-**Status:** Open
+**Status:** Dropped — the author decided on 2026-10-19 not to build it. CodeRabbit already posts its summary, findings and check run on GitHub, and Review shows the threads.
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** Pull requests (1H).
 **Raised by:** the author, through

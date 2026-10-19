@@ -2,7 +2,7 @@
 
 # FEAT-093 — Threads done properly
 
-**Status:** Open — built on `feature/FEAT-093-threads-done-properly`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-093-threads-done-properly`
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-04, as slice 5 of the Review handoff

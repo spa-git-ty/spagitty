@@ -2,7 +2,7 @@
 
 # FEAT-101 — Merge without conflicts
 
-**Status:** Open — built and merged into `main`; the manual sweep is not yet run.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-101-merge-without-conflicts`
 **Screens:** 1S.
 **Raised by:** the author, 2026-10-06, as slice 2 of `design_handoff_merger/`:

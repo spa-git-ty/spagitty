@@ -2,7 +2,7 @@
 
 # FEAT-088 — GitLab, as its API says
 
-**Status:** Open — built on `feature/FEAT-088-gitlab-as-its-api-says`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-088-gitlab-as-its-api-says`
 **Screens:** 1R, 1H, Settings → Accounts.
 **Raised by:** the author, 2026-10-04, while FEAT-087 was being built: "make
