@@ -202,6 +202,10 @@ pub fn decomposition(farm: &Farm, task: &Task, policy: &Policy) -> String {
 /// which paths are checked out, and that the rest is in the repository, only
 /// not here. Absent for a whole worktree, which needs no explaining.
 fn slice_section(out: &mut String, farm: &Farm, task: &Task) {
+    if farm.workspace == WorkspaceMode::Copy {
+        copy_section(out);
+        return;
+    }
     if farm.workspace != WorkspaceMode::Slice {
         return;
     }
@@ -227,6 +231,36 @@ fn slice_section(out: &mut String, farm: &Farm, task: &Task) {
             bullets(&shown)
         ),
     );
+}
+
+/// Where the agent is standing, when the farm gives each task a copy
+/// (FEAT-147): a repository of its own with no remote, so commit and stop.
+fn copy_section(out: &mut String) {
+    section(
+        out,
+        "YOUR COPY",
+        "This directory is a copy of the repository made for this task. It has no \
+         remote and only your branch. Commit your work on this branch and stop: \
+         Spagitty takes your commits from here when you finish, checks that they \
+         change only the paths you may touch, and runs the checks. Do not push, \
+         and do not add remotes. Uncommitted changes are not taken.",
+    );
+}
+
+/// What an agent is told when the history tools are attached to its run
+/// (FEAT-145).
+pub fn history_note() -> String {
+    let mut out = String::new();
+    section(
+        &mut out,
+        "HISTORY",
+        "The repository's history is a set of tools on the `spagitty` server: \
+         `blame` (who changed these lines, and why), `history` (the commits that \
+         changed a file), `search` (commit messages, changes or code at a commit) \
+         and `show` (a file as a commit has it). Ask them rather than running \
+         `git log` or `git blame` yourself: the answers are shorter, and cached.",
+    );
+    out.trim_end().to_string()
 }
 
 fn goal_section(out: &mut String, goal: &Goal) {
@@ -654,6 +688,25 @@ mod tests {
         assert!(sliced.contains("# YOUR SLICE"));
         assert!(sliced.contains("- backend/src/auth/**\n- backend/src/session/**"));
         assert!(sliced.contains("The checks run on the whole tree."));
+    }
+
+    #[test]
+    fn the_history_note_names_the_four_tools() {
+        let note = history_note();
+        assert!(note.starts_with("# HISTORY"));
+        for tool in ["`blame`", "`history`", "`search`", "`show`"] {
+            assert!(note.contains(tool), "{tool}");
+        }
+    }
+
+    #[test]
+    fn a_copy_farm_tells_the_agent_to_commit_and_not_push() {
+        let (mut farm, task, policy) = (farm(), task(), Policy::default());
+        farm.workspace = WorkspaceMode::Copy;
+        let prompt = implementation(&context(&farm, &task, &policy));
+        assert!(prompt.contains("# YOUR COPY"));
+        assert!(prompt.contains("Do not push"));
+        assert!(!prompt.contains("YOUR SLICE"));
     }
 
     #[test]

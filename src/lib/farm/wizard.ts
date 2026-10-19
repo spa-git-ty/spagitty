@@ -44,7 +44,8 @@ export const DEFAULT_RULES: FarmSettings = {
 	maxParallel: 2,
 	maxAttempts: 3,
 	verification: [],
-	workspace: 'worktree'
+	workspace: 'worktree',
+	conflicts: { by: 'ask' }
 };
 
 /** The rules a remembered setup gives the wizard. */
@@ -57,7 +58,8 @@ export function rulesOf(setup: Setup | null): FarmSettings {
 		maxAttempts: setup.maxAttempts,
 		verification: [...setup.verification],
 		supplemental: { ...setup.supplemental },
-		workspace: setup.workspace ?? 'worktree'
+		workspace: setup.workspace ?? 'worktree',
+		conflicts: setup.conflicts ?? { by: 'ask' }
 	};
 }
 

@@ -508,7 +508,10 @@ mod tests {
         assert!(settings.show_git_commands);
 
         let settings = parse(r#"{"home": {"hidden": ["heat", "later"]}}"#);
-        assert_eq!(settings.home.hidden, vec!["heat".to_string(), "later".to_string()]);
+        assert_eq!(
+            settings.home.hidden,
+            vec!["heat".to_string(), "later".to_string()]
+        );
         assert!(settings.home.order.is_empty());
     }
 

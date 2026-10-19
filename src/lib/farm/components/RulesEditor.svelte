@@ -8,7 +8,14 @@
 	import { LEVELS } from '../wizard';
 	import { farmStore } from '../store.svelte';
 	import * as api from '../api';
-	import type { Autonomy, FarmSettings, Permissions, SupplementalPolicy, WorkspaceMode } from '../types';
+	import type {
+		Autonomy,
+		ConflictResolver,
+		FarmSettings,
+		Permissions,
+		SupplementalPolicy,
+		WorkspaceMode
+	} from '../types';
 
 	/**
 	 * The farm's rules, in Setup and in the Rules sheet (FEAT-111, FEAT-109).
@@ -32,7 +39,8 @@
 
 	const SPACES: { id: WorkspaceMode; name: string; detail: string; isNew: boolean }[] = [
 		{ id: 'worktree', name: 'A worktree per task', detail: 'The whole repository, checked out for the task. What you have today.', isNew: false },
-		{ id: 'slice', name: 'A slice per task', detail: 'Only the paths the task may touch. Checks still run on the whole tree.', isNew: true }
+		{ id: 'slice', name: 'A slice per task', detail: 'Only the paths the task may touch. Checks still run on the whole tree.', isNew: true },
+		{ id: 'copy', name: 'A copy per task', detail: 'A repository of its own with no remote. Its commits come in only after they are checked against the paths it may touch.', isNew: true }
 	];
 
 	const AT_ONCE = [1, 2, 3, 4];
@@ -77,6 +85,14 @@
 		untrack(() => ({ ...DEFAULT_SUPPLEMENTAL, ...settings.supplemental }))
 	);
 	let workspace = $state<WorkspaceMode>(untrack(() => settings.workspace ?? 'worktree'));
+	/** Who resolves a conflict (FEAT-146): you, the task's agent, or a command. */
+	let resolver = $state<ConflictResolver['by']>(untrack(() => settings.conflicts?.by ?? 'ask'));
+	let resolverCommand = $state(
+		untrack(() => (settings.conflicts?.by === 'tool' ? settings.conflicts.command : ''))
+	);
+	const conflicts = $derived<ConflictResolver>(
+		resolver === 'tool' ? { by: 'tool', command: resolverCommand.trim() } : { by: resolver }
+	);
 
 	$effect(() => {
 		settings = {
@@ -87,7 +103,8 @@
 			verification: checks.map((check) => check.trim()).filter(Boolean),
 			maxParallel: parallel,
 			maxAttempts: attempts,
-			workspace
+			workspace,
+			conflicts
 		};
 	});
 
@@ -220,6 +237,34 @@
 	<details>
 		<summary>{C.moreRules}</summary>
 		<div class="more">
+			<section>
+				<h4>When a merge conflicts</h4>
+				<div class="inline">
+					<label>
+						Resolved by
+						<select bind:value={resolver} disabled={busy}>
+							<option value="ask">You, in Merger</option>
+							<option value="agent">The task's agent</option>
+							<option value="tool">A command</option>
+						</select>
+					</label>
+					{#if resolver === 'tool'}
+						<label>
+							Command
+							<input class="mono" bind:value={resolverCommand} placeholder="mergiraf solve" disabled={busy} />
+						</label>
+					{/if}
+				</div>
+				<p class="muted resolver-note">
+					{#if resolver === 'ask'}
+						The task stops and waits for you. Nothing is written until you resolve it.
+					{:else}
+						It is resolved in the task's own workspace, never in yours, and the task's checks
+						and review run again before it is merged.{#if resolver === 'tool'} The command is
+							given the conflicted paths and must leave no conflict markers.{/if}
+					{/if}
+				</p>
+			</section>
 			<section>
 				<h4>{C.supplemental}</h4>
 				<div class="inline">
@@ -364,7 +409,7 @@
 
 	.spaces {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 10px;
 	}
 

@@ -175,5 +175,14 @@ describe('what was remembered and what came before', () => {
 
 	it('starts from the defaults when nothing is remembered', () => {
 		expect(rulesOf(null)).toMatchObject({ autonomy: 'semiAuto', maxParallel: 2, maxAttempts: 3, verification: [], workspace: 'worktree' });
+		// FEAT-146: a person resolves conflicts until the Rules say otherwise.
+		expect(rulesOf(null).conflicts).toEqual({ by: 'ask' });
+	});
+
+	it('keeps who resolves conflicts and where tasks work, and reads an older setup as asking (FEAT-146, FEAT-147)', () => {
+		expect(rulesOf(setup).conflicts).toEqual({ by: 'ask' });
+		const remembered = rulesOf({ ...setup, workspace: 'copy', conflicts: { by: 'tool', command: 'mergiraf solve' } });
+		expect(remembered.workspace).toBe('copy');
+		expect(remembered.conflicts).toEqual({ by: 'tool', command: 'mergiraf solve' });
 	});
 });

@@ -4,6 +4,8 @@
 
 **Decided 2026-10-18:** the local hub (option 1). Step 1 is FEAT-143, steps 2 and 3 are FEAT-144, step 4 is FEAT-145 and step 5 FEAT-146; own copies, from [the fuller proposal](../docs/proposals/landing-lane-and-local-hub.md), are FEAT-147.
 
+**Built 2026-10-19 (3.3.0):** FEAT-145, FEAT-146 and FEAT-147. The questions below were answered in those items, for the author to overrule: the person resolves by default, and when an agent does it is the task's own; a resolved conflict is checked and reviewed again; a slice takes *May touch* and *Reads* (FEAT-143). Batch merging is still not built.
+
 Raised by the author, 2026-10-18, after reading gitai
 (github.com/feder-cr/git-ai), an MIT implementation of the server-centric
 design Anthropic described in "Redesigning source control". The question:

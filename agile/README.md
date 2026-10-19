@@ -197,9 +197,9 @@ rather than an audit.
 | [FEAT-142](items/FEAT-142-a-notification-center.md) | A notification center that keeps what it said | chrome, 1K | Done |
 | [FEAT-143](items/FEAT-143-a-slice-per-task.md) | A slice per task | 1Q | Done |
 | [FEAT-144](items/FEAT-144-the-landing-lane.md) | The landing lane: merging without a queue, and a log of every branch move | 1Q | Done |
-| [FEAT-145](items/FEAT-145-history-as-tools-for-agents.md) | History as tools for agents | 1Q | Backlog |
-| [FEAT-146](items/FEAT-146-a-conflict-resolver-chosen-in-rules.md) | A conflict resolver chosen in Rules | 1Q, 1S | Backlog |
-| [FEAT-147](items/FEAT-147-own-copies-and-intake.md) | Own copies, and intake at the door | 1Q, 1K | Backlog |
+| [FEAT-145](items/FEAT-145-history-as-tools-for-agents.md) | History as tools for agents | 1Q | Done |
+| [FEAT-146](items/FEAT-146-a-conflict-resolver-chosen-in-rules.md) | A conflict resolver chosen in Rules | 1Q | Done |
+| [FEAT-147](items/FEAT-147-own-copies-and-intake.md) | Own copies, and intake at the door | 1Q | Done |
 | [FEAT-148](items/FEAT-148-arrange-home-s-cards-in-settings.md) | Arrange Home's cards in Settings | Settings, 2A | Done |
 | [FEAT-149](items/FEAT-149-a-coloured-tag-for-each-kind-of-file.md) | A coloured tag for each kind of file | 1U | Done |
 | [FEAT-150](items/FEAT-150-open-a-file-from-anywhere-with-a-click.md) | Open a file from anywhere with a click | every screen | Done |

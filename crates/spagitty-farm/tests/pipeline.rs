@@ -1483,3 +1483,106 @@ echo '```'"#,
     );
     assert_eq!(harness.status(&task), TaskStatus::Review);
 }
+
+/// A copy farm's task, with a scripted agent that writes `docs/notes.md` and,
+/// when `stray` is set, a file outside its paths too.
+fn copy_farm_task(harness: &Harness, stray: bool) -> (TaskId, AgentId) {
+    arrange(harness);
+    harness.service.create("Ship it", "").unwrap();
+    harness
+        .service
+        .configure(|farm| {
+            farm.workspace = WorkspaceMode::Copy;
+            farm.verification = vec!["/bin/sh -c 'test -f docs/notes.md'".into()];
+        })
+        .unwrap();
+    let extra = if stray { "echo oops > stray.txt\n" } else { "" };
+    let definition = scripted_agent(
+        harness.bin(),
+        if stray {
+            "worker-copy-stray"
+        } else {
+            "worker-copy"
+        },
+        &format!(
+            r#"git remote > .git/remotes.txt 2>&1
+mkdir -p docs && echo "notes" > docs/notes.md
+{extra}git add docs {stray} >/dev/null 2>&1
+git -c user.name=Agent -c user.email=agent@example.com commit -q -m "TASK copy work" >/dev/null 2>&1
+git push >/dev/null 2>&1 && echo pushed > .git/pushed.txt
+echo '```spagitty-handoff'
+echo '{{"status":"completed","summary":"wrote docs/notes.md","filesChanged":["docs/notes.md"]}}'
+echo '```'"#,
+            stray = if stray { "stray.txt" } else { "" },
+        ),
+    );
+    let agent = definition.id.clone();
+    harness.service.save_agent(definition).unwrap();
+    let mut task = Task::new(TaskId::new("unset"), "Write the docs", 0);
+    task.status = TaskStatus::Ready;
+    task.allowed_paths = vec!["docs/**".into()];
+    (harness.service.add_task(task).unwrap().id, agent)
+}
+
+/// FEAT-147: on a copy farm the agent works in a clone with no remote, and
+/// its commits reach the farm branch only through intake.
+#[test]
+fn a_copy_farm_takes_the_work_in_through_the_door() {
+    let harness = Harness::new();
+    let (task, agent) = copy_farm_task(&harness, false);
+
+    harness.run(&task, &agent);
+
+    let copy = harness.worktree(&task);
+    assert!(copy.to_string_lossy().contains("copies"), "{copy:?}");
+    assert_eq!(
+        std::fs::read_to_string(copy.join(".git/remotes.txt"))
+            .unwrap()
+            .trim(),
+        "",
+        "the copy had a remote"
+    );
+    assert!(
+        !copy.join(".git/pushed.txt").exists(),
+        "the agent could push"
+    );
+    // The farm branch in the person's repository is the copy's commit.
+    let branch = harness
+        .service
+        .farm()
+        .unwrap()
+        .task(&task)
+        .unwrap()
+        .branch
+        .clone()
+        .unwrap();
+    let tip = spagitty_core::shell::commit_id(harness.repo.path(), &format!("refs/heads/{branch}"))
+        .unwrap();
+    assert_eq!(tip, spagitty_core::shell::commit_id(&copy, "HEAD").unwrap());
+    assert!(harness.service.verification_of(&task).unwrap().passed);
+    assert_eq!(harness.status(&task), TaskStatus::Review);
+}
+
+#[test]
+fn a_copy_farm_refuses_work_outside_the_task_s_paths() {
+    let harness = Harness::new();
+    let (task, agent) = copy_farm_task(&harness, true);
+
+    harness.run(&task, &agent);
+
+    assert_eq!(harness.status(&task), TaskStatus::Blocked);
+    let note = harness
+        .service
+        .farm()
+        .unwrap()
+        .task(&task)
+        .unwrap()
+        .note
+        .clone()
+        .unwrap();
+    assert!(note.contains("stray.txt"), "{note}");
+    assert!(
+        harness.service.verification_of(&task).is_none(),
+        "refused work was checked"
+    );
+}

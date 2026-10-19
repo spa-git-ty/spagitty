@@ -129,6 +129,8 @@ pub fn remove(repo: &Path, task: &TaskId, provider: AgentProvider, force: bool) 
     if path.exists() {
         shell::worktree_remove(repo, &path, force)?;
     }
+    // A task on a copy farm has a copy instead (FEAT-147); the same rules.
+    super::copy::remove(repo, task, provider, force)?;
     let branch = branch_name(task, provider);
     if branch_exists(repo, &branch) {
         // Not fatal: an unmerged branch is *meant* to survive this.
@@ -166,7 +168,7 @@ fn branch_exists(repo: &Path, branch: &str) -> bool {
 /// `.git/info/exclude` rather than `.gitignore`, for the reason in the module
 /// header. Failures are ignored: an unwritable `info/exclude` costs a noisy
 /// `git status`, not the farm.
-fn exclude_farm_dir(repo: &Path) {
+pub(crate) fn exclude_farm_dir(repo: &Path) {
     let exclude = repo.join(".git").join("info").join("exclude");
     let Some(parent) = exclude.parent() else {
         return;

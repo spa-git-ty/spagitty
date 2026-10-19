@@ -235,6 +235,13 @@ pub fn farm_open<R: Runtime>(
     if let Ok(host) = app.state::<crate::extensions::ExtensionsState>().host() {
         service.set_supplemental_provider(Arc::new(crate::supplemental::ExtensionReviewer(host)));
     }
+    // This executable is the history server too (FEAT-145): an agent's CLI
+    // starts it as `spagitty --history-mcp <repository>`.
+    service.set_history_server(
+        std::env::current_exe()
+            .ok()
+            .map(|exe| spagitty_farm::history::Server::of(exe, &path)),
+    );
     *state.service.lock().expect("farm service lock") = Some(service.clone());
     *state.path.lock().expect("farm path lock") = Some(path);
 
@@ -504,6 +511,8 @@ pub struct FarmSettings {
     pub goal_description: Option<String>,
     /// Where each task works (FEAT-143).
     pub workspace: Option<WorkspaceMode>,
+    /// Who resolves a conflict (FEAT-146).
+    pub conflicts: Option<ConflictResolver>,
 }
 
 #[tauri::command(async)]
@@ -547,6 +556,18 @@ pub fn farm_configure(state: State<'_, FarmState>, settings: FarmSettings) -> Re
         }
         if let Some(workspace) = settings.workspace {
             farm.workspace = workspace;
+        }
+        if let Some(conflicts) = settings.conflicts {
+            // A tool with no command is nobody: it stops and asks.
+            farm.conflicts = match conflicts {
+                ConflictResolver::Tool { command } if command.trim().is_empty() => {
+                    ConflictResolver::Ask
+                }
+                ConflictResolver::Tool { command } => ConflictResolver::Tool {
+                    command: command.trim().to_string(),
+                },
+                other => other,
+            };
         }
     })?)
 }

@@ -35,6 +35,9 @@ pub struct Setup {
     /// Where each task works, `worktree` or `slice` (FEAT-143).
     #[serde(default)]
     pub workspace: super::WorkspaceMode,
+    /// Who resolves a conflict (FEAT-146).
+    #[serde(default)]
+    pub conflicts: super::ConflictResolver,
     /// The goal of the farm these came from, to name it in the question.
     #[serde(default)]
     pub from_title: String,
@@ -62,6 +65,7 @@ impl Setup {
             verification: farm.verification.clone(),
             supplemental: farm.supplemental.clone(),
             workspace: farm.workspace,
+            conflicts: farm.conflicts.clone(),
             from_title: farm.goal.title.clone(),
             from_ms: farm.created_ms,
         }

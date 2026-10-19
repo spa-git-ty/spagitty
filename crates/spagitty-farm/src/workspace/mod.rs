@@ -9,7 +9,9 @@
 
 pub mod branch;
 pub mod cleanup;
+pub mod copy;
 pub mod lock;
+pub mod resolve;
 pub mod slice;
 pub mod worktree;
 
