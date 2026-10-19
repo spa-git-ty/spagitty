@@ -4,8 +4,8 @@
 
 **Item:** [`agile/items/TASK-052-nothing-waits-in-line.md`](../items/TASK-052-nothing-waits-in-line.md)
 
-**Where this stands:** step 1 is built. Steps 2 to 5 are below for review;
-step 2 waits for the author's go-ahead, as the item asks.
+**Where this stands:** steps 1 and 2 are built. The author gave the go-ahead
+for step 2 on 2026-10-19; steps 3 to 5 are below.
 
 **Branch base.** `task/TASK-052-nothing-waits-in-line` is cut from the Review
 stack's tip (`feature/FEAT-093-threads-done-properly`), not from `main`: it
@@ -45,9 +45,27 @@ reuses the stack's measured virtual list. It merges after the stack.
   `crates/spagitty-core/examples/baseline.rs`, which times the work behind
   each screen without the application around it.
 
-## Step 2 — Stop holding the lock for the work (for review)
+## Step 2 — Stop holding the lock for the work (built, 2026-10-19)
 
-The proposal, in the order it would be done:
+Built as proposed below, on `release/3.4.0`. What was learned on the way:
+
+- `with_session` keeps its name and its callers: the view it hands over is
+  `Open`, whose `path` and `repo` are the fields the closures already read.
+  Only `graph_request` reads the graph worker; it moved to
+  `with_live_session`, which holds the session as before.
+- The write lock is `write: Mutex<()>`, as proposed. An `RwLock` was tried
+  first and dropped: it made every read wait behind a `pull`.
+- A read whose session was replaced answers `Error::Replaced` (*was closed or
+  replaced while it was being read*), not `Superseded`, whose words are about
+  opening. It compares the session's own ticket rather than the latest one,
+  so an open that fails does not leave every later read refused.
+- `WRITERS` lists 58 commands and the test-only `READERS` 43; the test reads
+  `commands.rs` for every name given to `with_session`, `with_live_session`
+  and `files_repo`.
+- Fetch, push and the review checkout's fetch already ran outside the session
+  lock, through git's own ref locking. They are left as they were.
+
+The proposal, as it was reviewed:
 
 1. **A view instead of the session.** Most closures use `session.repo` and
    `session.path` only. `with_session` becomes: lock, clone the

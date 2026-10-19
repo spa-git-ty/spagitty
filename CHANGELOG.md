@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Changed
+
+- **Screens no longer wait for each other.** Every command used to queue behind the slowest one reading the repository, so selecting a commit while a long file was being blamed waited for the blame. Reads now run side by side, and only changes to the repository take turns.
+
 ### Fixed
 
 - **Assigning an agent twice in quick succession starts one agent.** Two clicks on Assign, or a click and a resume, could each start an agent on the same pull request or merge while the first was still being set up, spending tokens twice. The second is now told *An agent is already assigned to this.*

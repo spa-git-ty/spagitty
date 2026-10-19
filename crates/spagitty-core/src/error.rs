@@ -23,6 +23,12 @@ pub enum Error {
     #[error("opening {0} was overtaken by a later request")]
     Superseded(PathBuf),
 
+    /// A read that finished after its repository was closed or another was
+    /// opened. Its answer is for a repository no longer on screen, so it is
+    /// dropped (TASK-052).
+    #[error("{0} was closed or replaced while it was being read")]
+    Replaced(PathBuf),
+
     #[error("this repository has no commits yet")]
     EmptyRepository,
 
