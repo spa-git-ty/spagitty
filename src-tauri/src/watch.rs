@@ -134,8 +134,13 @@ fn plain(path: &Path) -> PathBuf {
     if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
         return PathBuf::from(format!(r"\\{rest}"));
     }
+    // Only when what is left is still absolute, a drive's above all:
+    // `\\?\Volume{…}\` or a device path has no plain form, and without its
+    // prefix would read as a relative path (TASK-066).
     if let Some(rest) = text.strip_prefix(r"\\?\") {
-        return PathBuf::from(rest);
+        if rest.as_bytes().get(1) == Some(&b':') || Path::new(rest).is_absolute() {
+            return PathBuf::from(rest);
+        }
     }
     path.to_path_buf()
 }
@@ -485,6 +490,13 @@ mod tests {
             plain(Path::new("/work/app/.git")),
             PathBuf::from("/work/app/.git")
         );
+        // A volume or a device has no plain form; its prefix stays on.
+        for kept in [
+            r"\\?\Volume{0b1c2d3e-0000-0000-0000-100000000000}\work\.git",
+            r"\\?\GLOBALROOT\Device\HarddiskVolume3\work\.git",
+        ] {
+            assert_eq!(plain(Path::new(kept)), PathBuf::from(kept));
+        }
     }
 
     /// BUG-059. The git directory as `canonicalize` answers on Windows, the

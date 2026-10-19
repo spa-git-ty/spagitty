@@ -14,6 +14,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 /**
  * The section for `version`, without its own heading, trimmed.
@@ -75,6 +76,6 @@ function main(argv) {
 }
 
 // Run only as a CLI; importing the module for its function runs nothing.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	process.exit(main(process.argv.slice(2)));
 }
