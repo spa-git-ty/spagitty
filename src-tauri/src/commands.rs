@@ -197,6 +197,7 @@ const READERS: &[&str] = &[
     "files_tree",
     "files_read",
     "files_find",
+    "files_search",
     "files_before",
     "files_blame",
     "files_spans",
@@ -1293,6 +1294,26 @@ pub fn files_find(state: State<'_, AppState>, rev: String, query: String) -> Res
         &rev,
         &query,
         FILES_FIND_LIMIT,
+    )
+}
+
+/// How many lines *Search in files* returns. Past this it says there are more.
+const FILES_SEARCH_LIMIT: usize = 2_000;
+
+/// Every line of every text file at `rev` that `query` matches (FEAT-151).
+#[tauri::command(async)]
+pub fn files_search(
+    state: State<'_, AppState>,
+    rev: String,
+    query: String,
+    options: files::SearchOptions,
+) -> Result<files::Searched> {
+    files::search(
+        &files_repo(&state, "files_search")?,
+        &rev,
+        &query,
+        options,
+        FILES_SEARCH_LIMIT,
     )
 }
 

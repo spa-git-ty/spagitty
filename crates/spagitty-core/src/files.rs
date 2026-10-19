@@ -398,6 +398,207 @@ pub fn find(repo: &gix::Repository, rev: &str, query: &str, limit: usize) -> Res
     })
 }
 
+/// How *Search in files* and the search in a file read what was typed
+/// (FEAT-151).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SearchOptions {
+    /// A regular expression rather than the text as typed.
+    pub regex: bool,
+    /// Only where it stands as a word of its own.
+    pub word: bool,
+    /// Letter case counts. Without it, case counts only when what was typed
+    /// has a capital — escapes such as `\S` aside.
+    pub case: bool,
+}
+
+/// Does `query` ask for its case to count, read as `options` read it?
+pub fn case_counts(query: &str, options: SearchOptions) -> bool {
+    if options.case {
+        return true;
+    }
+    let mut plain = String::with_capacity(query.len());
+    let mut chars = query.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' && options.regex {
+            chars.next();
+        } else {
+            plain.push(c);
+        }
+    }
+    plain.chars().any(char::is_uppercase)
+}
+
+/// What was typed, as the expression it is matched with. A pattern that is
+/// not a regular expression says why.
+pub fn pattern(query: &str, options: SearchOptions) -> Result<regex::Regex> {
+    let body = if options.regex {
+        query.to_string()
+    } else {
+        regex::escape(query)
+    };
+    let body = if options.word {
+        format!(r"\b(?:{body})\b")
+    } else {
+        body
+    };
+    regex::RegexBuilder::new(&body)
+        .case_insensitive(!case_counts(query, options))
+        .size_limit(1 << 20)
+        .build()
+        .map_err(|error| Error::Pattern(error.to_string()))
+}
+
+/// Above this a file is not searched: a search reads every blob it walks.
+const GREP_MAX_BYTES: u64 = 2 * 1024 * 1024;
+/// How much of a long line is sent around its match.
+const HIT_BEFORE: usize = 80;
+const HIT_AFTER: usize = 200;
+
+/// One line *Search in files* found.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Hit {
+    pub path: String,
+    /// One-based.
+    pub line: u32,
+    /// Where the match is in the whole line, in UTF-16 units as the webview
+    /// counts them.
+    pub column: u32,
+    pub length: u32,
+    /// The line, or the part of a long one around the match.
+    pub text: String,
+    /// The match within `text`, in UTF-16 units.
+    pub start: u32,
+    pub end: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Searched {
+    pub hits: Vec<Hit>,
+    /// How many files held a match.
+    pub files: u32,
+    /// More matched than were returned, or the walk stopped at its limit.
+    pub more: bool,
+}
+
+fn utf16(text: &str) -> u32 {
+    text.encode_utf16().count() as u32
+}
+
+/// The first match on `line`, as a hit, with a long line cut around it.
+fn hit_on(path: &str, number: usize, line: &str, found: regex::Match<'_>) -> Hit {
+    let (mut from, mut to) = (0, line.len());
+    if line.len() > HIT_BEFORE + HIT_AFTER {
+        from = found.start().saturating_sub(HIT_BEFORE);
+        to = (found.end() + HIT_AFTER).min(line.len());
+        while !line.is_char_boundary(from) {
+            from -= 1;
+        }
+        while !line.is_char_boundary(to) {
+            to += 1;
+        }
+    }
+    let lead = if from > 0 { "…" } else { "" };
+    let text = format!("{lead}{}", &line[from..to]);
+    let start = utf16(lead) + utf16(&line[from..found.start()]);
+    Hit {
+        path: path.to_string(),
+        line: number as u32 + 1,
+        column: utf16(&line[..found.start()]),
+        length: utf16(found.as_str()),
+        start,
+        end: start + utf16(found.as_str()),
+        text,
+    }
+}
+
+/// Every line of every text file at `rev` that `query` matches, the first
+/// match on each, in path order (FEAT-151). Binary files, Git LFS pointers
+/// and files over 2 MB are left out. Reads blobs only, like the rest of this
+/// module.
+pub fn search(
+    repo: &gix::Repository,
+    rev: &str,
+    query: &str,
+    options: SearchOptions,
+    limit: usize,
+) -> Result<Searched> {
+    let empty = Searched {
+        hits: Vec::new(),
+        files: 0,
+        more: false,
+    };
+    if query.is_empty() || limit == 0 {
+        return Ok(empty);
+    }
+    let matcher = pattern(query, options)?;
+
+    let mut blobs: Vec<(String, gix::ObjectId)> = Vec::new();
+    let mut walked = 0usize;
+    let mut cut = false;
+    let mut pending = vec![(String::new(), tree_at(repo, rev)?.id)];
+    'walk: while let Some((dir, id)) = pending.pop() {
+        let tree = repo
+            .find_tree(id)
+            .map_err(|error| Error::Diff(error.to_string()))?;
+        for entry in tree.iter() {
+            let entry = entry.map_err(|error| Error::Diff(error.to_string()))?;
+            walked += 1;
+            if walked > FIND_WALK_MAX {
+                cut = true;
+                break 'walk;
+            }
+            let path = join(&dir, &entry.filename().to_string());
+            if entry.mode().is_tree() {
+                pending.push((path, entry.object_id()));
+            } else if entry.mode().is_blob() {
+                blobs.push((path, entry.object_id().to_owned()));
+            }
+        }
+    }
+    blobs.sort();
+
+    let mut hits = Vec::new();
+    let mut files = 0u32;
+    'files: for (path, id) in blobs {
+        let size = repo
+            .find_header(id)
+            .map_err(|error| Error::Diff(error.to_string()))?
+            .size();
+        if size > GREP_MAX_BYTES {
+            continue;
+        }
+        let data = repo
+            .find_object(id)
+            .map_err(|error| Error::Diff(error.to_string()))?
+            .detach()
+            .data;
+        if data[..data.len().min(BINARY_SNIFF_BYTES)].contains(&0) || lfs_pointer(&data).is_some() {
+            continue;
+        }
+        let text = String::from_utf8_lossy(&data);
+        let mut any = false;
+        for (number, line) in text.lines().enumerate() {
+            if let Some(found) = matcher.find(line) {
+                if hits.len() == limit {
+                    cut = true;
+                    break 'files;
+                }
+                any = true;
+                hits.push(hit_on(&path, number, line, found));
+            }
+        }
+        files += u32::from(any);
+    }
+    Ok(Searched {
+        hits,
+        files,
+        more: cut,
+    })
+}
+
 /// Which of what a terminal printed is real (FEAT-130).
 ///
 /// A hex word is a commit when it resolves to one in this repository, and a
@@ -814,6 +1015,120 @@ mod tests {
         assert!(highlight::spans(&repo, &read_big.blob, "rust", 0, 10)
             .expect("spans")
             .is_empty());
+    }
+
+    fn searched(repo: &gix::Repository, query: &str, options: SearchOptions) -> Vec<String> {
+        search(repo, "HEAD", query, options, 100)
+            .expect("search")
+            .hits
+            .iter()
+            .map(|hit| format!("{}:{}", hit.path, hit.line))
+            .collect()
+    }
+
+    #[test]
+    fn search_finds_text_in_every_file_at_the_revision() {
+        let fixture = a_tree();
+        let repo = fixture.open();
+        let plain = SearchOptions::default();
+        assert_eq!(
+            searched(&repo, "pub fn", plain),
+            ["src/deep/avatars.rs:1", "src/lib.rs:1"]
+        );
+        // Smart case: lower case finds any case, a capital asks for its own.
+        assert_eq!(searched(&repo, "guide", plain), ["docs/guide.md:1"]);
+        assert!(searched(&repo, "GUIDE", plain).is_empty());
+        let counted = search(&repo, "HEAD", "pub fn", plain, 100).expect("search");
+        assert_eq!((counted.files, counted.more), (2, false));
+    }
+
+    #[test]
+    fn search_reads_a_regex_a_whole_word_and_case() {
+        let fixture = a_tree();
+        let repo = fixture.open();
+        let regex = SearchOptions {
+            regex: true,
+            ..SearchOptions::default()
+        };
+        assert_eq!(
+            searched(&repo, r"fn \w+\(\) -> u32", regex),
+            ["src/lib.rs:1"]
+        );
+        // An escape is not a capital asking for case.
+        assert_eq!(searched(&repo, r"\S+ thing", regex), ["README.md:1"]);
+        let word = SearchOptions {
+            word: true,
+            ..SearchOptions::default()
+        };
+        assert_eq!(searched(&repo, "avatar", word), ["src/deep/avatars.rs:1"]);
+        assert!(searched(&repo, "avat", word).is_empty());
+        let case = SearchOptions {
+            case: true,
+            ..SearchOptions::default()
+        };
+        assert!(searched(&repo, "thing", case)
+            .iter()
+            .all(|hit| hit != "README.md:1"));
+        assert_eq!(searched(&repo, "Thing", case), ["README.md:1"]);
+    }
+
+    #[test]
+    fn a_pattern_that_is_not_a_regex_says_so() {
+        let fixture = a_tree();
+        let repo = fixture.open();
+        let regex = SearchOptions {
+            regex: true,
+            ..SearchOptions::default()
+        };
+        let refused = search(&repo, "HEAD", "fn (", regex, 10).unwrap_err();
+        assert!(
+            refused.to_string().starts_with("not a pattern:"),
+            "{refused}"
+        );
+        // As plain text the same characters are only characters.
+        assert!(search(&repo, "HEAD", "fn (", SearchOptions::default(), 10).is_ok());
+    }
+
+    #[test]
+    fn search_leaves_binary_files_out_and_says_when_there_is_more() {
+        let fixture = a_tree();
+        fixture.write("bin/blob.bin", "pub fn\0hidden\n");
+        fixture.write("many.txt", &"needle\n".repeat(10));
+        save(&fixture, "Binary and many");
+        let repo = fixture.open();
+        assert!(!searched(&repo, "pub fn", SearchOptions::default())
+            .iter()
+            .any(|hit| hit.starts_with("bin/")));
+        let few = search(&repo, "HEAD", "needle", SearchOptions::default(), 4).expect("search");
+        assert_eq!((few.hits.len(), few.more), (4, true));
+    }
+
+    #[test]
+    fn a_hit_says_where_its_match_is_in_utf16_units() {
+        let fixture = a_tree();
+        let long = format!("é{}needle{}", "x".repeat(200), "y".repeat(300));
+        fixture.write("wide.txt", &format!("café needle\n{long}\n"));
+        save(&fixture, "Wide");
+        let repo = fixture.open();
+        let hits = search(&repo, "HEAD", "needle", SearchOptions::default(), 10)
+            .expect("search")
+            .hits;
+        let short = &hits[0];
+        assert_eq!((short.line, short.column, short.length), (1, 5, 6));
+        assert_eq!(&short.text, "café needle");
+        assert_eq!((short.start, short.end), (5, 11));
+        // A long line is cut around its match, and the match is still marked.
+        let cut = &hits[1];
+        assert_eq!(cut.column, 201);
+        assert!(cut.text.starts_with('…'));
+        let marked: String = cut
+            .text
+            .encode_utf16()
+            .skip(cut.start as usize)
+            .take((cut.end - cut.start) as usize)
+            .map(|unit| char::from_u32(unit as u32).unwrap())
+            .collect();
+        assert_eq!(marked, "needle");
     }
 
     #[test]

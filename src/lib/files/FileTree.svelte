@@ -3,7 +3,9 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import FileGlyph from './FileGlyph.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
-	import type { FilesEntry } from '$lib/types';
+	import type { FilesEntry, FilesHit } from '$lib/types';
+	import { optionKey } from './keys';
+	import SearchToggles from './SearchToggles.svelte';
 	import { files } from './store.svelte';
 
 	/**
@@ -39,11 +41,40 @@
 
 	let timer: ReturnType<typeof setTimeout> | null = null;
 
-	/** Wait for a pause in the typing: every letter is a walk of the tree. */
+	/**
+	 * Wait for a pause in the typing: every letter is a walk of the tree, and
+	 * a search of the text reads every file in it, so it waits longer.
+	 */
 	function type(text: string) {
 		if (timer) clearTimeout(timer);
-		timer = setTimeout(() => void files.findFiles(text), 140);
+		timer =
+			files.lookFor === 'text'
+				? setTimeout(() => void files.searchFiles(text), 350)
+				: setTimeout(() => void files.findFiles(text), 140);
 	}
+
+	function fieldKey(event: KeyboardEvent) {
+		if (files.lookFor !== 'text') return;
+		const option = optionKey(event);
+		if (option) {
+			event.preventDefault();
+			files.toggleOption(option);
+		} else if (event.key === 'Enter') {
+			if (timer) clearTimeout(timer);
+			void files.searchFiles(event.currentTarget instanceof HTMLInputElement ? event.currentTarget.value : '');
+		}
+	}
+
+	/** The lines found, by file, in the order they came. */
+	const groups = $derived.by(() => {
+		const out: { path: string; hits: FilesHit[] }[] = [];
+		for (const hit of files.searched?.hits ?? []) {
+			const last = out.at(-1);
+			if (last?.path === hit.path) last.hits.push(hit);
+			else out.push({ path: hit.path, hits: [hit] });
+		}
+		return out;
+	});
 
 	function press(entry: FilesEntry) {
 		if (entry.kind === 'folder') files.toggleFolder(entry.path);
@@ -56,22 +87,85 @@
 	}
 </script>
 
-<aside class="tree" aria-label="Files at {files.rev}">
+<aside class="tree" class:wide={files.lookFor === 'text'} aria-label="Files at {files.rev}">
+	<div class="look" role="group" aria-label="Look for">
+		<button
+			type="button"
+			class:on={files.lookFor === 'names'}
+			aria-pressed={files.lookFor === 'names'}
+			onclick={() => files.setLookFor('names')}>Names</button
+		>
+		<button
+			type="button"
+			class:on={files.lookFor === 'text'}
+			aria-pressed={files.lookFor === 'text'}
+			title="Search the text of every file at this revision"
+			onclick={() => files.setLookFor('text')}>Text</button
+		>
+	</div>
 	<label class="find">
 		<Icon name="search" size={14} weight={2} />
-		<input
-			type="text"
-			aria-label="Find a file"
-			placeholder="Find a file"
-			spellcheck="false"
-			autocomplete="off"
-			value={files.finding}
-			oninput={(event) => type(event.currentTarget.value)}
-		/>
+		{#if files.lookFor === 'text'}
+			<input
+				type="text"
+				aria-label="Search in files"
+				placeholder="Search in files"
+				spellcheck="false"
+				autocomplete="off"
+				value={files.seeking}
+				oninput={(event) => type(event.currentTarget.value)}
+				onkeydown={fieldKey}
+			/>
+			<SearchToggles />
+		{:else}
+			<input
+				type="text"
+				aria-label="Find a file"
+				placeholder="Find a file"
+				spellcheck="false"
+				autocomplete="off"
+				value={files.finding}
+				oninput={(event) => type(event.currentTarget.value)}
+			/>
+		{/if}
 	</label>
 
 	<div class="rows">
-		{#if files.found}
+		{#if files.lookFor === 'text'}
+			{#if files.searchedError}
+				<span class="note said error" role="alert">{files.searchedError}</span>
+			{:else if files.seekingNow && !files.searched}
+				<Loader size="inline" label="Searching…" />
+			{:else if files.searched}
+				<span class="note said" aria-live="polite">
+					{files.searched.hits.length}
+					{files.searched.hits.length === 1 ? 'line' : 'lines'} in {files.searched.files}
+					{files.searched.files === 1 ? 'file' : 'files'}{#if files.searched.more}, and more: type more to narrow them{/if}
+				</span>
+				{#each groups as group (group.path)}
+					{@const parts = nameOf(group.path)}
+					<div class="row found file" title={group.path}>
+						<FileGlyph path={group.path} />
+						<span class="name">{parts.name}</span>
+						<span class="dir note">{parts.dir}</span>
+						<span class="count note">{group.hits.length}</span>
+					</div>
+					{#each group.hits as hit (hit.line)}
+						<button
+							class="row hit mono"
+							class:here={group.path === here && files.match?.line === hit.line - 1}
+							title="{group.path}:{hit.line}"
+							onclick={() => files.openHit(hit)}
+						>
+							<span class="at note">{hit.line}</span>
+							<span class="text"
+								>{hit.text.slice(0, hit.start)}<mark>{hit.text.slice(hit.start, hit.end)}</mark>{hit.text.slice(hit.end)}</span
+							>
+						</button>
+					{/each}
+				{/each}
+			{/if}
+		{:else if files.found}
 			{#each files.found.paths as path (path)}
 				{@const parts = nameOf(path)}
 				<button class="row found" class:here={path === here} title={path} onclick={() => files.openFile(path)}>
@@ -238,5 +332,67 @@
 
 	.error {
 		color: var(--danger);
+	}
+
+	/* Lines of text need more room than names do. */
+	.tree.wide {
+		flex-basis: 340px;
+		max-width: 380px;
+	}
+
+	.look {
+		flex: none;
+		display: flex;
+		gap: 2px;
+		padding: 2px;
+		border-radius: var(--r-button);
+		background: var(--sunken);
+	}
+
+	.look button {
+		flex: 1;
+		height: 22px;
+		border-radius: var(--r-field);
+		color: var(--muted);
+		font-size: var(--fs-secondary);
+	}
+
+	.look button.on {
+		background: var(--surface);
+		color: var(--ink);
+		font-weight: 600;
+	}
+
+	.row.file {
+		margin-top: 6px;
+	}
+
+	.row.file .count {
+		flex: none;
+		margin-left: 6px;
+	}
+
+	.row.hit {
+		gap: 8px;
+		padding-left: 12px;
+	}
+
+	.hit .at {
+		flex: none;
+		min-width: 3ch;
+		text-align: right;
+	}
+
+	.hit .text {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: pre;
+	}
+
+	.hit mark {
+		border-radius: 3px;
+		background: color-mix(in srgb, var(--accent) 28%, transparent);
+		color: inherit;
 	}
 </style>

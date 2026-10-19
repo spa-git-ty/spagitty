@@ -750,6 +750,40 @@ export interface FilesFound {
 	more: boolean;
 }
 
+/** How a search reads what was typed (FEAT-151). Mirrors `files::SearchOptions`. */
+export interface SearchOptions {
+	/** A regular expression rather than the text as typed. */
+	regex: boolean;
+	/** Only where it stands as a word of its own. */
+	word: boolean;
+	/** Letter case counts. Without it, only when what was typed has a capital. */
+	case: boolean;
+}
+
+/** One line *Search in files* found. Mirrors `files::Hit`. */
+export interface FilesHit {
+	path: string;
+	/** One-based. */
+	line: number;
+	/** Where the match is in the whole line. */
+	column: number;
+	length: number;
+	/** The line, or the part of a long one around the match. */
+	text: string;
+	/** The match within `text`. */
+	start: number;
+	end: number;
+}
+
+/** What *Search in files* found. Mirrors `files::Searched`. */
+export interface FilesSearched {
+	hits: FilesHit[];
+	/** How many files held a match. */
+	files: number;
+	/** More matched than were returned. */
+	more: boolean;
+}
+
 /** One commit a blamed file's lines come from. Mirrors `blame::BlameCommit`. */
 export interface BlameCommit {
 	id: string;

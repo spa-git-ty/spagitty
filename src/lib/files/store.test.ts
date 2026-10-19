@@ -8,6 +8,7 @@ vi.mock('$lib/api', () => ({
 	filesTree: vi.fn(),
 	filesRead: vi.fn(),
 	filesFind: vi.fn(),
+	filesSearch: vi.fn(),
 	filesSpans: vi.fn(),
 	filesBlame: vi.fn(),
 	filesBefore: vi.fn()
@@ -20,6 +21,7 @@ const resolve = vi.mocked(api.filesResolve);
 const tree = vi.mocked(api.filesTree);
 const read = vi.mocked(api.filesRead);
 const findFiles = vi.mocked(api.filesFind);
+const searchFiles = vi.mocked(api.filesSearch);
 const spans = vi.mocked(api.filesSpans);
 const blame = vi.mocked(api.filesBlame);
 const before = vi.mocked(api.filesBefore);
@@ -697,5 +699,79 @@ describe('labels', () => {
 		expect(pullOf('Merge pull request #69 from spa-git-ty/release/2.2.2')).toBe(69);
 		expect(pullOf('Fix #12 in the cache')).toBeNull();
 		expect(pullOf('Add avatar cache')).toBeNull();
+	});
+});
+
+describe('searching (FEAT-151)', () => {
+	beforeEach(async () => {
+		await files.enter(REPO, 'main');
+	});
+
+	const HIT = { path: 'src/lib.rs', line: 3, column: 2, length: 3, text: 'three', start: 2, end: 5 };
+
+	it('searches the text of every file at the revision, with the options set', async () => {
+		searchFiles.mockResolvedValue({ hits: [HIT], files: 1, more: false });
+		files.setLookFor('text');
+		files.toggleOption('word');
+
+		await files.searchFiles('ree');
+
+		expect(searchFiles).toHaveBeenCalledWith(IDS.main, 'ree', { regex: false, word: true, case: false });
+		expect(files.searched?.hits).toEqual([HIT]);
+	});
+
+	it('runs the search again when an option is turned', async () => {
+		searchFiles.mockResolvedValue({ hits: [], files: 0, more: false });
+		files.setLookFor('text');
+		await files.searchFiles('ree');
+		files.toggleOption('case');
+		await settle();
+		expect(searchFiles).toHaveBeenLastCalledWith(IDS.main, 'ree', { regex: false, word: false, case: true });
+	});
+
+	it('says why a regular expression is not one, without asking the backend', async () => {
+		files.setLookFor('text');
+		files.toggleOption('regex');
+		await files.searchFiles('fn (');
+		expect(searchFiles).not.toHaveBeenCalled();
+		expect(files.searchedError).toBeTruthy();
+		expect(files.searched).toBeNull();
+	});
+
+	it('opens a line it found with its match marked, and n carries on from it', async () => {
+		searchFiles.mockResolvedValue({ hits: [HIT], files: 1, more: false });
+		files.setLookFor('text');
+		await files.searchFiles('ree');
+
+		await files.openHit(HIT);
+
+		expect(files.tab?.path).toBe('src/lib.rs');
+		expect(files.match).toEqual({ line: 2, start: 2, end: 5 });
+		expect(files.query).toBe('ree');
+		expect(files.searchNext()).toEqual({ line: 2, start: 2, end: 5 });
+	});
+
+	it('finds by regex and whole word in the file on screen', async () => {
+		read.mockImplementation(async (_rev, path) => text(path, 'a1 b22\nab c333\n'));
+		await files.openFile('src/lib.rs');
+		files.toggleOption('regex');
+		files.startSearch(false);
+		files.setQuery('\\d{3}');
+		expect(files.searchNext()).toEqual({ line: 1, start: 4, end: 7 });
+		files.setQuery('(');
+		expect(files.searchError).toBeTruthy();
+		files.toggleOption('regex');
+		files.toggleOption('word');
+		files.setQuery('ab');
+		expect(files.searchNext()).toEqual({ line: 1, start: 0, end: 2 });
+	});
+
+	it('goes back to names, and puts the text search away', async () => {
+		searchFiles.mockResolvedValue({ hits: [HIT], files: 1, more: false });
+		files.setLookFor('text');
+		await files.searchFiles('ree');
+		files.setLookFor('names');
+		expect(files.lookFor).toBe('names');
+		expect(files.searched).toBeNull();
 	});
 });

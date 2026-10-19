@@ -32,6 +32,10 @@ pub enum Error {
     #[error("this repository has no commits yet")]
     EmptyRepository,
 
+    /// A search whose regular expression does not parse (FEAT-151).
+    #[error("not a pattern: {0}")]
+    Pattern(String),
+
     #[error("could not read the repository: {0}")]
     Open(String),
 

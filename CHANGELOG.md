@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Search in files.** Files can look for text in every file at the branch, tag or commit it shows: switch the tree's field from *Names* to *Text*. Matching lines are listed under their files with the match marked, and a click opens the file there. The search in a file (`/`) and the search in files both take a regular expression (`.*`, Alt+R), a whole word (`W`, Alt+W) and match case (`Aa`, Alt+C).
+
 ### Changed
 
 - **Screens no longer wait for each other.** Every command used to queue behind the slowest one reading the repository, so selecting a commit while a long file was being blamed waited for the blame. Reads now run side by side, and only changes to the repository take turns.

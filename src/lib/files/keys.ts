@@ -13,6 +13,8 @@
  * there is: the key waited on.
  */
 
+import type { SearchOptions } from '../types';
+
 export type Action =
 	| { kind: 'move'; by: number }
 	/** Half a screen, as `Ctrl+d` and `Ctrl+u` go. `by` is 1 or -1. */
@@ -117,46 +119,102 @@ export interface Match {
 }
 
 /**
+ * Alt with R, W or C in a search field: which option it flips (FEAT-151),
+ * or null for any other key.
+ */
+export function optionKey(event: KeyboardEvent): keyof SearchOptions | null {
+	if (!event.altKey || event.ctrlKey || event.metaKey) return null;
+	switch (event.code) {
+		case 'KeyR':
+			return 'regex';
+		case 'KeyW':
+			return 'word';
+		case 'KeyC':
+			return 'case';
+	}
+	return null;
+}
+
+/** Text as typed, smart about case: what `/` has always done. */
+export const PLAIN: SearchOptions = { regex: false, word: false, case: false };
+
+/**
+ * Does `query` ask for its case to count? Always with *Match case*; without
+ * it, only when it has a capital — an escape such as `\S` in a regular
+ * expression is not one. Mirrors `files::case_counts`.
+ */
+export function caseCounts(query: string, options: SearchOptions): boolean {
+	if (options.case) return true;
+	const plain = options.regex ? query.replace(/\\./g, '') : query;
+	return plain !== plain.toLowerCase();
+}
+
+/**
+ * What was typed, as the expression a search matches with (FEAT-151), or
+ * why it is not one. Mirrors `files::pattern`.
+ */
+export function patternOf(query: string, options: SearchOptions = PLAIN): RegExp | string {
+	const body = options.regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const wrapped = options.word ? `\\b(?:${body})\\b` : body;
+	try {
+		return new RegExp(wrapped, caseCounts(query, options) ? 'g' : 'gi');
+	} catch (error) {
+		return error instanceof Error ? error.message : String(error);
+	}
+}
+
+/** Where `pattern` matches in `text`, start and end, empty matches left out. */
+function spans(text: string, pattern: RegExp): [number, number][] {
+	const out: [number, number][] = [];
+	pattern.lastIndex = 0;
+	for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
+		if (found[0].length === 0) {
+			pattern.lastIndex += 1;
+			continue;
+		}
+		out.push([found.index, found.index + found[0].length]);
+	}
+	return out;
+}
+
+/**
  * The next place `query` is found, from `from` in the direction asked,
- * wrapping at either end. Null when it is nowhere.
+ * wrapping at either end. Null when it is nowhere, or when a regular
+ * expression does not parse.
  *
- * Case is ignored unless the query has a capital in it, which is what `/`
- * does with `smartcase` set and what most people expect either way.
- * `from.col` is where the cursor is: a match starting there is the one you
- * are on, and the next one is past it.
+ * By default the query is text and case is ignored unless it has a capital
+ * in it, which is what `/` does with `smartcase` set and what most people
+ * expect either way; `options` can make it a regular expression, a whole
+ * word, or case-sensitive (FEAT-151). `from.col` is where the cursor is: a
+ * match starting there is the one you are on, and the next one is past it.
  */
 export function find(
 	lines: readonly string[],
 	query: string,
 	from: { line: number; col: number },
-	backward: boolean
+	backward: boolean,
+	options: SearchOptions = PLAIN
 ): Match | null {
 	if (query === '' || lines.length === 0) return null;
-	const exact = query !== query.toLowerCase();
-	const needle = exact ? query : query.toLowerCase();
-	const read = (index: number) => (exact ? lines[index] : lines[index].toLowerCase());
+	const pattern = patternOf(query, options);
+	if (typeof pattern === 'string') return null;
 	const count = lines.length;
 
 	// The cursor's own line first, on the far side of the cursor; then every
 	// other line; then the cursor's line again, on the near side.
 	for (let turn = 0; turn <= count; turn++) {
 		const index = (((from.line + (backward ? -turn : turn)) % count) + count) % count;
-		const text = read(index);
-		let at: number;
+		const found = spans(lines[index], pattern);
+		let hit: [number, number] | undefined;
 		if (turn === 0) {
-			at = backward
-				? from.col > 0
-					? text.lastIndexOf(needle, from.col - 1)
-					: -1
-				: text.indexOf(needle, from.col + 1);
+			hit = backward ? found.filter(([start]) => start < from.col).at(-1) : found.find(([start]) => start > from.col);
 		} else if (turn === count) {
-			at = backward ? text.lastIndexOf(needle) : text.indexOf(needle);
 			// Only the part the first look did not cover.
-			if (at !== -1 && (backward ? at < from.col : at > from.col)) at = -1;
+			hit = backward ? found.filter(([start]) => start >= from.col).at(-1) : found.find(([start]) => start <= from.col);
 		} else {
-			at = backward ? text.lastIndexOf(needle) : text.indexOf(needle);
+			hit = backward ? found.at(-1) : found[0];
 		}
-		if (at !== -1) return { line: index, start: at, end: at + needle.length };
+		if (hit) return { line: index, start: hit[0], end: hit[1] };
 	}
 	return null;
 }
