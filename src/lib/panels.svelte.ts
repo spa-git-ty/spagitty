@@ -19,6 +19,7 @@ import {
 	DIFF_FILES_W,
 	FARM_LOG_H,
 	FILES_BLAME_W,
+	FILES_TREE_W,
 	RAIL_W,
 	REQUESTS_DETAIL_W,
 	REVIEW_PREVIEW_W,
@@ -130,6 +131,13 @@ export const PANELS = {
 		min: 140,
 		max: 520
 	},
+	filesTree: {
+		variable: 'files-tree-w',
+		side: 'left',
+		initial: FILES_TREE_W,
+		min: 180,
+		max: 640
+	},
 	farmLog: {
 		variable: 'farm-log-h',
 		side: 'bottom',
@@ -165,6 +173,7 @@ let extra = $state<Record<string, number>>({
 	diffFiles: DIFF_FILES_W,
 	stashEntries: STASH_ENTRIES_W,
 	filesBlame: FILES_BLAME_W,
+	filesTree: FILES_TREE_W,
 	farmLog: FARM_LOG_H
 });
 /**
@@ -353,6 +362,7 @@ export const panels = {
 			diffFiles: DIFF_FILES_W,
 			stashEntries: STASH_ENTRIES_W,
 			filesBlame: FILES_BLAME_W,
+			filesTree: FILES_TREE_W,
 			farmLog: FARM_LOG_H
 		};
 		railCollapsed = false;

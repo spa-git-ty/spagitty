@@ -14,6 +14,15 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **The Files tree can be widened.** Drag the divider between the tree and the file; a double-click puts it back.
+- **Right-click a file in the Files tree** to copy its name, its path from the top of the repository, or its content at the branch, tag or commit Files shows. A folder copies its name or path.
+
+### Fixed
+
+- **Selecting more of a file than fits on screen keeps the whole selection.** Lines that scrolled out of view dropped out of the selection, so only what was on screen was copied.
+
 ## [3.4.0] - 2026-10-19
 
 ### Added

@@ -17,6 +17,7 @@ import {
 	DIFF_FILES_W,
 	FARM_LOG_H,
 	FILES_BLAME_W,
+	FILES_TREE_W,
 	RAIL_W,
 	REQUESTS_DETAIL_W,
 	REVIEW_PREVIEW_W,
@@ -198,6 +199,7 @@ describe('reset', () => {
 			farmLog: FARM_LOG_H,
 			// The blame in Files (FEAT-131).
 			filesBlame: FILES_BLAME_W,
+			filesTree: FILES_TREE_W,
 			// Review's three (FEAT-094).
 			reviewPreview: REVIEW_PREVIEW_W,
 			roomFiles: ROOM_FILES_W,

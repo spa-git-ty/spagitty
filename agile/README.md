@@ -205,6 +205,7 @@ rather than an audit.
 | [FEAT-149](items/FEAT-149-a-coloured-tag-for-each-kind-of-file.md) | A coloured tag for each kind of file | 1U | Done |
 | [FEAT-150](items/FEAT-150-open-a-file-from-anywhere-with-a-click.md) | Open a file from anywhere with a click | every screen | Done |
 | [FEAT-151](items/FEAT-151-search-the-text-of-files.md) | Search the text of files, by word or regular expression | 1U | Done |
+| [FEAT-152](items/FEAT-152-the-files-tree-widens-and-copies.md) | The Files tree widens by dragging, copies from a right-click, and a long selection holds | 1U | Done |
 
 ## Bugs
 

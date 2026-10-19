@@ -70,6 +70,42 @@
 	let field = $state<HTMLInputElement | null>(null);
 	let pending: Pending = null;
 
+	/**
+	 * The rows the browser's selection runs between, kept drawn while it
+	 * lasts (FEAT-152). Without them a selection dragged or scrolled past
+	 * the drawn rows lost its far end, and only what was on screen copied.
+	 */
+	let held = $state<[number, number] | null>(null);
+
+	function lineOf(node: Node | null): number | null {
+		const element = node instanceof Element ? node : (node?.parentElement ?? null);
+		const line = element?.closest<HTMLElement>('.line[data-line]');
+		return line && pane?.contains(line) ? Number(line.dataset.line) - 1 : null;
+	}
+
+	$effect(() => {
+		const onselectionchange = () => {
+			const chosen = document.getSelection();
+			if (!chosen || chosen.isCollapsed) {
+				held = null;
+				return;
+			}
+			const ends = [lineOf(chosen.anchorNode), lineOf(chosen.focusNode)].filter(
+				(line): line is number => line !== null
+			);
+			// Neither end is in the file: the selection is somewhere else.
+			if (ends.length === 0) {
+				held = null;
+				return;
+			}
+			// One end off the lines, on a spacer while dragging: keep what was held.
+			const at = ends.map(rowOf).concat(ends.length === 1 && held ? held : []);
+			held = [Math.min(...at), Math.max(...at)];
+		};
+		document.addEventListener('selectionchange', onselectionchange);
+		return () => document.removeEventListener('selectionchange', onselectionchange);
+	});
+
 	function rowOf(line: number): number {
 		const peek = files.peek;
 		return peek !== null && peek < line ? line + 1 : line;
@@ -274,6 +310,7 @@
 					key={(row) => (row < 0 ? `p${-row - 1}` : `l${row}`)}
 					estimate={(row) => (row < 0 ? 170 : ROW)}
 					overscan={500}
+					hold={held}
 					label="{file.path}, {lines.length} lines"
 					onrange={(start, end) => files.wantColour(start, end)}
 				>

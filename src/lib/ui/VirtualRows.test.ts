@@ -170,3 +170,32 @@ it('leaves an effect that asked for a row alone when rows are measured (BUG-047)
 	unmount(harness);
 	host.remove();
 });
+
+/** FEAT-152: a selection loses an end whose row is dropped. */
+it('keeps rows it is asked to hold drawn wherever the scroll is', () => {
+	const other = document.createElement('div');
+	document.body.appendChild(other);
+	const held = mount(VirtualRows<string>, {
+		target: other,
+		props: {
+			items: ITEMS,
+			key: (item: string) => item,
+			estimate: () => 20,
+			row: createRawSnippet((item: () => string) => ({ render: () => `<span>${item()}</span>` })),
+			overscan: 600,
+			hold: [5, 8]
+		}
+	});
+	flushSync();
+
+	const scrolled = other.querySelector<HTMLElement>('.viewport')!;
+	scrolled.scrollTop = 10_000;
+	scrolled.dispatchEvent(new Event('scroll'));
+	flushSync();
+	const keys = [...other.querySelectorAll<HTMLElement>('.row')].map((row) => row.dataset.key);
+	expect(keys[0]).toBe('r5');
+	expect(keys.at(-1)).toBe('r545');
+
+	unmount(held);
+	other.remove();
+});
