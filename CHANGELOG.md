@@ -29,6 +29,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Spagitty opens on Home.** The last session's tab and selected commit still come back.
 - **The farm's Setup page is gone**, replaced by the steps above. Its rules sheet shows the autonomy levels as one row, with where you come in under it.
 
+### Fixed
+
+- **Security gate** records the three unmaintained notices for the zbus 5 notification dependencies by advisory ID, with the upstream migration needed to remove them. Other advisories remain blocking.
+
 ### Downloads
 
 - **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
