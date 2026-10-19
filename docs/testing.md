@@ -233,6 +233,18 @@ Then `xdotool mousemove`, `xdotool click`, `xdotool type` and
 Findings go into the item's `agile/testing/<ID>-sweep.md` as filled-in results,
 not into a commit message.
 
+### The sweep portal
+
+`bun run sweep` opens a page on this machine with every sweep ticket: its
+steps and what to expect, a result to set (passed, failed, blocked, partly
+passed, obsolete), a note, and screenshots or a screen recording to attach —
+paste a screenshot into the ticket you are on, drop files on it, or record the
+screen from the page. A result is written into the ticket's own cell or line in
+its sweep document, and [`agile/testing/sweeps.md`](../agile/testing/sweeps.md),
+the index of every sweep, is written again after it (TASK-073). Attached files
+stay in `agile/testing/evidence/`, which is not committed; the result links
+them.
+
 ## Development stylesheet regression
 
 `bun run test tools/dev-styles.test.ts` checks the installed Vite/Svelte pipeline
