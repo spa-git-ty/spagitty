@@ -20,7 +20,7 @@ use spagitty_core::worktrees::Worktree;
 
 use crate::error::Result;
 use crate::model::TaskId;
-use crate::workspace::branch::{is_farm_branch, task_of};
+use crate::workspace::branch::{is_farm_branch, task_of, worktree_dir};
 
 /// A worktree the farm made, and what is known about it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +88,33 @@ pub fn sweep(repo: &Path, known: &[TaskId]) -> Result<Vec<Stale>> {
     // record behind. Pruning them is safe by definition — there is nothing on
     // disk to lose — and without it they are listed forever.
     let _ = shell::worktree_prune(repo);
+    // Copies (FEAT-147) by the same rule: no farm claims the task, nothing is
+    // uncommitted, and its branch is in HEAD, so nothing in it is unique.
+    let claimed: Vec<String> = known.iter().map(worktree_dir).collect();
+    for (dir, path) in super::copy::copies(repo) {
+        if claimed.contains(&dir) {
+            continue;
+        }
+        let clean = shell::ran_ok(&path, &["status", "--porcelain"])
+            .map(|status| status.trim().is_empty())
+            .unwrap_or(false);
+        let branch = shell::ran_ok(&path, &["branch", "--show-current"])
+            .map(|name| name.trim().to_string())
+            .unwrap_or_default();
+        let merged = shell::commit_id(&path, "HEAD")
+            .and_then(|tip| shell::is_ancestor(repo, &tip, "HEAD"))
+            .unwrap_or(false);
+        if !clean || !merged || std::fs::remove_dir_all(&path).is_err() {
+            continue;
+        }
+        let _ = std::fs::remove_file(path.with_extension("start"));
+        removed.push(Stale {
+            task: task_of(&branch).unwrap_or_else(|| TaskId::new(dir.to_uppercase())),
+            path: path.to_string_lossy().into_owned(),
+            branch,
+            orphaned: false,
+        });
+    }
     // Successful merges already removed their worktrees. Sweep those branches too,
     // using the same namespace, ownership and merge proof as the worktree path.
     if let Ok(repository) = spagitty_core::repo::open(repo) {
@@ -121,8 +148,26 @@ pub fn sweep(repo: &Path, known: &[TaskId]) -> Result<Vec<Stale>> {
 mod tests {
     use super::*;
     use crate::model::AgentProvider;
-    use crate::workspace::worktree;
+    use crate::workspace::{copy, worktree};
     use spagitty_core::fixture::Fixture;
+
+    #[test]
+    fn a_leftover_copy_with_nothing_unique_is_swept_and_a_claimed_one_kept() {
+        let repo = Fixture::woven();
+        let leftover = TaskId::new("TASK-0008");
+        let claimed = TaskId::new("TASK-0009");
+        copy::create(repo.path(), &leftover, AgentProvider::Codex, "HEAD").unwrap();
+        copy::create(repo.path(), &claimed, AgentProvider::Codex, "HEAD").unwrap();
+
+        let removed = sweep(repo.path(), std::slice::from_ref(&claimed)).unwrap();
+
+        assert!(
+            removed.iter().any(|stale| stale.task == leftover),
+            "{removed:?}"
+        );
+        assert!(!copy::exists(repo.path(), &leftover));
+        assert!(copy::exists(repo.path(), &claimed));
+    }
 
     #[test]
     fn only_farm_worktrees_are_listed() {

@@ -4,7 +4,7 @@
 
 **Prepared:** 2026-10-18  
 **Target:** 3.2.0 (the lane), 3.3.0 (the hub). Open — see [question 7](#12-questions-for-the-author).  
-**Status:** The author chose the local hub on 2026-10-18. The items are FEAT-144 (the lane: §5.1 and §5.5 now; §5.2 and §5.3 later) and FEAT-147 (own copies, Backlog). FEAT-140 to FEAT-143 went to Home, the farm wizard, the notification center and slices first, so the numbers first proposed here were reassigned.  
+**Status:** The author chose the local hub on 2026-10-18. The items are FEAT-144 (the lane: §5.1 and §5.5 in 3.2.0; §5.2 and §5.3 later) and FEAT-147 (own copies, in 3.3.0, with the answers to §12 recorded in the item). FEAT-140 to FEAT-143 went to Home, the farm wizard, the notification center and slices first, so the numbers first proposed here were reassigned.  
 **Raised by:** the author, 2026-10-18, after reading [feder-cr/git-ai](https://github.com/feder-cr/git-ai) (an open implementation of the server-centric source control described in Anthropic's *Redesigning source control*): make the local repository behave like a git server, with a layer in the middle that lets local agents take copies of their own, work in parallel, and land back into the local repository — from where pushing to the remote is ordinary.  
 **Screens:** 1Q (Farm), 1K (Settings › Farm). Merger, Conflicts and Review are used, not changed.
 

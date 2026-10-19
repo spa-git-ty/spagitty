@@ -182,8 +182,11 @@ export type GoalSource =
 	| { kind: 'brief'; path: string; text: string }
 	| { kind: 'branch'; name: string };
 
-/** Where each task works (FEAT-143). */
-export type WorkspaceMode = 'worktree' | 'slice';
+/** Where each task works (FEAT-143), and in a copy of its own (FEAT-147). */
+export type WorkspaceMode = 'worktree' | 'slice' | 'copy';
+
+/** Who resolves a conflict the farm meets when it merges a task (FEAT-146). */
+export type ConflictResolver = { by: 'ask' } | { by: 'agent' } | { by: 'tool'; command: string };
 
 /** The crew and rules the last farm here started with (FEAT-141). */
 export interface Setup {
@@ -195,6 +198,8 @@ export interface Setup {
 	verification: string[];
 	supplemental: SupplementalPolicy;
 	workspace: WorkspaceMode;
+	/** Absent from a setup remembered before FEAT-146. */
+	conflicts?: ConflictResolver;
 	fromTitle: string;
 	fromMs: number;
 }
@@ -250,6 +255,8 @@ export interface Farm {
 	maxAttempts: number;
 	/** Where each task works (FEAT-143). Absent from a farm written before. */
 	workspace?: WorkspaceMode;
+	/** Who resolves a conflict (FEAT-146). Absent from a farm written before. */
+	conflicts?: ConflictResolver;
 	createdMs: number;
 	updatedMs: number;
 }
@@ -461,6 +468,7 @@ export interface FarmSettings {
 	goalTitle?: string;
 	goalDescription?: string;
 	workspace?: WorkspaceMode;
+	conflicts?: ConflictResolver;
 }
 
 /** The shape a farm command rejects with. */

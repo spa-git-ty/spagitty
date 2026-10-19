@@ -139,6 +139,7 @@ describe('command names and arguments', () => {
 			notifyChecks: true,
 			notifyEveryMinutes: 2,
 			rail: { hidden: [], order: [], where: 'more' as const },
+			home: { hidden: [], order: [] },
 			terminalShell: '',
 			terminalMultiplexer: true
 		};

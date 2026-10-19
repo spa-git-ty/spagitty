@@ -48,6 +48,7 @@ pub mod assign;
 pub mod context;
 pub mod error;
 pub mod execution;
+pub mod history;
 pub mod model;
 pub mod orchestrator;
 pub mod persistence;

@@ -21,6 +21,7 @@ import { repo } from '../repo.svelte';
 import { pushed } from '$lib/delight/watch';
 import { notice } from '../ui/notice.svelte';
 import { settings } from '../settings/store.svelte';
+import { plainSummary } from './plain';
 import {
 	NETWORK_DONE_EVENT,
 	NETWORK_PROGRESS_EVENT,
@@ -35,7 +36,7 @@ let token = $state<number | null>(null);
 let operation = $state<NetworkOperation | null>(null);
 /** The last step git reported, or null before the first one. */
 let step = $state<CloneProgress | null>(null);
-/** git's own last words about the operation that finished. */
+/** git's last words about the operation that finished, in plain words (BUG-091). */
 let summary = $state<string | null>(null);
 let error = $state<string | null>(null);
 /** Whoever is waiting for the operation running now to end. */
@@ -67,11 +68,10 @@ function ended(payload: NetworkDoneEvent): void {
 	const what = payload.operation === 'push' ? 'Pushed' : 'Fetched';
 
 	if (payload.ok) {
-		summary = payload.summary;
+		summary = plainSummary(payload.operation, payload.summary);
 		error = null;
-		// The notice as well as the toolbar line: the toolbar's is
-		// transient state that the next operation overwrites, and a
-		// notice is what somebody looking at another screen sees.
+		// Said in a notice, which goes away, and not beside the branch,
+		// where git's line stayed until the next fetch or push (BUG-091).
 		notice.ok(what, summary);
 		// Spagitty never passes `--force-with-lease` from the UI today,
 		// so this is always the gentle kind. The flag is carried anyway

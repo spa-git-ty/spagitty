@@ -256,8 +256,16 @@
 		font-size: var(--fs-secondary);
 	}
 
+	/*
+	 * farm.css stacks every label in the farm (`.farm-journey label` is a
+	 * column) and gives every input a border and padding. Both won here, so
+	 * the icon sat on a bar of its own with a second box under it (BUG-093).
+	 * The direction is said outright, and the input's rule is made more
+	 * specific than the shared one.
+	 */
 	.search {
 		display: flex;
+		flex-direction: row;
 		align-items: center;
 		gap: 8px;
 		height: 36px;
@@ -270,8 +278,11 @@
 		color: var(--muted);
 	}
 
-	.search input {
+	.search input[type='search'] {
 		flex: 1;
+		height: 100%;
+		border-radius: 0;
+		box-shadow: none;
 		min-width: 0;
 		border: 0;
 		padding: 0;

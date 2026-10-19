@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, fire, press, render } from '../../testing/mount';
+import { drag } from '../../testing/pointer';
 import type { PreviewRow, RebasePreview, RebaseTodo, TodoRow } from '$lib/types';
 
 vi.mock('$lib/api', () => ({
@@ -171,14 +172,14 @@ describe('RebasePlan', () => {
 		view.destroy();
 	});
 
+	const grip = (row: HTMLElement) => row.querySelector<HTMLElement>('[data-sort-grip]')!;
+
 	it('a drag moves the row it was dropped onto', async () => {
 		await planned();
 		const view = render(RebasePlan, {});
 		const rows = view.all('.row');
 
-		fire(rows[0], 'dragstart');
-		fire(rows[2], 'dragover');
-		fire(rows[2], 'drop');
+		drag(grip(rows[0]), rows[2]);
 		await Promise.resolve();
 
 		expect(rebase.plan.map((entry) => entry.id)).toEqual([
@@ -194,8 +195,7 @@ describe('RebasePlan', () => {
 		const view = render(RebasePlan, {});
 		const rows = view.all('.row');
 
-		fire(rows[1], 'dragstart');
-		fire(rows[1], 'drop');
+		drag(grip(rows[1]), rows[1]);
 		await Promise.resolve();
 
 		expect(rebase.plan.map((entry) => entry.id)).toEqual(
@@ -204,28 +204,31 @@ describe('RebasePlan', () => {
 		view.destroy();
 	});
 
-	it('a drop with nothing being dragged is ignored', async () => {
-		await planned();
-		const view = render(RebasePlan, {});
-
-		fire(view.all('.row')[1], 'drop');
-		await Promise.resolve();
-
-		expect(rebase.plan.map((entry) => entry.id)).toEqual(
-			todoOf().rows.map((row) => row.id)
-		);
-		view.destroy();
-	});
-
-	it('ending a drag without dropping leaves the plan alone', async () => {
+	it('a press on the row rather than its grip moves nothing', async () => {
 		await planned();
 		const view = render(RebasePlan, {});
 		const rows = view.all('.row');
 
-		fire(rows[0], 'dragstart');
-		fire(rows[0], 'dragend');
-		fire(rows[2], 'drop');
+		drag(rows[0].querySelector<HTMLElement>('.what')!, rows[2]);
 		await Promise.resolve();
+
+		expect(rebase.plan.map((entry) => entry.id)).toEqual(
+			todoOf().rows.map((row) => row.id)
+		);
+		view.destroy();
+	});
+
+	it('Escape gives a drag up, and the plan stays as it was', async () => {
+		await planned();
+		const view = render(RebasePlan, {});
+		const rows = view.all('.row');
+
+		drag(grip(rows[0]), rows[2], { release: false });
+		expect(rows[2].classList.contains('over')).toBe(true);
+		press(document.body, 'Escape');
+		fire(grip(rows[0]), 'pointerup');
+		await Promise.resolve();
+		expect(view.all('.row.over, .row.dragging')).toHaveLength(0);
 
 		expect(rebase.plan.map((entry) => entry.id)).toEqual(
 			todoOf().rows.map((row) => row.id)
@@ -289,7 +292,10 @@ describe('RebasePlan', () => {
 		await Promise.resolve();
 
 		expect(rebase.plan[0].action).toBe('pick');
-		expect(view.all('.row')[0].getAttribute('draggable')).toBe('false');
+		const rows = view.all('.row');
+		drag(rows[0].querySelector<HTMLElement>('[data-sort-grip]')!, rows[2]);
+		await Promise.resolve();
+		expect(rebase.plan.map((entry) => entry.id)).toEqual(todoOf().rows.map((row) => row.id));
 		view.destroy();
 	});
 });

@@ -31,7 +31,7 @@ pub use agent::{
     AgentProvider, AgentRole, AgentTraits,
 };
 pub use event::{FarmEvent, Recorded};
-pub use farm::{Autonomy, Farm, FarmStatus, Permissions, WorkspaceMode};
+pub use farm::{Autonomy, ConflictResolver, Farm, FarmStatus, Permissions, WorkspaceMode};
 pub use goal::{Goal, GoalSource};
 pub use handoff::{Handoff, HandoffStatus, ProposedTask, TestOutcome, TestReport};
 pub use ledger::{LedgerAgent, LedgerEntry, LedgerKind};

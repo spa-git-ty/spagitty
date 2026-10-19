@@ -230,3 +230,150 @@ fn a_task_merged_in_merger_is_in_the_ledger_too() {
     assert_eq!(ledger[0].kind, LedgerKind::Merger);
     assert_eq!(ledger[0].old, None);
 }
+
+/// A conflicting task and a person who rewrote the same file on main.
+fn conflicting(lane: &Lane, name: &str) -> TaskId {
+    let task = lane.done(name, "notes.md", "the agent's notes");
+    lane.repo.write("notes.md", "the person's notes\n");
+    lane.repo.commit_all("The person rewrites the notes");
+    task
+}
+
+fn worktree(lane: &Lane, task: &TaskId) -> PathBuf {
+    PathBuf::from(
+        lane.service
+            .farm()
+            .unwrap()
+            .task(task)
+            .unwrap()
+            .worktree
+            .clone()
+            .unwrap(),
+    )
+}
+
+/// FEAT-146: a tool named in the Rules resolves the conflict in the task's
+/// worktree; the task is checked again and merges on the next try.
+#[test]
+fn a_tool_resolves_a_conflict_in_the_task_s_worktree_and_the_task_merges_after() {
+    let lane = Lane::new(&[]);
+    lane.service
+        .configure(|farm| {
+            farm.conflicts = ConflictResolver::Tool {
+                command: r#"/bin/sh -c 'for f; do printf "both notes\n" > "$f"; done' resolve"#
+                    .into(),
+            }
+        })
+        .unwrap();
+    let task = conflicting(&lane, "tool-clasher");
+    let before = lane.repo.rev("main");
+
+    lane.service.merge(&task).unwrap();
+
+    // Resolved on the task's branch and back for review; main untouched.
+    assert_eq!(
+        lane.status(&task),
+        TaskStatus::Review,
+        "{}",
+        lane.note(&task)
+    );
+    assert_eq!(lane.repo.rev("main"), before);
+    assert_eq!(lane.repo.read("notes.md"), "the person's notes\n");
+    let branch = lane
+        .service
+        .farm()
+        .unwrap()
+        .task(&task)
+        .unwrap()
+        .branch
+        .clone()
+        .unwrap();
+    let parents = lane.repo.git(&["log", "-1", "--pretty=%P", &branch]);
+    assert!(
+        parents.contains(&before),
+        "main is not a parent of the resolution: {parents}"
+    );
+
+    lane.service.merge(&task).unwrap();
+
+    assert_eq!(lane.status(&task), TaskStatus::Done, "{}", lane.note(&task));
+    assert_eq!(lane.repo.read("notes.md"), "both notes\n");
+}
+
+#[test]
+fn a_tool_that_leaves_markers_stops_and_puts_the_worktree_back() {
+    let lane = Lane::new(&[]);
+    lane.service
+        .configure(|farm| {
+            farm.conflicts = ConflictResolver::Tool {
+                command: "/bin/sh -c 'true'".into(),
+            }
+        })
+        .unwrap();
+    let task = conflicting(&lane, "lazy-tool");
+
+    lane.service.merge(&task).unwrap();
+
+    assert_eq!(lane.status(&task), TaskStatus::Blocked);
+    assert!(
+        lane.note(&task).contains("Still in conflict: notes.md"),
+        "{}",
+        lane.note(&task)
+    );
+    let merging = std::process::Command::new("git")
+        .current_dir(worktree(&lane, &task))
+        .args(["rev-parse", "-q", "--verify", "MERGE_HEAD"])
+        .status()
+        .unwrap();
+    assert!(!merging.success(), "the merge was left in the worktree");
+}
+
+/// FEAT-146: the task's agent is sent back with the merge waiting for it.
+#[test]
+fn the_task_s_agent_is_sent_back_to_resolve_a_conflict() {
+    let lane = Lane::new(&[]);
+    lane.service
+        .configure(|farm| farm.conflicts = ConflictResolver::Agent)
+        .unwrap();
+    let task = conflicting(&lane, "agent-clasher");
+
+    let before = lane.repo.rev("main");
+
+    lane.service.merge(&task).unwrap();
+
+    // Sent straight back to its agent, with the merge waiting in its worktree;
+    // the agent writes the file again and commits, which finishes the merge.
+    assert!(
+        matches!(
+            lane.status(&task),
+            TaskStatus::Waiting | TaskStatus::Assigned | TaskStatus::Running
+        ),
+        "{:?}: {}",
+        lane.status(&task),
+        lane.note(&task)
+    );
+    lane.service.await_task(&task).unwrap();
+    let branch = lane
+        .service
+        .farm()
+        .unwrap()
+        .task(&task)
+        .unwrap()
+        .branch
+        .clone()
+        .unwrap();
+    let parents = lane.repo.git(&["log", "-1", "--pretty=%P", &branch]);
+    assert!(
+        parents.contains(&before),
+        "main is not a parent of the resolution: {parents}"
+    );
+    assert_eq!(
+        lane.status(&task),
+        TaskStatus::Review,
+        "{}",
+        lane.note(&task)
+    );
+
+    lane.service.merge(&task).unwrap();
+    assert_eq!(lane.status(&task), TaskStatus::Done, "{}", lane.note(&task));
+}

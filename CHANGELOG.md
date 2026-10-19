@@ -14,6 +14,34 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-10-19
+
+### Added
+
+- **Settings › Home** arranges Home's cards: show or hide each one, and drag it, or move it with Alt and the arrows, into the order you want. *Needs you* keeps its double width wherever it goes.
+- **Files tags each file with its kind**: a small coloured `TS`, `RS`, `{}`, `MD` and so on in front of its name, and a folder for each folder, so the tree is quicker to scan.
+- **A copy per task.** A farm can give each task a repository of its own instead of a worktree: a local clone with no remote, so the agent cannot push or move your branches. When it finishes, Spagitty takes its commits and checks them first: they must start where the task started, change only the paths the task may touch, leave CI files, submodules and hooks alone unless the task names them, and add no file over 5 MB. Work that fails is held with the reason; work that passes is checked and reviewed as usual. Chosen in the farm's Rules, as *Where each task works*.
+- **Who resolves a conflict** is a farm rule: you, in Merger (as before, and the default), the agent that wrote the task, or a command such as `mergiraf solve`. An agent or a command works in the task's own workspace, never yours, and the resolution is checked and reviewed again before it is merged.
+- **History tools for agents.** Claude Code and Codex, run by the farm, can ask Spagitty for blame, a file's history, a search of commits or code, and a file at a commit, instead of reading the history themselves. Answers are kept per commit, so the next agent to ask gets them at once.
+- **Open any file from anywhere.** Double-click a file, or Ctrl-click it (⌘ on a Mac), on any screen to open it in Files at the version that screen shows. Where clicking a file name did nothing before — Home's working copy, an agent's plan, CodeRabbit's findings, search results, a farm task's changes — a plain click opens it.
+
+### Fixed
+
+- **Dragging rows into place works on Windows**: the Rail in Settings, the rebase plan, Hooks' blocks and the Graph's column headings. Dropping did nothing there before; Alt with the arrows was the only way.
+- **Starting a farm:** the issue search box is one field again, and the steps at the top show their numbers in rings instead of spilling them under tiny dots.
+- **A fetch or push no longer leaves git's line beside the branch.** It used to stay there, two hashes and an arrow, until the next one. A notice now says what happened in words, such as *Pushed chore/fix-sonar-scan*, and goes away. A failed fetch or push still says why beside the branch.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.2.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.2.0] - 2026-10-18
 
 ### Added

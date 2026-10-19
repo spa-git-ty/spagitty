@@ -6,6 +6,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, flushSync, press, render } from '../../testing/mount';
+import { drag } from '../../testing/pointer';
 import type { Settings } from '$lib/types';
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
@@ -53,6 +54,7 @@ function stored(rail: Partial<RailSettings> = {}): Settings {
 		notifyChecks: true,
 		notifyEveryMinutes: 2,
 		rail: { ...RAIL_DEFAULT, ...rail },
+		home: { hidden: [], order: [] },
 		terminalShell: '',
 		terminalMultiplexer: true
 	};
@@ -210,6 +212,46 @@ describe('Settings › Rail', () => {
 		// The first row of Repository has nowhere to go but out, so it stays.
 		setSettings.mockClear();
 		press(radio(rowOf(view, '/'), 'Pin'), 'ArrowUp', { altKey: true });
+		await settle();
+		expect(setSettings).not.toHaveBeenCalled();
+
+		view.destroy();
+	});
+
+	/**
+	 * BUG-092: the rows were moved with HTML drag and drop, and on Windows the
+	 * window takes drags for itself, so nothing was ever dropped. The pointer
+	 * moves them now.
+	 */
+	it('moves a row dragged by its grip onto another row of its group', async () => {
+		const view = await mounted();
+		const tools = () => view.all('.card[aria-label="Tools"] .row').map((row) => row.dataset.code);
+		const [first, , third] = view.all('.card[aria-label="Tools"] .row');
+
+		drag(first.querySelector<HTMLElement>('[data-sort-grip]')!, third, { release: false });
+		expect(first.classList.contains('dragging')).toBe(true);
+		expect(third.classList.contains('over')).toBe(true);
+		drag(first.querySelector<HTMLElement>('[data-sort-grip]')!, third);
+		await settle();
+
+		expect(tools()[2]).toBe(first.dataset.code);
+		expect(written().order).toContain(first.dataset.code);
+		expect(view.all('.row.dragging, .row.over')).toHaveLength(0);
+
+		view.destroy();
+	});
+
+	it('refuses a row dragged into another group, and a drag from outside the grip', async () => {
+		const view = await mounted();
+		const tool = view.get('.card[aria-label="Tools"] .row');
+		const work = view.get('.card[aria-label="Repository"] .row');
+
+		drag(tool.querySelector<HTMLElement>('[data-sort-grip]')!, work);
+		await settle();
+		expect(setSettings).not.toHaveBeenCalled();
+
+		const other = view.all('.card[aria-label="Tools"] .row')[2];
+		drag(tool.querySelector<HTMLElement>('.label')!, other);
 		await settle();
 		expect(setSettings).not.toHaveBeenCalled();
 

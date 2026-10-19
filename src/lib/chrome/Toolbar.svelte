@@ -388,15 +388,15 @@
 		{/if}
 
 		<!--
-			How the last fetch or push ended, in git's own words (FEAT-018).
-			Beside the location: it is about the repository.
+			A fetch or push that failed, in git's own words (FEAT-018), beside
+			the location: it is about the repository. One that worked is said
+			in a notice and then gone (BUG-091); its line used to stay here,
+			hashes and all, until the next one replaced it.
 		-->
 		{#if activity.running}
 			<!-- Said over the pill while it runs: see `.working`. -->
 		{:else if network.error}
 			<span class="note error" role="alert" title={network.error}>{network.error}</span>
-		{:else if network.summary}
-			<span class="note" title={network.summary}>{network.summary}</span>
 		{/if}
 	</div>
 

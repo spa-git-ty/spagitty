@@ -212,6 +212,10 @@ pub struct Farm {
     /// Where each task works (FEAT-143). A farm written before is worktrees.
     #[serde(default)]
     pub workspace: WorkspaceMode,
+    /// Who resolves a conflict the farm meets when it merges (FEAT-146). A
+    /// farm written before stops and asks.
+    #[serde(default)]
+    pub conflicts: ConflictResolver,
     pub created_ms: u64,
     #[serde(default)]
     pub updated_ms: u64,
@@ -230,6 +234,28 @@ pub enum WorkspaceMode {
     Worktree,
     /// Only the paths the task may touch, and what it must read.
     Slice,
+    /// A clone of its own with no remote (FEAT-147): the agent cannot move the
+    /// person's branches or push, and its work comes in through intake.
+    Copy,
+}
+
+/// Who resolves a conflict the farm meets when it merges a task (FEAT-146).
+///
+/// Whoever it is works in the task's own workspace, never the person's, and
+/// commits the resolution on the task's branch. The task then goes through its
+/// checks and its review again: a resolved conflict is a change like any other,
+/// and is reviewed like one.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "by")]
+pub enum ConflictResolver {
+    /// Stop with the conflict and wait for a person, who resolves it in Merger.
+    #[default]
+    Ask,
+    /// The agent that wrote the task, which knows the change best.
+    Agent,
+    /// A command, run in the task's workspace with the conflicted paths after
+    /// it. It must leave no conflict marker.
+    Tool { command: String },
 }
 
 /// Two, not the core count.
@@ -267,6 +293,7 @@ impl Farm {
             supplemental_evidence: Default::default(),
             supplemental_repairs: Default::default(),
             workspace: WorkspaceMode::default(),
+            conflicts: ConflictResolver::default(),
             created_ms: now,
             updated_ms: now,
         }

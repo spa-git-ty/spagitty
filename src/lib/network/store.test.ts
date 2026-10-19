@@ -248,12 +248,12 @@ describe('when it finishes', () => {
 		expect(network.running).toBe(false);
 	});
 
-	it('keeps git’s last words and re-reads the repository', async () => {
+	it('keeps git’s last words, in plain words, and re-reads the repository', async () => {
 		await network.fetch();
 		finish({ summary: 'Everything up-to-date' });
 
-		expect(network.summary).toBe('Everything up-to-date');
-		expect(ok).toHaveBeenCalledWith('Fetched', 'Everything up-to-date');
+		expect(network.summary).toBe('Already up to date');
+		expect(ok).toHaveBeenCalledWith('Fetched', 'Already up to date');
 		// A fetch moves remote-tracking refs, which changes what every
 		// divergence on screen means.
 		expect(repoCalls.refreshed).toBeGreaterThan(0);

@@ -252,6 +252,9 @@ pub struct FarmService {
     merge_lock: Mutex<()>,
     supplemental: Mutex<Option<Arc<dyn crate::supplemental::Provider>>>,
     supplemental_stops: Mutex<HashMap<TaskId, Arc<AtomicBool>>>,
+    /// How to start the history tools for an agent (FEAT-145). Set by the
+    /// application, which is the server; absent, agents run without them.
+    history: Mutex<Option<crate::history::Server>>,
 }
 
 impl FarmService {
@@ -298,6 +301,7 @@ impl FarmService {
             verification_stops: Mutex::new(HashMap::new()),
             merge_lock: Mutex::new(()),
             supplemental: Mutex::new(None),
+            history: Mutex::new(None),
             supplemental_stops: Mutex::new(HashMap::new()),
         };
         service.recover();
@@ -1124,17 +1128,30 @@ impl FarmService {
         // A slice farm narrows the worktree every time a run starts — the first
         // run, and each one after a send-back widened it for the checks
         // (FEAT-143). A whole-worktree farm cuts it as it always did.
-        let sliced = self
-            .farm()
-            .is_some_and(|farm| farm.workspace == WorkspaceMode::Slice);
-        let opened = if sliced {
-            workspace::WorktreeSlice {
+        // A copy farm clones a repository of its own for the task, with no
+        // remote (FEAT-147).
+        let mode = self.farm().map(|farm| farm.workspace).unwrap_or_default();
+        // A conflict being resolved in the worktree (FEAT-146) cannot be
+        // narrowed: sparse-checkout refuses unmerged paths. It stays whole.
+        let mode = if mode == WorkspaceMode::Slice
+            && workspace::resolve::in_progress(&workspace::worktree_path(&self.repo, id))
+        {
+            WorkspaceMode::Worktree
+        } else {
+            mode
+        };
+        let opened = match mode {
+            WorkspaceMode::Slice => workspace::WorktreeSlice {
                 repo: self.repo.clone(),
                 provider: definition.provider,
             }
-            .open(id, &destination, &workspace::slice::patterns(&task))
-        } else {
-            workspace::create(&self.repo, id, definition.provider, &destination)
+            .open(id, &destination, &workspace::slice::patterns(&task)),
+            WorkspaceMode::Copy => {
+                workspace::copy::create(&self.repo, id, definition.provider, &destination)
+            }
+            WorkspaceMode::Worktree => {
+                workspace::create(&self.repo, id, definition.provider, &destination)
+            }
         };
         let workspace = match opened {
             Ok(workspace) => workspace,
@@ -1162,7 +1179,24 @@ impl FarmService {
         })?;
 
         let run = RunId::new(format!("{}-{}", id.as_str().to_lowercase(), now_ms()));
-        let command = adapter_for(definition.provider).command(
+        // The history tools, for the CLIs that can be told about a server
+        // (FEAT-145). The prompt mentions them only when they are there.
+        let history = self
+            .history
+            .lock()
+            .expect("history server")
+            .clone()
+            .filter(|_| {
+                matches!(
+                    definition.provider,
+                    AgentProvider::ClaudeCode | AgentProvider::Codex
+                )
+            });
+        let prompt = match history {
+            Some(_) => format!("{prompt}\n\n{}", context::history_note()),
+            None => prompt,
+        };
+        let mut command = adapter_for(definition.provider).command(
             &definition,
             &AgentRunRequest {
                 workdir: workspace.path.clone(),
@@ -1170,6 +1204,9 @@ impl FarmService {
                 unattended,
             },
         );
+        if let Some(server) = &history {
+            crate::history::attach(definition.provider, &mut command, server);
+        }
 
         self.spawn_run(Launch {
             run,
@@ -1505,6 +1542,12 @@ impl FarmService {
         // (FEAT-143). A worktree that was never narrowed is left as it is.
         workspace::slice::widen(&workdir)?;
 
+        // Work done in a copy comes in through the door first (FEAT-147): what
+        // is refused there is never checked, reviewed or merged.
+        if !self.take_from_copy(id)? {
+            return Ok(());
+        }
+
         self.set_status(id, TaskStatus::Verification, None)?;
         let before = evidence::clean_commit(&workdir).ok();
         {
@@ -1579,6 +1622,37 @@ impl FarmService {
             }
         }
         self.request_review(id)
+    }
+
+    /// Intake for a task that works in a copy: take its commits, check them
+    /// at the door, and move its farm branch. False when they were refused,
+    /// and the task is blocked with the reason. A task with no copy passes.
+    fn take_from_copy(&self, id: &TaskId) -> Result<bool> {
+        if !workspace::copy::exists(&self.repo, id) {
+            return Ok(true);
+        }
+        let task = self
+            .farm()
+            .and_then(|farm| farm.task(id).cloned())
+            .ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+        let provider = self.provider_of(&task);
+        let door = workspace::copy::Door {
+            allowed: &task.allowed_paths,
+            size_limit: workspace::copy::SIZE_LIMIT,
+        };
+        match workspace::copy::intake(&self.repo, id, provider, &door)? {
+            workspace::copy::Intake::Refused(refusal) => {
+                self.state.lock().expect("farm lock").leases.release(id);
+                self.set_status(id, TaskStatus::Blocked, Some(refusal.to_string()))?;
+                Ok(false)
+            }
+            workspace::copy::Intake::Taken(_) | workspace::copy::Intake::Nothing => Ok(true),
+        }
+    }
+
+    /// Offer the history tools to the agents this farm runs (FEAT-145).
+    pub fn set_history_server(&self, server: Option<crate::history::Server>) {
+        *self.history.lock().expect("history server") = server;
     }
 
     pub fn set_supplemental_provider(&self, provider: Arc<dyn crate::supplemental::Provider>) {
@@ -2242,12 +2316,11 @@ impl FarmService {
                     // Merged with the destination, the work fails its checks:
                     // back to its agent, as a red check on its own commit is.
                     LaneStop::Red(why) => self.after_rejection(id, why),
-                    // A conflict is never resolved silently by an agent, and
-                    // finding one touched no files. Merger is where it is
-                    // resolved, as a person's merge is (FEAT-117).
-                    LaneStop::Conflict(_) | LaneStop::Failed(_) => {
-                        self.set_status(id, TaskStatus::Blocked, Some(message))
-                    }
+                    // Finding a conflict touched no files. The Rules say who
+                    // resolves it (FEAT-146); by default a person, in Merger,
+                    // as a person's merge is (FEAT-117).
+                    LaneStop::Conflict(_) => self.resolve_conflict(id, &destination, message),
+                    LaneStop::Failed(_) => self.set_status(id, TaskStatus::Blocked, Some(message)),
                 }
             }
         }
@@ -2298,6 +2371,103 @@ impl FarmService {
                 checks: checks.to_string(),
             },
         );
+    }
+
+    /// Hand a conflict the lane met to whoever the Rules name (FEAT-146).
+    ///
+    /// The merge of the destination is started in the task's own workspace.
+    /// The task's agent is sent back to it with the conflicted paths; a tool is
+    /// run on them now. Either way the resolution is committed on the task's
+    /// branch and the task is checked and reviewed again before it is merged.
+    /// Anything that goes wrong stops and asks, with the workspace put back.
+    fn resolve_conflict(&self, id: &TaskId, destination: &str, conflict: String) -> Result<()> {
+        let resolver = self.farm().map(|farm| farm.conflicts).unwrap_or_default();
+        if resolver == ConflictResolver::Ask {
+            return self.set_status(id, TaskStatus::Blocked, Some(conflict));
+        }
+        let task = self
+            .farm()
+            .and_then(|farm| farm.task(id).cloned())
+            .ok_or_else(|| Error::NoSuchTask(id.clone()))?;
+        let (Some(workdir), Some(branch)) = (
+            task.worktree.clone().map(PathBuf::from),
+            task.branch.clone(),
+        ) else {
+            return self.set_status(id, TaskStatus::Blocked, Some(conflict));
+        };
+        let stop = |why: String| -> Result<()> {
+            let _ = workspace::resolve::abort(&workdir);
+            self.set_status(id, TaskStatus::Blocked, Some(format!("{conflict} {why}")))
+        };
+        let tip = match shell::commit_id(&self.repo, destination) {
+            Ok(tip) => tip,
+            Err(error) => return stop(error.to_string()),
+        };
+        let message = format!("Merge {destination} into {branch}");
+        let paths =
+            match workspace::resolve::open(&self.repo, &workdir, destination, &tip, &message) {
+                Ok(workspace::resolve::Opened::Clean(_)) => {
+                    if workspace::copy::exists(&self.repo, id) {
+                        workspace::copy::allow_merge(&self.repo, id, &tip)?;
+                    }
+                    return self.verify(id);
+                }
+                Ok(workspace::resolve::Opened::Conflicted(paths)) => paths,
+                Err(error) => return stop(error.to_string()),
+            };
+        if workspace::copy::exists(&self.repo, id) {
+            workspace::copy::allow_merge(&self.repo, id, &tip)?;
+        }
+        match resolver {
+            ConflictResolver::Ask => unreachable!("handled above"),
+            ConflictResolver::Tool { command } => {
+                let quoted: Vec<String> = paths.iter().map(|path| format!("\"{path}\"")).collect();
+                let line = format!("{command} {}", quoted.join(" "));
+                let ran = verifier::run(&workdir, &[line], &mut |_: &CommandResult| {});
+                if !ran.passed {
+                    return stop(format!("{command} did not resolve it: {}", ran.summary()));
+                }
+                match workspace::resolve::finish(&workdir, &paths, &message) {
+                    Ok(_) => self.verify(id),
+                    Err(error) => stop(error.to_string()),
+                }
+            }
+            ConflictResolver::Agent => {
+                let exhausted = self
+                    .farm()
+                    .and_then(|farm| {
+                        farm.task(id)
+                            .map(|task| task.is_exhausted_at(farm.max_attempts))
+                    })
+                    .unwrap_or(true);
+                if exhausted {
+                    return stop("It has had all its tries.".into());
+                }
+                let request = format!(
+                    "Merging this task into {destination} conflicts. The merge has been started in \
+                     your workspace and is waiting for you. Resolve the conflicts in:\n{}\n\n\
+                     Keep what both sides meant, remove every conflict marker, then `git add` \
+                     the files and `git commit --no-edit` to finish the merge. Change nothing \
+                     else. The result is checked and reviewed again before it is merged.",
+                    paths.iter().map(|path| format!("- {path}")).collect::<Vec<_>>().join("\n")
+                );
+                {
+                    let mut state = self.state.lock().expect("farm lock");
+                    state.change_requests.insert(id.clone(), request);
+                    state.leases.release(id);
+                }
+                self.set_status(
+                    id,
+                    TaskStatus::Waiting,
+                    Some(format!(
+                        "Resolving conflicts with {destination} in {}",
+                        paths.join(", ")
+                    )),
+                )?;
+                self.tick();
+                Ok(())
+            }
+        }
     }
 
     /// The lane for one task: read the tip, build the candidate, check it when

@@ -321,7 +321,7 @@
 						{#each detail.stats.files as file (file.path)}
 							<div
 								class="spread file-row"
-								{...fileAttrs(file.path, task.branch, task.branch ? undefined : 'No branch yet')}
+								{...fileAttrs(file.path, task.branch, task.branch ? undefined : 'No branch yet', { click: true })}
 							>
 								<span class="mono">{file.path}</span>
 								{#if file.binary}
