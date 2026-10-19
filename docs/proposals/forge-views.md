@@ -244,7 +244,7 @@ All in `design_handoff_forge_views/source/`, 1440×900, dark reference theme (ea
 ## 13. Implementation decisions
 
 1. Host writes use individual confirmations.
-2. The four screens form a group immediately above Settings.
+2. The four screens are rows of the Repository group, after Recipes (changed 2026-10-18; at first they were a group of their own above Settings).
 3. Additional hosts are outside this release.
 4. Existing hook managers retain control until explicit Import.
 5. Shared hooks use `.spagitty/hooks.toml`; personal hooks use application data.

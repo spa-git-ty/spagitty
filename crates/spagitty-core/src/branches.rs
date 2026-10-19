@@ -135,6 +135,13 @@ pub fn list(repo: &gix::Repository) -> Result<Vec<BranchRow>> {
     Ok(rows)
 }
 
+/// Short name of the checked-out branch's upstream, when it has one that was
+/// fetched. Reads one ref, unlike [`list`], which counts every branch's drift.
+pub fn current_upstream(repo: &gix::Repository) -> Option<String> {
+    let head = repo.head_ref().ok()??;
+    upstream_of(repo, &head).map(|(_, short)| short)
+}
+
 /// The remote-tracking ref a branch is configured to follow: its id and its
 /// short name. `None` for a branch with no upstream, and for remote-tracking
 /// refs, which do not have one.

@@ -103,7 +103,6 @@ describe('Settings › Rail', () => {
 			'Farm',
 			'Repository',
 			'Tools',
-			'Issues',
 			'Spagitty'
 		]);
 		expect(rowOf(view, '/stash').textContent).toContain('Stash');

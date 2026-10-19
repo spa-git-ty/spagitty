@@ -281,6 +281,13 @@ rather than an audit.
 | [BUG-081](items/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why.md) | Push of a new branch fails and does not say why | chrome, 1A | Open |
 | [BUG-082](items/BUG-082-saving-the-git-identity-clears-the-fields.md) | Saving the git identity clears the fields | 1K | Open |
 | [BUG-083](items/BUG-083-hiding-the-blame-in-files-breaks-every-line.md) | Hiding the blame in Files breaks every line | 1U | Fixed |
+| [BUG-084](items/BUG-084-pipelines-live-shows-empty-trace-panel.md) | Pipelines Live still draws the trace panel when a branch has no runs | 1Y | Fixed |
+| [BUG-085](items/BUG-085-hooks-runs-step-list-collapses-when-detail-hidden.md) | Hooks Runs step list collapses when the detail panel is hidden | 1X | Fixed |
+| [BUG-086](items/BUG-086-pipelines-preview-target-branch-input-no-placeholder.md) | Pipelines Preview target branch input has no placeholder | 1Y | Fixed |
+| [BUG-087](items/BUG-087-ci-yaml-error-mislabeled-as-git-config.md) | A repeated key empties the GitLab preview, and says it is a git-configuration error | 1Y | Fixed |
+| [BUG-088](items/BUG-088-ci-problem-file-badge-wraps-on-hyphen.md) | CI problem file badge wraps awkwardly on the hyphen | 1Y | Fixed |
+| [BUG-089](items/BUG-089-releases-misleading-empty-state-on-api-error.md) | Releases on GitLab is always empty: "responded 302" | 1Z | Fixed |
+| [BUG-090](items/BUG-090-pipelines-screen-does-not-match-its-artboards.md) | Pipelines does not look like its artboards, and Preview takes half a minute | 1Y | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -390,3 +397,10 @@ missing documents are not listed here, and fails again if a row here is stale.
 | FEAT-114 | plan, automated, sweep | Built in one session against a request to ship it in 1.3.0. The change detection has unit tests in `changes.test.ts` and the host parsing in `watch.rs`, but there is no plan written ahead and no automated record; the sweep is owed on Windows, macOS and Linux, including whether an ad-hoc signed macOS build can post notifications. |
 | BUG-057 | plan, automated, sweep | Fixed in one session from a report, so there is no plan or automated record. Covered by `inbox.test.ts` and the Review page tests; the sweep against a repository whose open pull requests are all the reader's own is owed. |
 | BUG-058 | plan, automated, sweep | Fixed in one session from a report, so there is no plan or automated record. Covered by a room test with a long whole-PR comment and a reply; how the clipped text is measured in a real window is owed to the sweep. |
+| BUG-084 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-085 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-086 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-087 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-088 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-089 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
+| BUG-090 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |

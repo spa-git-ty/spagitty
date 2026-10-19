@@ -44,6 +44,11 @@ pub enum Error {
     #[error("could not read the git configuration: {0}")]
     Config(String),
 
+    /// A CI workflow could not be read or previewed. The sentence is complete
+    /// on its own; it is not about git's configuration (BUG-087).
+    #[error("{0}")]
+    Workflow(String),
+
     #[error("{0}")]
     NotStageable(String),
 

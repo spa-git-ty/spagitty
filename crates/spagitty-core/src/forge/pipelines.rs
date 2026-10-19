@@ -132,10 +132,11 @@ pub fn run(v: &Value, github: bool) -> Run {
     };
     Run {
         id: v["id"].as_u64().unwrap_or(0),
-        name: if github {
-            string(v, "name")
-        } else {
-            format!("Pipeline #{}", v["id"])
+        // The screen writes the number after the name; GitLab names a
+        // pipeline only when its file sets `workflow: name`.
+        name: match string(v, "name") {
+            name if name.is_empty() && !github => "pipeline".into(),
+            name => name,
         },
         branch: string(v, if github { "head_branch" } else { "ref" }),
         commit: string(v, if github { "head_sha" } else { "sha" }),

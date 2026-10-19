@@ -4,87 +4,260 @@
 	import { untrack } from 'svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
-	import PipelineGraph from './PipelineGraph.svelte';
+	import LiveView from './LiveView.svelte';
+	import PreviewView from './PreviewView.svelte';
 	import { pipelines } from './store.svelte';
-	import { liveGraph as arrangeLive } from './live';
-	let watching = $state(false), watched = $state(''), reference = $state('main'), base = $state('main'), start = $state('HEAD~1'), end = $state('HEAD');
-	const workflow = $derived(pipelines.workflow), picked = $derived(pipelines.job), run = $derived(pipelines.run), liveJob = $derived(pipelines.liveJob);
-	const liveGraph = $derived(arrangeLive(pipelines.jobs, pipelines.graph));
-	const durations = $derived(pipelines.runs.slice(0, 12).reverse());
-	const maximum = $derived(Math.max(1, ...durations.map((r) => r.duration ?? 0)));
+	import type { Hosted } from './types';
+
+	let watching = $state(false), watched = $state('');
+	const workflow = $derived(pipelines.workflow);
+	const errors = $derived(Object.values(pipelines.errors).filter(Boolean));
 	const sourceLines = $derived(pipelines.source?.text.split(/\r?\n/) ?? []);
 	let sourceRows = $state<{ scrollToIndex: (index: number, align: 'center') => void } | null>(null);
-	$effect(() => { const line = pipelines.source?.line, rows = sourceRows; if (line && rows) untrack(() => rows.scrollToIndex(line - 1, 'center')); });
-	const duration = (seconds: number | null) => seconds === null ? '·' : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-	$effect(() => { reference = pipelines.simulation.reference; base = pipelines.simulation.base; start = pipelines.from; end = pipelines.to; });
-	async function watch() { if (!watched.trim()) return; await pipelines.watch(watched); if (!pipelines.errors.watches) { watching = false; watched = ''; } }
+	$effect(() => {
+		const line = pipelines.source?.line, rows = sourceRows;
+		if (line && rows) untrack(() => rows.scrollToIndex(line - 1, 'center'));
+	});
+
+	const hostLabel = (h: Hosted) => `${h.repo.kind === 'gitHub' ? 'GitHub' : h.repo.kind === 'gitLab' ? 'GitLab' : 'Bitbucket'} · ${h.repo.owner}/${h.repo.name}`;
+
+	function show(view: 'preview' | 'live') {
+		void pipelines.setView(view);
+		void goto(`/pipelines/${view}`);
+	}
+
+	async function watch() {
+		if (!watched.trim()) return;
+		await pipelines.watch(watched);
+		if (!pipelines.errors.watches) { watching = false; watched = ''; }
+	}
 </script>
+
 <div class="screen">
-	<header class="head"><h1>Pipelines</h1><nav class="segments" aria-label="Pipelines views"><a href="/pipelines/preview" class:on={pipelines.view === 'preview'} onclick={(e) => { e.preventDefault(); void pipelines.setView('preview'); void goto('/pipelines/preview'); }}>Preview</a><a href="/pipelines/live" class:on={pipelines.view === 'live'} onclick={(e) => { e.preventDefault(); void pipelines.setView('live'); void goto('/pipelines/live'); }}>Live</a></nav>
-		{#if pipelines.view === 'preview'}<span class="mono title-file">{workflow?.file ?? ''}</span><span class="chip note">working copy</span>{/if}
+	<header class="head">
+		<span class="title">Pipelines</span>
+		<nav class="seg" aria-label="Pipelines views">
+			<a href="/pipelines/preview" class:on={pipelines.view === 'preview'} aria-current={pipelines.view === 'preview' ? 'page' : undefined} onclick={(e) => { e.preventDefault(); show('preview'); }}>Preview</a>
+			<a href="/pipelines/live" class:on={pipelines.view === 'live'} aria-current={pipelines.view === 'live' ? 'page' : undefined} onclick={(e) => { e.preventDefault(); show('live'); }}>Live</a>
+		</nav>
+		{#if pipelines.view === 'preview' && workflow}
+			<span class="rule" aria-hidden="true"></span>
+			<span class="file mono" title={workflow.file}>{workflow.file}</span>
+			<span class="chip">working copy</span>
+		{/if}
 		<span class="grow"></span>
-		{#if pipelines.hosts.length}<select aria-label="Pipeline host" value={pipelines.remote} onchange={(e) => pipelines.choose(e.currentTarget.value)}>{#each pipelines.hosts as h}<option value={h.remote}>{h.repo.kind === 'gitHub' ? 'GitHub' : h.repo.kind === 'gitLab' ? 'GitLab' : 'Bitbucket'} · {h.repo.owner}/{h.repo.name}</option>{/each}</select>{/if}
-		{#if pipelines.view === 'preview'}<Btn disabled={!workflow} onclick={() => workflow && pipelines.openSource(workflow.file)}>Open source</Btn><Btn busy={pipelines.previewing} onclick={() => pipelines.preview()}>Refresh</Btn>{:else}<Btn onclick={() => { watching = !watching; }}>Watch a branch…</Btn><Btn busy={pipelines.reading} onclick={() => pipelines.refresh()}>Refresh</Btn>{/if}
+		{#if pipelines.hosts.length > 1}
+			<select class="host" aria-label="Pipeline host" value={pipelines.remote} onchange={(e) => pipelines.choose(e.currentTarget.value)}>
+				{#each pipelines.hosts as h (h.remote)}<option value={h.remote}>{hostLabel(h)}</option>{/each}
+			</select>
+		{:else if pipelines.host && pipelines.view === 'live'}
+			<span class="chip">{hostLabel(pipelines.host)}</span>
+		{/if}
+		{#if pipelines.view === 'preview'}
+			<Btn disabled={!workflow} onclick={() => workflow && pipelines.openSource(workflow.file)}>Open source</Btn>
+			<Btn busy={pipelines.previewing} onclick={() => pipelines.preview()}>Refresh</Btn>
+		{:else}
+			<Btn disabled={!pipelines.host} onclick={() => { watching = !watching; }}>Watch a branch…</Btn>
+			<Btn busy={pipelines.reading} onclick={() => pipelines.refresh()}>Refresh</Btn>
+		{/if}
 	</header>
-	{#each Object.values(pipelines.errors).filter(Boolean) as error}<p role="alert" class="error">{error}</p>{/each}
-	{#if watching}<form class="watch" onsubmit={(e) => { e.preventDefault(); void watch(); }}><input aria-label="Branch to watch" bind:value={watched} placeholder="release/3.1" /><Btn onclick={() => watch()}>Watch</Btn><Btn onclick={() => { watching = false; }}>Cancel</Btn></form>{/if}
-	{#if pipelines.view === 'preview'}
-		{#if pipelines.local?.changesWarning}<p role="status" class="note warning">{pipelines.local.changesWarning}</p>{/if}
-		<div class="body">
-			<aside class="pane sidebar" aria-label="Workflow files">{#each ['gitHub', 'gitLab'] as kind}<h2>{kind === 'gitHub' ? 'GitHub Actions' : 'GitLab CI'}</h2>{#each pipelines.local?.workflows.filter((w) => w.kind === kind) ?? [] as w}<button class="workflow" class:on={workflow?.file === w.file} onclick={() => pipelines.selectFile(w.file)}><span class="dot" class:bad={w.problems.length}>●</span><span class="mono">{w.file.split('/').at(-1)}</span><span class="grow"></span>{w.jobs.length}</button>{/each}{/each}{#if !pipelines.local?.workflows.length}<p class="note">{pipelines.loading ? 'Reading workflows…' : 'No workflow files in the working copy.'}</p>{/if}</aside>
-			<section class="pane graph-pane" aria-label="Preview">
-				<form class="simulation" onsubmit={(e) => { e.preventDefault(); void pipelines.preview({ reference, base }, pipelines.mode, start, end); }}>
-					<span class="note">If</span><select aria-label="Simulation event" value={pipelines.simulation.event} onchange={(e) => pipelines.preview({ event: e.currentTarget.value })}><option value="push">push</option><option value="pull_request">pull request</option><option value="tag">tag</option><option value="schedule">schedule</option><option value="manual">manual</option></select><span class="note">to</span><input aria-label="Simulation branch or tag" class="ref" bind:value={reference} onchange={() => pipelines.preview({ reference })} />
-					{#if pipelines.simulation.event === 'pull_request'}<label class="note">base <input class="ref" aria-label="Pull request base" bind:value={base} onchange={() => pipelines.preview({ base })} /></label>{/if}
-					<span class="note">with</span><select aria-label="Changed files" value={pipelines.mode} onchange={(e) => pipelines.preview({}, e.currentTarget.value, start, end)}><option value="working">working copy · {pipelines.local?.changed.length ?? 0} files</option><option value="range">commit range</option></select>
-					{#if pipelines.mode === 'range'}<input class="ref" aria-label="Range from" bind:value={start} /><span>…</span><input class="ref" aria-label="Range to" bind:value={end} /><button>Apply</button>{/if}
-				</form>
-				<PipelineGraph jobs={workflow?.jobs ?? []} stages={workflow?.stages ?? []} selected={picked?.id} onselect={(id) => pipelines.selectJob(id)} />
-				<div class="legend note"><span class="ok">● runs</span><span class="warning">‖ waits for approval</span><span>– skipped by if / paths</span><span>? decided on the host</span><span class="mono">×N matrix</span></div>
-				{#if workflow?.problems.length}<div class="problems" aria-label="Workflow problems">{#each workflow.problems as problem}<div class="problem"><span class="warning">!</span><span class="mono">{problem.file}:{problem.line}</span><span>{problem.message}</span><span class="grow"></span><button onclick={() => pipelines.openSource(problem.file, problem.line)}>Go to line</button></div>{/each}</div>{/if}
-			</section>
-			<aside class="pane detail" aria-label="Selected job">{#if picked}<h3>{picked.name}</h3><button class="mono source-link" onclick={() => pipelines.openSource(picked.file, picked.line)}>{picked.file}:{picked.line}</button><p class="reason" data-state={picked.state}><strong>{picked.state === 'runs' ? 'Runs on this event' : picked.state === 'approval' ? 'Waits for approval' : picked.state === 'skipped' ? 'Skipped' : 'Decided on the host'}</strong><span>{picked.reason}</span></p><dl><dt>runner</dt><dd>{picked.runsOn.join(', ') || 'host default'}</dd><dt>needs</dt><dd>{picked.needs.join(', ') || 'none'}</dd><dt>matrix</dt><dd>{picked.matrix.length ? `${picked.matrix.length} combinations` : 'none'}</dd><dt>services</dt><dd>{picked.services.join(', ') || 'none'}</dd><dt>timeout</dt><dd>{picked.timeout || 'host default'}</dd><dt>secrets</dt><dd>{picked.secrets.join(', ') || 'none named'}</dd></dl>{#if picked.matrix.length}<details><summary>Matrix values</summary><pre>{JSON.stringify(picked.matrix, null, 2)}</pre></details>{/if}<h2>Steps</h2>{#each picked.steps as step, index}<div class="step"><span class="note">{index + 1}</span><span class="mono">{step.name || step.command}</span></div>{/each}{:else}<p class="note">Select a job for its details.</p>{/if}
-				{#if workflow?.kind === 'gitLab' && pipelines.host?.repo.kind === 'gitLab'}<Btn busy={pipelines.busy} onclick={() => pipelines.send('lint')}>Check with GitLab lint</Btn>{#if pipelines.lint}<pre>{pipelines.lint}</pre>{/if}{/if}
-			</aside>
-		</div>
-	{:else}
-		<div class="body live">
-			<aside class="pane sidebar" aria-label="Watched branches"><h2>Branches</h2>{#each pipelines.branches as name}<div class="branch-row"><button class="workflow" class:on={pipelines.branch === name} onclick={() => pipelines.chooseBranch(name)}><span class="mono">{name}</span><span class="note">{pipelines.lists[name]?.runs[0]?.name ?? ''}</span></button>{#if name !== pipelines.branches[0]}<button aria-label={`Stop watching ${name}`} onclick={() => pipelines.watch(name, true)}>×</button>{/if}</div>{/each}<h2>Requests</h2>{#each pipelines.requests as name}<button class="workflow" class:on={pipelines.branch === name} onclick={() => pipelines.chooseBranch(name)}><span class="mono">{name}</span></button>{/each}{#if !pipelines.host}<p class="note">Connect a supported hosted remote in Settings.</p>{:else if pipelines.host.repo.kind === 'bitbucket'}<p class="note">Bitbucket · soon</p>{/if}</aside>
-			<section class="pane graph-pane live-pane" aria-label="Pipeline run"><div class="run-head">{#if run}<strong>{run.name} #{run.id}</strong><span class="chip">{run.state === 'completed' ? run.result : run.state} · {duration(run.duration)}</span><span class="mono note">{run.branch} · {run.commit.slice(0, 7)} · {run.event}</span>{/if}<span class="grow"></span><div class="durations" aria-label="Last twelve runs">{#each durations as r}<button class:selected={run?.id === r.id} data-result={r.result || r.state} style:height={`${8 + 28 * (r.duration ?? 0) / maximum}px`} title={`#${r.id} ${r.result || r.state} · ${duration(r.duration)}`} aria-label={`Open run ${r.id}`} onclick={() => pipelines.openRun(r.id)}></button>{/each}</div>{#if run}<Btn danger disabled={run.state === 'completed' || !pipelines.canWrite} busy={pipelines.busy} onclick={() => pipelines.send('cancel')}>Cancel</Btn><Btn disabled={!pipelines.canWrite || run.state !== 'completed' || !['failure', 'failed', 'timed_out'].includes(run.result)} busy={pipelines.busy} onclick={() => pipelines.send('rerunFailed')}>Re-run failed</Btn><a class="external" href={run.url} target="_blank" rel="noreferrer">Open on host ↗</a>{/if}</div>
-				{#if !run}<p class="empty note">{pipelines.reading ? 'Reading pipeline runs…' : 'No runs on this branch.'}</p>{/if}
-				{#if pipelines.graphWarning}<p class="note warning">{pipelines.graphWarning}</p>{/if}
-				<PipelineGraph jobs={liveGraph} stages={pipelines.graph?.stages ?? [...new Set(pipelines.jobs.map((j) => j.stage))]} selected={String(liveJob?.id ?? '')} onselect={(id) => pipelines.selectLiveJob(Number(id))} />
-				{#if pipelines.moreJobs}<button class="more" onclick={() => pipelines.readJobs(true)}>More jobs</button>{/if}
-				<div class="log-head"><strong>{liveJob?.name ?? 'Select a job'}</strong>{#if liveJob}<span class="note">{liveJob.runner} · {duration(liveJob.duration)}</span>{/if}<span class="grow"></span><span class="note">{pipelines.host?.repo.kind === 'gitLab' && liveJob?.state !== 'completed' ? 'partial trace · polled' : 'completed log'}</span></div>
-				{#if liveJob?.steps.length}<div class="live-steps">{#each liveJob.steps as step}<span class="mono" title={step.result || step.state}>{step.result === 'success' ? '✓' : step.state === 'in_progress' ? '●' : '○'} {step.name}</span>{/each}</div>{/if}
-				{#if pipelines.host?.repo.kind === 'gitHub' && liveJob && liveJob.state !== 'completed'}<p class="note log-info">GitHub exposes the log after completion. Step states refresh while the job runs.</p>{/if}
-				<div class="logs" aria-label="Job log"><VirtualRows items={pipelines.log.split('\n').map((text, index) => ({ text, index }))} key={(line) => String(line.index)} estimate={() => 24} label="Log lines">{#snippet row(line)}<pre>{line.text || ' '}</pre>{/snippet}</VirtualRows></div>
-				<div class="updated note" role="status">{pipelines.updated ? `Updated ${pipelines.age} s ago` : 'Waiting for a host response'}{pipelines.reading ? ' · reading' : ''}</div>
-			</section>
-		</div>
+
+	{#if watching}
+		<form class="watch" onsubmit={(e) => { e.preventDefault(); void watch(); }}>
+			<input aria-label="Branch to watch" bind:value={watched} placeholder="release/3.1" />
+			<Btn primary quiet onclick={() => watch()}>Watch</Btn>
+			<Btn onclick={() => { watching = false; }}>Cancel</Btn>
+		</form>
 	{/if}
-	{#if pipelines.source}<section class="source-pane pane" aria-label="Workflow source"><header><strong class="mono">{pipelines.source.file} · working copy</strong><span class="grow"></span><Btn onclick={() => pipelines.closeSource()}>Close source</Btn></header><div class="source-rows"><VirtualRows bind:this={sourceRows} items={sourceLines.map((text, index) => ({ text, line: index + 1 }))} key={(line) => String(line.line)} estimate={() => 24} label="Source lines">{#snippet row(line)}<pre class:highlighted={line.line === pipelines.source?.line}><span class="note">{line.line}</span> {line.text}</pre>{/snippet}</VirtualRows></div><p class="note">Requested line {pipelines.source.line}</p></section>{/if}
+	{#each errors as error, index (index)}
+		<p role="alert" class="error">{error}</p>
+	{/each}
+
+	{#if pipelines.view === 'preview'}
+		<PreviewView />
+	{:else}
+		<LiveView />
+	{/if}
+
+	{#if pipelines.source}
+		<section class="source" aria-label="Workflow source">
+			<header>
+				<strong class="mono">{pipelines.source.file} · working copy</strong>
+				<span class="note">line {pipelines.source.line}</span>
+				<span class="grow"></span>
+				<Btn onclick={() => pipelines.closeSource()}>Close source</Btn>
+			</header>
+			<div class="source-rows">
+				<VirtualRows bind:this={sourceRows} items={sourceLines.map((text, index) => ({ text, line: index + 1 }))} key={(line) => String(line.line)} estimate={() => 22} label="Source lines">
+					{#snippet row(line)}<pre class:highlighted={line.line === pipelines.source?.line}><span class="n">{line.line}</span>{line.text}</pre>{/snippet}
+				</VirtualRows>
+			</div>
+		</section>
+	{/if}
 </div>
+
 <style>
-	.screen { display: flex; flex-direction: column; height: 100%; min-height: 0; position: relative; }
-	.head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px 10px; flex: none; }
-	h1 { font-size: var(--fs-title); font-weight: 500; margin: 0; } h2 { font-size: var(--fs-secondary); text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 8px 10px; } h3 { margin: 0 0 8px; font-size: var(--fs-title); }
-	.grow { flex: 1; } .mono, pre, dd { font-family: var(--font-mono); } .mono, pre { font-size: var(--fs-mono); } .title-file { overflow: hidden; text-overflow: ellipsis; }
-	.segments { display: flex; padding: 3px; background: var(--sunken); border: 1px solid var(--soft); border-radius: var(--r-pill); } .segments a { padding: 4px 14px; border-radius: var(--r-pill); color: var(--muted); text-decoration: none; font-size: var(--fs-secondary); } .on { background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); } .segments a.on { color: var(--ink); background: var(--surface-2); }
-	.chip { border: 1px solid var(--soft); border-radius: var(--r-pill); padding: 3px 10px; font-size: var(--fs-secondary); white-space: nowrap; }
-	.body { display: flex; flex: 1; min-height: 0; gap: 10px; padding: 0 12px 12px; } .sidebar { flex: 0 0 210px; padding: 12px 8px; overflow: auto; } .graph-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow: hidden; } .detail { flex: 0 0 275px; padding: 18px; overflow: auto; }
-	.workflow { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-field); width: 100%; text-align: left; overflow-wrap: anywhere; font-size: var(--fs-secondary); } .branch-row { display: flex; align-items: center; } .branch-row .workflow { flex-direction: column; align-items: flex-start; }
-	.dot { color: var(--ok); } .dot.bad, .warning { color: var(--warn); } .ok { color: var(--ok); }
-	.simulation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--soft); } input.ref { width: 100px; font-family: var(--font-mono); font-size: var(--fs-mono); }
-	.legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 8px 14px; } .problems { max-height: 130px; overflow: auto; border-top: 1px solid var(--soft); background: color-mix(in srgb, var(--warn) 7%, transparent); } .problem { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: var(--fs-secondary); } .problem button { flex: none; }
-	.reason { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--soft); border-radius: var(--r-field); font-size: var(--fs-secondary); } .reason[data-state="runs"] { border-color: var(--ok); } .reason[data-state="approval"] { border-color: var(--warn); }
-	dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: var(--fs-secondary); } dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; font-size: var(--fs-mono); } .source-link { color: var(--muted); text-align: left; overflow-wrap: anywhere; }
-	.step { display: flex; gap: 12px; border: 1px solid var(--soft); background: var(--surface-2); border-radius: var(--r-field); margin: 6px 0; padding: 8px; overflow-wrap: anywhere; }
-	.run-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--soft); } .durations { display: flex; align-items: flex-end; gap: 3px; height: 36px; } .durations button { width: 7px; border-radius: 2px; background: var(--muted); } .durations button[data-result="success"] { background: var(--ok); } .durations button[data-result="failure"], .durations button[data-result="failed"] { background: var(--danger); } .durations button[data-result="running"] { background: var(--lane-5); } .durations button.selected { outline: 1px solid var(--ink); outline-offset: 1px; }
-	.external { border: 1px solid var(--soft); border-radius: var(--r-field); padding: 5px 12px; color: var(--ink); text-decoration: none; font-size: var(--fs-secondary); }
-	.log-head { display: flex; gap: 10px; padding: 10px 14px; align-items: center; } .live-steps { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 14px 10px; } .log-info { margin: 0 14px 10px; } .logs { height: 35%; min-height: 120px; background: var(--sunken); margin: 0 14px 10px; border-radius: var(--r-field); overflow: hidden; } .logs pre { margin: 0; padding: 3px 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); } .updated { padding: 6px 14px; border-top: 1px solid var(--soft); }
-	.error { color: var(--danger); margin: 4px 18px; font-size: var(--fs-secondary); } .empty { padding: 14px; } .watch { display: flex; gap: 8px; padding: 8px 18px; }
-	.source-pane { position: absolute; inset: 60px 16px 16px; display: flex; flex-direction: column; padding: 14px; background: var(--surface); z-index: 2; } .source-pane header { display: flex; gap: 10px; align-items: center; } .source-rows { flex: 1; min-height: 0; margin-top: 12px; } .source-rows pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; } .source-rows pre.highlighted { background: var(--soft); } pre { max-width: 100%; overflow: auto; } .more { padding: 6px; }
-	@media (max-width: 1000px) { .sidebar { flex-basis: 165px; } .detail { flex-basis: 220px; padding: 12px; } }
-	@media (max-width: 760px) { .body { flex-wrap: wrap; overflow: auto; } .sidebar { flex: 1 1 100%; max-height: 140px; } .graph-pane { flex: 1 1 100%; min-height: 420px; } .detail { flex: 1 1 100%; } }
+	.screen {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		height: 100%;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.head {
+		flex: none;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		padding: 12px 16px 10px;
+	}
+
+	.title {
+		margin-right: 4px;
+		font-size: var(--fs-title);
+		white-space: nowrap;
+	}
+
+	.seg {
+		display: inline-flex;
+		gap: 2px;
+		padding: 3px;
+		border-radius: var(--r-pill);
+		background: var(--sunken);
+		border: 1px solid var(--pane-edge);
+	}
+
+	.seg a {
+		padding: 4px 14px;
+		border-radius: var(--r-pill);
+		font-size: var(--fs-secondary);
+		color: var(--muted);
+		text-decoration: none;
+	}
+
+	.seg a.on {
+		background: var(--surface-2);
+		color: var(--ink);
+		font-weight: 600;
+		box-shadow: var(--shadow-1);
+	}
+
+	.rule {
+		flex: none;
+		width: 1px;
+		height: 22px;
+		background: var(--soft);
+	}
+
+	.mono {
+		font-family: var(--font-mono);
+		font-size: var(--fs-mono);
+	}
+
+	.file {
+		min-width: 0;
+		max-width: 40%;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		font-size: var(--fs-secondary);
+	}
+
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 3px 10px;
+		border-radius: var(--r-pill);
+		border: 1px solid var(--soft);
+		background-color: var(--surface-veil);
+		font-size: var(--fs-mono);
+		color: var(--muted);
+		white-space: nowrap;
+	}
+
+	.grow {
+		flex: 1;
+	}
+
+	.host {
+		height: 30px;
+		max-width: 320px;
+		font-size: var(--fs-secondary);
+	}
+
+	.watch {
+		flex: none;
+		display: flex;
+		gap: 8px;
+		padding: 0 16px 10px;
+	}
+
+	.watch input {
+		width: 240px;
+		font-family: var(--font-mono);
+		font-size: var(--fs-mono);
+	}
+
+	.error {
+		flex: none;
+		margin: 0 12px 8px;
+		padding: 8px 12px;
+		border-radius: var(--r-field);
+		background: color-mix(in srgb, var(--danger) 9%, transparent);
+		border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+		color: var(--danger);
+		font-size: var(--fs-secondary);
+		overflow-wrap: anywhere;
+	}
+
+	.source {
+		position: absolute;
+		inset: 56px 12px 12px;
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
+		padding: 14px;
+		background: var(--surface);
+		border: 1px solid var(--pane-edge);
+		border-radius: var(--r-panel);
+		box-shadow: var(--shadow-2);
+	}
+
+	.source header {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+	}
+
+	.source-rows {
+		flex: 1;
+		min-height: 0;
+		margin-top: 12px;
+	}
+
+	.source-rows pre {
+		margin: 0;
+		padding: 0 8px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		font-family: var(--font-mono);
+		font-size: var(--fs-mono);
+	}
+
+	.source-rows pre.highlighted {
+		background: color-mix(in srgb, var(--warn) 16%, transparent);
+	}
+
+	.n {
+		display: inline-block;
+		min-width: 4ch;
+		margin-right: 12px;
+		text-align: right;
+		color: var(--muted);
+	}
 </style>

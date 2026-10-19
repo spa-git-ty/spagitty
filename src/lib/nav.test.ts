@@ -114,6 +114,10 @@ describe('NAV_ITEMS', () => {
 			'/review',
 			// FEAT-133. Git steps in blocks.
 			'/recipes',
+			'/issues',
+			'/hooks',
+			'/pipelines',
+			'/releases',
 			// TASK-056. The tools are always on the rail again, and Stash, Tags
 			// and Reflog are rows of their own, as the author asked (reversing
 			// TASK-045, which had made them tabs of Branches).
@@ -126,10 +130,6 @@ describe('NAV_ITEMS', () => {
 			'/reflog',
 			'/badges',
 			'/repos',
-			'/issues',
-			'/hooks',
-			'/pipelines',
-			'/releases',
 			'/settings'
 		]);
 	});
@@ -181,7 +181,7 @@ describe('grouping', () => {
 
 	it('starts a group exactly at each boundary', () => {
 		const starts = rows.filter((row) => row.startsGroup).map((row) => row.item.href);
-		expect(starts).toEqual(['/farm', '/', '/rebase', '/issues', '/settings']);
+		expect(starts).toEqual(['/farm', '/', '/rebase', '/settings']);
 	});
 
 	it('heads every group but the first', () => {
@@ -237,6 +237,10 @@ describe('isShown', () => {
 			'/requests',
 			'/review',
 			'/recipes',
+			'/issues',
+			'/hooks',
+			'/pipelines',
+			'/releases',
 			'/rebase',
 			'/investigate',
 			'/search',
@@ -244,10 +248,6 @@ describe('isShown', () => {
 			'/tags',
 			'/reflog',
 			'/repos',
-			'/issues',
-			'/hooks',
-			'/pipelines',
-			'/releases',
 			'/settings'
 		]);
 	});
@@ -393,14 +393,14 @@ describe('the rail a person chose', () => {
 			]);
 		});
 
-		it('sits at the end of Tools, before the new screens and Settings', () => {
+		it('sits at the end of Tools, before Settings', () => {
 			const rows = railRows(NAV_ITEMS, { ...quiet, rail: chosen });
 			const at = rows.findIndex((row) => row.kind === 'more');
 			const before = rows[at - 1];
 			const after = rows[at + 1];
 
 			expect(before.kind === 'screen' && before.item.group).toBe('tools');
-			expect(after.kind === 'screen' && after.item.href).toBe('/issues');
+			expect(after.kind === 'screen' && after.item.href).toBe('/settings');
 			expect(rows[at].startsGroup).toBe(false);
 		});
 
@@ -412,7 +412,7 @@ describe('the rail a person chose', () => {
 
 			expect(rows[at].startsGroup).toBe(true);
 			expect(rows[at + 1].kind === 'screen' && rows[at + 1].startsGroup).toBe(true);
-			expect(after.kind === 'screen' && after.item.group).toBe('forge');
+			expect(after.kind === 'screen' && after.item.group).toBe('app');
 		});
 
 		it('goes when hidden screens are for the palette only', () => {
@@ -481,7 +481,6 @@ describe('the rail a person chose', () => {
 				'farm',
 				'work',
 				'tools',
-				'forge',
 				'app'
 			]);
 			expect(inOrder(NAV_ITEMS, scrambled)).toHaveLength(NAV_ITEMS.length);

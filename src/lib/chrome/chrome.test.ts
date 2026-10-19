@@ -1276,6 +1276,10 @@ describe('NavRail', () => {
 			'Review',
 			// FEAT-133.
 			'Recipes',
+			'Issues',
+			'Hooks',
+			'Pipelines',
+			'Releases',
 			'Rebase',
 			// FEAT-132.
 			'Investigate',
@@ -1284,10 +1288,6 @@ describe('NavRail', () => {
 			'Tags',
 			'Reflog',
 			'All repositories',
-			'Issues',
-			'Hooks',
-			'Pipelines',
-			'Releases',
 			'Settings'
 		]);
 
@@ -1508,7 +1508,7 @@ describe('NavRail', () => {
 			const shown = labels(view);
 			expect(shown).not.toContain('Stash');
 			expect(shown).not.toContain('Tags');
-			expect(shown.slice(-6)).toEqual(['More', 'Issues', 'Hooks', 'Pipelines', 'Releases', 'Settings']);
+			expect(shown.slice(-2)).toEqual(['More', 'Settings']);
 
 			view.destroy();
 		});

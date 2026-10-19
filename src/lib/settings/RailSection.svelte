@@ -50,7 +50,7 @@
 	/** Two columns, as the day goes: the work on the left, the rest beside it. */
 	const COLUMNS: NavGroup[][] = [
 		['farm', 'work'],
-		['tools', 'forge', 'app']
+		['tools', 'app']
 	];
 
 	function members(group: NavGroup): NavItem[] {

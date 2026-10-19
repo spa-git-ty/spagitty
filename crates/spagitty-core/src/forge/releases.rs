@@ -188,8 +188,8 @@ pub fn page(repo: &Repo, token: &str, number: u32, old: Option<&Page>) -> Result
         let mut saved = old
             .cloned()
             .ok_or_else(|| failure(repo, "The unchanged release page has no saved answer."))?;
-        if number == 1 {
-            mark_latest(repo, token, &mut saved.releases)?;
+        if number == 1 && repo.kind == Kind::GitHub {
+            mark_latest(repo, token, &mut saved.releases);
         }
         return Ok(saved);
     }
@@ -202,7 +202,16 @@ pub fn page(repo: &Repo, token: &str, number: u32, old: Option<&Page>) -> Result
         .map(|row| read_release(row, repo.kind))
         .collect();
     if number == 1 {
-        mark_latest(repo, token, &mut releases)?;
+        if repo.kind == Kind::GitHub {
+            mark_latest(repo, token, &mut releases);
+        } else {
+            // GitLab lists by release date, newest first, and its latest is
+            // the newest one already released. Its permalink endpoint answers
+            // with a redirect, which the transport never follows (BUG-089).
+            if let Some(release) = gitlab_latest(rows).and_then(|i| releases.get_mut(i)) {
+                release.latest = true;
+            }
+        }
     }
     Ok(Page {
         releases,
@@ -212,28 +221,26 @@ pub fn page(repo: &Repo, token: &str, number: u32, old: Option<&Page>) -> Result
     })
 }
 
-fn mark_latest(repo: &Repo, token: &str, releases: &mut [Release]) -> Result<()> {
-    let github = repo.kind == Kind::GitHub;
-    let path = if github {
-        "releases/latest"
-    } else {
-        "releases/permalink/latest"
-    };
-    let response = http::get_json(&format!("{}/{path}", root(repo)?), token, &repo.host)?;
-    let latest = if response.status == 404 {
-        Value::Null
-    } else {
-        checked(repo, response)?
-    };
-    let id = if github {
-        latest["id"].to_string()
-    } else {
-        text(&latest, "tag_name")
-    };
+/// The first release GitLab lists that is already out: its list is newest
+/// first by release date, and an upcoming release is never the latest.
+fn gitlab_latest(rows: &[Value]) -> Option<usize> {
+    rows.iter()
+        .position(|row| !row["upcoming_release"].as_bool().unwrap_or(false))
+}
+
+/// GitHub only. A *Latest* mark is a detail: failing to read it leaves the
+/// list unmarked rather than refusing the whole list.
+fn mark_latest(repo: &Repo, token: &str, releases: &mut [Release]) {
+    let latest = root(repo)
+        .and_then(|root| http::get_json(&format!("{root}/releases/latest"), token, &repo.host))
+        .ok()
+        .filter(|response| response.status != 404)
+        .and_then(|response| checked(repo, response).ok())
+        .unwrap_or(Value::Null);
+    let id = latest["id"].to_string();
     for release in releases {
         release.latest = release.id == id;
     }
-    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -739,6 +746,18 @@ mod tests {
         assert!(!gitlab.draft);
         assert_eq!(gitlab.assets[0].downloads, None);
         assert!(!gitlab.assets[1].removable);
+    }
+
+    #[test]
+    fn gitlab_latest_is_the_newest_release_already_out() {
+        let rows = [
+            json!({"tag_name":"v3","upcoming_release":true}),
+            json!({"tag_name":"v2","upcoming_release":false}),
+            json!({"tag_name":"v1"}),
+        ];
+        assert_eq!(gitlab_latest(&rows), Some(1));
+        assert_eq!(gitlab_latest(&rows[2..]), Some(0));
+        assert_eq!(gitlab_latest(&rows[..1]), None);
     }
 
     #[test]

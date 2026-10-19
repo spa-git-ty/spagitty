@@ -95,6 +95,17 @@ ignore = [
     "RUSTSEC-2025-0081", # unic-char-property 0.9.0
     "RUSTSEC-2025-0098", # unic-ucd-version 0.9.0
     "RUSTSEC-2025-0100", # unic-ucd-ident 0.9.0
+
+    # --- Linux notifications, via tauri-plugin-notification -> notify-rust -> zbus 5 ---
+    # Reviewed 2026-10-18. These are unmaintained notices, not vulnerability
+    # reports: the standalone crates moved into zbus 6 (upstream announcement:
+    # https://github.com/z-galaxy/zbus/issues/2043).
+    # notify-rust 4.18.2, the latest release, requires zbus 5; a lockfile update
+    # cannot cross that major-version boundary. Accept only these three IDs
+    # until notify-rust migrates to zbus 6; remove them when that upgrade lands.
+    "RUSTSEC-2026-0370", # zvariant 5.15.0
+    "RUSTSEC-2026-0371", # zbus_names 4.3.4
+    "RUSTSEC-2026-0372", # zvariant_derive 5.15.0
 ]
 
 [sources]
