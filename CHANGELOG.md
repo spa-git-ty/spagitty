@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-10-19
+
 ### Added
 
 - **Settings › Home** arranges Home's cards: show or hide each one, and drag it, or move it with Alt and the arrows, into the order you want. *Needs you* keeps its double width wherever it goes.
@@ -27,6 +29,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 - **Dragging rows into place works on Windows**: the Rail in Settings, the rebase plan, Hooks' blocks and the Graph's column headings. Dropping did nothing there before; Alt with the arrows was the only way.
 - **A fetch or push no longer leaves git's line beside the branch.** It used to stay there, two hashes and an arrow, until the next one. A notice now says what happened in words, such as *Pushed chore/fix-sonar-scan*, and goes away. A failed fetch or push still says why beside the branch.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.2.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
 
 ## [3.2.0] - 2026-10-18
 
