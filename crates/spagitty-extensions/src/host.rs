@@ -1081,7 +1081,7 @@ impl Inner {
         let current = snapshot::take(&workdir, &request, &configuration_files)
             .ok()
             .map(|(s, _)| s);
-        let stale = current.as_ref().map_or(true, |c| !c.same_code(&reviewed));
+        let stale = current.as_ref().is_none_or(|c| !c.same_code(&reviewed));
         let status = review::settle(said, completeness, stale && said != RunStatus::Failed);
 
         let mut findings = op.findings.clone();
@@ -1634,7 +1634,7 @@ impl ExtensionHost {
             .any(|p| p.sends_code_to.is_some());
         let repo = repository(workdir)?;
         let already = inner.store.read(|s| s.consented(id, &repo.id));
-        if sends && !already && consent.map_or(true, |c| c.trim().is_empty()) {
+        if sends && !already && consent.is_none_or(|c| c.trim().is_empty()) {
             return Err(Error::Refused(format!(
                 "{} sends code to a service. Agree to that before enabling it here.",
                 manifest.name

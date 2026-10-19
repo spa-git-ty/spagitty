@@ -12,9 +12,9 @@ members = [
 ]
 
 [workspace.package]
-version = "3.3.0"
+version = "3.4.0"
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.90"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/Spa-git-ty/spagitty"
 authors = ["Spagitty contributors"]

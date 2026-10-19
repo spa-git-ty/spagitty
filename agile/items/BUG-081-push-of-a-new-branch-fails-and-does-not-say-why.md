@@ -2,7 +2,7 @@
 
 # BUG-081 — Push of a new branch fails and does not say why
 
-**Status:** Open — implemented and tested on `bugfix/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why` for 2.2.3; awaiting merge and the desktop sweep.
+**Status:** Fixed — shipped in 2.2.3; the manual sweep is still owed.
 **Screens:** chrome, 1A.
 **Raised by:** the author, 2026-10-12: Push on a branch that has never been pushed fails with only an exit code instead of publishing the branch or explaining the failure.
 

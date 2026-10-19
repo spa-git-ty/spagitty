@@ -2,7 +2,7 @@
 
 # FEAT-091 — The review room
 
-**Status:** Open — built on `feature/FEAT-091-the-review-room`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-091-the-review-room`
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-04, as slice 3 of the Review handoff

@@ -25,7 +25,7 @@ const README = 'agile/README.md';
 const ID = /\b(?:FEAT|TASK|BUG)-\d{3}[a-z]?\b/g;
 
 /** The vocabulary of `agile/README.md`'s Status section. */
-const STATUSES = ['Done', 'Fixed', 'Partial', 'Open', 'Backlog'] as const;
+const STATUSES = ['Done', 'Fixed', 'Partial', 'Open', 'Backlog', 'Dropped'] as const;
 type Status = (typeof STATUSES)[number];
 
 /** Built work: everything that owes four documents. */

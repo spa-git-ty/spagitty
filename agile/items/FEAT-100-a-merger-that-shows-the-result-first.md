@@ -2,7 +2,7 @@
 
 # FEAT-100 — A merger that shows the result first
 
-**Status:** Open — built and merged into `main`; the manual sweep is not yet run.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-100-a-merger-that-shows-the-result-first`
 **Screens:** 1S (new), chrome (the rail).
 **Raised by:** the author, 2026-10-06. Merging today is a graph action

@@ -2,7 +2,7 @@
 
 # BUG-068 — Ordinary commits are marked as conflict fixes
 
-**Status:** Open — on `bugfix/BUG-068-ordinary-commits-marked-as-conflict-fixes`; two of the three suspects are confirmed and fixed, the pull request the author saw it on has not been checked.
+**Status:** Fixed — shipped in 2.1.0. Two of the three suspects were confirmed and fixed; the pull request the author saw it on has not been checked; the manual sweep is still owed.
 **Screens:** 1R.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 

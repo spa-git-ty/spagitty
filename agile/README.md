@@ -41,6 +41,7 @@ the same word as the one in the index. Everything after it is prose.
 | `Partial` | Some of it is built and merged and some is not. The item says which. |
 | `Open` | Being worked on now. |
 | `Backlog` | Recorded, not started. Item document only. |
+| `Dropped` | Recorded and decided against. Item document only; the status line says who decided and why. |
 
 `Partial` exists because the record had no word for it and used `Backlog`
 instead, which sent readers to write code that was already there (TASK-012).
@@ -131,31 +132,31 @@ rather than an audit.
 | [FEAT-076](items/FEAT-076-the-farm-takes-on-large-work.md) | The farm takes on large work | Farm (1Q) | Done |
 | [FEAT-078](items/FEAT-078-who-asked-for-this-task.md) | Who asked for this task | Farm (1Q) | Done |
 | [FEAT-077](items/FEAT-077-the-farm-is-worth-watching.md) | The farm is worth watching | Farm (1Q) | Done |
-| [FEAT-079](items/FEAT-079-a-node-that-says-who.md) | A node that says who | Graph | Open |
+| [FEAT-079](items/FEAT-079-a-node-that-says-who.md) | A node that says who | Graph | Done |
 | [FEAT-080](items/FEAT-080-follow-omarchy.md) | Follow Omarchy | Settings, all | Done |
-| [FEAT-081](items/FEAT-081-the-graph-resizes-like-a-hand-moves.md) | The graph resizes like a hand moves | Graph | Open |
-| [FEAT-082](items/FEAT-082-a-spatial-shell.md) | A spatial shell | chrome | Open |
-| [FEAT-083](items/FEAT-083-the-content-in-the-spatial-language.md) | The content in the spatial language | Graph, all | Open |
-| [FEAT-084](items/FEAT-084-the-other-screens-in-the-spatial-language.md) | The other screens in the spatial language | 1F, 1K, 1M, 1N, 1O, 1Q, all | Open |
-| [FEAT-085](items/FEAT-085-a-new-mark-palette-and-wordmark.md) | A new mark, palette and wordmark | brand, chrome, 1J | Open |
+| [FEAT-081](items/FEAT-081-the-graph-resizes-like-a-hand-moves.md) | The graph resizes like a hand moves | Graph | Done |
+| [FEAT-082](items/FEAT-082-a-spatial-shell.md) | A spatial shell | chrome | Done |
+| [FEAT-083](items/FEAT-083-the-content-in-the-spatial-language.md) | The content in the spatial language | Graph, all | Done |
+| [FEAT-084](items/FEAT-084-the-other-screens-in-the-spatial-language.md) | The other screens in the spatial language | 1F, 1K, 1M, 1N, 1O, 1Q, all | Done |
+| [FEAT-085](items/FEAT-085-a-new-mark-palette-and-wordmark.md) | A new mark, palette and wordmark | brand, chrome, 1J | Done |
 | [FEAT-086](items/FEAT-086-the-pomodoro-theme.md) | The Pomodoro theme | all | Done |
-| [FEAT-087](items/FEAT-087-the-review-screen-and-inbox.md) | The Review screen and its inbox | 1R, chrome | Open |
-| [FEAT-088](items/FEAT-088-gitlab-as-its-api-says.md) | GitLab, as its API says | 1R, 1H, Settings | Open |
-| [FEAT-089](items/FEAT-089-a-pull-request-read-from-disk.md) | A pull request read from disk | 1R | Open |
-| [FEAT-090](items/FEAT-090-settings-reading.md) | Settings › Reading | 1K, 1B, 1C, 1O, 1R | Open |
-| [FEAT-091](items/FEAT-091-the-review-room.md) | The review room | 1R | Open |
-| [FEAT-092](items/FEAT-092-conflict-fix-origin.md) | Conflict fixes, told apart | 1R | Open |
-| [FEAT-093](items/FEAT-093-threads-done-properly.md) | Threads done properly | 1R | Open |
-| [FEAT-094](items/FEAT-094-review-reads-like-code.md) | Review reads like code | 1R, 1H, diff | Open |
-| [FEAT-095](items/FEAT-095-check-out-a-pull-request.md) | Check out a pull request | 1R | Open |
-| [FEAT-096](items/FEAT-096-an-extension-host-anyone-can-build-for.md) | An extension host anyone can build for | 1K, 1C, 1Q, 1H, palette | Open |
-| [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Open |
-| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Open |
-| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Open |
-| [FEAT-100](items/FEAT-100-a-merger-that-shows-the-result-first.md) | A merger that shows the result first | 1S, chrome | Open |
-| [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Open |
-| [FEAT-102](items/FEAT-102-resolve-every-conflict-every-way.md) | Resolve every conflict, every way | 1S, 1D | Open |
-| [FEAT-103](items/FEAT-103-a-rebase-that-stops-in-merger.md) | A rebase that stops, in Merger | 1S | Open |
+| [FEAT-087](items/FEAT-087-the-review-screen-and-inbox.md) | The Review screen and its inbox | 1R, chrome | Done |
+| [FEAT-088](items/FEAT-088-gitlab-as-its-api-says.md) | GitLab, as its API says | 1R, 1H, Settings | Done |
+| [FEAT-089](items/FEAT-089-a-pull-request-read-from-disk.md) | A pull request read from disk | 1R | Done |
+| [FEAT-090](items/FEAT-090-settings-reading.md) | Settings › Reading | 1K, 1B, 1C, 1O, 1R | Done |
+| [FEAT-091](items/FEAT-091-the-review-room.md) | The review room | 1R | Done |
+| [FEAT-092](items/FEAT-092-conflict-fix-origin.md) | Conflict fixes, told apart | 1R | Done |
+| [FEAT-093](items/FEAT-093-threads-done-properly.md) | Threads done properly | 1R | Done |
+| [FEAT-094](items/FEAT-094-review-reads-like-code.md) | Review reads like code | 1R, 1H, diff | Done |
+| [FEAT-095](items/FEAT-095-check-out-a-pull-request.md) | Check out a pull request | 1R | Done |
+| [FEAT-096](items/FEAT-096-an-extension-host-anyone-can-build-for.md) | An extension host anyone can build for | 1K, 1C, 1Q, 1H, palette | Done |
+| [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Done |
+| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Done |
+| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Done |
+| [FEAT-100](items/FEAT-100-a-merger-that-shows-the-result-first.md) | A merger that shows the result first | 1S, chrome | Done |
+| [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Done |
+| [FEAT-102](items/FEAT-102-resolve-every-conflict-every-way.md) | Resolve every conflict, every way | 1S, 1D | Done |
+| [FEAT-103](items/FEAT-103-a-rebase-that-stops-in-merger.md) | A rebase that stops, in Merger | 1S | Done |
 | [FEAT-104](items/FEAT-104-a-branch-named-where-head-is.md) | A branch named where HEAD is | chrome, 1A | Done |
 | [FEAT-105](items/FEAT-105-review-from-the-pull-request-screen.md) | Review from the pull request screen | 1H, 1R | Done |
 | [FEAT-106](items/FEAT-106-a-rebase-you-can-see.md) | A rebase you can see | 1E | Done |
@@ -203,6 +204,7 @@ rather than an audit.
 | [FEAT-148](items/FEAT-148-arrange-home-s-cards-in-settings.md) | Arrange Home's cards in Settings | Settings, 2A | Done |
 | [FEAT-149](items/FEAT-149-a-coloured-tag-for-each-kind-of-file.md) | A coloured tag for each kind of file | 1U | Done |
 | [FEAT-150](items/FEAT-150-open-a-file-from-anywhere-with-a-click.md) | Open a file from anywhere with a click | every screen | Done |
+| [FEAT-151](items/FEAT-151-search-the-text-of-files.md) | Search the text of files, by word or regular expression | 1U | Done |
 
 ## Bugs
 
@@ -273,24 +275,24 @@ rather than an audit.
 | [BUG-062](items/BUG-062-after-a-merge-another-pull-request-opens-empty.md) | After a merge, Pull requests opens another pull request with nothing in it | 1H | Fixed |
 | [BUG-063](items/BUG-063-a-conflicting-pull-request-is-not-marked.md) | A pull request that conflicts with its base is not marked, and Merge only fails | 1R, 1H, 1S | Fixed |
 | [BUG-064](items/BUG-064-review-says-nobody-asked-you-after-you-answered.md) | Review says "nobody asked you yet" about pull requests you have already reviewed | 1R | Fixed |
-| [BUG-065](items/BUG-065-agent-cli-access.md) | Command-line agents cannot start or finish reviews correctly | Settings, Review, Merger, Farm | Open |
+| [BUG-065](items/BUG-065-agent-cli-access.md) | Command-line agents cannot start or finish reviews correctly | Settings, Review, Merger, Farm | Fixed |
 | [BUG-066](items/BUG-066-extensions-refuse-spagitty-2.md) | Extensions refuse to run on Spagitty 2 | 1K | Fixed |
-| [BUG-067](items/BUG-067-review-says-the-token-is-invalid.md) | Review says the token is invalid until Pull requests has been opened | 1R | Open |
-| [BUG-068](items/BUG-068-ordinary-commits-marked-as-conflict-fixes.md) | Ordinary commits are marked as conflict fixes | 1R | Open |
+| [BUG-067](items/BUG-067-review-says-the-token-is-invalid.md) | Review says the token is invalid until Pull requests has been opened | 1R | Fixed |
+| [BUG-068](items/BUG-068-ordinary-commits-marked-as-conflict-fixes.md) | Ordinary commits are marked as conflict fixes | 1R | Fixed |
 | [BUG-069](items/BUG-069-added-lines-look-red.md) | Added lines sometimes look red | 1R, 1B | Fixed |
-| [BUG-070](items/BUG-070-local-agents-do-not-get-their-instructions.md) | Local agents do not get their instructions, and some cannot start in Review or Merger | 1R, 1S, 1K | Open |
-| [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Open |
-| [BUG-072](items/BUG-072-a-remote-agent-with-no-key-is-told-bad-request.md) | A remote agent with no key is told "Bad request", not that its key is missing | 1K, 1R, 1S | Open |
-| [BUG-073](items/BUG-073-two-quick-assign-clicks-start-two-agents.md) | Two quick Assign clicks start two agents on one pull request | 1R, 1S | Open |
-| [BUG-074](items/BUG-074-a-remote-agents-token-limit-is-read-only-between-steps.md) | A remote agent's token limit is read only between steps | 1K, 1R, 1S | Open |
-| [BUG-075](items/BUG-075-a-reply-that-cannot-be-read-is-taken-as-empty.md) | A model's reply that cannot be read is taken as an empty one | 1K, 1R, 1S | Open |
-| [BUG-076](items/BUG-076-merger-says-pushed-when-the-push-failed.md) | Merger says *Pushed* when the push failed, and no fetch or push works after it | 1S | Open |
-| [BUG-077](items/BUG-077-a-farm-task-merged-in-merger-skips-the-farms-checks.md) | A Farm task merged in Merger skips the Farm's own checks | 1Q, 1S | Open |
+| [BUG-070](items/BUG-070-local-agents-do-not-get-their-instructions.md) | Local agents do not get their instructions, and some cannot start in Review or Merger | 1R, 1S, 1K | Fixed |
+| [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Fixed |
+| [BUG-072](items/BUG-072-a-remote-agent-with-no-key-is-told-bad-request.md) | A remote agent with no key is told "Bad request", not that its key is missing | 1K, 1R, 1S | Fixed |
+| [BUG-073](items/BUG-073-two-quick-assign-clicks-start-two-agents.md) | Two quick Assign clicks start two agents on one pull request | 1R, 1S | Fixed |
+| [BUG-074](items/BUG-074-a-remote-agents-token-limit-is-read-only-between-steps.md) | A remote agent's token limit is read only between steps | 1K, 1R, 1S | Fixed |
+| [BUG-075](items/BUG-075-a-reply-that-cannot-be-read-is-taken-as-empty.md) | A model's reply that cannot be read is taken as an empty one | 1K, 1R, 1S | Fixed |
+| [BUG-076](items/BUG-076-merger-says-pushed-when-the-push-failed.md) | Merger says *Pushed* when the push failed, and no fetch or push works after it | 1S | Fixed |
+| [BUG-077](items/BUG-077-a-farm-task-merged-in-merger-skips-the-farms-checks.md) | A Farm task merged in Merger skips the Farm's own checks | 1Q, 1S | Fixed |
 | [BUG-078](items/BUG-078-the-attribution-check-refuses-a-person-named-like-an-agent.md) | The attribution check refuses a person whose name an agent shares | — | Fixed |
 | [BUG-079](items/BUG-079-all-resolved-is-drawn-as-a-button.md) | *All resolved* is drawn as a button | 1D, 1S | Fixed |
 | [BUG-080](items/BUG-080-the-review-pill-runs-out-of-a-narrow-diff.md) | The review pill runs out of a narrow diff, over the conversation | 1R, 1D, 1S | Fixed |
-| [BUG-081](items/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why.md) | Push of a new branch fails and does not say why | chrome, 1A | Open |
-| [BUG-082](items/BUG-082-saving-the-git-identity-clears-the-fields.md) | Saving the git identity clears the fields | 1K | Open |
+| [BUG-081](items/BUG-081-push-of-a-new-branch-fails-and-does-not-say-why.md) | Push of a new branch fails and does not say why | chrome, 1A | Fixed |
+| [BUG-082](items/BUG-082-saving-the-git-identity-clears-the-fields.md) | Saving the git identity clears the fields | 1K | Fixed |
 | [BUG-083](items/BUG-083-hiding-the-blame-in-files-breaks-every-line.md) | Hiding the blame in Files breaks every line | 1U | Fixed |
 | [BUG-084](items/BUG-084-pipelines-live-shows-empty-trace-panel.md) | Pipelines Live still draws the trace panel when a branch has no runs | 1Y | Fixed |
 | [BUG-085](items/BUG-085-hooks-runs-step-list-collapses-when-detail-hidden.md) | Hooks Runs step list collapses when the detail panel is hidden | 1X | Fixed |
@@ -302,6 +304,8 @@ rather than an audit.
 | [BUG-091](items/BUG-091-git-s-push-line-stays-beside-the-branch.md) | git's push line stays beside the branch, hashes and all | chrome | Fixed |
 | [BUG-092](items/BUG-092-nothing-can-be-dragged-into-place-on-windows.md) | Nothing can be dragged into place on Windows | Settings, 1E, 1X, 1A | Fixed |
 | [BUG-093](items/BUG-093-the-farm-wizard-s-search-box-and-step-markers-are-broken.md) | The farm wizard's search box and step markers are broken | 1Q | Fixed |
+| [BUG-094](items/BUG-094-a-resumed-agent-skips-files-that-changed-since.md) | A resumed agent skips files that changed since its first run | 1R, 1S | Fixed |
+| [BUG-095](items/BUG-095-the-terminal-s-plus-says-no-server-running.md) | The Terminal's `+` says *no server running on session* | 1T | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -353,20 +357,20 @@ of its own.
 | [TASK-042](items/TASK-042-one-control-scale-and-a-platform-policy.md) | One control scale, and a window that knows its platform | chrome, all | Done |
 | [TASK-043](items/TASK-043-the-linux-renderer-and-the-accessibility-bridge.md) | The Linux renderer and the accessibility bridge | — | Backlog |
 | [TASK-044](items/TASK-044-settings-stops-explaining-itself.md) | Settings stops explaining itself | Settings | Done |
-| [TASK-045](items/TASK-045-a-rail-of-five.md) | A rail of five | chrome | Open |
-| [TASK-046](items/TASK-046-lists-you-can-read.md) | Lists you can read | Working copy, Stash, Diff | Open |
-| [TASK-047](items/TASK-047-a-commit-bar.md) | A commit bar | Working copy (1C) | Open |
-| [TASK-048](items/TASK-048-commands-off-the-main-thread.md) | Commands off the main thread | all | Open |
+| [TASK-045](items/TASK-045-a-rail-of-five.md) | A rail of five | chrome | Done |
+| [TASK-046](items/TASK-046-lists-you-can-read.md) | Lists you can read | Working copy, Stash, Diff | Done |
+| [TASK-047](items/TASK-047-a-commit-bar.md) | A commit bar | Working copy (1C) | Done |
+| [TASK-048](items/TASK-048-commands-off-the-main-thread.md) | Commands off the main thread | all | Done |
 | [TASK-049](items/TASK-049-the-record-catches-up-with-what-merged.md) | The record catches up with what merged | — | Done |
-| [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Open |
-| [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Open |
+| [TASK-050](items/TASK-050-the-chatter-goes.md) | The chatter goes | 1K, all | Done |
+| [TASK-051](items/TASK-051-one-theme.md) | One theme | 1K, all | Done |
 | [TASK-052](items/TASK-052-nothing-waits-in-line.md) | Nothing waits in line | all | Open |
 | [TASK-053](items/TASK-053-the-review-room-after-first-use.md) | The review room after first use | 1R | Done |
 | [TASK-054](items/TASK-054-build-macos-on-a-mac.md) | Build macOS on a Mac | — | Done |
-| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Open |
-| [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Open |
+| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Done |
+| [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Done |
 | [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
-| [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Open |
+| [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Done |
 | [TASK-059](items/TASK-059-reading-font-and-ruler-off-by-default.md) | The reading font and the focus ruler are off by default, and off the review bar | 1R, 1K | Done |
 | [TASK-060](items/TASK-060-agent-permissions-with-standard-names.md) | Agent permissions with standard names | 1K, 1R, 1S | Done |
 | [TASK-061](items/TASK-061-plain-words-for-merging-and-approval.md) | Plain words for merging and stopping for approval | all | Done |
@@ -374,13 +378,13 @@ of its own.
 | [TASK-063](items/TASK-063-audit-the-merged-pull-requests.md) | Audit the pull requests merged since 2.0.0 | — | Done |
 | [TASK-064](items/TASK-064-refuse-agent-attribution-in-ci.md) | Refuse agent attribution in commits and descriptions, in CI | — | Done |
 | [TASK-065](items/TASK-065-run-the-agents-sweep-where-it-was-skipped.md) | Run the agents sweep that FEAT-115 was closed without | 1K, 1R, 1S | Backlog |
-| [TASK-066](items/TASK-066-style-notes-from-the-2-0-audit.md) | Style notes from the 2.0 audit | — | Backlog |
-| [TASK-067](items/TASK-067-the-attribution-check-does-not-read-who-wrote-a-commit.md) | The attribution check does not read who wrote a commit | — | Backlog |
+| [TASK-066](items/TASK-066-style-notes-from-the-2-0-audit.md) | Style notes from the 2.0 audit | — | Done |
+| [TASK-067](items/TASK-067-the-attribution-check-does-not-read-who-wrote-a-commit.md) | The attribution check does not read who wrote a commit | — | Done |
 | [TASK-068](items/TASK-068-what-coderabbit-found-on-63-and-64.md) | What CodeRabbit found on pull requests #63 and #64 | 1S, 1R, 1K, 1Q | Done |
-| [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Backlog |
+| [TASK-069](items/TASK-069-the-two-modals-that-choose-a-branch-use-the-branch-menu.md) | The two modals that choose a branch use the branch menu | 1H, 1J | Done |
 | [TASK-070](items/TASK-070-the-plans-file-list-scrolls-in-a-card-the-height-of-its-neighbours.md) | The plan's file list scrolls, in a card the height of its neighbours | 1S | Done |
 | [TASK-071](items/TASK-071-remove-agy.md) | agy is removed | 1K, 1Q, 1R, 1S | Done |
-| [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Backlog |
+| [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Done |
 
 ## Skipped identifiers
 

@@ -48,6 +48,8 @@ import type {
 	FilesFound,
 	FilesRead,
 	FilesRevision,
+	FilesSearched,
+	SearchOptions,
 	IdentityKey,
 	IdentityScope,
 	Licenses,
@@ -346,6 +348,11 @@ export function filesRead(rev: string, path: string): Promise<FilesRead> {
 /** The files of `rev` whose paths hold every word of `query`. */
 export function filesFind(rev: string, query: string): Promise<FilesFound> {
 	return invoke('files_find', { rev, query });
+}
+
+/** Every line of every text file at `rev` that `query` matches (FEAT-151). */
+export function filesSearch(rev: string, query: string, options: SearchOptions): Promise<FilesSearched> {
+	return invoke('files_search', { rev, query, options });
 }
 
 /**

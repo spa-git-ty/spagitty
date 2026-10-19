@@ -80,12 +80,143 @@ struct Session {
     pinned: Vec<String>,
     /// How the walk sequences the same DAG: date order or branch (topo) order.
     order: GraphOrder,
+    /// The ticket of the open that installed it. A read taken from it is
+    /// delivered only while it is still the session (TASK-052).
+    ticket: u64,
     _watcher: Option<RepoWatcher>,
 }
+
+/// The open repository as a command works on it: taken from the session
+/// under its lock, which is let go before the work starts (TASK-052).
+struct Open {
+    path: PathBuf,
+    repo: spagitty_core::gix::ThreadSafeRepository,
+    ticket: u64,
+}
+
+/// The commands that change the repository. They run one at a time; reads
+/// run beside them and beside each other. A command not named here reads, and
+/// `every_command_is_read_or_write_on_purpose` refuses a new one that is in
+/// neither list.
+const WRITERS: &[&str] = &[
+    "stage",
+    "unstage",
+    "stage_hunk",
+    "unstage_hunk",
+    "discard",
+    "discard_hunk",
+    "commit",
+    "set_hooks_enabled",
+    "checkout",
+    "create_branch",
+    "stash_push",
+    "rebase_run",
+    "rebase_continue",
+    "rebase_skip",
+    "rebase_abort",
+    "reset",
+    "revert",
+    "cherry_pick",
+    "integrate",
+    "rebase_onto",
+    "checkout_detached",
+    "rename_branch",
+    "delete_branch",
+    "create_tag",
+    "delete_tag",
+    "stash_action",
+    "pull",
+    "pull_branch",
+    "conflict_take",
+    "conflict_resolve_region",
+    "conflict_write",
+    "conflict_resolve",
+    "conflict_settle",
+    "conflict_continue",
+    "conflict_abort",
+    "merger_land",
+    "merger_rebase_open",
+    "merger_rebase_continue",
+    "merger_rebase_skip",
+    "merger_rebase_abort",
+    "merger_rebase_finish",
+    "tag_create",
+    "tag_delete",
+    "tag_retag",
+    "remote_add",
+    "remote_rename",
+    "remote_remove",
+    "remote_set_url",
+    "submodule_update",
+    "submodule_sync",
+    "submodule_deinit",
+    "launch_external_merge",
+    "worktree_add",
+    "worktree_remove",
+    "worktree_lock",
+    "worktree_unlock",
+    "worktree_prune",
+    "review_check_out",
+];
+
+/// The commands that only read. Listed so that a new command is put in one
+/// list or the other by somebody deciding, not by default.
+#[cfg(test)]
+const READERS: &[&str] = &[
+    "graph_request",
+    "snapshot",
+    "commit_detail",
+    "commit_diff",
+    "file_diff",
+    "working_copy",
+    "working_diff",
+    "binary_file_diff",
+    "binary_working_diff",
+    "hooks",
+    "head_message",
+    "branches",
+    "home_overview",
+    "stashes",
+    "rebase_todo",
+    "rebase_progress",
+    "start",
+    "search_start",
+    "blame",
+    "conflicts",
+    "conflict_sides",
+    "tags",
+    "reflog",
+    "reflog_refs",
+    "remotes",
+    "submodules",
+    "launch_external_diff",
+    "worktrees",
+    "review_files",
+    "review_file",
+    "files_resolve",
+    "files_tree",
+    "files_read",
+    "files_find",
+    "files_search",
+    "files_before",
+    "files_blame",
+    "files_spans",
+    "investigate_branch",
+    "investigate_compare",
+    "investigate_hunk",
+    "investigate_life",
+    "investigate_today",
+    "terminal_links",
+];
 
 #[derive(Default)]
 pub struct AppState {
     session: Mutex<Option<Session>>,
+    /// Taken by every one of the [`WRITERS`] for the whole of its work, so two
+    /// writes never run at once (TASK-052). Reads never take it: they read
+    /// what git has on disk, as they would with git running beside Spagitty.
+    /// The session lock is held only to take the repository handle.
+    write: Mutex<()>,
     next_token: AtomicU64,
     /// The query running right now, if any. Replacing it cancels the one it
     /// replaces — a search is restartable, not resumable.
@@ -173,9 +304,55 @@ impl AppState {
         }
     }
 
-    /// Run `f` against the open repository, holding the session lock while
-    /// it runs. `command` names the hold in the timings.
+    /// Run `f` against the open repository. `command` names it in the
+    /// timings and says whether it writes ([`WRITERS`]).
+    ///
+    /// The session lock is held only to take the repository handle (TASK-052):
+    /// a quick read no longer waits behind a slow one, or behind a write. A
+    /// write waits for the write in flight. A read whose repository was
+    /// closed or replaced while it ran is [`Error::Replaced`], so its answer
+    /// never lands on the next repository's screen; a write that finished is
+    /// reported as it is, since what it did is done.
     fn with_session<T>(
+        &self,
+        command: &'static str,
+        f: impl FnOnce(&Open) -> Result<T>,
+    ) -> Result<T> {
+        self.with_turn(command, WRITERS.contains(&command), f)
+    }
+
+    /// [`AppState::with_session`], told whether `command` writes.
+    fn with_turn<T>(
+        &self,
+        command: &'static str,
+        writes: bool,
+        f: impl FnOnce(&Open) -> Result<T>,
+    ) -> Result<T> {
+        let asked = std::time::Instant::now();
+        let open = {
+            let guard = self.session.lock().expect("session lock");
+            let session = guard.as_ref().ok_or(Error::NoRepository)?;
+            Open {
+                path: session.path.clone(),
+                repo: session.repo.clone(),
+                ticket: session.ticket,
+            }
+        };
+        let alone = writes.then(|| self.write.lock().expect("write lock"));
+        let since = std::time::Instant::now();
+        let done = f(&open);
+        drop(alone);
+        timing::push(command, since - asked, since.elapsed());
+        if !writes && !self.still_open(open.ticket) {
+            return Err(Error::Replaced(open.path));
+        }
+        done
+    }
+
+    /// Run `f` against the session itself, holding its lock while it runs:
+    /// for what lives in the session rather than the repository, the graph
+    /// worker above all. `f` must be quick.
+    fn with_live_session<T>(
         &self,
         command: &'static str,
         f: impl FnOnce(&Session) -> Result<T>,
@@ -183,6 +360,15 @@ impl AppState {
         let held = self.lock_session(command);
         let session = held.as_ref().ok_or(Error::NoRepository)?;
         f(session)
+    }
+
+    /// Is the session installed by `ticket` still the open one?
+    fn still_open(&self, ticket: u64) -> bool {
+        self.session
+            .lock()
+            .expect("session lock")
+            .as_ref()
+            .is_some_and(|session| session.ticket == ticket)
     }
 
     /// Where the open repository is, for work that takes longer than the
@@ -307,6 +493,7 @@ fn open_as<R: Runtime>(
         visible: Vec::new(),
         pinned: Vec::new(),
         order,
+        ticket,
         _watcher: watcher,
     });
 
@@ -321,7 +508,7 @@ fn open_as<R: Runtime>(
 /// the `graph-rows` event.
 #[tauri::command(async)]
 pub fn graph_request(state: State<'_, AppState>, token: u64, count: usize) -> Result<()> {
-    state.with_session("graph_request", |session| {
+    state.with_live_session("graph_request", |session| {
         // A request against a walk that has been replaced is stale, not an
         // error — it just raced a refresh.
         if session.graph.token() == token {
@@ -1107,6 +1294,26 @@ pub fn files_find(state: State<'_, AppState>, rev: String, query: String) -> Res
         &rev,
         &query,
         FILES_FIND_LIMIT,
+    )
+}
+
+/// How many lines *Search in files* returns. Past this it says there are more.
+const FILES_SEARCH_LIMIT: usize = 2_000;
+
+/// Every line of every text file at `rev` that `query` matches (FEAT-151).
+#[tauri::command(async)]
+pub fn files_search(
+    state: State<'_, AppState>,
+    rev: String,
+    query: String,
+    options: files::SearchOptions,
+) -> Result<files::Searched> {
+    files::search(
+        &files_repo(&state, "files_search")?,
+        &rev,
+        &query,
+        options,
+        FILES_SEARCH_LIMIT,
     )
 }
 
@@ -2934,48 +3141,159 @@ mod tests {
         ));
     }
 
-    /// What TASK-052's step 1 measures, and step 2 is to change: today a
-    /// quick read waits for whatever holds the repository, and the timings
-    /// say so.
+    const READ: bool = false;
+    const WRITE: bool = true;
+
+    /// Hold a turn at the repository for 150 ms on another thread, and time
+    /// how long a second, empty command takes to get its turn beside it.
+    fn waited_beside(state: &AppState, slow: bool, quick: bool) -> std::time::Duration {
+        std::thread::scope(|scope| {
+            let (holding, held) = std::sync::mpsc::channel();
+            scope.spawn(move || {
+                state
+                    .with_turn("t052_slow", slow, |_| {
+                        holding.send(()).expect("told");
+                        std::thread::sleep(std::time::Duration::from_millis(150));
+                        Ok(())
+                    })
+                    .expect("the slow command");
+            });
+            held.recv().expect("the slow command has started");
+            let asked = std::time::Instant::now();
+            state
+                .with_turn("t052_quick", quick, |_| Ok(()))
+                .expect("the quick command");
+            asked.elapsed()
+        })
+    }
+
+    const WAITED: std::time::Duration = std::time::Duration::from_millis(100);
+
+    /// TASK-052: a long blame no longer holds up selecting a commit.
     #[test]
-    fn a_quick_read_waits_for_a_slow_one_and_the_timings_say_how_long() {
+    fn a_quick_read_does_not_wait_for_a_slow_one() {
         let fixture = Fixture::woven();
         let app = app();
         open(&app, fixture.path()).expect("opening the fixture");
         let state: &AppState = &app.state::<AppState>();
 
+        assert!(waited_beside(state, READ, READ) < WAITED);
+    }
+
+    #[test]
+    fn two_writes_never_overlap_and_reads_wait_for_neither() {
+        let fixture = Fixture::woven();
+        let app = app();
+        open(&app, fixture.path()).expect("opening the fixture");
+        let state: &AppState = &app.state::<AppState>();
+
+        assert!(waited_beside(state, WRITE, WRITE) >= WAITED);
+        // A read runs beside a write, as it would beside git itself, and a
+        // write beside a read.
+        assert!(waited_beside(state, WRITE, READ) < WAITED);
+        assert!(waited_beside(state, READ, WRITE) < WAITED);
+    }
+
+    /// The timings still say how long a command held the repository.
+    #[test]
+    fn the_timings_say_how_long_a_command_held_the_repository() {
+        let fixture = Fixture::woven();
+        let app = app();
+        open(&app, fixture.path()).expect("opening the fixture");
+        let state: &AppState = &app.state::<AppState>();
+
+        let before = crate::timing::since(0).last().map_or(0, |entry| entry.seq);
+        state
+            .with_turn("t052_timed", READ, |_| {
+                std::thread::sleep(std::time::Duration::from_millis(30));
+                Ok(())
+            })
+            .expect("the read");
+        let timed = crate::timing::since(before)
+            .into_iter()
+            .find(|entry| entry.command == "t052_timed")
+            .expect("timed");
+        assert!(timed.held_us >= 30_000, "{timed:?}");
+    }
+
+    #[test]
+    fn a_read_that_outlives_its_repository_is_not_delivered() {
+        let first = Fixture::woven();
+        let second = Fixture::woven();
+        let app = app();
+        open(&app, first.path()).expect("opening the first");
+        let state: &AppState = &app.state::<AppState>();
+
         std::thread::scope(|scope| {
-            let (holding, held) = std::sync::mpsc::channel();
-            scope.spawn(move || {
-                state
-                    .with_session("a_slow_read", |_| {
-                        holding.send(()).expect("told");
-                        std::thread::sleep(std::time::Duration::from_millis(150));
-                        Ok(())
-                    })
-                    .expect("the slow read");
+            let (reading, read) = std::sync::mpsc::channel();
+            let (opened, go_on) = std::sync::mpsc::channel::<()>();
+            let slow = scope.spawn(move || {
+                state.with_session("blame", |session| {
+                    reading.send(()).expect("told");
+                    go_on.recv().expect("the other repository is open");
+                    Ok(session.path.clone())
+                })
             });
-            held.recv().expect("the slow read holds the repository");
-            state
-                .with_session("a_quick_read", |_| Ok(()))
-                .expect("the quick read");
+            read.recv().expect("the read has its repository");
+            open(&app, second.path()).expect("opening the second");
+            opened.send(()).expect("told");
+            assert!(matches!(
+                slow.join().expect("joined"),
+                Err(Error::Replaced(_))
+            ));
         });
 
-        let kept = crate::timing::since(0);
-        let last = |command: &str| {
-            kept.iter()
-                .rev()
-                .find(|entry| entry.command == command)
-                .cloned()
-                .expect("timed")
-        };
-        assert!(last("a_slow_read").held_us >= 150_000);
-        assert!(
-            last("a_quick_read").wait_us >= 100_000,
-            "{:?}",
-            last("a_quick_read")
+        // A read that starts now reads the second.
+        let now = state
+            .with_session("blame", |session| Ok(session.path.clone()))
+            .expect("the read");
+        assert_eq!(
+            now.canonicalize().unwrap(),
+            second.path().canonicalize().unwrap()
         );
-        assert!(last("a_quick_read").held_us < 100_000);
+    }
+
+    /// Every command that reaches the repository says whether it writes, so
+    /// a new one is classified by somebody deciding (TASK-052).
+    #[test]
+    fn every_command_is_read_or_write_on_purpose() {
+        let source = include_str!("commands.rs");
+        let code = &source[..source.find("mod tests {").unwrap_or(source.len())];
+        let named = session_commands(code);
+        assert!(named.len() > 80, "found only {} commands", named.len());
+        for name in &named {
+            let reads = READERS.contains(&name.as_str());
+            let writes = WRITERS.contains(&name.as_str());
+            assert!(
+                reads != writes,
+                "`{name}` must be in exactly one of READERS and WRITERS"
+            );
+        }
+        for listed in READERS.iter().chain(WRITERS) {
+            assert!(
+                named.iter().any(|name| name == listed),
+                "`{listed}` is listed but no command uses it"
+            );
+        }
+    }
+
+    /// The names given to `with_session`, `with_live_session` and `files_repo`.
+    fn session_commands(code: &str) -> Vec<String> {
+        let mut names = Vec::new();
+        for opener in ["with_session(", "with_live_session(", "files_repo(&state,"] {
+            let mut rest = code;
+            while let Some(at) = rest.find(opener) {
+                rest = &rest[at + opener.len()..];
+                if let Some(quoted) = rest.trim_start().strip_prefix('"') {
+                    if let Some(end) = quoted.find('"') {
+                        names.push(quoted[..end].to_string());
+                    }
+                }
+            }
+        }
+        names.sort();
+        names.dedup();
+        names
     }
 
     #[test]

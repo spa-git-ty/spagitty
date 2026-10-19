@@ -135,6 +135,8 @@ enum Line {
 struct Script {
     lines: Arc<Mutex<VecDeque<Line>>>,
     asked: Arc<Mutex<Vec<String>>>,
+    /// What was left of the limits when each step was asked.
+    budgets: Arc<Mutex<Vec<engine::Budget>>>,
     tokens: u64,
 }
 
@@ -143,6 +145,7 @@ impl Script {
         Script {
             lines: Arc::new(Mutex::new(lines.into())),
             asked: Arc::default(),
+            budgets: Arc::default(),
             tokens: 0,
         }
     }
@@ -157,6 +160,7 @@ impl Driver for Script {
         cancel: &Arc<AtomicBool>,
     ) -> Result<Reply, String> {
         self.asked.lock().unwrap().push(ask.prompt.clone());
+        self.budgets.lock().unwrap().push(ask.budget);
         hear("reading");
         let next = self.lines.lock().unwrap().pop_front();
         match next {
@@ -672,6 +676,57 @@ fn an_answer_that_cannot_be_read_fails_with_the_agents_words() {
     let end = run.end();
     assert_eq!(end.state, State::Failed);
     assert!(end.reason.unwrap().contains("I could not find the files."));
+}
+
+/// Run a review to its end with a token limit, each step spending `spent`.
+fn limited(lines: Vec<Line>, spent: u64, limit: u64) -> (Assignment, Script) {
+    let dir = tempfile::tempdir().unwrap();
+    let mut script = Script::new(lines);
+    script.tokens = spent;
+    let mut assignment = sample("/work/app", "r1");
+    assignment.level = Level::Suggest;
+    let (handle, engine) = engine::prepare(Setup {
+        assignment,
+        work: engine::Work::Review(ReviewWork::default()),
+        rules: RepoRules::default(),
+        limits: Limits {
+            tokens: Some(limit),
+            minutes: None,
+        },
+        world: Box::new(Fake {
+            files: vec!["src/avatars.rs"],
+            ..Fake::default()
+        }),
+        driver: Box::new(script.clone()),
+        store: Store::new(dir.path()),
+        sink: Arc::new(Seen::default()),
+    });
+    engine.run();
+    (handle.snapshot(), script)
+}
+
+#[test]
+fn each_step_is_handed_what_is_left_of_the_limit() {
+    let (_, script) = limited(vec![plan(&["src/avatars.rs"]), findings(true)], 150, 1_000);
+    let left: Vec<_> = script
+        .budgets
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|b| b.tokens)
+        .collect();
+    assert_eq!(left[..2], [Some(1_000), Some(850)]);
+}
+
+#[test]
+fn a_step_cut_off_at_its_limit_with_nothing_to_show_stops_rather_than_fails() {
+    // The driver stopped the step part-way, before the model had answered.
+    let (end, _) = limited(vec![Line::Says("Still reading.".into())], 150, 100);
+    assert_eq!(end.state, State::Stopped);
+    assert_eq!(
+        end.reason.as_deref(),
+        Some("Reached its limit of 100 tokens. Everything it made is kept.")
+    );
 }
 
 #[test]

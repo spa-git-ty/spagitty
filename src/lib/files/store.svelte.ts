@@ -29,9 +29,19 @@
 
 import * as api from '../api';
 import { detectLanguage, tokenizeLines, type Token } from '../diff/highlight';
-import type { BlameCommit, CompactBlame, FilesEntry, FilesFound, FilesRead, FilesRevision } from '../types';
+import type {
+	BlameCommit,
+	CompactBlame,
+	FilesEntry,
+	FilesFound,
+	FilesHit,
+	FilesRead,
+	FilesRevision,
+	FilesSearched,
+	SearchOptions
+} from '../types';
 import { linesOf, tokensOf } from './colour';
-import { blockFrom, find, type Match } from './keys';
+import { blockFrom, find, PLAIN, patternOf, type Match } from './keys';
 
 /** One open file: a path, and the revision it was opened at. */
 export interface Tab {
@@ -110,6 +120,16 @@ let nowhere = $state(false);
 
 let finding = $state('');
 let found = $state<FilesFound | null>(null);
+
+/** How both searches read what was typed: regex, whole word, case (FEAT-151). */
+let options = $state<SearchOptions>({ ...PLAIN });
+/** What the tree's field looks for: file names, or text in every file. */
+let lookFor = $state<'names' | 'text'>('names');
+let seeking = $state('');
+let searched = $state.raw<FilesSearched | null>(null);
+let searchedError = $state<string | null>(null);
+let seekingNow = $state(false);
+let seekTicket = 0;
 
 let fileTicket = 0;
 let blameTicket = 0;
@@ -198,6 +218,8 @@ async function resolveNow(): Promise<boolean> {
 			folders = {};
 			void readFolder('');
 			for (const dir of open) void readFolder(dir);
+			// A search of the files is of this revision's files.
+			if (lookFor === 'text' && seeking !== '') void files.searchFiles(seeking);
 		}
 		return true;
 	} catch (error) {
@@ -387,6 +409,30 @@ export const files = {
 	},
 	get found(): FilesFound | null {
 		return found;
+	},
+	get searchOptions(): SearchOptions {
+		return options;
+	},
+	/** Why what is typed in the search is not a regular expression, or null. */
+	get searchError(): string | null {
+		if (query === '') return null;
+		const pattern = patternOf(query, options);
+		return typeof pattern === 'string' ? pattern : null;
+	},
+	get lookFor(): 'names' | 'text' {
+		return lookFor;
+	},
+	get seeking(): string {
+		return seeking;
+	},
+	get searched(): FilesSearched | null {
+		return searched;
+	},
+	get searchedError(): string | null {
+		return searchedError;
+	},
+	get seekingNow(): boolean {
+		return seekingNow;
 	},
 
 	/** The language as the status line names it. */
@@ -679,7 +725,7 @@ export const files = {
 	 */
 	searchNext(reverse = false): Match | null {
 		if (query === '') return null;
-		const next = find(lines, query, cursor, backward !== reverse);
+		const next = find(lines, query, cursor, backward !== reverse, options);
 		nowhere = next === null;
 		if (!next) return null;
 		anchor = null;
@@ -703,6 +749,76 @@ export const files = {
 		const [first, last] = this.selection;
 		const where = first === last ? `${first + 1}` : `${first + 1}-${last + 1}`;
 		return `${file.path}:${where}@${file.revision.slice(0, 7)}`;
+	},
+
+	/**
+	 * Turn regex, whole word or match case on or off, for both searches. A
+	 * search of the files already shown is run again with it.
+	 */
+	toggleOption(name: keyof SearchOptions): void {
+		options = { ...options, [name]: !options[name] };
+		nowhere = false;
+		if (lookFor === 'text' && seeking !== '') void this.searchFiles(seeking);
+	},
+
+	/** What the tree's field looks for. The other one's answer is put away. */
+	setLookFor(next: 'names' | 'text'): void {
+		if (next === lookFor) return;
+		lookFor = next;
+		if (next === 'text') {
+			void this.findFiles('');
+			if (seeking !== '') void this.searchFiles(seeking);
+		} else {
+			seekTicket++;
+			searched = null;
+			searchedError = null;
+			seekingNow = false;
+		}
+	},
+
+	/** Every line of every file at the revision that `text` matches (FEAT-151). */
+	async searchFiles(text: string): Promise<void> {
+		seeking = text;
+		const ticket = ++seekTicket;
+		searchedError = null;
+		if (text === '' || !resolved) {
+			searched = null;
+			seekingNow = false;
+			return;
+		}
+		const pattern = patternOf(text, options);
+		if (typeof pattern === 'string') {
+			searched = null;
+			searchedError = pattern;
+			seekingNow = false;
+			return;
+		}
+		seekingNow = true;
+		try {
+			const next = await api.filesSearch(resolved.id, text, options);
+			if (ticket === seekTicket) searched = next;
+		} catch (error) {
+			if (ticket === seekTicket) {
+				searched = null;
+				searchedError = String(error);
+			}
+		} finally {
+			if (ticket === seekTicket) seekingNow = false;
+		}
+	},
+
+	/**
+	 * Open a file a search found, at its line, with its match marked; the
+	 * search becomes the file's own, so `n` and `N` carry on through it.
+	 */
+	async openHit(hit: FilesHit): Promise<void> {
+		await this.openFile(hit.path, { line: hit.line });
+		if (file?.path !== hit.path) return;
+		query = seeking;
+		backward = false;
+		nowhere = false;
+		match = { line: hit.line - 1, start: hit.column, end: hit.column + hit.length };
+		cursor = { line: hit.line - 1, col: hit.column };
 	},
 
 	/** Look for files by name. An empty word goes back to the tree. */
@@ -739,6 +855,13 @@ export const files = {
 		query = '';
 		finding = '';
 		found = null;
+		options = { ...PLAIN };
+		lookFor = 'names';
+		seeking = '';
+		searched = null;
+		searchedError = null;
+		seekingNow = false;
+		seekTicket++;
 		fileTicket++;
 		blameTicket++;
 		peekTicket++;

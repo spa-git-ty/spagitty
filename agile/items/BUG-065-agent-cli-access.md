@@ -2,7 +2,7 @@
 
 # BUG-065 — Command-line agents cannot start or finish reviews correctly
 
-**Status:** Open — implemented on `bugfix/BUG-065-agent-cli-access`; local validation complete, PR awaiting review and merge. OMP's authenticated smoke test needs the selected model/profile.
+**Status:** Fixed — shipped in 2.1.0, through pull request #63; the manual sweep is still owed.
 **Screens:** Settings → Agents, Review, Merger, Farm.
 
 ## What happens

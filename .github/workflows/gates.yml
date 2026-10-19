@@ -199,6 +199,10 @@ jobs:
         run: bun tools/extensions/bundle.ts --debug
 
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      # Clippy reads the workspace's rust-version, and cargo never checks it
+      # against the dependencies' (TASK-072).
+      - name: No dependency needs a newer Rust than Cargo.toml says
+        run: node tools/rust-version.mjs
       - run: bun run check
 
       # The app icon and the brand collateral are generated from a fixed

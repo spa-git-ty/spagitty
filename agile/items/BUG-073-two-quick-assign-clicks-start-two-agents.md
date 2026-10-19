@@ -2,7 +2,7 @@
 
 # BUG-073 — Two quick Assign clicks start two agents on one pull request
 
-**Status:** Open — found by the TASK-063 audit of pull request #52 (2026-10-12).
+**Status:** Fixed — on `release/3.4.0`; unmerged. Covered by unit tests; not tried with a real agent in the running application.
 **Screens:** 1R, 1S.
 **Raised by:** CodeRabbit on #52, still unresolved there; confirmed in the code on 2026-10-12.
 

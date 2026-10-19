@@ -2,7 +2,7 @@
 
 # TASK-072 — The declared minimum Rust is older than a dependency needs
 
-**Status:** Backlog — raised while building FEAT-131, 2026-10-13.
+**Status:** Done — on `release/3.4.0`; unmerged. Covered by a unit test and run on Windows; gate 2 runs it from this change on.
 **Screens:** —.
 **Raised by:** FEAT-131: `tree-sitter` and `tree-sitter-highlight` 0.27 declare `rust-version = "1.90"`, and the workspace declares `1.77`.
 

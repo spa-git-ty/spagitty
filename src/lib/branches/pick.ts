@@ -9,6 +9,8 @@
  * thousand branches.
  */
 
+import type { BranchRow, RefKind } from '../types';
+
 export type BranchGroup = 'local' | 'remote' | 'tag';
 
 /** One name the menu offers. */
@@ -29,6 +31,17 @@ export const GROUP_HEADINGS: Record<BranchGroup, string> = {
 };
 
 const GROUP_ORDER: readonly BranchGroup[] = ['local', 'remote', 'tag'];
+
+const GROUP_OF_KIND: Record<RefKind, BranchGroup> = {
+	branch: 'local',
+	remote: 'remote',
+	tag: 'tag'
+};
+
+/** The Branches screen's rows, as the menu lists them (TASK-069). */
+export function optionsOf(rows: readonly BranchRow[]): BranchOption[] {
+	return rows.map((row) => ({ name: row.name, group: GROUP_OF_KIND[row.kind] }));
+}
 
 /**
  * Rows drawn per group. A menu is not a table: past this many, the rest are

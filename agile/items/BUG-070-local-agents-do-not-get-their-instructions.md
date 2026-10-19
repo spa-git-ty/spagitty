@@ -2,7 +2,7 @@
 
 # BUG-070 — Local agents do not get their instructions, and some cannot start in Review or Merger
 
-**Status:** Open — on `bugfix/BUG-065-agent-cli-access` (pull request #59, rebased, with the instructions fix on top); the real-agent sweep is not run.
+**Status:** Fixed — shipped in 2.1.0, through pull request #63; the manual sweep is still owed.
 **Screens:** 1R, 1S, 1K.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 

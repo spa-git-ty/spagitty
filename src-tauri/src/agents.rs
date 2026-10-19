@@ -951,6 +951,58 @@ pub fn agents_test_remote(probe: Probe) -> Result<Tested> {
 pub struct AgentsState {
     config: Mutex<()>,
     live: Mutex<HashMap<String, engine::Handle>>,
+    /// Jobs whose assignment is still being set up. Claimed under the same
+    /// lock as the check, so a second start on one job is refused before the
+    /// first is live (BUG-073).
+    starting: Mutex<Vec<(String, Target)>>,
+}
+
+/// A job held while its assignment is set up. Dropping it lets the job go,
+/// on every early return as well as once the handle is live.
+struct Claim<'a> {
+    starting: &'a Mutex<Vec<(String, Target)>>,
+    repo: String,
+    target: Target,
+}
+
+impl Drop for Claim<'_> {
+    fn drop(&mut self) {
+        let mut starting = self.starting.lock().expect("starting lock");
+        if let Some(at) = starting
+            .iter()
+            .position(|(repo, target)| *repo == self.repo && same_job(target, &self.target))
+        {
+            starting.remove(at);
+        }
+    }
+}
+
+impl AgentsState {
+    /// Hold a job for one start, refused while another start holds it or an
+    /// assignment on it is live.
+    fn claim(&self, repo: &str, target: &Target) -> Result<Claim<'_>> {
+        let mut starting = self.starting.lock().expect("starting lock");
+        let live = self.live.lock().expect("assignments lock");
+        let busy = starting
+            .iter()
+            .any(|(r, t)| r == repo && same_job(t, target))
+            || live.values().any(|handle| {
+                let a = handle.snapshot();
+                !a.state.is_over() && a.repo == repo && same_job(&a.target, target)
+            });
+        if busy {
+            return Err(Failure::new(
+                "refused",
+                "An agent is already assigned to this.",
+            ));
+        }
+        starting.push((repo.to_string(), target.clone()));
+        Ok(Claim {
+            starting: &self.starting,
+            repo: repo.to_string(),
+            target: target.clone(),
+        })
+    }
 }
 
 pub fn manage<R: Runtime>(app: &AppHandle<R>) {
@@ -1075,6 +1127,38 @@ fn same_job(a: &Target, b: &Target) -> bool {
     }
 }
 
+/// Is `a` the same job at the same revisions as `b`? A run is carried on only
+/// then (BUG-094): one whose pull request was pushed to, or whose branches
+/// moved, would skip files it finished on code that is no longer there.
+fn same_revisions(a: &Target, b: &Target) -> bool {
+    same_job(a, b)
+        && match (a, b) {
+            (
+                Target::Review { base, head, .. },
+                Target::Review {
+                    base: b2, head: h2, ..
+                },
+            ) => base == b2 && head == h2,
+            (
+                Target::Merge {
+                    a_tip, b_tip, base, ..
+                },
+                Target::Merge {
+                    a_tip: a2,
+                    b_tip: bt2,
+                    base: b2,
+                    ..
+                },
+            ) => a_tip == a2 && b_tip == bt2 && base == b2,
+            _ => false,
+        }
+}
+
+/// What a fresh run is told when it was asked to carry an earlier one on
+/// whose work has moved.
+const MOVED: &str = "This was asked to carry on an earlier run, but what it works on has \
+moved since, so it starts over.";
+
 fn days_now() -> u64 {
     spagitty_farm::assign::record::now() / 86_400
 }
@@ -1094,25 +1178,18 @@ pub fn assignment_start<R: Runtime>(
             "This repository does not allow that agent.",
         ));
     }
-    {
-        let live = state.live.lock().expect("assignments lock");
-        if live.values().any(|handle| {
-            let a = handle.snapshot();
-            !a.state.is_over() && a.repo == request.repo && same_job(&a.target, &request.target)
-        }) {
-            return Err(Failure::new(
-                "refused",
-                "An agent is already assigned to this.",
-            ));
-        }
-    }
+    let claim = state.claim(&request.repo, &request.target)?;
 
     let store = store(&app)?;
-    let kept = request
+    let earlier = request
         .resume
         .as_deref()
         .and_then(|id| store.load(&request.repo, id))
         .filter(|kept| kept.state.is_over() && kept.agent.id == request.agent);
+    let moved = earlier
+        .as_ref()
+        .is_some_and(|kept| !same_revisions(&kept.target, &request.target));
+    let kept = earlier.filter(|_| !moved);
     let id = match &kept {
         Some(kept) => kept.id.clone(),
         None => format!(
@@ -1249,7 +1326,13 @@ pub fn assignment_start<R: Runtime>(
         lands: request.lands,
         state: Life::Starting,
         sentence: "Starting".into(),
-        note: request.note.clone(),
+        note: if moved {
+            format!("{} {MOVED}", request.note.trim())
+                .trim()
+                .to_string()
+        } else {
+            request.note.clone()
+        },
         steps: Vec::new(),
         proposals: Vec::new(),
         planned: 0,
@@ -1282,6 +1365,7 @@ pub fn assignment_start<R: Runtime>(
         .lock()
         .expect("assignments lock")
         .insert(id.clone(), handle.clone());
+    drop(claim);
     if limits.tokens.is_some() {
         spawn_spend_keeper(app.clone(), handle);
     }
@@ -1840,6 +1924,72 @@ mod tests {
         };
         assert!(same_job(&merge("feat"), &merge("feat")));
         assert!(!same_job(&merge("feat"), &review(1)));
+    }
+
+    #[test]
+    fn a_run_is_carried_on_only_at_the_revisions_it_worked_on() {
+        let at = |at: &str| {
+            let mut target = review(1);
+            if let Target::Review { head, .. } = &mut target {
+                *head = at.into();
+            }
+            target
+        };
+        assert!(same_revisions(&at("b"), &at("b")));
+        // Pushed to since: the files it finished are not the files there now.
+        assert!(!same_revisions(&at("b"), &at("c")));
+        assert!(!same_revisions(&review(1), &review(2)));
+        let merge = |b_tip: &str| Target::Merge {
+            a: "main".into(),
+            b: "feat".into(),
+            a_tip: "1".into(),
+            b_tip: b_tip.into(),
+            base: "0".into(),
+            strategy: String::new(),
+            into: String::new(),
+        };
+        assert!(same_revisions(&merge("2"), &merge("2")));
+        assert!(!same_revisions(&merge("2"), &merge("3")));
+    }
+
+    fn review(number: u64) -> Target {
+        Target::Review {
+            host: "github.com".into(),
+            owner: "o".into(),
+            name: "n".into(),
+            number,
+            title: String::new(),
+            base: "a".into(),
+            head: "b".into(),
+            target: "main".into(),
+        }
+    }
+
+    #[test]
+    fn a_second_start_on_one_job_is_refused_while_the_first_is_set_up() {
+        let state = AgentsState::default();
+        let first = state.claim("/r", &review(1)).expect("first start");
+        let second = state.claim("/r", &review(1)).err().expect("second start");
+        assert_eq!(second.message, "An agent is already assigned to this.");
+        // Another pull request, or the same one in another repository, is free.
+        assert!(state.claim("/r", &review(2)).is_ok());
+        assert!(state.claim("/other", &review(1)).is_ok());
+        drop(first);
+    }
+
+    #[test]
+    fn a_start_that_stops_early_leaves_no_claim_behind() {
+        let state = AgentsState::default();
+        let failed = || -> Result<()> {
+            let _claim = state.claim("/r", &review(1))?;
+            Err(Failure::new(
+                "refused",
+                "This repository does not allow that agent.",
+            ))
+        };
+        assert!(failed().is_err());
+        assert!(state.claim("/r", &review(1)).is_ok());
+        assert!(state.starting.lock().unwrap().is_empty());
     }
 
     #[test]

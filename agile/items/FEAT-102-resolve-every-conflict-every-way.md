@@ -2,7 +2,7 @@
 
 # FEAT-102 — Resolve every conflict, every way
 
-**Status:** Open — built and merged into `main`; the manual sweep is not yet run.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-102-resolve-every-conflict-every-way`
 **Screens:** 1S, 1D, chrome (the rail's dot).
 **Raised by:** the author, 2026-10-06, as slice 3 of `design_handoff_merger/`.

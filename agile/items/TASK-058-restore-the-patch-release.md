@@ -2,8 +2,7 @@
 
 # TASK-058 — Restore the patch release after the bug-fix merges
 
-**Status:** Open — 2.0.1 is prepared in pull request #61 on
-`codex/fix-release-2.0.1`; merging and publication are pending.
+**Status:** Done — 2.0.1 was merged and published on 2026-10-11.
 **Screen:** CI.
 **Raised by:** the failed main workflow after pull request #58.
 

@@ -2,7 +2,7 @@
 
 # BUG-072 — A remote agent with no key is told "Bad request", not that its key is missing
 
-**Status:** Open — fixed on `task/TASK-063-audit-the-merged-pull-requests` with its unit test; Open until the sweep runs in the real app (2026-10-12).
+**Status:** Fixed — shipped in 2.1.0; the manual sweep is still owed.
 **Screens:** 1K, 1R, 1S.
 **Raised by:** found while working BUG-071 on 2026-10-12: an agent whose key was never saved, or was lost from the keychain, is sent without one.
 

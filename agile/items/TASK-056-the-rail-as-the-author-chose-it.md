@@ -2,7 +2,7 @@
 
 # TASK-056 — The rail as the author chose it
 
-**Status:** Open — built and merged into `main`; the manual sweep is not yet run.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `task/TASK-056-the-rail-as-the-author-chose-it`
 **Screens:** chrome (the rail), 1A (the drag).
 **Raised by:** the author, 2026-10-06, as slice 5 of `design_handoff_merger/`.

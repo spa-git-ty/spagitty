@@ -224,7 +224,7 @@ fn inherited(root: &Node, id: &str, stack: &mut Vec<String>) -> std::result::Res
     if text(child, "inherit") != "false"
         && child
             .get("inherit")
-            .map_or(true, |v| text(v, "default") != "false")
+            .is_none_or(|v| text(v, "default") != "false")
     {
         if let (Some(default), Some(map)) = (root.get("default").and_then(Node::map), merged.map())
         {
@@ -235,7 +235,7 @@ fn inherited(root: &Node, id: &str, stack: &mut Vec<String>) -> std::result::Res
                 .filter(|v| matches!(&*v.data, Data::List(_)))
                 .map(Node::strings);
             for (k, v) in default {
-                if allowed.as_ref().map_or(true, |a| a.contains(k)) {
+                if allowed.as_ref().is_none_or(|a| a.contains(k)) {
                     values.entry(k.clone()).or_insert_with(|| v.clone());
                 }
             }

@@ -2,7 +2,7 @@
 
 # BUG-077 — A Farm task merged in Merger skips the Farm's own checks
 
-**Status:** Open — fixed on `bugfix/BUG-076-merger-says-pushed-when-the-push-failed` with its tests; Open until the sweep runs on a real Farm run (2026-10-12).
+**Status:** Fixed — shipped in 2.1.0. The sweep on a real Farm run is owed; the manual sweep is still owed.
 **Screens:** 1Q, 1S.
 **Raised by:** a review of the 2.0.1 stack on 2026-10-12, before FEAT-117 was merged.
 

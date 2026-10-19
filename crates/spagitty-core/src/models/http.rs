@@ -113,13 +113,18 @@ fn finish(
     match sent {
         Ok(mut response) => {
             let status = response.status().as_u16();
-            let body = response
-                .body_mut()
-                .with_config()
-                .limit(LIMIT)
-                .read_to_string()
-                .unwrap_or_default();
-            Ok(Answered { status, body })
+            match read_body(response.body_mut().as_reader(), LIMIT) {
+                Ok(body) => Ok(Answered { status, body }),
+                // A refusal is reported by its status even when its body is lost.
+                Err(_) if !(200..300).contains(&status) => Ok(Answered {
+                    status,
+                    body: String::new(),
+                }),
+                Err(unread) => Err(Error::Model {
+                    provider: provider.to_string(),
+                    detail: redact(&unread, headers),
+                }),
+            }
         }
         Err(ureq::Error::StatusCode(status)) => Ok(Answered {
             status,
@@ -130,6 +135,24 @@ fn finish(
             detail: redact(&error.to_string(), headers),
         }),
     }
+}
+
+/// Read a reply whole, or say why it could not be. A reply that is too large,
+/// cut off or not text is not an empty answer (BUG-075).
+fn read_body(reader: impl std::io::Read, limit: u64) -> std::result::Result<String, String> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    reader
+        .take(limit + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("the reply was cut off before it ended ({error})"))?;
+    if bytes.len() as u64 > limit {
+        return Err(format!(
+            "the reply was larger than {} bytes, so it was not read",
+            limit
+        ));
+    }
+    String::from_utf8(bytes).map_err(|_| "the reply was not text".to_string())
 }
 
 /// Cut every header value out of `text`. A transport error should never
@@ -202,5 +225,47 @@ mod tests {
         ];
         let text = "failed sending sk-ant-secret-1234 and sk-openai-5678";
         assert_eq!(redact(text, &headers), "failed sending •••• and ••••");
+    }
+
+    /// Gives `first`, then fails, as a connection cut mid-reply does.
+    struct CutOff {
+        first: Option<Vec<u8>>,
+    }
+
+    impl std::io::Read for CutOff {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            match self.first.take() {
+                Some(bytes) => {
+                    buf[..bytes.len()].copy_from_slice(&bytes);
+                    Ok(bytes.len())
+                }
+                None => Err(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionReset,
+                    "connection reset",
+                )),
+            }
+        }
+    }
+
+    #[test]
+    fn a_reply_cut_off_part_way_is_an_error_not_an_empty_answer() {
+        let reader = CutOff {
+            first: Some(b"{\"content\":".to_vec()),
+        };
+        let unread = read_body(reader, LIMIT).unwrap_err();
+        assert!(unread.contains("cut off"), "{unread}");
+    }
+
+    #[test]
+    fn a_reply_over_the_limit_is_an_error_not_an_empty_answer() {
+        let unread = read_body(&[b'a'; 11][..], 10).unwrap_err();
+        assert!(unread.contains("larger than 10 bytes"), "{unread}");
+        assert_eq!(read_body(&[b'a'; 10][..], 10).unwrap(), "a".repeat(10));
+    }
+
+    #[test]
+    fn a_reply_that_is_not_text_is_an_error_not_an_empty_answer() {
+        let unread = read_body(&[0xff, 0xfe, 0x00][..], LIMIT).unwrap_err();
+        assert_eq!(unread, "the reply was not text");
     }
 }

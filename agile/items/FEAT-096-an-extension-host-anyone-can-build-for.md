@@ -2,7 +2,7 @@
 
 # FEAT-096 — An extension host anyone can build for
 
-**Status:** Open
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-096-an-extension-host-anyone-can-build-for`
 **Screens:** Settings (1K), Working copy (1C), Farm (1Q), Pull requests (1H),
 the command palette.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { blockFrom, find, step, type Action, type Pending } from './keys';
+import { blockFrom, caseCounts, find, optionKey, patternOf, PLAIN, step, type Action, type Pending } from './keys';
 
 /** Press keys one after another, collecting what each did. */
 function press(...keys: (string | { key: string; ctrl?: boolean; alt?: boolean; meta?: boolean })[]) {
@@ -165,5 +165,63 @@ describe('blockFrom', () => {
 		expect(blockFrom(commits, 6, 1)).toBe(6);
 		expect(blockFrom(commits, 0, -1)).toBe(0);
 		expect(blockFrom([], 3, 1)).toBe(3);
+	});
+});
+
+describe('search options (FEAT-151)', () => {
+	const lines = ['let total = 12;', 'Total: 345', 'subtotal = total + 6'];
+	const start = { line: 0, col: -1 };
+
+	it('reads text as typed by default, smart about case', () => {
+		expect(find(lines, 'total', start, false)).toEqual({ line: 0, start: 4, end: 9 });
+		expect(find(lines, 'Total', start, false)).toEqual({ line: 1, start: 0, end: 5 });
+		// Characters a regular expression would read are only characters.
+		expect(find(['a.b axb'], 'a.b', start, false)).toEqual({ line: 0, start: 0, end: 3 });
+	});
+
+	it('reads a regular expression', () => {
+		const regex = { ...PLAIN, regex: true };
+		expect(find(lines, '\\d{3}', start, false, regex)).toEqual({ line: 1, start: 7, end: 10 });
+		expect(find(['a.b axb'], 'a.b', { line: 0, col: 0 }, false, regex)).toEqual({ line: 0, start: 4, end: 7 });
+	});
+
+	it('finds a whole word only where it stands alone', () => {
+		const word = { ...PLAIN, word: true };
+		expect(find(['subtotal total'], 'total', start, false, word)).toEqual({ line: 0, start: 9, end: 14 });
+		expect(find(['subtotal'], 'total', start, false, word)).toBeNull();
+	});
+
+	it('counts case when asked to, and when a capital is typed', () => {
+		const exact = { ...PLAIN, case: true };
+		// Past `Total`, which case leaves out, to the `total` inside `subtotal`.
+		expect(find(lines, 'total', { line: 0, col: 4 }, false, exact)).toEqual({ line: 2, start: 3, end: 8 });
+		expect(caseCounts('total', PLAIN)).toBe(false);
+		expect(caseCounts('Total', PLAIN)).toBe(true);
+		// An escape is not a capital asking for case.
+		expect(caseCounts('\\S+', { ...PLAIN, regex: true })).toBe(false);
+	});
+
+	it('says why a regular expression is not one, and finds nothing with it', () => {
+		const regex = { ...PLAIN, regex: true };
+		expect(typeof patternOf('(', regex)).toBe('string');
+		expect(find(lines, '(', start, false, regex)).toBeNull();
+		expect(patternOf('(', PLAIN)).toBeInstanceOf(RegExp);
+	});
+
+	it('steps through matches both ways and wraps', () => {
+		const regex = { ...PLAIN, regex: true };
+		const first = find(lines, 'total', start, false, regex)!;
+		const second = find(lines, 'total', { line: first.line, col: first.start }, false, regex)!;
+		expect([second.line, second.start]).toEqual([1, 0]);
+		expect(find(lines, 'total', { line: 0, col: 4 }, true, regex)).toEqual({ line: 2, start: 11, end: 16 });
+	});
+
+	it('flips an option with Alt and R, W or C', () => {
+		const key = (code: string, init: KeyboardEventInit = { altKey: true }) => new KeyboardEvent('keydown', { code, ...init });
+		expect(optionKey(key('KeyR'))).toBe('regex');
+		expect(optionKey(key('KeyW'))).toBe('word');
+		expect(optionKey(key('KeyC'))).toBe('case');
+		expect(optionKey(key('KeyR', {}))).toBeNull();
+		expect(optionKey(key('KeyX'))).toBeNull();
 	});
 });

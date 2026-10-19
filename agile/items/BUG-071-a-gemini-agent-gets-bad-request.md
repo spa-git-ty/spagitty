@@ -2,7 +2,7 @@
 
 # BUG-071 — A Gemini agent from Google AI Studio gets "Bad request"
 
-**Status:** Open — on `fix/gemini-thought-signatures` (pull request #60); not yet run against the real API.
+**Status:** Fixed — shipped in 2.1.0, through pull request #63. It has not been run against the real API; the manual sweep is still owed.
 **Screens:** 1K, 1R, 1S.
 **Raised by:** the author, 2026-10-11, on 2.0.1.
 

@@ -11,8 +11,9 @@
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
 	import { shortAge, strengths } from './age';
 	import { pieces } from './colour';
-	import { step, type Pending } from './keys';
+	import { optionKey, step, type Pending } from './keys';
 	import Peek from './Peek.svelte';
+	import SearchToggles from './SearchToggles.svelte';
 	import { files, revisionLabel } from './store.svelte';
 
 	/**
@@ -174,7 +175,11 @@
 	}
 
 	function searchKey(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
+		const option = optionKey(event);
+		if (option) {
+			event.preventDefault();
+			files.toggleOption(option);
+		} else if (event.key === 'Enter') {
 			event.preventDefault();
 			const went = files.searchNext();
 			files.endSearch();
@@ -390,7 +395,9 @@
 					onkeydown={searchKey}
 					onblur={() => files.endSearch()}
 				/>
+				<SearchToggles />
 			</label>
+			{#if files.searchError}<span class="cell error" role="alert">{files.searchError}</span>{/if}
 		{:else if files.nowhere}
 			<span class="cell muted">not found: {files.query}</span>
 		{/if}

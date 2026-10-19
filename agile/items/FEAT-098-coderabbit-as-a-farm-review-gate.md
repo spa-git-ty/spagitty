@@ -2,7 +2,7 @@
 
 # FEAT-098 — CodeRabbit as a farm review gate
 
-**Status:** Open
+**Status:** Done — merged into `main` on 2026-10-06 in `e819aeb`, whose message called it work in progress; its farm tests pass. A live CodeRabbit account and a paid repair cycle are owed to the sweep.
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** Farm (1Q).
 **Raised by:** the author, through

@@ -2,7 +2,7 @@
 
 # FEAT-094 — Review reads like code
 
-**Status:** Open — built on `feature/FEAT-094-review-reads-like-code`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-094-review-reads-like-code`
 **Screens:** 1R; the Diff, File history and Pull requests screens share its parts.
 **Raised by:** the author, 2026-10-05: "a very important feature that we need

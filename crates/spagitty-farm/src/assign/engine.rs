@@ -104,7 +104,8 @@ pub enum Work {
 }
 
 /// Limits no level lifts. Reaching one stops the agent at the end of its
-/// step and keeps everything it made.
+/// step, or within it for a driver that reads the [`Budget`], and keeps
+/// everything it made.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Limits {
@@ -161,6 +162,25 @@ pub struct Ask {
     /// The whole prompt, for an agent that reads one.
     pub prompt: String,
     pub workdir: PathBuf,
+    /// What is left of the limits when the step starts.
+    pub budget: Budget,
+}
+
+/// What is left of an assignment's limits. A driver that makes several
+/// exchanges in one step checks it after each, so a step cannot spend past
+/// the limit before the engine looks (BUG-074). `None` is no limit.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Budget {
+    pub tokens: Option<u64>,
+    pub deadline: Option<Instant>,
+}
+
+impl Budget {
+    /// Has a step that has spent `spent` used what was left?
+    pub fn spent(&self, spent: u64) -> bool {
+        self.tokens.is_some_and(|left| spent >= left)
+            || self.deadline.is_some_and(|at| Instant::now() >= at)
+    }
 }
 
 /// What came back from a step.
@@ -828,10 +848,18 @@ impl Engine {
                 entry.sent_prompt(&full);
             }
         });
+        let used = self.read(|a| a.tokens.total());
         let ask = Ask {
             kind,
             prompt: full,
             workdir: self.world.workdir(),
+            budget: Budget {
+                tokens: self.limits.tokens.map(|limit| limit.saturating_sub(used)),
+                deadline: self
+                    .limits
+                    .minutes
+                    .map(|minutes| self.started + Duration::from_secs(minutes * 60)),
+            },
         };
         let snapshot = self.world.snapshot();
         let shared = self.shared.clone();
@@ -888,6 +916,16 @@ impl Engine {
             return Err(Halt::Stopped);
         }
         match result {
+            // A step its driver ended at a limit with nothing to show stops
+            // with the limit's sentence, not as a failure. One that gathered
+            // something is used, and the next checkpoint stops it.
+            Ok(reply) if reply.answer.is_none() => match self.over_limit() {
+                Some(limit) => {
+                    self.update(|a| a.reason = Some(limit));
+                    Err(Halt::Stopped)
+                }
+                None => Ok(reply),
+            },
             Ok(reply) => Ok(reply),
             Err(error) => Err(Halt::Failed(self.failure(&error))),
         }
@@ -1979,7 +2017,7 @@ fn group(value: u64) -> String {
     let digits = value.to_string();
     let mut out = String::new();
     for (index, ch) in digits.chars().enumerate() {
-        if index > 0 && (digits.len() - index) % 3 == 0 {
+        if index > 0 && (digits.len() - index).is_multiple_of(3) {
             out.push(',');
         }
         out.push(ch);

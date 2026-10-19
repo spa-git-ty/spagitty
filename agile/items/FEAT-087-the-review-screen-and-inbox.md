@@ -2,7 +2,7 @@
 
 # FEAT-087 — The Review screen and its inbox
 
-**Status:** Open — built on `feature/FEAT-087-the-review-screen-and-inbox`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-087-the-review-screen-and-inbox`
 **Screens:** 1R (new), chrome (the rail).
 **Raised by:** the author, 2026-10-04: reviewing merge and pull requests on

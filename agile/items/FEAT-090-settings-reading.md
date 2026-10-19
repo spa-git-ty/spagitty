@@ -2,7 +2,7 @@
 
 # FEAT-090 — Settings › Reading
 
-**Status:** Open — built on `feature/FEAT-090-settings-reading`, not yet merged.
+**Status:** Done — merged into `main` on 2026-10-06; the manual sweep is still owed.
 **Branch:** `feature/FEAT-090-settings-reading`
 **Screens:** 1K (Settings › Reading); 1B, 1C, 1O and 1R read what it sets.
 **Raised by:** the author, 2026-10-04, as slice 7 of the Review handoff
