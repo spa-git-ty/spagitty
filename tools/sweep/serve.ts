@@ -171,7 +171,9 @@ function gate(request: Request, key: string): Response | null {
 			status: 303,
 			headers: {
 				location: answer.to,
-				'set-cookie': `${COOKIE}=${key}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`
+				// Lax, not Strict: the address is opened from another app, and a
+				// Strict cookie is not sent on the redirect that follows it.
+				'set-cookie': `${COOKIE}=${key}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
 			}
 		});
 	}
@@ -237,7 +239,8 @@ if (import.meta.main) {
 	}
 	writeFileSync(INDEX, current());
 	const phone = argv.includes('--phone');
-	const key = phone ? randomBytes(18).toString('base64url') : '';
+	// Hex: a chat app that links the address keeps every character of it.
+	const key = phone ? randomBytes(16).toString('hex') : '';
 	// This machine only, unless asked: what it writes is the working record.
 	const server = Bun.serve({
 		hostname: phone ? '0.0.0.0' : '127.0.0.1',
