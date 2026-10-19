@@ -151,8 +151,8 @@ rather than an audit.
 | [FEAT-095](items/FEAT-095-check-out-a-pull-request.md) | Check out a pull request | 1R | Done |
 | [FEAT-096](items/FEAT-096-an-extension-host-anyone-can-build-for.md) | An extension host anyone can build for | 1K, 1C, 1Q, 1H, palette | Done |
 | [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Done |
-| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Open |
-| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Dropped |
+| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Done |
+| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Done |
 | [FEAT-100](items/FEAT-100-a-merger-that-shows-the-result-first.md) | A merger that shows the result first | 1S, chrome | Done |
 | [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Done |
 | [FEAT-102](items/FEAT-102-resolve-every-conflict-every-way.md) | Resolve every conflict, every way | 1S, 1D | Done |
@@ -364,7 +364,7 @@ of its own.
 | [TASK-052](items/TASK-052-nothing-waits-in-line.md) | Nothing waits in line | all | Open |
 | [TASK-053](items/TASK-053-the-review-room-after-first-use.md) | The review room after first use | 1R | Done |
 | [TASK-054](items/TASK-054-build-macos-on-a-mac.md) | Build macOS on a Mac | — | Done |
-| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Open |
+| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Done |
 | [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Done |
 | [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
 | [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Done |

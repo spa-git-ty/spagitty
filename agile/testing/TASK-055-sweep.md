@@ -8,3 +8,5 @@ The real host imported and executed a separately packaged Windows hello extensio
 Windows production installer generation and packaged resource contents are verified. Installation and use of those installers in a clean desktop session is unverified.
 Linux installer/resource permissions and macOS app/sidecar signatures, notarization/Gatekeeper and both architectures still require their platform runners.
 Current production CI enables Linux and Windows; macOS production lanes remain disabled until their existing certificate requirements can be met. No release was published.
+
+2026-10-19: the published 3.3.0 Linux `.deb` was listed, not installed. It carries `extension.json`, `LICENSE`, `README.md` and the native worker `bin/x86_64-unknown-linux-gnu/coderabbit-extension` under `usr/lib/Spagitty/extensions/spagitty.coderabbit/`. Releases now publish macOS builds too; their worker signature is still unchecked.
