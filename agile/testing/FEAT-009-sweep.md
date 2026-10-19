@@ -116,7 +116,7 @@ that is a P1 failure regardless of what else the ticket says.
 - **Expected:** HEAD unchanged, `ORIG_HEAD` unchanged, status identical, and
   neither rebase directory exists. `git status` must not say "interactive rebase
   in progress". Acceptance criterion 5.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-015 made Rebase run; its sweep checks the run, the stop and the abort.
 
 ### SWEEP-1E-11 — Apply is disabled and says why
 
@@ -125,7 +125,7 @@ that is a P1 failure regardless of what else the ticket says.
 - **Expected:** Visibly disabled, with a title naming FEAT-015 and saying this
   screen plans while git executes. It cannot be clicked into doing anything.
   Acceptance criterion 7.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-015 made Rebase run; its sweep checks the run, the stop and the abort.
 
 ### SWEEP-1E-12 — An upstream with no shared history
 

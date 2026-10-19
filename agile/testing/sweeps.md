@@ -12,21 +12,21 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1869 tickets in 286 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 0 obsolete, 1673 not run, 2 with a note only.
+**1878 tickets in 287 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1640 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | FEAT-001 | Graph screen | Done | 15 | 0 | 0 | 0 | 0 | 15 | [FEAT-001-sweep.md](FEAT-001-sweep.md) |
 | FEAT-002 | Diff screen | Done | 17 | 0 | 0 | 0 | 0 | 17 | [FEAT-002-sweep.md](FEAT-002-sweep.md) |
 | FEAT-003 | Working copy / Commit | Done | 20 | 0 | 0 | 0 | 0 | 20 | [FEAT-003-sweep.md](FEAT-003-sweep.md) |
-| FEAT-004 | Branches | Done | 16 | 0 | 0 | 0 | 0 | 16 | [FEAT-004-sweep.md](FEAT-004-sweep.md) |
-| FEAT-005 | Stash | Done | 13 | 0 | 0 | 0 | 0 | 13 | [FEAT-005-sweep.md](FEAT-005-sweep.md) |
+| FEAT-004 | Branches | Done | 16 | 0 | 0 | 0 | 1 | 15 | [FEAT-004-sweep.md](FEAT-004-sweep.md) |
+| FEAT-005 | Stash | Done | 13 | 0 | 0 | 0 | 1 | 12 | [FEAT-005-sweep.md](FEAT-005-sweep.md) |
 | FEAT-006 | All repositories | Done | 15 | 0 | 0 | 0 | 0 | 15 | [FEAT-006-sweep.md](FEAT-006-sweep.md) |
 | FEAT-007 | Log search | Done | 17 | 0 | 0 | 0 | 0 | 17 | [FEAT-007-sweep.md](FEAT-007-sweep.md) |
-| FEAT-008 | Conflicts | Done | 15 | 0 | 0 | 0 | 0 | 15 | [FEAT-008-sweep.md](FEAT-008-sweep.md) |
-| FEAT-009 | Interactive rebase | Done | 16 | 0 | 0 | 0 | 0 | 16 | [FEAT-009-sweep.md](FEAT-009-sweep.md) |
-| FEAT-010 | Pull requests | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-010-sweep.md](FEAT-010-sweep.md) |
-| FEAT-011 | Settings | Done | 18 | 0 | 0 | 0 | 0 | 18 | [FEAT-011-sweep.md](FEAT-011-sweep.md) |
+| FEAT-008 | Conflicts | Done | 15 | 0 | 0 | 0 | 2 | 13 | [FEAT-008-sweep.md](FEAT-008-sweep.md) |
+| FEAT-009 | Interactive rebase | Done | 16 | 0 | 0 | 0 | 2 | 14 | [FEAT-009-sweep.md](FEAT-009-sweep.md) |
+| FEAT-010 | Pull requests | Done | 9 | 0 | 0 | 0 | 7 | 2 | [FEAT-010-sweep.md](FEAT-010-sweep.md) |
+| FEAT-011 | Settings | Done | 18 | 0 | 0 | 0 | 1 | 17 | [FEAT-011-sweep.md](FEAT-011-sweep.md) |
 | FEAT-012 | Clone | Done | 16 | 0 | 0 | 0 | 0 | 16 | [FEAT-012-sweep.md](FEAT-012-sweep.md) |
 | FEAT-013 | Branch delete and rename | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-013-sweep.md](FEAT-013-sweep.md) |
 | FEAT-014 | Stash pop, apply and drop | Done | 7 | 0 | 0 | 0 | 0 | 7 | [FEAT-014-sweep.md](FEAT-014-sweep.md) |
@@ -36,13 +36,13 @@ not committed.
 | FEAT-018 | Fetch and push | Done | 10 | 0 | 0 | 0 | 0 | 10 | [FEAT-018-sweep.md](FEAT-018-sweep.md) |
 | FEAT-019 | Commit signing | Done | 8 | 0 | 0 | 0 | 0 | 8 | [FEAT-019-sweep.md](FEAT-019-sweep.md) |
 | FEAT-020 | Show the git command behind each action | Done | 16 | 0 | 0 | 0 | 0 | 16 | [FEAT-020-sweep.md](FEAT-020-sweep.md) |
-| FEAT-021 | Themes, and a title bar that stops lying | Done | 11 | 0 | 0 | 0 | 0 | 11 | [FEAT-021-sweep.md](FEAT-021-sweep.md) |
-| FEAT-022 | The graph as a launcher, not a report | Done | 34 | 0 | 0 | 0 | 0 | 34 | [FEAT-022-sweep.md](FEAT-022-sweep.md) |
+| FEAT-021 | Themes, and a title bar that stops lying | Done | 11 | 0 | 0 | 0 | 4 | 7 | [FEAT-021-sweep.md](FEAT-021-sweep.md) |
+| FEAT-022 | The graph as a launcher, not a report | Done | 34 | 0 | 0 | 0 | 1 | 33 | [FEAT-022-sweep.md](FEAT-022-sweep.md) |
 | FEAT-023 | Author heads, and a graph column of its own | Done | 14 | 0 | 0 | 0 | 0 | 14 | [FEAT-023-sweep.md](FEAT-023-sweep.md) |
 | FEAT-025 | A table you can size, and one that scrolls sideways | Done | 6 | 0 | 0 | 0 | 0 | 6 | [FEAT-025-sweep.md](FEAT-025-sweep.md) |
 | FEAT-026 | The nav rail collapses to icons | Done | 6 | 0 | 0 | 0 | 0 | 6 | [FEAT-026-sweep.md](FEAT-026-sweep.md) |
 | FEAT-027 | Repository tabs in the title bar | Done | 8 | 0 | 0 | 0 | 0 | 8 | [FEAT-027-sweep.md](FEAT-027-sweep.md) |
-| FEAT-028 | The toolbar: centred, grouped, and without Commit | Done | 4 | 0 | 0 | 0 | 0 | 4 | [FEAT-028-sweep.md](FEAT-028-sweep.md) |
+| FEAT-028 | The toolbar: centred, grouped, and without Commit | Done | 4 | 0 | 0 | 0 | 1 | 3 | [FEAT-028-sweep.md](FEAT-028-sweep.md) |
 | FEAT-029 | Bigger faces, and a type scale the rail follows | Done | 6 | 0 | 0 | 0 | 0 | 6 | [FEAT-029-sweep.md](FEAT-029-sweep.md) |
 | FEAT-030 | The rail's open-repository slot | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-030-sweep.md](FEAT-030-sweep.md) |
 | FEAT-033 | Branch divergence on the chip | Done | 7 | 0 | 0 | 0 | 0 | 7 | [FEAT-033-sweep.md](FEAT-033-sweep.md) |
@@ -67,10 +67,10 @@ not committed.
 | FEAT-052 | The graph reads at depth | Done | 6 | 0 | 0 | 0 | 0 | 6 | [FEAT-052-sweep.md](FEAT-052-sweep.md) |
 | FEAT-053 | Lanes turn square | Done | 4 | 0 | 0 | 0 | 0 | 4 | [FEAT-053-sweep.md](FEAT-053-sweep.md) |
 | FEAT-054 | Tell people when there is a newer Spagitty | Done | 6 | 0 | 0 | 0 | 0 | 6 | [FEAT-054-sweep.md](FEAT-054-sweep.md) |
-| FEAT-057 | Liquid glass: the pane that bends what is behind it | Done | 7 | 0 | 0 | 0 | 0 | 7 | [FEAT-057-sweep.md](FEAT-057-sweep.md) |
-| FEAT-058 | A pull request you can read and answer | Done | 11 | 0 | 0 | 0 | 0 | 11 | [FEAT-058-sweep.md](FEAT-058-sweep.md) |
-| FEAT-059 | Dedicated pull request review workspace | Done | 1 | 0 | 0 | 0 | 0 | 1 | [FEAT-059-sweep.md](FEAT-059-sweep.md) |
-| FEAT-060 | Spagitty, with a face: the brand | Done | 1 | 0 | 0 | 0 | 0 | 1 | [FEAT-060-sweep.md](FEAT-060-sweep.md) |
+| FEAT-057 | Liquid glass: the pane that bends what is behind it | Done | 7 | 0 | 0 | 0 | 7 | 0 | [FEAT-057-sweep.md](FEAT-057-sweep.md) |
+| FEAT-058 | A pull request you can read and answer | Done | 11 | 0 | 0 | 0 | 3 | 8 | [FEAT-058-sweep.md](FEAT-058-sweep.md) |
+| FEAT-059 | Dedicated pull request review workspace | Done | 1 | 0 | 0 | 0 | 1 | 0 | [FEAT-059-sweep.md](FEAT-059-sweep.md) |
+| FEAT-060 | Spagitty, with a face: the brand | Done | 1 | 0 | 0 | 0 | 1 | 0 | [FEAT-060-sweep.md](FEAT-060-sweep.md) |
 | FEAT-061 | Brand guide and interactive showcase | Done | 5 | 5 | 0 | 0 | 0 | 0 | [FEAT-061-sweep.md](FEAT-061-sweep.md) |
 | FEAT-062 | Worktrees management | Done | 5 | 5 | 0 | 0 | 0 | 0 | [FEAT-062-sweep.md](FEAT-062-sweep.md) |
 | FEAT-063 | File history and blame view | Done | 5 | 5 | 0 | 0 | 0 | 0 | [FEAT-063-sweep.md](FEAT-063-sweep.md) |
@@ -158,7 +158,7 @@ not committed.
 | TASK-002 | Test and CI baseline | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-002-sweep.md](TASK-002-sweep.md) |
 | TASK-003 | Make the Tauri layer generic over `Runtime` | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-003-sweep.md](TASK-003-sweep.md) |
 | TASK-004 | Rename the project from GitLord to Spagitty | Done | 5 | 0 | 0 | 0 | 0 | 5 | [TASK-004-sweep.md](TASK-004-sweep.md) |
-| TASK-005 | Branch coverage is below the Amendment 10 floor | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-005-sweep.md](TASK-005-sweep.md) |
+| TASK-005 | Branch coverage is below the Amendment 10 floor | Done | 8 | 0 | 0 | 0 | 1 | 7 | [TASK-005-sweep.md](TASK-005-sweep.md) |
 | TASK-007 | Copy sweep: drop the hand-holding and the Mac notation | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-007-sweep.md](TASK-007-sweep.md) |
 | TASK-008 | The last self-narrating footer | Done | 3 | 0 | 0 | 0 | 0 | 3 | [TASK-008-sweep.md](TASK-008-sweep.md) |
 | TASK-009 | The interface stops naming its own work items | Done | 4 | 0 | 0 | 0 | 0 | 4 | [TASK-009-sweep.md](TASK-009-sweep.md) |
@@ -188,13 +188,13 @@ not committed.
 | TASK-033 | Restore coverage and platform tests | Done | 1 | 0 | 0 | 0 | 0 | 1 | [TASK-033-sweep.md](TASK-033-sweep.md) |
 | TASK-036 | Use the current shared amendments book | Done | 1 | 0 | 0 | 0 | 0 | 1 | [TASK-036-sweep.md](TASK-036-sweep.md) |
 | TASK-037 | Updates that actually arrive | Done | 9 | 0 | 0 | 0 | 0 | 9 | [TASK-037-sweep.md](TASK-037-sweep.md) |
-| TASK-038 | Settings that stop lecturing | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-038-sweep.md](TASK-038-sweep.md) |
-| TASK-039 | One colour system in every dialog | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-039-sweep.md](TASK-039-sweep.md) |
+| TASK-038 | Settings that stop lecturing | Done | 10 | 0 | 0 | 0 | 1 | 9 | [TASK-038-sweep.md](TASK-038-sweep.md) |
+| TASK-039 | One colour system in every dialog | Done | 10 | 0 | 0 | 0 | 1 | 9 | [TASK-039-sweep.md](TASK-039-sweep.md) |
 | TASK-040 | The macOS download says what it is | Done | 11 | 0 | 0 | 0 | 0 | 11 | [TASK-040-sweep.md](TASK-040-sweep.md) |
 | TASK-041 | The frame stops competing with the work | Done | 13 | 0 | 0 | 0 | 0 | 13 | [TASK-041-sweep.md](TASK-041-sweep.md) |
 | TASK-042 | One control scale, and a window that knows its platform | Done | 12 | 0 | 0 | 0 | 0 | 12 | [TASK-042-sweep.md](TASK-042-sweep.md) |
-| TASK-044 | Settings stops explaining itself | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-044-sweep.md](TASK-044-sweep.md) |
-| TASK-045 | A rail of five | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-045-sweep.md](TASK-045-sweep.md) |
+| TASK-044 | Settings stops explaining itself | Done | 6 | 0 | 0 | 0 | 3 | 3 | [TASK-044-sweep.md](TASK-044-sweep.md) |
+| TASK-045 | A rail of five | Done | 6 | 0 | 0 | 0 | 3 | 3 | [TASK-045-sweep.md](TASK-045-sweep.md) |
 | TASK-046 | Lists you can read | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-046-sweep.md](TASK-046-sweep.md) |
 | TASK-047 | A commit bar | Done | 5 | 0 | 0 | 0 | 0 | 5 | [TASK-047-sweep.md](TASK-047-sweep.md) |
 | TASK-048 | Commands off the main thread | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-048-sweep.md](TASK-048-sweep.md) |
@@ -220,6 +220,7 @@ not committed.
 | TASK-070 | The plan's file list scrolls, in a card the height of its neighbours | Done | 5 | 0 | 0 | 0 | 0 | 5 | [TASK-070-sweep.md](TASK-070-sweep.md) |
 | TASK-071 | agy is removed | Done | 5 | 0 | 0 | 0 | 0 | 5 | [TASK-071-sweep.md](TASK-071-sweep.md) |
 | TASK-072 | The declared minimum Rust is older than a dependency needs | Done | 2 | 0 | 0 | 0 | 0 | 2 | [TASK-072-sweep.md](TASK-072-sweep.md) |
+| TASK-073 | The sweeps, refreshed and run from a portal | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-073-sweep.md](TASK-073-sweep.md) |
 | BUG-002 | The primary button has no fill | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-002-sweep.md](BUG-002-sweep.md) |
 | BUG-003 | The lane canvas paints over the messages | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-003-sweep.md](BUG-003-sweep.md) |
 | BUG-004 | The packaged Linux app opens a blank window | Fixed | 7 | 0 | 0 | 0 | 0 | 7 | [BUG-004-sweep.md](BUG-004-sweep.md) |
@@ -236,7 +237,7 @@ not committed.
 | BUG-014 | The Conflicts screen says resolving is not built | Fixed | 4 | 0 | 0 | 0 | 0 | 4 | [BUG-014-sweep.md](BUG-014-sweep.md) |
 | BUG-015 | A backend preference list disarms the safe renderer | Fixed | 5 | 0 | 0 | 0 | 0 | 5 | [BUG-015-sweep.md](BUG-015-sweep.md) |
 | BUG-016 | The graph's columns stop at the last commit row | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-016-sweep.md](BUG-016-sweep.md) |
-| BUG-017 | The lens wipes the right column and the bottom of the window | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-017-sweep.md](BUG-017-sweep.md) |
+| BUG-017 | The lens wipes the right column and the bottom of the window | Fixed | 6 | 0 | 0 | 0 | 1 | 5 | [BUG-017-sweep.md](BUG-017-sweep.md) |
 | BUG-018 | A menu cannot be dismissed, and the next one is drawn over it | Fixed | 5 | 0 | 0 | 0 | 0 | 5 | [BUG-018-sweep.md](BUG-018-sweep.md) |
 | BUG-019 | Closing the last tab leaves the repository open | Fixed | 4 | 0 | 0 | 0 | 0 | 4 | [BUG-019-sweep.md](BUG-019-sweep.md) |
 | BUG-020 | The window freezes while the farm plans | Fixed | 7 | 0 | 0 | 0 | 0 | 7 | [BUG-020-sweep.md](BUG-020-sweep.md) |
@@ -247,7 +248,7 @@ not committed.
 | BUG-025 | One completion watcher per run | Fixed | 1 | 0 | 0 | 0 | 0 | 1 | [BUG-025-sweep.md](BUG-025-sweep.md) |
 | BUG-026 | Verification keeps draining and can be stopped | Fixed | 1 | 0 | 0 | 0 | 0 | 1 | [BUG-026-sweep.md](BUG-026-sweep.md) |
 | BUG-027 | Require current evidence before automatic merging | Fixed | 1 | 0 | 0 | 0 | 0 | 1 | [BUG-027-sweep.md](BUG-027-sweep.md) |
-| BUG-028 | Development styles depend on request order | Fixed | 1 | 0 | 0 | 0 | 0 | 1 | [BUG-028-sweep.md](BUG-028-sweep.md) |
+| BUG-028 | Development styles depend on request order | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-028-sweep.md](BUG-028-sweep.md) |
 | BUG-029 | The packaged Linux window is ringed with blurred desktop | Fixed | 8 | 0 | 0 | 0 | 0 | 8 | [BUG-029-sweep.md](BUG-029-sweep.md) |
 | BUG-030 | The toolbar offers what it cannot do, and hides what it can | Fixed | 11 | 0 | 0 | 0 | 0 | 11 | [BUG-030-sweep.md](BUG-030-sweep.md) |
 | BUG-031 | The window opens in the wrong theme, then changes its mind | Fixed | 11 | 0 | 0 | 0 | 0 | 11 | [BUG-031-sweep.md](BUG-031-sweep.md) |

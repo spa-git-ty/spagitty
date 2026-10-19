@@ -386,7 +386,7 @@ of its own.
 | [TASK-070](items/TASK-070-the-plans-file-list-scrolls-in-a-card-the-height-of-its-neighbours.md) | The plan's file list scrolls, in a card the height of its neighbours | 1S | Done |
 | [TASK-071](items/TASK-071-remove-agy.md) | agy is removed | 1K, 1Q, 1R, 1S | Done |
 | [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Done |
-| [TASK-073](items/TASK-073-the-sweeps-refreshed-and-run-from-a-portal.md) | The sweeps, refreshed and run from a portal | — | Open |
+| [TASK-073](items/TASK-073-the-sweeps-refreshed-and-run-from-a-portal.md) | The sweeps, refreshed and run from a portal | — | Done |
 
 ## Skipped identifiers
 

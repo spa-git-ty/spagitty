@@ -2,6 +2,8 @@
 
 # FEAT-057 — Manual sweep
 
+> **Refreshed 2026-10-19 (TASK-073).** TASK-022 took the refracting glass off menus and dialogs. Every ticket here is obsolete; TASK-022's own sweep checks the frost that replaced it.
+
 **Item:** [`agile/items/FEAT-057-liquid-glass.md`](../items/FEAT-057-liquid-glass.md)
 
 **Preconditions for every ticket:** a build of `feature/FEAT-057-liquid-glass`,
@@ -27,7 +29,7 @@ look *at*, not just what to click.
 | 4 | Look closely at the sharpest part of the bend | A faint colour split at the rim. It should read as glass, not as a printing error. |
 | 5 | Look at the middle of the menu, away from the rims | Frosted and still. The bend belongs to the rim; the centre only frosts. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.
 
 ---
 
@@ -43,7 +45,7 @@ look *at*, not just what to click.
 | 4 | Move the window to a second display at a different scale, with the menu open | The ring follows within a frame. |
 | 5 | Repeat at 100% | Unchanged. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.
 
 ---
 
@@ -58,7 +60,7 @@ look *at*, not just what to click.
 | 3 | Close the menu | Unchanged again. |
 | 4 | Maximize the window and repeat | The radius and cast are gone by design when maximized; the edge highlight stays. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.
 
 ---
 
@@ -73,7 +75,7 @@ look *at*, not just what to click.
 | 3 | With the dialog open, raise a menu over it if the dialog offers one | Both panes refract. Neither doubles the other where they overlap. |
 | 4 | Watch the dialog while the menu opens and closes | The dialog does not change appearance. The thickest pane sets the material, and a tie keeps the first. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.
 
 ---
 
@@ -89,7 +91,7 @@ look *at*, not just what to click.
 | 4 | Scroll the graph hard with a menu open, then with none | Note both. A visible difference is expected; an unusable difference is a finding — record the numbers. |
 | 5 | Resize the window with a menu open | The ring keeps up. Some lag is expected; a ring that detaches and lands late is a finding. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.
 
 ---
 
@@ -103,7 +105,7 @@ look *at*, not just what to click.
 | 2 | Switch the theme in Settings → Appearance, with a menu open | The glass takes the new palette. The rim does not stay the old theme's colour. |
 | 3 | In the light theme, check the rim highlight against the pane | Still readable. Thin glass in a light theme is where this reads cheapest. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.
 
 ---
 
@@ -117,4 +119,4 @@ look *at*, not just what to click.
 | 2 | Look for a fringed band anywhere outside a pane | None. That is `feDisplacementMap` reading past the edge of a map, and it would mean the filter region and the maps have come out of step. |
 | 3 | Confirm the refraction happens at all | A WebKit version where `feImage` with a data URI behaves differently would show no bend rather than a wrong one. Say which it is. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refracting glass off menus and dialogs, which now wear a frost.

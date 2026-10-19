@@ -44,4 +44,4 @@
 - **Steps:** Hover Undo and Redo.
 - **Expected:** "Not built yet" on both. Any other button carrying that tooltip
   while it works is the bug this item fixed, returning.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — BUG-030 took Undo and Redo off the toolbar.

@@ -108,7 +108,7 @@ them back is not built yet.
   none does anything when clicked. The panel names the terminal command that
   does it today. A stash you cannot restore is a trap; the screen must not
   pretend otherwise.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-014 built apply, pop and drop; its sweep checks them.
 
 ### SWEEP-1G-11 — An empty stash explains itself
 

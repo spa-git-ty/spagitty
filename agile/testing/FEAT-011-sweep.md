@@ -114,7 +114,7 @@ tests refuse to cover, which is why they are here.
 - **Expected:** Each says what it will do, and each carries "Persisted, not yet
   honoured" with a work item — FEAT-019, FEAT-015, FEAT-020. None of them
   claims to be in effect. Acceptance criterion 4, narrowed to the truth.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-015, FEAT-019 and FEAT-020 made the three toggles do what they say.
 
 ### SWEEP-1K-10 — A hand-edited settings file does not stop the application
 

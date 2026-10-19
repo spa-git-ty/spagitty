@@ -144,4 +144,4 @@ Run the application from this branch. Tester fills the **Result** column.
 | 2 | Without answering it, trigger an action that opens a **confirmation** (e.g. from the command palette) | The prompt is cancelled and **no branch is created**. | The prompt resolves `false`, which its caller's `=== null` guard does not catch. |
 | 3 | Observe | No branch named `false`, no error. | Verify whether a branch is wrongly created. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — BUG-007 is fixed; its own sweep checks the fix.

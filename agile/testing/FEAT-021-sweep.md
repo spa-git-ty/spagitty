@@ -2,6 +2,8 @@
 
 # FEAT-021 — Manual sweep
 
+> **Refreshed 2026-10-19 (TASK-073).** TASK-051 (2026-09-30) folded the four families into one, Pomodoro, in light and dark. Tickets that need several families are obsolete; the rest are checked in Light and Dark.
+
 Test tickets for the themes and the title bar.
 
 **What this is.** Four palette families — Catppuccin, Dracula, Tokyo Night,
@@ -27,7 +29,7 @@ would show up.
 - **Steps:** Look at the title bar.
 - **Expected:** Repository name, branch, licence and version, window buttons.
   No `⌘K`, no `dark`/`light` chip. Acceptance criterion 8.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-043 moved the repository and branch out of the title bar and FEAT-082 redrew it; the chips are still gone.
 
 ### SWEEP-1M-02 — Every family, both modes
 
@@ -38,7 +40,7 @@ would show up.
   reload. The chosen family is marked, and the variant name beside "Theme"
   follows — Latte, Mocha, Alucard, Dracula, Day, Night, Light, Dark.
   Acceptance criteria 1 and 2.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — TASK-051 left one theme family, Pomodoro.
 
 ### SWEEP-1M-03 — The graph follows the theme
 
@@ -55,8 +57,8 @@ would show up.
 ### SWEEP-1M-04 — Every screen follows the theme
 
 - **Priority:** P1
-- **Steps:** Pick the most distinctive theme (Gruvbox dark or Dracula) and visit
-  all twelve screens plus the Clone modal.
+- **Steps:** Choose Dark and visit
+  every screen on the rail plus the Clone modal.
 - **Expected:** No surface still showing the old white or grey — no panel, no
   border, no button, no empty state, no scrollbar area. Anything that does not
   change is a colour hard-coded outside the token system, and worth reporting
@@ -71,13 +73,13 @@ would show up.
 - **Expected:** Each family's swatches are its colours *in the mode currently
   on* — dark swatches in dark mode. Choosing that family produces what the
   swatch showed.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — TASK-051 left one theme family, Pomodoro.
 
 ### SWEEP-1M-06 — The choice survives a restart
 
 - **Priority:** P1
-- **Steps:** Choose Gruvbox dark. Quit Spagitty completely, start it again.
-- **Expected:** Gruvbox dark, from the first frame. Acceptance criterion 3.
+- **Steps:** Choose Dark. Quit Spagitty completely, start it again.
+- **Expected:** Dark, from the first frame. Acceptance criterion 3.
 - **Result:**
 
 ### SWEEP-1M-07 — An old installation keeps its light or dark
@@ -88,12 +90,12 @@ would show up.
   change is in. Start Spagitty.
 - **Expected:** Dark, in Catppuccin. Nobody loses their setting to an upgrade.
   Acceptance criterion 3.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — TASK-051 left one theme family, Pomodoro.
 
 ### SWEEP-1M-08 — The first frame is not a flash of white
 
 - **Priority:** P2
-- **Steps:** With Catppuccin dark chosen, quit and start Spagitty several times,
+- **Steps:** With Dark chosen, quit and start Spagitty several times,
   watching the very first frame.
 - **Expected:** It comes up in a theme, not in white and then a theme. The boot
   values in `src/app.css` are the default family, so the first frame is Latte or
@@ -105,7 +107,7 @@ would show up.
 - **Priority:** P2
 - **Steps:** Quit. Set `spagitty.theme.family` to `solarized` and `spagitty.theme`
   to `chartreuse`. Start Spagitty.
-- **Expected:** It starts, in Catppuccin, light or dark by the system
+- **Expected:** It starts, in Pomodoro, light or dark by the system
   preference. No window with no colours in it. Acceptance criterion 4.
 - **Result:**
 

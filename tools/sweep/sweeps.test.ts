@@ -64,6 +64,17 @@ const BULLETS = `# FEAT-004 — Manual sweep
 - **Expected:** They agree.
 `;
 
+const CHECKS = `# TASK-032 — Manual sweep
+
+## BASE-01 — Release baseline
+
+**Priority:** High. **Preconditions:** Published 0.5.0.
+1. Compare the versions.
+2. Confirm the changelog.
+**Expected:** Matching versions.
+**Pass/fail:** ______
+`;
+
 const PROSE = `<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 # FEAT-059 — Manual Sweep
@@ -129,6 +140,17 @@ describe('parse', () => {
 		expect(first.span).toBe(2);
 		expect(second.line).toBe(-1);
 		expect(second.bulleted).toBe(true);
+	});
+
+	it('reads a check of its own name, with a numbered list and a Pass/fail line', () => {
+		const [only] = parse('TASK-032-sweep.md', CHECKS).tickets;
+		expect(only.id).toBe('BASE-01');
+		expect(only.steps).toBe('1. Compare the versions.\n2. Confirm the changelog.');
+		expect(only.expected).toBe('Matching versions.');
+		expect(only.state).toBe('not-run');
+		const text = write(CHECKS, only, 'Passed, 2026-10-19.');
+		expect(text).toContain('**Pass/fail:** Passed, 2026-10-19.');
+		expect(parse('TASK-032-sweep.md', text).tickets[0].state).toBe('passed');
 	});
 
 	it('reads prose as one ticket', () => {

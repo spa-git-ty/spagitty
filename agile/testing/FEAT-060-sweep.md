@@ -32,3 +32,5 @@ the sections; the checklist below maps to them.
 - It cannot judge whether the identity is *good* — only whether it is
   consistent. If the shape wants a change, that is a new item, not a
   hand-edit of the bytes (the gate-2 drift check refuses hand-edits anyway).
+
+**Result:** Obsolete, 2026-10-19 — FEAT-085 replaced the mark, the palette and the wordmark; its sweep checks the new ones.

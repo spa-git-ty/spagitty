@@ -70,7 +70,7 @@ export interface Sweep {
 /** What a result says, read from its first words. */
 export function stateOf(result: string): State {
 	const text = result.replace(/\*\*/g, '').trim();
-	if (text === '' || text === '—' || text === '-') return 'not-run';
+	if (text === '' || text === '—' || text === '-' || /^_+$/.test(text)) return 'not-run';
 	if (/^obsolete\b/i.test(text)) return 'obsolete';
 	if (/^(failed|fail\b|fails\b|❌)/i.test(text)) return 'failed';
 	if (/^blocked\b/i.test(text)) return 'blocked';
@@ -78,7 +78,7 @@ export function stateOf(result: string): State {
 	if (/^(passed|pass\b|passes\b|ok\b|done\b|✅)/i.test(text)) return 'passed';
 	// What only a test, or a headless browser, has seen is still to be swept.
 	if (
-		/\b(not run|not yet run|owed|unverified|unverifiable|not tried|not looked at|desktop check not run|is checking|covered by|mounted tests?\b|headless)/i.test(
+		/\b(not run|not yet run|owed|unverified|unverifiable|not tried|not looked at|desktop check not run|is checking|covered by|mounted tests?\b|headless|pending)/i.test(
 			text
 		)
 	)
@@ -109,7 +109,7 @@ export function cells(line: string): string[] {
 
 const ROW = /^\s*\|/;
 const SEPARATOR = /^\s*\|[\s:|-]+\|\s*$/;
-const RESULT_LINE = /^(\s*(?:-\s+)?)\*\*Result:\*\*(.*)$/;
+const RESULT_LINE = /^(\s*(?:-\s+)?)\*\*(Result|Pass\/fail):\*\*(.*)$/i;
 /** A bold label and what follows it: `**Steps:** …` or `- **Steps:** …`. */
 const FIELD = /^(\s*)(-\s+)?\*\*([A-Za-z][A-Za-z /]*?):\*\*\s*(.*)$/;
 const HEADING = /^#{1,4}\s/;
@@ -132,7 +132,9 @@ function fieldsOf(lines: string[], from: number, to: number): Map<string, Field>
 		const found = FIELD.exec(lines[at]);
 		if (!found) continue;
 		const label = found[3].toLowerCase();
-		const name = label.startsWith('precondition')
+		const name = label === 'pass/fail'
+			? 'result'
+			: label.startsWith('precondition')
 			? 'preconditions'
 			: label.startsWith('step')
 				? 'steps'
@@ -202,7 +204,10 @@ export function parse(file: string, text: string): Sweep {
 
 	// Sections: `## BUG-006-T1 — Title` with a step table and **Result:**
 	// lines, or `### SWEEP-1F-01 — Title` with bulleted fields.
-	const SECTION = /^#{2,4}\s+((?:FEAT|TASK|BUG)-\d{3}[a-z]?-T\d+|SWEEP-[A-Za-z0-9-]+)\s*[—–-]\s*(.*)$/;
+	// Ticket names: `BUG-006-T1`, `SWEEP-1F-01`, or a check's own, `BASE-01` —
+	// never a work item's bare identifier, which a heading may name.
+	const SECTION =
+		/^#{2,4}\s+((?:FEAT|TASK|BUG)-\d{3}[a-z]?-T\d+|SWEEP-[A-Za-z0-9-]+|(?!(?:FEAT|TASK|BUG)-\d{3}\b)[A-Z][A-Z0-9]*-\d+[a-z]?)\s*[—–-]\s*(.*)$/;
 	for (let index = 0; index < lines.length; index++) {
 		const found = SECTION.exec(lines[index]);
 		if (!found) continue;
@@ -211,6 +216,10 @@ export function parse(file: string, text: string): Sweep {
 		const fields = fieldsOf(lines, index + 1, end);
 		const steps: string[] = [];
 		const expected: string[] = [];
+		// Steps written as a numbered list under the heading, with no label.
+		const listed = fields.has('steps')
+			? []
+			: lines.slice(index + 1, end).filter((line) => /^\d+\.\s/.test(line));
 		for (const line of lines.slice(index + 1, end)) {
 			if (!ROW.test(line) || SEPARATOR.test(line)) continue;
 			const values = cells(line);
@@ -228,7 +237,7 @@ export function parse(file: string, text: string): Sweep {
 			title: found[2].trim(),
 			priority: fields.get('priority')?.text ?? '',
 			preconditions: fields.get('preconditions')?.text ?? '',
-			steps: steps.length > 0 ? steps.join('\n') : (fields.get('steps')?.text ?? ''),
+			steps: steps.length > 0 ? steps.join('\n') : (fields.get('steps')?.text ?? listed.join('\n')),
 			expected: expected.length > 0 ? expected.join('\n') : (fields.get('expected')?.text ?? ''),
 			result: said,
 			state: stateOf(said),
@@ -247,7 +256,7 @@ export function parse(file: string, text: string): Sweep {
 		lines.forEach((line, index) => {
 			if (RESULT_LINE.test(line)) resultAt = index;
 		});
-		const result = resultAt >= 0 ? (RESULT_LINE.exec(lines[resultAt])?.[2] ?? '').trim() : '';
+		const result = resultAt >= 0 ? (RESULT_LINE.exec(lines[resultAt])?.[3] ?? '').trim() : '';
 		const body = lines
 			.filter((line, index) => index !== resultAt && !line.startsWith('<!--') && !line.startsWith('# '))
 			.join('\n')
@@ -308,7 +317,8 @@ export function write(text: string, ticket: Ticket, result: string): string {
 		const found = RESULT_LINE.exec(lines[ticket.line]);
 		if (!found) throw new Error(`${ticket.id}'s result line has moved`);
 		// One line now, however many the result ran over before.
-		lines.splice(ticket.line, Math.max(1, ticket.span), `${found[1]}**Result:**${result ? ` ${result}` : ''}`);
+		// The label stays as it was written: `Result`, or `Pass/fail`.
+		lines.splice(ticket.line, Math.max(1, ticket.span), `${found[1]}**${found[2]}:**${result ? ` ${result}` : ''}`);
 	} else if (ticket.shape === 'document') {
 		while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
 		lines.push('', `**Result:**${result ? ` ${result}` : ''}`, '');

@@ -2,7 +2,7 @@
 
 # TASK-073 — The sweeps, refreshed and run from a portal
 
-**Status:** Open — the portal is built on `release/3.4.0`; the refresh of the sweep documents is under way.
+**Status:** Done — on `release/3.4.0`; unmerged. The portal is covered by tests and was driven through its API; the page has not been looked at in a browser (the author is checking it). The refresh read every ticket of the items before the revamp and ran its rules over the rest; the sweeps written since 2026-09-29 were not read ticket by ticket.
 **Branch:** `release/3.4.0`.
 **Screens:** none in the application; `tools/sweep/`, `agile/testing/`.
 **Raised by:** the author, 2026-10-19: "i tried to run sweep test from starting with first document but it felt outdated, so (don't delete them just update them if the sweep element is obsolete or deprecated) and create a document with index to all of them with html portal (maybe small server i can run with one command) to check sweep test done, or record behaviour or attach screen or video".
