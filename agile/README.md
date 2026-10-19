@@ -282,9 +282,9 @@ rather than an audit.
 | [BUG-070](items/BUG-070-local-agents-do-not-get-their-instructions.md) | Local agents do not get their instructions, and some cannot start in Review or Merger | 1R, 1S, 1K | Fixed |
 | [BUG-071](items/BUG-071-a-gemini-agent-gets-bad-request.md) | A Gemini agent from Google AI Studio gets "Bad request" | 1K, 1R, 1S | Fixed |
 | [BUG-072](items/BUG-072-a-remote-agent-with-no-key-is-told-bad-request.md) | A remote agent with no key is told "Bad request", not that its key is missing | 1K, 1R, 1S | Fixed |
-| [BUG-073](items/BUG-073-two-quick-assign-clicks-start-two-agents.md) | Two quick Assign clicks start two agents on one pull request | 1R, 1S | Open |
+| [BUG-073](items/BUG-073-two-quick-assign-clicks-start-two-agents.md) | Two quick Assign clicks start two agents on one pull request | 1R, 1S | Fixed |
 | [BUG-074](items/BUG-074-a-remote-agents-token-limit-is-read-only-between-steps.md) | A remote agent's token limit is read only between steps | 1K, 1R, 1S | Open |
-| [BUG-075](items/BUG-075-a-reply-that-cannot-be-read-is-taken-as-empty.md) | A model's reply that cannot be read is taken as an empty one | 1K, 1R, 1S | Open |
+| [BUG-075](items/BUG-075-a-reply-that-cannot-be-read-is-taken-as-empty.md) | A model's reply that cannot be read is taken as an empty one | 1K, 1R, 1S | Fixed |
 | [BUG-076](items/BUG-076-merger-says-pushed-when-the-push-failed.md) | Merger says *Pushed* when the push failed, and no fetch or push works after it | 1S | Fixed |
 | [BUG-077](items/BUG-077-a-farm-task-merged-in-merger-skips-the-farms-checks.md) | A Farm task merged in Merger skips the Farm's own checks | 1Q, 1S | Fixed |
 | [BUG-078](items/BUG-078-the-attribution-check-refuses-a-person-named-like-an-agent.md) | The attribution check refuses a person whose name an agent shares | — | Fixed |

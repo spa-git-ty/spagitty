@@ -951,6 +951,58 @@ pub fn agents_test_remote(probe: Probe) -> Result<Tested> {
 pub struct AgentsState {
     config: Mutex<()>,
     live: Mutex<HashMap<String, engine::Handle>>,
+    /// Jobs whose assignment is still being set up. Claimed under the same
+    /// lock as the check, so a second start on one job is refused before the
+    /// first is live (BUG-073).
+    starting: Mutex<Vec<(String, Target)>>,
+}
+
+/// A job held while its assignment is set up. Dropping it lets the job go,
+/// on every early return as well as once the handle is live.
+struct Claim<'a> {
+    starting: &'a Mutex<Vec<(String, Target)>>,
+    repo: String,
+    target: Target,
+}
+
+impl Drop for Claim<'_> {
+    fn drop(&mut self) {
+        let mut starting = self.starting.lock().expect("starting lock");
+        if let Some(at) = starting
+            .iter()
+            .position(|(repo, target)| *repo == self.repo && same_job(target, &self.target))
+        {
+            starting.remove(at);
+        }
+    }
+}
+
+impl AgentsState {
+    /// Hold a job for one start, refused while another start holds it or an
+    /// assignment on it is live.
+    fn claim(&self, repo: &str, target: &Target) -> Result<Claim<'_>> {
+        let mut starting = self.starting.lock().expect("starting lock");
+        let live = self.live.lock().expect("assignments lock");
+        let busy = starting
+            .iter()
+            .any(|(r, t)| r == repo && same_job(t, target))
+            || live.values().any(|handle| {
+                let a = handle.snapshot();
+                !a.state.is_over() && a.repo == repo && same_job(&a.target, target)
+            });
+        if busy {
+            return Err(Failure::new(
+                "refused",
+                "An agent is already assigned to this.",
+            ));
+        }
+        starting.push((repo.to_string(), target.clone()));
+        Ok(Claim {
+            starting: &self.starting,
+            repo: repo.to_string(),
+            target: target.clone(),
+        })
+    }
 }
 
 pub fn manage<R: Runtime>(app: &AppHandle<R>) {
@@ -1094,18 +1146,7 @@ pub fn assignment_start<R: Runtime>(
             "This repository does not allow that agent.",
         ));
     }
-    {
-        let live = state.live.lock().expect("assignments lock");
-        if live.values().any(|handle| {
-            let a = handle.snapshot();
-            !a.state.is_over() && a.repo == request.repo && same_job(&a.target, &request.target)
-        }) {
-            return Err(Failure::new(
-                "refused",
-                "An agent is already assigned to this.",
-            ));
-        }
-    }
+    let claim = state.claim(&request.repo, &request.target)?;
 
     let store = store(&app)?;
     let kept = request
@@ -1282,6 +1323,7 @@ pub fn assignment_start<R: Runtime>(
         .lock()
         .expect("assignments lock")
         .insert(id.clone(), handle.clone());
+    drop(claim);
     if limits.tokens.is_some() {
         spawn_spend_keeper(app.clone(), handle);
     }
@@ -1840,6 +1882,46 @@ mod tests {
         };
         assert!(same_job(&merge("feat"), &merge("feat")));
         assert!(!same_job(&merge("feat"), &review(1)));
+    }
+
+    fn review(number: u64) -> Target {
+        Target::Review {
+            host: "github.com".into(),
+            owner: "o".into(),
+            name: "n".into(),
+            number,
+            title: String::new(),
+            base: "a".into(),
+            head: "b".into(),
+            target: "main".into(),
+        }
+    }
+
+    #[test]
+    fn a_second_start_on_one_job_is_refused_while_the_first_is_set_up() {
+        let state = AgentsState::default();
+        let first = state.claim("/r", &review(1)).expect("first start");
+        let second = state.claim("/r", &review(1)).err().expect("second start");
+        assert_eq!(second.message, "An agent is already assigned to this.");
+        // Another pull request, or the same one in another repository, is free.
+        assert!(state.claim("/r", &review(2)).is_ok());
+        assert!(state.claim("/other", &review(1)).is_ok());
+        drop(first);
+    }
+
+    #[test]
+    fn a_start_that_stops_early_leaves_no_claim_behind() {
+        let state = AgentsState::default();
+        let failed = || -> Result<()> {
+            let _claim = state.claim("/r", &review(1))?;
+            Err(Failure::new(
+                "refused",
+                "This repository does not allow that agent.",
+            ))
+        };
+        assert!(failed().is_err());
+        assert!(state.claim("/r", &review(1)).is_ok());
+        assert!(state.starting.lock().unwrap().is_empty());
     }
 
     #[test]

@@ -2,7 +2,7 @@
 
 # BUG-075 — A model's reply that cannot be read is taken as an empty one
 
-**Status:** Open — found by the TASK-063 audit of pull request #52 (2026-10-12).
+**Status:** Fixed — on `release/3.4.0`; unmerged. Covered by unit tests; not tried against a real provider.
 **Screens:** 1K, 1R, 1S.
 **Raised by:** the audit; found by reading `crates/spagitty-core/src/models/http.rs`.
 

@@ -14,6 +14,11 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Assigning an agent twice in quick succession starts one agent.** Two clicks on Assign, or a click and a resume, could each start an agent on the same pull request or merge while the first was still being set up, spending tokens twice. The second is now told *An agent is already assigned to this.*
+- **A model's reply that cannot be read says so.** A reply cut off by the connection, larger than 8 MB, or not text was taken as an empty answer, so the agent reported that the model said nothing. It now says which of the three happened.
+
 ## [3.3.0] - 2026-10-19
 
 ### Added
