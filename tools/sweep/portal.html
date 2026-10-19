@@ -204,7 +204,7 @@
 	<div class="brand">spa<span>git</span>ty · sweeps</div>
 	<div class="totals" id="totals"></div>
 	<div class="spacer"></div>
-	<div class="hint" data-desktop>Paste a screenshot into the ticket you are on · drop files on it · results are written into the sweep documents</div>
+	<div class="hint" data-desktop>Paste or drop screenshots on a ticket · results save into the sweep files</div>
 </header>
 <main>
 	<aside>
@@ -215,14 +215,14 @@
 				<button type="button" data-kind="BUG">Bugs</button>
 				<button type="button" data-kind="TASK">Tasks</button>
 			</div>
-			<input id="search" type="search" placeholder="Find an item, a ticket or a word in its steps" autocomplete="off">
+			<input id="search" type="search" placeholder="Search" autocomplete="off">
 			<select id="show">
-				<option value="todo">Sweeps with tickets not run</option>
-				<option value="all">Every sweep</option>
-				<option value="trouble">Failed or blocked</option>
-				<option value="done">Finished</option>
+				<option value="todo">Still to test</option>
+				<option value="all">All sweeps</option>
+				<option value="trouble">Has problems</option>
+				<option value="done">Done</option>
 			</select>
-			<label><input id="newest" type="checkbox" checked> Newest items first</label>
+			<label><input id="newest" type="checkbox" checked> Newest first</label>
 		</div>
 		<div id="items"></div>
 	</aside>
@@ -233,8 +233,8 @@
 <script>
 	'use strict';
 	const LABEL = {
-		'not-run': 'Not run', passed: 'Passed', failed: 'Failed', blocked: 'Blocked',
-		partial: 'Partly passed', obsolete: 'Obsolete', noted: 'Note'
+		'not-run': 'Not tested', passed: 'Passed', failed: 'Failed', blocked: 'Blocked',
+		partial: 'Partly works', obsolete: 'Outdated', noted: 'Note'
 	};
 	const SETTABLE = ['passed', 'failed', 'blocked', 'partial', 'obsolete', 'not-run'];
 	const ORDER = ['passed', 'partial', 'failed', 'blocked', 'obsolete', 'noted'];
@@ -329,7 +329,7 @@
 						<span class="bar">${bar(count, sweep.tickets.length)}</span>
 					</div>`;
 				})
-				.join('') || '<div class="empty">Nothing matches.</div>';
+				.join('') || '<div class="empty">No matches.</div>';
 	}
 
 	function key(file, id) {
@@ -354,12 +354,12 @@
 		const body = [];
 		if (ticket.preconditions) body.push(`<div class="cell full"><div class="label">Before you start</div><div class="text">${md(ticket.preconditions)}</div></div>`);
 		if (ticket.shape === 'document') {
-			body.push(`<div class="cell full"><div class="label">The sweep</div><div class="text">${md(ticket.steps)}</div></div>`);
+			body.push(`<div class="cell full"><div class="label">What to do</div><div class="text">${md(ticket.steps)}</div></div>`);
 		} else {
 			body.push(`<div class="cell"><div class="label">Steps</div><div class="text">${md(ticket.steps) || '—'}</div></div>`);
 			body.push(`<div class="cell"><div class="label">Expected</div><div class="text">${md(ticket.expected) || '—'}</div></div>`);
 		}
-		body.push(`<div class="cell full"><div class="label">Result now</div><div class="text result-now">${ticket.result ? md(ticket.result) : 'Nothing recorded.'}</div>
+		body.push(`<div class="cell full"><div class="label">Last result</div><div class="text result-now">${ticket.result ? md(ticket.result) : 'Not tested yet.'}</div>
 			${ticket.evidence.length ? `<div class="evidence" style="margin-top:8px">${evidenceHtml(ticket.evidence)}</div>` : ''}</div>`);
 		return `<article class="ticket${isActive ? ' active' : ''}" data-file="${escape(sweep.file)}" data-id="${escape(ticket.id)}" tabindex="-1">
 			<div class="t-head">
@@ -371,12 +371,12 @@
 			</div>
 			<div class="t-body">${body.join('')}</div>
 			<div class="act">
-				<div class="seg">${SETTABLE.map((state) => `<button type="button" data-state="${state}" class="${draft.state === state ? 'on' : ''}"><i class="s-${state}"></i>${state === 'not-run' ? 'Clear' : LABEL[state]}</button>`).join('')}</div>
-				<textarea data-note placeholder="What you saw — what happened, what differed, which machine and theme">${escape(draft.note)}</textarea>
+				<div class="seg">${SETTABLE.map((state) => `<button type="button" data-state="${state}" class="${draft.state === state ? 'on' : ''}"><i class="s-${state}"></i>${state === 'not-run' ? 'Reset' : LABEL[state]}</button>`).join('')}</div>
+				<textarea data-note placeholder="What happened? (optional)">${escape(draft.note)}</textarea>
 				<div class="row">
 					<button type="button" class="btn" data-attach>Attach a file</button>
-					${navigator.mediaDevices?.getDisplayMedia ? `<button type="button" class="btn${recorder && isActive ? ' rec' : ''}" data-record>${recorder && isActive ? '■ Stop recording' : '● Record the screen'}</button>` : ''}
-					<span class="hint" data-desktop>or paste a screenshot here</span>
+					${navigator.mediaDevices?.getDisplayMedia ? `<button type="button" class="btn${recorder && isActive ? ' rec' : ''}" data-record>${recorder && isActive ? '■ Stop recording' : '● Record screen'}</button>` : ''}
+					<span class="hint" data-desktop>or paste a screenshot</span>
 					<span class="spacer"></span>
 					<button type="button" class="btn primary" data-save ${draft.state ? '' : 'disabled'}>Save result</button>
 				</div>
@@ -388,7 +388,7 @@
 		const sweep = data.sweeps.find((one) => one.file === chosen);
 		document.body.classList.toggle('reading', !!sweep);
 		if (!sweep) {
-			$('#sweep').innerHTML = '<div class="empty">Choose a sweep on the left.</div>';
+			$('#sweep').innerHTML = '<div class="empty">Pick a sweep from the list.</div>';
 			return;
 		}
 		const hide = $('#sweep').dataset.hide === 'on';
@@ -400,9 +400,9 @@
 				<h1>${escape(sweep.item)} — ${md(sweep.title)}</h1>
 				${sweep.status ? `<span class="badge">${escape(sweep.status)}</span>` : ''}
 			</div>
-			<div class="path">agile/testing/${escape(sweep.file)} · ${sweep.tickets.length} tickets · ${count.passed} passed · ${count.failed} failed · ${count['not-run']} not run</div>
-			<div class="tools"><label class="hint"><input type="checkbox" id="hide" ${hide ? 'checked' : ''}> Only tickets not run</label></div>
-			${tickets.map((ticket) => ticketHtml(sweep, ticket)).join('') || '<div class="empty">Every ticket here has a result.</div>'}`;
+			<div class="path">agile/testing/${escape(sweep.file)} · ${sweep.tickets.length} tickets · ${count.passed} passed · ${count.failed} failed · ${count['not-run']} not tested</div>
+			<div class="tools"><label class="hint"><input type="checkbox" id="hide" ${hide ? 'checked' : ''}> Hide tested tickets</label></div>
+			${tickets.map((ticket) => ticketHtml(sweep, ticket)).join('') || '<div class="empty">Every ticket here is tested.</div>'}`;
 	}
 
 	function choose(file) {
@@ -450,7 +450,7 @@
 		const draft = drafts.get(key(file, id)) ?? { state: null, note: '' };
 		drafts.set(key(file, id), draft);
 		renderSweep();
-		toast(`Kept ${name}. Save a result to link it.`);
+		toast(`Attached ${name}. Save to add it to the result.`);
 	}
 
 	async function save(file, id) {
@@ -473,7 +473,7 @@
 		renderTotals();
 		renderItems();
 		renderSweep();
-		toast(`${id}: ${LABEL[said.ticket.state]}, written to ${file}.`);
+		toast(`Saved: ${id} — ${LABEL[said.ticket.state]}`);
 	}
 
 	async function record(file, id) {
@@ -485,7 +485,7 @@
 		try {
 			stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
 		} catch {
-			toast('Recording was not started.');
+			toast('Could not start recording.');
 			return;
 		}
 		const parts = [];
@@ -498,14 +498,14 @@
 			try {
 				await upload(file, id, new Blob(parts, { type: 'video/webm' }), 'recording.webm');
 			} catch (error) {
-				toast(`The recording was not kept: ${error.message}`);
+				toast(`Could not save the recording: ${error.message}`);
 			}
 		};
 		// Stopping from the browser's own bar stops it here too.
 		stream.getVideoTracks()[0].addEventListener('ended', () => recorder?.state === 'recording' && recorder.stop());
 		recorder.start(1000);
 		renderSweep();
-		toast('Recording. Press Stop recording when done.');
+		toast('Recording… press Stop when done.');
 	}
 
 	$('#items').addEventListener('click', (event) => {
