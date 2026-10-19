@@ -28,6 +28,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Fixed
 
 - **Dragging rows into place works on Windows**: the Rail in Settings, the rebase plan, Hooks' blocks and the Graph's column headings. Dropping did nothing there before; Alt with the arrows was the only way.
+- **Starting a farm:** the issue search box is one field again, and the steps at the top show their numbers in rings instead of spilling them under tiny dots.
 - **A fetch or push no longer leaves git's line beside the branch.** It used to stay there, two hashes and an arrow, until the next one. A notice now says what happened in words, such as *Pushed chore/fix-sonar-scan*, and goes away. A failed fetch or push still says why beside the branch.
 
 ### Downloads

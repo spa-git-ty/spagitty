@@ -16,7 +16,7 @@
 		{@const n = i + 1}
 		<li class:done={n < current} class:current={n === current} aria-current={n === current ? 'step' : undefined}>
 			{#if i > 0}<span class="bar" class:lit={n <= current} aria-hidden="true"></span>{/if}
-			<span class="dot">{#if n < current}<Icon name="check" size="0.9em" weight={2.6} />{:else}{n}{/if}</span>
+			<span class="marker">{#if n < current}<Icon name="check" size="0.9em" weight={2.6} />{:else}{n}{/if}</span>
 			<span class="label">{label}</span>
 		</li>
 	{/each}
@@ -53,7 +53,12 @@
 		background: var(--ok);
 	}
 
-	.dot {
+	/*
+	 * `marker`, not `dot`: farm.css's `.farm-journey .dot` is the 7px status
+	 * dot, and it won over this one, so each step's number spilled out under a
+	 * dot too small to hold it (BUG-093).
+	 */
+	.marker {
 		width: 28px;
 		height: 28px;
 		box-sizing: border-box;
@@ -69,7 +74,7 @@
 		color: var(--ink);
 	}
 
-	.done .dot {
+	.done .marker {
 		color: var(--ok);
 		border: 2px solid var(--ok);
 	}
@@ -79,7 +84,7 @@
 		font-weight: 600;
 	}
 
-	.current .dot {
+	.current .marker {
 		color: var(--accent);
 		border: 2px solid var(--accent);
 		box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 18%, transparent);

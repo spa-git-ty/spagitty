@@ -301,6 +301,7 @@ rather than an audit.
 | [BUG-090](items/BUG-090-pipelines-screen-does-not-match-its-artboards.md) | Pipelines does not look like its artboards, and Preview takes half a minute | 1Y | Fixed |
 | [BUG-091](items/BUG-091-git-s-push-line-stays-beside-the-branch.md) | git's push line stays beside the branch, hashes and all | chrome | Fixed |
 | [BUG-092](items/BUG-092-nothing-can-be-dragged-into-place-on-windows.md) | Nothing can be dragged into place on Windows | Settings, 1E, 1X, 1A | Fixed |
+| [BUG-093](items/BUG-093-the-farm-wizard-s-search-box-and-step-markers-are-broken.md) | The farm wizard's search box and step markers are broken | 1Q | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -419,6 +420,7 @@ missing documents are not listed here, and fails again if a row here is stale.
 | BUG-090 | plan, automated, sweep | Fixed in one session from a report; covered by the change. Verification records owed. |
 | BUG-091 | plan, automated, sweep | Fixed in one session from a report; covered by `network/plain.test.ts` and the store tests. Verification records owed. |
 | BUG-092 | plan, automated, sweep | Fixed in one session from a report; covered by the Rail and rebase plan drag tests. The sweep on Windows, with a real pointer, is owed. |
+| BUG-093 | plan, automated, sweep | Fixed in one session from a screenshot; a CSS precedence fix the test DOM cannot see. The sweep is owed: the author is checking it. |
 | FEAT-148 | plan, automated, sweep | Built in one session from a request, with no plan written ahead. Covered by `settings/home-section.test.ts`, the layout and screen cases in `home/home.test.ts` and `settings.rs`. The sweep is owed: the author is checking it. |
 | FEAT-149 | plan, automated, sweep | Built in one session from a request, with no plan written ahead. Covered by `files/kind.test.ts`. The sweep, in light and dark, is owed: the author is checking it. |
 | FEAT-150 | plan, automated, sweep | Built in one session from a request, with no plan written ahead. Covered by the click and double-click cases in `files/open.test.ts`. The sweep across the screens is owed: the author is checking it. |
