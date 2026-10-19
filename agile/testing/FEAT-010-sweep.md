@@ -2,6 +2,8 @@
 
 # FEAT-010 — Manual sweep
 
+> **Refreshed 2026-10-19 (TASK-073).** This sweep checked Pull requests before it could reach a host. FEAT-017 connected accounts, so most of it is obsolete; the rail and the way to Settings still apply.
+
 Test tickets for the Pull requests screen (1H).
 
 **What this screen is in this pass.** The layout and an honest empty state. No
@@ -32,7 +34,7 @@ no network client. Most of these tickets are therefore about what the screen
   pull requests from whichever service hosts the repository, and says connecting
   one is not built yet. It does **not** say "not built yet" about the screen —
   the screen works; the account does not. Acceptance criterion 1.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.
 
 ### SWEEP-1H-03 — The way to Settings → Accounts
 
@@ -50,7 +52,7 @@ no network client. Most of these tickets are therefore about what the screen
 - **Expected:** "Pull request", "account", "hosting service" — and no brand:
   no GitHub, GitLab, Bitbucket, Gitea, Forgejo or Azure DevOps. Acceptance
   criterion 4.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.
 
 ### SWEEP-1H-05 — The layout is the design's
 
@@ -62,7 +64,7 @@ no network client. Most of these tickets are therefore about what the screen
   the second dashed, detail panel to the side.
 - **Expected:** As above. Re-run this ticket for real under FEAT-017.
   Acceptance criterion 3.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.
 
 ### SWEEP-1H-06 — The footer's promise
 
@@ -71,7 +73,7 @@ no network client. Most of these tickets are therefore about what the screen
 - **Expected:** It states plainly that Spagitty does not talk to any hosting
   service, that there is no network client in the build, and that this screen
   makes no request.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.
 
 ### SWEEP-1H-07 — It works with networking off
 
@@ -81,7 +83,7 @@ no network client. Most of these tickets are therefore about what the screen
   and use the Pull requests screen.
 - **Expected:** Identical behaviour. No spinner, no timeout, no error, no delay.
   Acceptance criterion 2. Re-enable networking afterwards.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.
 
 ### SWEEP-1H-08 — Nothing leaves the machine
 
@@ -92,7 +94,7 @@ no network client. Most of these tickets are therefore about what the screen
 - **Expected:** No traffic from the Spagitty process at all. This is the ticket
   that actually proves the non-scope; the automated test proves only that no
   client is linked in.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.
 
 ### SWEEP-1H-09 — The screen survives being visited repeatedly
 
@@ -100,4 +102,4 @@ no network client. Most of these tickets are therefore about what the screen
 - **Steps:** Move between Pull requests and other screens ten times.
 - **Expected:** The same empty state every time, no accumulation, no flicker of
   a list that is not there.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-017 connected accounts, and Pull requests reads from the host; the screen this checked, with no network client, is gone.

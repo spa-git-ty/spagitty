@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "tauri": "tauri",
-    "ext": "bun tools/extensions/cli.ts"
+    "ext": "bun tools/extensions/cli.ts",
+    "sweep": "bun tools/sweep/serve.ts",
+    "sweep:index": "bun tools/sweep/index.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

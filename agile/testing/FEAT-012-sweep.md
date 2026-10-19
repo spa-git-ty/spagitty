@@ -65,7 +65,7 @@ account.
 
 - **Priority:** P1
 - **Steps:** After a successful clone, press **Open it**.
-- **Expected:** The modal closes, the repository opens, the title bar names it,
+- **Expected:** The modal closes, the repository opens, its tab names it,
   the graph paints its history, and it appears in **All repositories**.
   Acceptance criterion 7.
 - **Result:**

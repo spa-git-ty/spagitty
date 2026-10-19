@@ -58,7 +58,7 @@ webview says 1.3636.
 | 4 | Open a menu near the bottom edge, and near the right edge | Measured and moved inside the window as before, with the frost following it. |
 | 5 | Switch to another theme, including a light one, and repeat step 1 | The glass reads as glass in each. The shadow is the theme's ink, not black. |
 
-**Result:**
+**Result:** Obsolete, 2026-10-19 — TASK-022 took the refraction off menus; the frost stays, and T1, T2, T4 to T6 still apply.
 
 ---
 

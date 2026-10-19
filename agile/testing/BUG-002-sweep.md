@@ -38,13 +38,13 @@ state.
   accent-coloured on hover. The fix must not have taken the border off these.
 - **Result:**
 
-### SWEEP-002-03 — All eight palettes
+### SWEEP-002-03 — Light and dark
 
 - **Priority:** P1
-- **Steps:** Settings → Appearance. Step through all four families in light and
-  dark, checking the Commit button each time.
-- **Expected:** The label is readable on the fill in every one of the eight. Any
-  palette where it disappears again is the same bug in a different disguise.
+- **Steps:** Settings → Appearance. Switch between Light and Dark, checking the
+  Commit button each time. (There were eight palettes; TASK-051 left one family.)
+- **Expected:** The label is readable on the fill in both. Any palette where it
+  disappears again is the same bug in a different disguise.
 - **Result:**
 
 ### SWEEP-002-04 — Hover and disabled

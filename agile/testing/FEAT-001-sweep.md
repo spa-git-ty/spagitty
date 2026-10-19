@@ -24,7 +24,7 @@ development is built by the script recorded in `docs/testing.md`.
 - **Steps:**
   1. Press **Open repository…** in the nav rail footer.
   2. Choose the fixture repository.
-- **Expected:** The title bar shows the repository name and the current branch.
+- **Expected:** The repository's tab carries its name and the toolbar its current branch.
   Rows appear progressively rather than all at once after a pause. The rail's
   Graph count rises as rows arrive and settles on the total.
 - **Result:**
@@ -154,7 +154,7 @@ development is built by the script recorded in `docs/testing.md`.
 
 - **Priority:** P2
 - **Preconditions:** Fixture open.
-- **Steps:** Toggle the theme chip in the title bar; read every surface.
+- **Steps:** Switch between Light and Dark in Settings → Appearance; read every surface.
 - **Expected:** Text stays legible against its background in both themes. Lane
   colours stay tellable apart. The selected row and the active rail item are
   still obviously the selected ones.

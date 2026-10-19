@@ -6,7 +6,7 @@
 
 | Ticket | Preconditions | Steps | Expected result | Priority | Result |
 | --- | --- | --- | --- | --- | --- |
-| SWEEP-BUG070-01 | Claude Code, Codex, Cursor, Oh My Pi, agy and a custom agent installed (Windows with npm shims) | Settings › Agents, press *Test* on each | Each reports ok after reading the test file | P1 | Not run. |
+| SWEEP-BUG070-01 | Claude Code, Codex, Cursor, Oh My Pi and a custom agent installed (agy: no longer supported, TASK-071) (Windows with npm shims) | Settings › Agents, press *Test* on each | Each reports ok after reading the test file | P1 | Not run. |
 | SWEEP-BUG070-02 | As above | Assign each to one Review step on a pull request | The step finishes with findings that show the agent had the instructions | P1 | Not run. |
 | SWEEP-BUG070-03 | As above | Assign each to one Merger step | The step finishes with a plan | P1 | Not run. |
 | SWEEP-BUG070-04 | macOS and Linux | Repeat 01 to 03 | The same | P1 | Not run. |

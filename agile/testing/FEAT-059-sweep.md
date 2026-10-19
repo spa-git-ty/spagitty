@@ -21,3 +21,4 @@
 15. Toggle mode to Developer View -> draft options switch to thread reply inputs and resolve buttons.
 16. Click "Back" -> returns cleanly to Pull requests list view.
 
+**Result:** Obsolete, 2026-10-19 — FEAT-116 moved reviewing to Review and FEAT-094 rebuilt reading a pull request; their sweeps check what this did.

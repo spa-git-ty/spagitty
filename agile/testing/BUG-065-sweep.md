@@ -2,13 +2,13 @@
 
 # BUG-065 — Manual and live checks
 
-1. On Windows, detect Codex, `omp` and `agy` with their normal installations.
+1. On Windows, detect Codex and `omp` with their normal installations (agy: no longer supported, TASK-071).
 2. Settings → Agents → Codex: test with the default sandbox; a startup failure
    must show its error. Select Full Access, test again, restart and check persistence.
 3. Assign a pull request to Codex. Complete a file gate: its viewed tick should
    appear. Stop during another file: it must stay unticked. Untick a completed
    file and reload: it must stay unticked. Move the PR head: stale work must not tick it.
-4. Test and assign OMP and agy. Confirm headless print mode exits after each step
+4. Test and assign OMP. Confirm headless print mode exits after each step
    and cancellation stops the child process.
 
 ## Live results — Windows, 2026-10-08

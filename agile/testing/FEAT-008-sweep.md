@@ -129,7 +129,7 @@ git merge theirs        # expected to stop
      `git status --porcelain > /tmp/after; diff /tmp/before /tmp/after`.
 - **Expected:** The index mtime is unchanged, there is no lock file, and the
   status output is identical. Acceptance criterion 8.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-016 made Conflicts write: take a side, resolve a region, edit, continue and abort.
 
 ### SWEEP-1D-10 — The write actions are disabled and say why
 
@@ -138,7 +138,7 @@ git merge theirs        # expected to stop
 - **Expected:** Both are visibly disabled and their tooltips name FEAT-016 and
   the reason. Neither can be clicked into doing anything. The footer states
   permanently that this screen only reads.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-016 made Conflicts write: take a side, resolve a region, edit, continue and abort.
 
 ### SWEEP-1D-11 — Paging between files
 

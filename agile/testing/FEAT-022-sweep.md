@@ -72,7 +72,7 @@ and commits from more than one author. Spagitty open on the Graph screen.
 
 - **Priority:** P1
 - **Steps:** Right-click a commit → Checkout this commit.
-- **Expected:** It confirms first. Afterwards the header and the title bar show
+- **Expected:** It confirms first. Afterwards the header and the toolbar show
   a detached state rather than a branch name, and the graph reflects the new
   HEAD.
 - **Result:**
@@ -114,7 +114,7 @@ and commits from more than one author. Spagitty open on the Graph screen.
   makes clear which branch moves — the one you dragged, onto the one you
   dropped on. Fast-forward is disabled with a reason when it is not possible.
   Acceptance criterion 3.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — TASK-056: dropping a branch on another opens Merger; its sweep checks that.
 
 ### SWEEP-22-10 — Dropping a branch on itself does nothing
 

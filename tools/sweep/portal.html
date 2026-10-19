@@ -1,0 +1,612 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sweeps · Spagitty</title>
+<style>
+	/* The Pomodoro palette from docs/branding.md, light and dark. */
+	:root {
+		--bg: #fbf7f1;
+		--panel: #f3ece2;
+		--card: #fffdf9;
+		--ink: #2a1f1a;
+		--muted: #7a6a60;
+		--line: #e3d8ca;
+		--accent: #b8321f;
+		--ok: #2f7d45;
+		--danger: #b3124a;
+		--warn: #9a5b00;
+		--grey: #8c8178;
+		--partial: #6c4fa3;
+		--soft: rgba(184, 50, 31, 0.08);
+		color-scheme: light;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #1c1613;
+			--panel: #161110;
+			--card: #221b17;
+			--ink: #f3e9dd;
+			--muted: #a8988c;
+			--line: #3a2f29;
+			--accent: #f2715a;
+			--ok: #7cc68d;
+			--danger: #ff5c7c;
+			--warn: #f0b54a;
+			--grey: #8f847b;
+			--partial: #a58bd8;
+			--soft: rgba(242, 113, 90, 0.1);
+			color-scheme: dark;
+		}
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--ink);
+		font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+		height: 100vh;
+		display: grid;
+		grid-template-rows: auto 1fr;
+	}
+	code { font: 12.5px ui-monospace, 'Cascadia Code', Menlo, monospace; background: var(--soft); padding: 0 4px; border-radius: 4px; }
+	button, input, select, textarea { font: inherit; color: inherit; }
+	button { cursor: pointer; }
+
+	header.top {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 10px 16px;
+		border-bottom: 1px solid var(--line);
+		background: var(--panel);
+		flex-wrap: wrap;
+	}
+	.brand { font-weight: 700; letter-spacing: 0.2px; }
+	.brand span { color: var(--accent); }
+	.totals { display: flex; gap: 6px; flex-wrap: wrap; }
+	.chip {
+		display: inline-flex; align-items: center; gap: 5px;
+		border: 1px solid var(--line); border-radius: 999px;
+		padding: 1px 9px; font-size: 12px; white-space: nowrap; background: var(--card);
+	}
+	.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+	.passed i, .s-passed { background: var(--ok); }
+	.failed i, .s-failed { background: var(--danger); }
+	.blocked i, .s-blocked { background: var(--warn); }
+	.partial i, .s-partial { background: var(--partial); }
+	.obsolete i, .s-obsolete { background: var(--grey); }
+	.not-run i, .s-not-run { background: transparent; border: 1px solid var(--muted); }
+	.noted i, .s-noted { background: var(--muted); }
+	.spacer { flex: 1; }
+	.hint { color: var(--muted); font-size: 12px; }
+
+	main { display: grid; grid-template-columns: 340px 1fr; min-height: 0; }
+	aside {
+		border-right: 1px solid var(--line);
+		display: grid;
+		grid-template-rows: auto 1fr;
+		min-height: 0;
+		background: var(--panel);
+	}
+	.filters { padding: 10px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); }
+	.filters input, .filters select {
+		width: 100%; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+	}
+	.filters label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+	.filters input[type='checkbox'] { width: auto; }
+	.kinds { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--line); }
+	.kinds button { flex: 1; border: 0; border-radius: 6px; padding: 4px 6px; background: none; color: var(--muted); font-size: 13px; }
+	.kinds button.on { background: var(--card); color: var(--ink); font-weight: 600; }
+	#items { overflow: auto; padding: 4px 0; }
+	.item {
+		display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+		padding: 7px 12px; cursor: pointer; border-left: 3px solid transparent;
+	}
+	.item:hover { background: var(--soft); }
+	.item.on { background: var(--soft); border-left-color: var(--accent); }
+	.item .id { font: 600 12px ui-monospace, Menlo, monospace; }
+	.item .count { font-size: 12px; color: var(--muted); text-align: right; }
+	.item .name { grid-column: 1 / -1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.bar { grid-column: 1 / -1; display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: var(--line); }
+	.bar span { display: block; height: 100%; }
+
+	section#sweep { overflow: auto; padding: 16px 20px 60px; min-width: 0; }
+	.empty { color: var(--muted); padding: 40px; text-align: center; }
+	.sweep-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+	.sweep-head h1 { font-size: 20px; margin: 0; }
+	.path { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+	.tools { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+
+	.ticket {
+		background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+		margin-bottom: 14px; overflow: hidden;
+	}
+	.ticket.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--soft); }
+	.ticket.drag { outline: 2px dashed var(--accent); outline-offset: -6px; }
+	.t-head { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+	.t-head .tid { font: 600 12.5px ui-monospace, Menlo, monospace; }
+	.t-head .ttitle { font-weight: 600; }
+	.badge { font-size: 11px; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+	.state { font-size: 11px; padding: 1px 8px; border-radius: 6px; color: #fff; }
+	.state.s-not-run { color: var(--muted); }
+	.t-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+	.t-body .cell { padding: 10px 14px; min-width: 0; }
+	.t-body .cell + .cell { border-left: 1px solid var(--line); }
+	.t-body .full { grid-column: 1 / -1; border-top: 1px solid var(--line); border-left: 0 !important; }
+	.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+	.text { white-space: pre-wrap; overflow-wrap: anywhere; }
+	.result-now { color: var(--muted); }
+	.act { padding: 10px 14px; border-top: 1px solid var(--line); display: grid; gap: 8px; background: var(--panel); }
+	.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+	.seg button {
+		border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 4px 10px; font-size: 13px;
+		display: inline-flex; gap: 6px; align-items: center;
+	}
+	.seg button i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+	.seg button.on { border-color: var(--ink); font-weight: 600; }
+	textarea {
+		width: 100%; min-height: 54px; resize: vertical; padding: 7px 9px;
+		border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+	}
+	.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+	.btn { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 12px; }
+	.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+	.btn.rec { border-color: var(--danger); color: var(--danger); }
+	.btn:disabled { opacity: 0.5; cursor: default; }
+	.evidence { display: flex; gap: 8px; flex-wrap: wrap; }
+	.evidence a { display: block; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+	.evidence img, .evidence video { display: block; max-width: 220px; max-height: 140px; }
+	.evidence .file { padding: 6px 10px; font-size: 12px; }
+	.toast {
+		position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+		background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 13px;
+		opacity: 0; transition: opacity 0.2s; pointer-events: none; max-width: 80vw;
+	}
+	.toast.show { opacity: 1; }
+	.back { display: none; }
+	@media (max-width: 900px) {
+		.t-body { grid-template-columns: 1fr; }
+		.t-body .cell + .cell { border-left: 0; border-top: 1px solid var(--line); }
+	}
+	/* A phone: one thing at a time. The list, or the sweep chosen from it,
+	   and the phone's own Back goes from the sweep to the list. */
+	@media (max-width: 700px) {
+		body { height: 100dvh; }
+		header.top { gap: 8px; padding: 8px 12px; }
+		header.top .hint { display: none; }
+		.chip { font-size: 11px; padding: 0 7px; }
+		main { grid-template-columns: 1fr; }
+		aside { border-right: 0; }
+		body.reading aside, body:not(.reading) section#sweep { display: none; }
+		body.reading .totals { display: none; }
+		section#sweep { padding: 10px 12px 60px; }
+		.back {
+			display: inline-flex; align-items: center; gap: 4px; margin: 0 0 10px -4px;
+			border: 0; background: none; color: var(--accent); font-weight: 600; padding: 6px 4px;
+		}
+		.sweep-head h1 { font-size: 17px; }
+		.item { padding: 10px 14px; }
+		.seg button { padding: 7px 12px; }
+		.btn { padding: 8px 14px; }
+		.evidence img, .evidence video { max-width: 100%; }
+	}
+	/* A touch screen has nothing to paste a screenshot from or drop files with. */
+	@media (hover: none) {
+		[data-desktop] { display: none; }
+	}
+</style>
+</head>
+<body>
+<header class="top">
+	<div class="brand">spa<span>git</span>ty · sweeps</div>
+	<div class="totals" id="totals"></div>
+	<div class="spacer"></div>
+	<div class="hint" data-desktop>Paste or drop screenshots on a ticket · results save into the sweep files</div>
+</header>
+<main>
+	<aside>
+		<div class="filters">
+			<div class="kinds" id="kinds" role="group" aria-label="Kind of item">
+				<button type="button" class="on" data-kind="">All</button>
+				<button type="button" data-kind="FEAT">Features</button>
+				<button type="button" data-kind="BUG">Bugs</button>
+				<button type="button" data-kind="TASK">Tasks</button>
+			</div>
+			<input id="search" type="search" placeholder="Search" autocomplete="off">
+			<select id="show">
+				<option value="todo">Still to test</option>
+				<option value="all">All sweeps</option>
+				<option value="trouble">Has problems</option>
+				<option value="done">Done</option>
+			</select>
+			<label><input id="newest" type="checkbox" checked> Newest first</label>
+		</div>
+		<div id="items"></div>
+	</aside>
+	<section id="sweep"><div class="empty">Loading…</div></section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+	'use strict';
+	const LABEL = {
+		'not-run': 'Not tested', passed: 'Passed', failed: 'Failed', blocked: 'Blocked',
+		partial: 'Partly works', obsolete: 'Outdated', noted: 'Note'
+	};
+	const SETTABLE = ['passed', 'failed', 'blocked', 'partial', 'obsolete', 'not-run'];
+	const ORDER = ['passed', 'partial', 'failed', 'blocked', 'obsolete', 'noted'];
+	const COLOR = {
+		passed: 'var(--ok)', failed: 'var(--danger)', blocked: 'var(--warn)',
+		partial: 'var(--partial)', obsolete: 'var(--grey)', noted: 'var(--muted)'
+	};
+
+	let data = null;
+	let chosen = null;
+	let active = null; // { file, id } of the ticket pasted and dropped into
+	const drafts = new Map(); // `${file}#${id}` → { state, note }
+	let recorder = null;
+
+	const $ = (selector) => document.querySelector(selector);
+	const escape = (text) =>
+		String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+	/** Just enough markdown for steps: code, bold, links shown as their text. */
+	function md(text) {
+		return escape(text)
+			.replace(/\\\|/g, '|')
+			.replace(/`([^`]+)`/g, '<code>$1</code>')
+			.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+			.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<em>$2</em>')
+			.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+			.replace(/&lt;br&gt;/g, '\n');
+	}
+
+	function toast(text) {
+		const element = $('#toast');
+		element.textContent = text;
+		element.classList.add('show');
+		clearTimeout(toast.timer);
+		toast.timer = setTimeout(() => element.classList.remove('show'), 2600);
+	}
+
+	function tally(tickets) {
+		const out = { 'not-run': 0, passed: 0, failed: 0, blocked: 0, partial: 0, obsolete: 0, noted: 0 };
+		for (const ticket of tickets) out[ticket.state] += 1;
+		return out;
+	}
+
+	function bar(count, total) {
+		return ORDER.filter((state) => count[state] > 0)
+			.map((state) => `<span style="width:${(count[state] / total) * 100}%;background:${COLOR[state]}"></span>`)
+			.join('');
+	}
+
+	function renderTotals() {
+		const count = tally(data.sweeps.flatMap((sweep) => sweep.tickets));
+		$('#totals').innerHTML = ['passed', 'failed', 'blocked', 'partial', 'obsolete', 'not-run']
+			.map((state) => `<span class="chip ${state}"><i></i>${LABEL[state]} ${count[state]}</span>`)
+			.join('');
+	}
+
+	function matches(sweep, words) {
+		if (words.length === 0) return true;
+		const hay = [sweep.item, sweep.title, sweep.heading, ...sweep.tickets.flatMap((t) => [t.id, t.title, t.steps, t.expected])]
+			.join(' ')
+			.toLowerCase();
+		return words.every((word) => hay.includes(word));
+	}
+
+	function shown() {
+		const words = $('#search').value.toLowerCase().split(/\s+/).filter(Boolean);
+		const show = $('#show').value;
+		const kind = $('#kinds .on')?.dataset.kind ?? '';
+		let list = data.sweeps.filter((sweep) => (!kind || sweep.item.startsWith(`${kind}-`)) && matches(sweep, words));
+		list = list.filter((sweep) => {
+			const count = tally(sweep.tickets);
+			if (show === 'todo') return count['not-run'] + count.noted > 0;
+			if (show === 'trouble') return count.failed + count.blocked > 0;
+			if (show === 'done') return count['not-run'] + count.noted === 0;
+			return true;
+		});
+		if ($('#newest').checked) list = [...list].reverse();
+		return list;
+	}
+
+	function renderItems() {
+		const list = shown();
+		$('#items').innerHTML =
+			list
+				.map((sweep) => {
+					const count = tally(sweep.tickets);
+					const done = sweep.tickets.length - count['not-run'] - count.noted;
+					return `<div class="item${chosen === sweep.file ? ' on' : ''}" data-file="${escape(sweep.file)}">
+						<span class="id">${escape(sweep.item)}</span>
+						<span class="count">${done}/${sweep.tickets.length}</span>
+						<span class="name" title="${escape(sweep.title)}">${md(sweep.title)}</span>
+						<span class="bar">${bar(count, sweep.tickets.length)}</span>
+					</div>`;
+				})
+				.join('') || '<div class="empty">No matches.</div>';
+	}
+
+	function key(file, id) {
+		return `${file}#${id}`;
+	}
+
+	function evidenceHtml(links) {
+		return links
+			.map((link) => {
+				const url = '/' + link.split('/').map(encodeURIComponent).join('/');
+				const name = escape(link.split('/').pop());
+				if (/\.(png|jpe?g|gif|webp)$/i.test(link)) return `<a href="${url}" target="_blank" title="${name}"><img src="${url}" alt="${name}"></a>`;
+				if (/\.(webm|mp4|mov)$/i.test(link)) return `<a title="${name}"><video src="${url}" controls preload="metadata"></video></a>`;
+				return `<a href="${url}" target="_blank"><div class="file">${name}</div></a>`;
+			})
+			.join('');
+	}
+
+	function ticketHtml(sweep, ticket) {
+		const draft = drafts.get(key(sweep.file, ticket.id)) ?? { state: null, note: '' };
+		const isActive = active && active.file === sweep.file && active.id === ticket.id;
+		const body = [];
+		if (ticket.preconditions) body.push(`<div class="cell full"><div class="label">Before you start</div><div class="text">${md(ticket.preconditions)}</div></div>`);
+		if (ticket.shape === 'document') {
+			body.push(`<div class="cell full"><div class="label">What to do</div><div class="text">${md(ticket.steps)}</div></div>`);
+		} else {
+			body.push(`<div class="cell"><div class="label">Steps</div><div class="text">${md(ticket.steps) || '—'}</div></div>`);
+			body.push(`<div class="cell"><div class="label">Expected</div><div class="text">${md(ticket.expected) || '—'}</div></div>`);
+		}
+		body.push(`<div class="cell full"><div class="label">Last result</div><div class="text result-now">${ticket.result ? md(ticket.result) : 'Not tested yet.'}</div>
+			${ticket.evidence.length ? `<div class="evidence" style="margin-top:8px">${evidenceHtml(ticket.evidence)}</div>` : ''}</div>`);
+		return `<article class="ticket${isActive ? ' active' : ''}" data-file="${escape(sweep.file)}" data-id="${escape(ticket.id)}" tabindex="-1">
+			<div class="t-head">
+				<span class="tid">${escape(ticket.id)}</span>
+				${ticket.title ? `<span class="ttitle">${md(ticket.title)}</span>` : ''}
+				${ticket.priority ? `<span class="badge">${escape(ticket.priority)}</span>` : ''}
+				<span class="spacer"></span>
+				<span class="state s-${ticket.state}">${LABEL[ticket.state]}</span>
+			</div>
+			<div class="t-body">${body.join('')}</div>
+			<div class="act">
+				<div class="seg">${SETTABLE.map((state) => `<button type="button" data-state="${state}" class="${draft.state === state ? 'on' : ''}"><i class="s-${state}"></i>${state === 'not-run' ? 'Reset' : LABEL[state]}</button>`).join('')}</div>
+				<textarea data-note placeholder="What happened? (optional)">${escape(draft.note)}</textarea>
+				<div class="row">
+					<button type="button" class="btn" data-attach>Attach a file</button>
+					${navigator.mediaDevices?.getDisplayMedia ? `<button type="button" class="btn${recorder && isActive ? ' rec' : ''}" data-record>${recorder && isActive ? '■ Stop recording' : '● Record screen'}</button>` : ''}
+					<span class="hint" data-desktop>or paste a screenshot</span>
+					<span class="spacer"></span>
+					<button type="button" class="btn primary" data-save ${draft.state ? '' : 'disabled'}>Save result</button>
+				</div>
+			</div>
+		</article>`;
+	}
+
+	function renderSweep() {
+		const sweep = data.sweeps.find((one) => one.file === chosen);
+		document.body.classList.toggle('reading', !!sweep);
+		if (!sweep) {
+			$('#sweep').innerHTML = '<div class="empty">Pick a sweep from the list.</div>';
+			return;
+		}
+		const hide = $('#sweep').dataset.hide === 'on';
+		const tickets = hide ? sweep.tickets.filter((t) => t.state === 'not-run' || t.state === 'noted') : sweep.tickets;
+		const count = tally(sweep.tickets);
+		$('#sweep').innerHTML = `
+			<button type="button" class="back" data-back>‹ Sweeps</button>
+			<div class="sweep-head">
+				<h1>${escape(sweep.item)} — ${md(sweep.title)}</h1>
+				${sweep.status ? `<span class="badge">${escape(sweep.status)}</span>` : ''}
+			</div>
+			<div class="path">agile/testing/${escape(sweep.file)} · ${sweep.tickets.length} tickets · ${count.passed} passed · ${count.failed} failed · ${count['not-run']} not tested</div>
+			<div class="tools"><label class="hint"><input type="checkbox" id="hide" ${hide ? 'checked' : ''}> Hide tested tickets</label></div>
+			${tickets.map((ticket) => ticketHtml(sweep, ticket)).join('') || '<div class="empty">Every ticket here is tested.</div>'}`;
+	}
+
+	function choose(file) {
+		chosen = file;
+		active = null;
+		location.hash = encodeURIComponent(file.replace(/-sweep\.md$/, ''));
+		renderItems();
+		renderSweep();
+		$('#sweep').scrollTop = 0;
+	}
+
+	async function load() {
+		const answer = await fetch('/api/sweeps');
+		data = await answer.json();
+		renderTotals();
+		const wanted = decodeURIComponent(location.hash.slice(1));
+		if (!chosen && wanted) chosen = `${wanted}-sweep.md`;
+		renderItems();
+		renderSweep();
+	}
+
+	function ticketOf(element) {
+		const card = element.closest('.ticket');
+		if (!card) return null;
+		const sweep = data.sweeps.find((one) => one.file === card.dataset.file);
+		return { card, sweep, ticket: sweep?.tickets.find((t) => t.id === card.dataset.id) };
+	}
+
+	function setActive(card) {
+		const next = { file: card.dataset.file, id: card.dataset.id };
+		if (active && active.file === next.file && active.id === next.id) return;
+		active = next;
+		document.querySelectorAll('.ticket.active').forEach((one) => one.classList.remove('active'));
+		card.classList.add('active');
+	}
+
+	async function upload(file, id, blob, name) {
+		const url = `/api/evidence?file=${encodeURIComponent(file)}&id=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}`;
+		const answer = await fetch(url, { method: 'POST', body: blob });
+		const said = await answer.json();
+		if (!answer.ok) throw new Error(said.error);
+		const sweep = data.sweeps.find((one) => one.file === file);
+		const ticket = sweep.tickets.find((t) => t.id === id);
+		ticket.evidence = said.evidence;
+		const draft = drafts.get(key(file, id)) ?? { state: null, note: '' };
+		drafts.set(key(file, id), draft);
+		renderSweep();
+		toast(`Attached ${name}. Save to add it to the result.`);
+	}
+
+	async function save(file, id) {
+		const draft = drafts.get(key(file, id));
+		if (!draft?.state) return;
+		const answer = await fetch('/api/result', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ file, id, state: draft.state, note: draft.note })
+		});
+		const said = await answer.json();
+		if (!answer.ok) {
+			toast(`Not saved: ${said.error}`);
+			return;
+		}
+		const sweep = data.sweeps.find((one) => one.file === file);
+		const index = sweep.tickets.findIndex((t) => t.id === id);
+		sweep.tickets[index] = { ...said.ticket, evidence: sweep.tickets[index].evidence };
+		drafts.delete(key(file, id));
+		renderTotals();
+		renderItems();
+		renderSweep();
+		toast(`Saved: ${id} — ${LABEL[said.ticket.state]}`);
+	}
+
+	async function record(file, id) {
+		if (recorder) {
+			recorder.stop();
+			return;
+		}
+		let stream;
+		try {
+			stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+		} catch {
+			toast('Could not start recording.');
+			return;
+		}
+		const parts = [];
+		recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm' });
+		recorder.ondataavailable = (event) => event.data.size > 0 && parts.push(event.data);
+		recorder.onstop = async () => {
+			stream.getTracks().forEach((track) => track.stop());
+			recorder = null;
+			renderSweep();
+			try {
+				await upload(file, id, new Blob(parts, { type: 'video/webm' }), 'recording.webm');
+			} catch (error) {
+				toast(`Could not save the recording: ${error.message}`);
+			}
+		};
+		// Stopping from the browser's own bar stops it here too.
+		stream.getVideoTracks()[0].addEventListener('ended', () => recorder?.state === 'recording' && recorder.stop());
+		recorder.start(1000);
+		renderSweep();
+		toast('Recording… press Stop when done.');
+	}
+
+	$('#items').addEventListener('click', (event) => {
+		const row = event.target.closest('.item');
+		if (row) choose(row.dataset.file);
+	});
+	for (const id of ['#search', '#show', '#newest']) $(id).addEventListener('input', renderItems);
+	$('#kinds').addEventListener('click', (event) => {
+		const pressed = event.target.closest('[data-kind]');
+		if (!pressed) return;
+		for (const button of document.querySelectorAll('#kinds button')) button.classList.toggle('on', button === pressed);
+		renderItems();
+	});
+
+	$('#sweep').addEventListener('change', (event) => {
+		if (event.target.id === 'hide') {
+			$('#sweep').dataset.hide = event.target.checked ? 'on' : 'off';
+			renderSweep();
+		}
+	});
+
+	/** Back to the list: the hash goes, and `hashchange` does the rest. */
+	window.addEventListener('hashchange', () => {
+		if (location.hash.length > 1) return;
+		chosen = null;
+		active = null;
+		renderItems();
+		renderSweep();
+	});
+	$('#sweep').addEventListener('click', async (event) => {
+		if (event.target.closest('[data-back]')) {
+			history.back();
+			return;
+		}
+		const found = ticketOf(event.target);
+		if (!found?.ticket) return;
+		const { card, sweep, ticket } = found;
+		setActive(card);
+		const draft = drafts.get(key(sweep.file, ticket.id)) ?? { state: null, note: card.querySelector('[data-note]').value };
+		drafts.set(key(sweep.file, ticket.id), draft);
+		const state = event.target.closest('[data-state]')?.dataset.state;
+		if (state) {
+			draft.state = state;
+			card.querySelectorAll('[data-state]').forEach((button) => button.classList.toggle('on', button.dataset.state === state));
+			card.querySelector('[data-save]').disabled = false;
+		} else if (event.target.closest('[data-save]')) {
+			await save(sweep.file, ticket.id);
+		} else if (event.target.closest('[data-attach]')) {
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.multiple = true;
+			input.accept = 'image/*,video/*,.txt,.log,.json';
+			input.onchange = async () => {
+				for (const file of input.files) await upload(sweep.file, ticket.id, file, file.name).catch((error) => toast(error.message));
+			};
+			input.click();
+		} else if (event.target.closest('[data-record]')) {
+			await record(sweep.file, ticket.id);
+		}
+	});
+
+	$('#sweep').addEventListener('input', (event) => {
+		if (!event.target.matches('[data-note]')) return;
+		const { sweep, ticket } = ticketOf(event.target);
+		const draft = drafts.get(key(sweep.file, ticket.id)) ?? { state: null, note: '' };
+		draft.note = event.target.value;
+		drafts.set(key(sweep.file, ticket.id), draft);
+	});
+
+	$('#sweep').addEventListener('focusin', (event) => {
+		const card = event.target.closest('.ticket');
+		if (card) setActive(card);
+	});
+
+	for (const type of ['dragover', 'dragleave', 'drop']) {
+		$('#sweep').addEventListener(type, async (event) => {
+			const card = event.target.closest('.ticket');
+			if (!card) return;
+			event.preventDefault();
+			card.classList.toggle('drag', type === 'dragover');
+			if (type !== 'drop') return;
+			setActive(card);
+			for (const file of event.dataTransfer.files)
+				await upload(card.dataset.file, card.dataset.id, file, file.name).catch((error) => toast(error.message));
+		});
+	}
+
+	document.addEventListener('paste', async (event) => {
+		if (!active) return;
+		const files = [...event.clipboardData.files].filter((file) => file.type.startsWith('image/'));
+		if (files.length === 0) return;
+		event.preventDefault();
+		for (const file of files) {
+			const extension = file.type.split('/')[1] || 'png';
+			await upload(active.file, active.id, file, `screenshot.${extension}`).catch((error) => toast(error.message));
+		}
+	});
+
+	load().catch((error) => {
+		$('#sweep').innerHTML = `<div class="empty">Could not read the sweeps: ${escape(error.message)}</div>`;
+	});
+</script>
+</body>
+</html>

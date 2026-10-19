@@ -34,5 +34,9 @@ src-tauri/gen/schemas/windows-schema.json
 /extensions/coderabbit/bundle/*
 !/extensions/coderabbit/bundle/.gitkeep
 
+# Screenshots and recordings attached in the sweep portal: kept on the machine
+# that took them, linked from the results, never committed.
+/agile/testing/evidence/
+
 # Generated macOS extension sidecars
 /extensions/coderabbit/sidecar/

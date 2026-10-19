@@ -105,7 +105,7 @@ answer.
 ### SWEEP-023-10 — Every palette
 
 - **Priority:** P2
-- **Steps:** Settings → Appearance, through all four families in light and dark,
+- **Steps:** Settings → Appearance, in Light and then in Dark,
   returning to the Graph each time.
 - **Expected:** Faces repaint in the new palette immediately — no stale colours
   from the previous theme. The column's fill sits a clear step away from the row

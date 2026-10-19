@@ -63,6 +63,6 @@ with enough history to fill the graph.
 | --- | --- | --- |
 | 1 | Open a menu in a dark theme | Readable, frosted, edge visible. |
 | 2 | Switch to a light theme and repeat | Same judgement. A frost tuned in the dark can vanish in the light — say so if it does. |
-| 3 | Try two more palettes, including a high-contrast one if available | The glass belongs to each of them. |
+| 3 | ~~Try two more palettes~~ — one family since TASK-051; nothing more to do | — |
 
 **Result:**

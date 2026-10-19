@@ -154,7 +154,7 @@ Keep a terminal open. Most tickets are "does Spagitty agree with `git branch -vv
 - **Steps:** Point at a **Delete** control.
 - **Expected:** It says deleting branches is not built yet, and does nothing
   when clicked. It reads as a label rather than a live button.
-- **Result:**
+- **Result:** Obsolete, 2026-10-19 — FEAT-013 built deleting and renaming branches; its sweep checks them.
 
 ### SWEEP-1F-15 — Empty and narrow states
 
