@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-20
+
 ### Added
 
 - **The Files tree can be widened.** Drag the divider between the tree and the file; a double-click puts it back.
@@ -22,6 +24,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 ### Fixed
 
 - **Selecting more of a file than fits on screen keeps the whole selection.** Lines that scrolled out of view dropped out of the selection, so only what was on screen was copied.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.4.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
 
 ## [3.4.0] - 2026-10-19
 
