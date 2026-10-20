@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The pull request lane: gates 0 to 4 from checks.yml, and nothing after.
+# Gates 5 and 6 build and publish a release, which only a push to `main` does
+# (gates.yml). Declaring them here only to skip them put two grey rows on
+# every pull request's merge box.
+
+name: gates
+
+on:
+  pull_request:
+    branches: [main, dev]
+    # `edited` as well as the defaults: gate 1 reads the description, and a
+    # description changed after it passed, or corrected after it failed, is not
+    # read again otherwise. A re-run would read the one it was started with.
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml

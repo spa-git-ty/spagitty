@@ -39,6 +39,13 @@ they are given.
 
 Cheapest and most certain first, so an obvious failure never burns a full build.
 
+**Three files, two lanes** (TASK-074). Gates 0 to 4 live in `checks.yml`, a
+reusable workflow. `pull-request.yml` calls it for a pull request into `main`
+or `dev`, and that is all a pull request runs. `gates.yml` calls it for a push
+to either branch and then holds gates 5 and 6, which read its `ship` output.
+Until 3.6.0 one file did both, and gates 5 and 6 sat on every pull request as
+*skipped* — listed in the merge box beside the gates that passed.
+
 **Every lane builds all four downloads.** Linux, Windows, and macOS on two
 runners: `macos-latest` for Apple silicon and `macos-15-intel` for Intel, since
 a build made on one does not run on the other. Until TASK-040 only the draft

@@ -5,6 +5,10 @@
 #
 #   0 scope -> 1 license -> 2 quality -> 3 tests -> 4 security -> 5 build -> 6 release
 #
+# This file is the push lane. Gates 0 to 4 live in checks.yml, which this
+# file and pull-request.yml both call. A pull request runs those and nothing
+# else, so its checks never list gates 5 and 6 as skipped.
+#
 # `main` runs 1 to 4 on every push. Gates 5 and 6 run only when the change
 # ships in the application — a merge into main is a publish *of a release*,
 # not of every README edit. Documentation, agile records and brand collateral
@@ -19,12 +23,6 @@ name: gates
 on:
   push:
     branches: [main, dev]
-  pull_request:
-    branches: [main, dev]
-    # `edited` as well as the defaults: gate 1 reads the description, and a
-    # description changed after it passed, or corrected after it failed, is not
-    # read again otherwise. A re-run would read the one it was started with.
-    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: gates-${{ github.ref }}
@@ -34,299 +32,13 @@ env:
   CARGO_TERM_COLOR: always
   # Abandon a stalled cache segment so Cargo can compile dependencies instead.
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
-  # The coverage floor, in one place so no gate can disagree with another.
-  COVERAGE_FLOOR: 70
 
 jobs:
-  # --- Scope --------------------------------------------------------------
-  # Decide whether this change is something people download. Gates 5 and 6
-  # read the answer; gates 1 to 4 always run so a docs edit that breaks the
-  # brand check or the licence files still fails.
-  scope:
-    name: 0 · scope
-    runs-on: ubuntu-latest
-    outputs:
-      ship: ${{ steps.classify.outputs.ship }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Classify whether this change ships
-        id: classify
-        run: |
-          set -euo pipefail
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch --no-tags origin "${{ github.base_ref }}"
-            range="origin/${{ github.base_ref }}...HEAD"
-          else
-            before="${{ github.event.before }}"
-            # A brand-new branch has no previous tip; treat it as shipping so
-            # the first push cannot slip past a release by accident.
-            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
-              echo "ship=true" >> "$GITHUB_OUTPUT"
-              echo "no previous tip — treating as a shipping change"
-              exit 0
-            fi
-            range="$before...${{ github.sha }}"
-          fi
-
-          mapfile -t files < <(git diff --name-only "$range")
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "ship=false" >> "$GITHUB_OUTPUT"
-            echo "no files changed"
-            exit 0
-          fi
-
-          printf 'changed:\n'
-          printf '  %s\n' "${files[@]}"
-
-          ship=false
-          for f in "${files[@]}"; do
-            case "$f" in
-              src/*|src-tauri/*|crates/*|extensions/*|packages/extension-sdk/*|tools/extensions/*|schemas/extensions/*) ship=true ;;
-              package.json|Cargo.toml|Cargo.lock|bun.lock|bun.lockb) ship=true ;;
-              vite.config.ts|vite.config.js|svelte.config.js|svelte.config.ts|tsconfig.json) ship=true ;;
-              */Cargo.toml) ship=true ;;
-            esac
-          done
-
-          # A version whose tag already exists has been released. Gate 6
-          # refuses to move that tag, so running gates 5 and 6
-          # here only builds four platforms and then fails. Code merged
-          # without a version bump goes out with the next release, the same
-          # way documentation does. Gate 6 still refuses the tag in case this
-          # check is ever bypassed.
-          if [ "$ship" = true ] && [ "${{ github.event_name }}" = "push" ]; then
-            version=$(node -p "require('./package.json').version")
-            if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
-              echo "v$version is already released — gates 5 and 6 stay off until the version is bumped"
-              ship=false
-            fi
-          fi
-
-          echo "ship=$ship" >> "$GITHUB_OUTPUT"
-          if [ "$ship" = true ]; then
-            echo "shipping change — gates 5 and 6 will run on main"
-          else
-            echo "documentation / record / collateral only — gates 5 and 6 stay off"
-          fi
-
-  # --- Gate 1 -------------------------------------------------------------
-  # Cheapest and most certain first, so an obvious failure never burns a build.
-  license:
-    name: 1 · licenses
-    needs: scope
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # AGENTS.md forbids agent, tool and session attribution. The pull
-      # request's own commits and its description are read; history before it
-      # is left as it is. The description goes in through the environment, never
-      # into the script text.
-      - name: No agent attribution in the commits or the description
-        if: github.event_name == 'pull_request'
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          node tools/attribution.mjs commits "$BASE..$HEAD"
-          printf '%s' "$PR_BODY" | node tools/attribution.mjs text -
-
-      - name: The project's own license and attribution files are present
-        run: |
-          test -f LICENSE
-          test -f NOTICE
-          grep -q "GPL-3.0-or-later" package.json
-          grep -q "GPL-3.0-or-later" Cargo.toml
-
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        timeout-minutes: 5
-        continue-on-error: true
-
-      - name: Rust dependency licenses
-        uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check licenses bans sources
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.0
-
-      - run: bun install --frozen-lockfile
-
-      - name: JS dependency licenses
-        run: |
-          bunx license-checker-rseidelsohn@4 \
-            --production \
-            --onlyAllow "MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;CC0-1.0;Unlicense;BlueOak-1.0.0;Python-2.0" \
-            --excludePrivatePackages
-
-  # --- Gate 2 -------------------------------------------------------------
-  quality:
-    name: 2 · code quality
-    needs: license
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        timeout-minutes: 5
-        continue-on-error: true
-      - uses: ./.github/actions/linux-deps
-
-      - run: cargo fmt --all --check
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.0
-      - run: bun install --frozen-lockfile
-
-      # tauri.conf.json bundles the official extension from a staging folder
-      # that only `tauri build`'s beforeBuildCommand fills. Plain cargo on a
-      # fresh checkout never runs it, so src-tauri's build script fails on the
-      # missing resource before clippy sees a line of code.
-      - name: Stage the official extension
-        run: bun tools/extensions/bundle.ts --debug
-
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      # Clippy reads the workspace's rust-version, and cargo never checks it
-      # against the dependencies' (TASK-072).
-      - name: No dependency needs a newer Rust than Cargo.toml says
-        run: node tools/rust-version.mjs
-      - run: bun run check
-
-      # The app icon and the brand collateral are generated from a fixed
-      # geometry by Pillow scripts. If the committed bytes drift from what the
-      # scripts produce, the identity has been hand-edited or the generator
-      # broken — a drift error, not a warning, because a mangled icon ships in
-      # every build from here on. docs/branding.md has the full tree.
-      - name: Brand and icon assets are current
-        run: |
-          python3 -m pip install --quiet pillow
-          python3 tools/make-icons.py --check
-          python3 tools/make-brand.py --check
-
-  # --- Gate 3 -------------------------------------------------------------
-  tests:
-    name: 3 · tests and coverage
-    needs: quality
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
-        timeout-minutes: 5
-        continue-on-error: true
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: ./.github/actions/linux-deps
-
-      # The About screen's dependency list (src-tauri/licenses.rs) reads the
-      # installed frontend tree, so the JS install comes before the Rust
-      # coverage run.
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.0
-      - run: bun install --frozen-lockfile
-
-      # The same staging as gate 2, for the same reason.
-      - name: Stage the official extension
-        run: bun tools/extensions/bundle.ts --debug
-
-      - name: Rust tests and coverage
-        run: |
-          cargo llvm-cov --workspace \
-            --ignore-filename-regex '(fixture|testing)\.rs' \
-            --fail-under-lines "$COVERAGE_FLOOR" \
-            --summary-only
-
-      # The thresholds live in vite.config.ts, so the same floor applies
-      # locally and here.
-      - name: Frontend tests and coverage
-        run: bun run coverage
-
-  farm_processes:
-    name: 3 · farm processes (${{ matrix.os }})
-    needs: quality
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        timeout-minutes: 5
-        continue-on-error: true
-      - uses: ./.github/actions/linux-deps
-        if: matrix.os == 'ubuntu-latest'
-      # The process tree moved to its own crate (FEAT-096), and the extension
-      # host starts real worker processes inside it, so both run on every OS.
-      - name: Descendant containment and noisy/cancellable verification
-        run: |
-          cargo test -p spagitty-process
-          cargo test -p spagitty-farm --lib verification::command::tests
-      - name: Extension workers, tools and packages on this OS
-        run: |
-          cargo test -p spagitty-extensions -p coderabbit-extension
-          cargo test -p spagitty-farm --test supplemental
-
-  # --- Gate 4 -------------------------------------------------------------
-  security:
-    name: 4 · security
-    needs: [tests, farm_processes]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        timeout-minutes: 5
-        continue-on-error: true
-
-      - name: Rust advisories
-        uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check advisories
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.0
-      - run: bun install --frozen-lockfile
-      - name: JS advisories
-        run: bun audit --audit-level=high
-
-      # gitleaks itself, not gitleaks-action.
-      #
-      # The action refuses to run for an organization account without a paid
-      # licence — "[GitLumiere] is an organization. License key is required." —
-      # so this gate failed on the tool never starting rather than on anything it
-      # found, and no diff has ever actually been scanned. The binary is the same
-      # scanner with the same rules and needs no licence.
-      #
-      # `--no-git` would scan the working tree; `detect` walks history, which is
-      # what catches a secret committed and then removed in a later commit.
-      - name: Secrets in the diff
-        run: |
-          version=8.28.0
-          curl -sSfL -o gitleaks.tar.gz \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz"
-          tar -xzf gitleaks.tar.gz gitleaks
-          ./gitleaks detect --source . --redact --verbose --exit-code 1
+  # --- Gates 0 to 4 -------------------------------------------------------
+  # In checks.yml, shared with the pull request lane. Its `ship` output is
+  # gate 0's answer, which gates 5 and 6 read.
+  checks:
+    uses: ./.github/workflows/checks.yml
 
   # --- Gate 5 -------------------------------------------------------------
   # main only, and only when the change ships in the application. `dev` stops
@@ -335,11 +47,10 @@ jobs:
   # version is the wrong response to documentation.
   build:
     name: 5 · build
-    needs: [security, scope]
+    needs: checks
     if: >
       github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
-      needs.scope.outputs.ship == 'true'
+      needs.checks.outputs.ship == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -472,11 +183,10 @@ jobs:
   # --- Gate 6 -------------------------------------------------------------
   release:
     name: 6 · release
-    needs: [build, scope]
+    needs: [build, checks]
     if: >
       github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
-      needs.scope.outputs.ship == 'true'
+      needs.checks.outputs.ship == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
