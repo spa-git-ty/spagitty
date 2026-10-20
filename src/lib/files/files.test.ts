@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { click, fire, flushSync, press, render, type Mounted } from '../../testing/mount';
-import type { BlameCommit, CompactBlame, FilesEntry, FilesRead } from '$lib/types';
+import type { BlameCommit, CompactBlame, FilesEntry, FilesRead, FilesUsage, FilesUsages } from '$lib/types';
 
 const { goto, want } = vi.hoisted(() => ({ goto: vi.fn(), want: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto }));
@@ -25,7 +25,8 @@ vi.mock('$lib/api', async (importOriginal) => ({
 	filesFind: vi.fn(),
 	filesSpans: vi.fn(),
 	filesBlame: vi.fn(),
-	filesBefore: vi.fn()
+	filesBefore: vi.fn(),
+	filesUsages: vi.fn()
 }));
 
 import * as api from '$lib/api';
@@ -41,6 +42,7 @@ const findFiles = vi.mocked(api.filesFind);
 const spans = vi.mocked(api.filesSpans);
 const blame = vi.mocked(api.filesBlame);
 const before = vi.mocked(api.filesBefore);
+const findUsages = vi.mocked(api.filesUsages);
 
 const MAIN = 'a'.repeat(40);
 const BODY = 'use std::fs;\n\nfn one() {\n    two();\n}\n\nfn two() {}\n';
@@ -861,5 +863,113 @@ describe('a selection longer than the screen (FEAT-152)', () => {
 		} finally {
 			tall.mockRestore();
 		}
+	});
+});
+
+describe('usages (FEAT-154)', () => {
+	function place(path: string, line: number, role: FilesUsage['role'], kind: string | null): FilesUsage {
+		return { path, line, column: 4, length: 3, text: '    two();', start: 4, end: 7, role, kind };
+	}
+
+	const TWO: FilesUsages = {
+		name: 'two',
+		usages: [
+			place('src/lib.rs', 7, 'definition', 'function'),
+			place('src/lib.rs', 4, 'use', 'call'),
+			place('src/other.rs', 2, 'use', null),
+			place('README.md', 1, 'mention', null)
+		],
+		files: 3,
+		more: false
+	};
+
+	/** Where a browser would put the caret: `offset` into the line's first run. */
+	function caretAt(n: number, offset: number) {
+		const text = code(n).querySelector('span')!.firstChild!;
+		Object.assign(document, { caretPositionFromPoint: () => ({ offsetNode: text, offset }) });
+	}
+
+	afterEach(() => {
+		delete (document as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+	});
+
+	it('Ctrl-click on a name looks up where it is defined and used', async () => {
+		findUsages.mockResolvedValue(TWO);
+		await opened();
+
+		caretAt(4, 5);
+		click(code(4), { ctrlKey: true });
+		await settle();
+
+		expect(findUsages).toHaveBeenCalledWith(MAIN, 'two');
+		expect(files.lookFor).toBe('usages');
+		expect(files.cursor.line).toBe(3);
+		// A Ctrl-click is not the click that opens the card.
+		expect(view!.find('.peek')).toBeNull();
+	});
+
+	it('Ctrl-click off a name looks nothing up', async () => {
+		await opened();
+
+		caretAt(4, 1);
+		click(code(4), { metaKey: true });
+		await settle();
+
+		expect(findUsages).not.toHaveBeenCalled();
+		expect(files.lookFor).toBe('names');
+	});
+
+	it('lists definitions, then uses, with mentions folded, and opens a place', async () => {
+		findUsages.mockResolvedValue(TWO);
+		await files.enter('/repos/thing', 'main');
+		await files.findUsages('two');
+		await settle();
+		view = render(FileTree, {});
+		await settle();
+
+		const said = view.text().replace(/\s+/g, ' ');
+		expect(said).toContain('two · 1 definition, 2 uses, 1 mention in 3 files');
+		expect(said).toContain('By name, not by type');
+		expect(view.all('.section .head').map((head) => head.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+			'Defined 1',
+			'Used 2',
+			'▸ Mentions 1 in comments, strings and documents'
+		]);
+		expect(view.get('[data-role="definition"] .kind').textContent).toBe('function');
+		expect(view.find('[data-role="mention"] .hit')).toBeNull();
+
+		click(view.get('[data-role="mention"] .head'));
+		expect(view.get('[data-role="mention"] .hit').getAttribute('title')).toBe('README.md:1');
+
+		click(view.get('[data-role="definition"] .hit'));
+		await settle();
+		expect(read).toHaveBeenCalledWith('main', 'src/lib.rs');
+		expect(files.match).toEqual({ line: 6, start: 4, end: 7 });
+	});
+
+	it('looks up a name typed into its field, and says when it is nowhere', async () => {
+		findUsages.mockResolvedValue({ name: 'nothing', usages: [], files: 0, more: false });
+		await files.enter('/repos/thing', 'main');
+		files.setLookFor('usages');
+		view = render(FileTree, {});
+		await settle();
+		expect(view.text()).toContain('click a name in the file');
+
+		const field = view.get('.ask input') as HTMLInputElement;
+		field.value = 'nothing';
+		fire(view.get('.ask'), 'submit');
+		await settle();
+
+		expect(findUsages).toHaveBeenCalledWith(MAIN, 'nothing');
+		expect(view.text()).toContain('“nothing” is not in any file here');
+	});
+
+	it('says why a lookup failed', async () => {
+		findUsages.mockRejectedValue('not a name: 9lives');
+		await files.enter('/repos/thing', 'main');
+		await files.findUsages('9lives');
+		view = render(FileTree, {});
+		await settle();
+		expect(view.get('[role="alert"]').textContent).toBe('not a name: 9lives');
 	});
 });

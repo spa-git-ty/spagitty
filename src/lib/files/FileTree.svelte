@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import * as api from '$lib/api';
+	import { mod } from '$lib/platform';
 	import Icon from '$lib/ui/Icon.svelte';
 	import FileGlyph from './FileGlyph.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
@@ -11,6 +12,7 @@
 	import { optionKey } from './keys';
 	import SearchToggles from './SearchToggles.svelte';
 	import { files } from './store.svelte';
+	import UsageList from './UsageList.svelte';
 
 	/**
 	 * The repository's tree at the revision (FEAT-131).
@@ -146,7 +148,7 @@
 	});
 </script>
 
-<aside class="tree" class:wide={files.lookFor === 'text'} aria-label="Files at {files.rev}">
+<aside class="tree" class:wide={files.lookFor !== 'names'} aria-label="Files at {files.rev}">
 	<div class="look" role="group" aria-label="Look for">
 		<button
 			type="button"
@@ -161,36 +163,47 @@
 			title="Search the text of every file at this revision"
 			onclick={() => files.setLookFor('text')}>Text</button
 		>
+		<button
+			type="button"
+			class:on={files.lookFor === 'usages'}
+			aria-pressed={files.lookFor === 'usages'}
+			title="Where a name is defined and used. {mod()}click a name in the file"
+			onclick={() => files.setLookFor('usages')}>Usages</button
+		>
 	</div>
-	<label class="find">
-		<Icon name="search" size={14} weight={2} />
-		{#if files.lookFor === 'text'}
-			<input
-				type="text"
-				aria-label="Search in files"
-				placeholder="Search in files"
-				spellcheck="false"
-				autocomplete="off"
-				value={files.seeking}
-				oninput={(event) => type(event.currentTarget.value)}
-				onkeydown={fieldKey}
-			/>
-			<SearchToggles />
-		{:else}
-			<input
-				type="text"
-				aria-label="Find a file"
-				placeholder="Find a file"
-				spellcheck="false"
-				autocomplete="off"
-				value={files.finding}
-				oninput={(event) => type(event.currentTarget.value)}
-			/>
-		{/if}
-	</label>
+	{#if files.lookFor !== 'usages'}
+		<label class="find">
+			<Icon name="search" size={14} weight={2} />
+			{#if files.lookFor === 'text'}
+				<input
+					type="text"
+					aria-label="Search in files"
+					placeholder="Search in files"
+					spellcheck="false"
+					autocomplete="off"
+					value={files.seeking}
+					oninput={(event) => type(event.currentTarget.value)}
+					onkeydown={fieldKey}
+				/>
+				<SearchToggles />
+			{:else}
+				<input
+					type="text"
+					aria-label="Find a file"
+					placeholder="Find a file"
+					spellcheck="false"
+					autocomplete="off"
+					value={files.finding}
+					oninput={(event) => type(event.currentTarget.value)}
+				/>
+			{/if}
+		</label>
+	{/if}
 
 	<div class="rows">
-		{#if files.lookFor === 'text'}
+		{#if files.lookFor === 'usages'}
+			<UsageList oncontext={(event, path) => context(event, path)} />
+		{:else if files.lookFor === 'text'}
 			{#if files.searchedError}
 				<span class="note said error" role="alert">{files.searchedError}</span>
 			{:else if files.seekingNow && !files.searched}

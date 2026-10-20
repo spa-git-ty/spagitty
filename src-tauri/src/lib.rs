@@ -154,6 +154,7 @@ pub fn run() {
             commands::files_read,
             commands::files_find,
             commands::files_search,
+            commands::files_usages,
             commands::files_spans,
             commands::files_blame,
             commands::files_before,

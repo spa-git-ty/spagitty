@@ -68,6 +68,10 @@ ureq = { version = "3.2.1", default-features = false, features = [
 # query, and the Dockerfile crate is built for tree-sitter 0.20. A language
 # with no grammar here falls back to `src/lib/diff/highlight.ts`.
 tree-sitter-highlight = "0.27"
+# Usages (FEAT-154) parse a file and run its grammar's tags query directly.
+# Already in the tree through tree-sitter-highlight, at the same version;
+# named here because the highlighter does not re-export it.
+tree-sitter = "0.27"
 tree-sitter-bash = "0.25"
 tree-sitter-c = "0.24"
 tree-sitter-c-sharp = "0.23"

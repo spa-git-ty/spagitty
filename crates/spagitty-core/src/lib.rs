@@ -61,6 +61,7 @@ pub mod submodules;
 pub mod tags;
 pub mod tools;
 pub mod update;
+pub mod usages;
 pub mod work;
 pub mod worktrees;
 

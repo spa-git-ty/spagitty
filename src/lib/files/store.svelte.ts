@@ -38,6 +38,8 @@ import type {
 	FilesRead,
 	FilesRevision,
 	FilesSearched,
+	FilesUsage,
+	FilesUsages,
 	SearchOptions
 } from '../types';
 import { linesOf, tokensOf } from './colour';
@@ -127,13 +129,23 @@ let found = $state<FilesFound | null>(null);
 
 /** How both searches read what was typed: regex, whole word, case (FEAT-151). */
 let options = $state<SearchOptions>({ ...PLAIN });
-/** What the tree's field looks for: file names, or text in every file. */
-let lookFor = $state<'names' | 'text'>('names');
+/**
+ * What the tree's field looks for: file names, text in every file, or where
+ * a name is defined and used (FEAT-154).
+ */
+let lookFor = $state<'names' | 'text' | 'usages'>('names');
 let seeking = $state('');
 let searched = $state.raw<FilesSearched | null>(null);
 let searchedError = $state<string | null>(null);
 let seekingNow = $state(false);
 let seekTicket = 0;
+
+/** The name whose usages are shown (FEAT-154). */
+let usagesOf = $state('');
+let usages = $state.raw<FilesUsages | null>(null);
+let usagesError = $state<string | null>(null);
+let usagesNow = $state(false);
+let usagesTicket = 0;
 
 let fileTicket = 0;
 let blameTicket = 0;
@@ -225,6 +237,7 @@ async function resolveNow(): Promise<boolean> {
 			for (const dir of open) void readFolder(dir);
 			// A search of the files is of this revision's files.
 			if (lookFor === 'text' && seeking !== '') void files.searchFiles(seeking);
+			if (lookFor === 'usages' && usagesOf !== '') void files.findUsages(usagesOf);
 		}
 		return true;
 	} catch (error) {
@@ -427,8 +440,20 @@ export const files = {
 		const pattern = patternOf(query, options);
 		return typeof pattern === 'string' ? pattern : null;
 	},
-	get lookFor(): 'names' | 'text' {
+	get lookFor(): 'names' | 'text' | 'usages' {
 		return lookFor;
+	},
+	get usagesOf(): string {
+		return usagesOf;
+	},
+	get usages(): FilesUsages | null {
+		return usages;
+	},
+	get usagesError(): string | null {
+		return usagesError;
+	},
+	get usagesNow(): boolean {
+		return usagesNow;
 	},
 	get seeking(): string {
 		return seeking;
@@ -780,8 +805,12 @@ export const files = {
 		if (lookFor === 'text' && seeking !== '') void this.searchFiles(seeking);
 	},
 
-	/** What the tree's field looks for. The other one's answer is put away. */
-	setLookFor(next: 'names' | 'text'): void {
+	/**
+	 * What the tree's field looks for. A search of the text is put away when
+	 * the field turns to something else; the usages last shown are kept, to
+	 * come back to.
+	 */
+	setLookFor(next: 'names' | 'text' | 'usages'): void {
 		if (next === lookFor) return;
 		lookFor = next;
 		if (next === 'text') {
@@ -840,6 +869,43 @@ export const files = {
 		cursor = { line: hit.line - 1, col: hit.column };
 	},
 
+	/**
+	 * Where `name` is defined, used and mentioned at the revision (FEAT-154).
+	 * The tree turns to show it.
+	 */
+	async findUsages(name: string): Promise<void> {
+		const wanted = name.trim();
+		this.setLookFor('usages');
+		usagesOf = wanted;
+		const ticket = ++usagesTicket;
+		usagesError = null;
+		if (wanted === '' || !resolved) {
+			usages = null;
+			usagesNow = false;
+			return;
+		}
+		usagesNow = true;
+		try {
+			const next = await api.filesUsages(resolved.id, wanted);
+			if (ticket === usagesTicket) usages = next;
+		} catch (error) {
+			if (ticket === usagesTicket) {
+				usages = null;
+				usagesError = String(error);
+			}
+		} finally {
+			if (ticket === usagesTicket) usagesNow = false;
+		}
+	},
+
+	/** Open a place a name appears, at its line, with the name marked. */
+	async openUsage(usage: FilesUsage): Promise<void> {
+		await this.openFile(usage.path, { line: usage.line });
+		if (file?.path !== usage.path) return;
+		match = { line: usage.line - 1, start: usage.column, end: usage.column + usage.length };
+		cursor = { line: usage.line - 1, col: usage.column };
+	},
+
 	/** Look for files by name. An empty word goes back to the tree. */
 	async findFiles(text: string): Promise<void> {
 		finding = text;
@@ -882,6 +948,11 @@ export const files = {
 		searchedError = null;
 		seekingNow = false;
 		seekTicket++;
+		usagesOf = '';
+		usages = null;
+		usagesError = null;
+		usagesNow = false;
+		usagesTicket++;
 		fileTicket++;
 		blameTicket++;
 		peekTicket++;

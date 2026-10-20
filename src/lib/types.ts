@@ -784,6 +784,30 @@ export interface FilesSearched {
 	more: boolean;
 }
 
+/**
+ * What a name is at one place it appears (FEAT-154): defined there, used,
+ * or only mentioned, in a comment, a string, or a file of data or prose.
+ */
+export type UsageRole = 'definition' | 'use' | 'mention';
+
+/** One place a name appears. Mirrors `usages::Usage`. */
+export interface FilesUsage extends FilesHit {
+	role: UsageRole;
+	/** What the grammar calls it — `function`, `class`, `call` — or null. */
+	kind: string | null;
+}
+
+/** Where a name is defined and used at a revision. Mirrors `usages::Usages`. */
+export interface FilesUsages {
+	name: string;
+	/** Definitions first, then uses, then mentions; each in path and line order. */
+	usages: FilesUsage[];
+	/** How many files the name appears in. */
+	files: number;
+	/** More were found than were returned. */
+	more: boolean;
+}
+
 /** One commit a blamed file's lines come from. Mirrors `blame::BlameCommit`. */
 export interface BlameCommit {
 	id: string;
