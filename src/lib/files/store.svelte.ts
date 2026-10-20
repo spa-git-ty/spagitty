@@ -67,6 +67,8 @@ interface Remembered {
 	active: number;
 	open: string[];
 	blame: boolean;
+	/** Whether a click on a line's text opens who wrote it (FEAT-153). */
+	click?: boolean;
 	wrap: boolean;
 }
 
@@ -82,6 +84,8 @@ let open = $state<string[]>([]);
 let folders = $state<Record<string, Folder>>({});
 
 let blameOn = $state(true);
+/** A click on a line's text opens the peek; off, it only moves the cursor. */
+let blameOnClick = $state(true);
 let wrap = $state(false);
 
 let file = $state.raw<FilesRead | null>(null);
@@ -156,6 +160,7 @@ function remember(): void {
 			active,
 			open,
 			blame: blameOn,
+			click: blameOnClick,
 			wrap
 		};
 		localStorage.setItem(KEY, JSON.stringify(all));
@@ -348,6 +353,9 @@ export const files = {
 	get blameOn(): boolean {
 		return blameOn;
 	},
+	get blameOnClick(): boolean {
+		return blameOnClick;
+	},
 	get wrap(): boolean {
 		return wrap;
 	},
@@ -483,6 +491,7 @@ export const files = {
 		active = tabs.length === 0 ? -1 : Math.min(Math.max(kept?.active ?? 0, 0), tabs.length - 1);
 		open = kept?.open ?? [];
 		blameOn = kept?.blame ?? true;
+		blameOnClick = kept?.click ?? true;
 		wrap = kept?.wrap ?? false;
 
 		const ok = await resolveNow();
@@ -646,6 +655,16 @@ export const files = {
 		blameOn = !blameOn;
 		if (blameOn) void readBlame();
 		else lit = null;
+		remember();
+	},
+
+	/**
+	 * Whether a click on a line says who wrote it. Off, the click is for
+	 * reading — it puts the cursor there — and Enter still opens the peek.
+	 */
+	toggleBlameOnClick(): void {
+		blameOnClick = !blameOnClick;
+		if (!blameOnClick && peek !== null) this.closePeek();
 		remember();
 	},
 
@@ -847,6 +866,7 @@ export const files = {
 		open = [];
 		folders = {};
 		blameOn = true;
+		blameOnClick = true;
 		wrap = false;
 		reading = false;
 		cursor = { line: 0, col: 0 };

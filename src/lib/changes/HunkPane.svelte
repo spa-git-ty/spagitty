@@ -6,6 +6,7 @@
 	import Chip from '$lib/ui/Chip.svelte';
 	import type { DiffLine } from '$lib/types';
 	import { pairWords } from '$lib/diff/words';
+	import { detectLanguage, paint, tokenizeDiff } from '$lib/diff/highlight';
 
 	/**
 	 * The hunks of the selected file, each with the actions that make sense for
@@ -25,6 +26,16 @@
 	const file = $derived(changes.file);
 	/** The changed words in each hunk's changed lines (FEAT-090). */
 	const marks = $derived(file ? file.hunks.map((hunk) => pairWords(hunk.lines)) : []);
+	/**
+	 * Each hunk's colour (BUG-096), read the way Review reads a diff: the old
+	 * and new sides apart, so a comment opened on one does not run into the
+	 * other. A hunk starts fresh; what comes between two hunks is not shown.
+	 */
+	const syntax = $derived.by(() => {
+		if (!file || file.binary) return [];
+		const language = detectLanguage(file.path);
+		return file.hunks.map((hunk) => tokenizeDiff(hunk.lines, language));
+	});
 	const side = $derived(changes.selection?.side ?? 'unstaged');
 
 	function sign(line: DiffLine): string {
@@ -78,8 +89,9 @@
 						<span class="num">{line.new ?? ''}</span>
 						<span class="sign">{sign(line)}</span>
 						<span class="text"
-							>{#each marks[index]?.get(row) ?? [{ text: line.text, changed: false }] as piece, p (p)}<span
-									class:word={piece.changed}>{piece.text}</span
+							>{#each paint( syntax[index]?.[row] ?? [{ type: 'plain', text: line.text }], marks[index]?.get(row) ) as run, p (p)}<span
+									class="tok-{run.type}"
+									class:word={run.changed}>{run.text}</span
 								>{/each}</span
 						>
 					</div>

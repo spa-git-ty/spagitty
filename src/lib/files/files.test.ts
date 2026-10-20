@@ -512,6 +512,42 @@ describe('the peek', () => {
 		expect(view!.find('.peek')).toBeNull();
 	});
 
+	it('opens from a click only while Blame on click is on (FEAT-153)', async () => {
+		await opened();
+		const toggle = view!.get('.head .toggle');
+		expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+		click(code(4));
+		await settle();
+		expect(view!.find('.peek')).not.toBeNull();
+
+		// Off: the open peek closes, and a click only moves the cursor.
+		click(toggle);
+		expect(toggle.getAttribute('aria-pressed')).toBe('false');
+		expect(view!.find('.peek')).toBeNull();
+		click(code(2));
+		await settle();
+		expect(view!.find('.peek')).toBeNull();
+		expect(files.cursor.line).toBe(1);
+
+		// Enter still asks.
+		press(keys(), 'Enter');
+		await settle();
+		expect(view!.find('.peek')).not.toBeNull();
+	});
+
+	it('remembers Blame on click for the repository', async () => {
+		await opened();
+		click(view!.get('.head .toggle'));
+		view!.destroy();
+		view = null;
+
+		files.clearState();
+		await opened();
+		expect(files.blameOnClick).toBe(false);
+		expect(view!.get('.head .toggle').getAttribute('aria-pressed')).toBe('false');
+	});
+
 	it('says why when there is no blame to show', async () => {
 		blame.mockResolvedValue({ ...BLAME, commits: [], lines: [], origin: [], refused: 'tooLarge' });
 		await opened();

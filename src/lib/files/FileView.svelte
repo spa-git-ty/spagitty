@@ -236,6 +236,11 @@
 			files.moveTo(line, true);
 			return;
 		}
+		// Blame on click is off: the click is for reading, not for asking who.
+		if (!files.blameOnClick) {
+			files.moveTo(line);
+			return;
+		}
 		if (files.peek === line) files.closePeek();
 		else files.openPeek(line);
 	}
@@ -273,16 +278,34 @@
 	</div>
 
 	{#if file && parts.length > 0}
-		<nav class="crumbs mono" aria-label="Path">
-			{#each parts as part, index (index)}
-				{#if index > 0}<span class="sep" aria-hidden="true">›</span>{/if}
-				{#if index < parts.length - 1}
-					<button onclick={() => onreveal?.(parts.slice(0, index + 1).join('/'))}>{part}</button>
-				{:else}
-					<span class="leaf">{part}</span>
-				{/if}
-			{/each}
-		</nav>
+		<div class="head">
+			<nav class="crumbs mono" aria-label="Path">
+				{#each parts as part, index (index)}
+					{#if index > 0}<span class="sep" aria-hidden="true">›</span>{/if}
+					{#if index < parts.length - 1}
+						<button onclick={() => onreveal?.(parts.slice(0, index + 1).join('/'))}>{part}</button>
+					{:else}
+						<span class="leaf">{part}</span>
+					{/if}
+				{/each}
+			</nav>
+			{#if content?.kind === 'text'}
+				<!-- FEAT-153: whether a click on a line says who wrote it. -->
+				<button
+					type="button"
+					class="toggle"
+					class:on={files.blameOnClick}
+					aria-pressed={files.blameOnClick}
+					title={files.blameOnClick
+						? 'Clicking a line shows who wrote it and why. Click to turn off'
+						: 'Clicking a line only moves the cursor. Click to show who wrote a line when you click it'}
+					onclick={() => files.toggleBlameOnClick()}
+				>
+					<Icon name="person" size={13} weight={2} />
+					<span>Blame on click</span>
+				</button>
+			{/if}
+		</div>
 	{/if}
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -522,15 +545,50 @@
 		color: var(--ink);
 	}
 
-	.crumbs {
+	.head {
 		flex: none;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 5px 10px 5px 16px;
+		border-bottom: 1px solid var(--soft);
+	}
+
+	.crumbs {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 6px;
-		padding: 7px 16px;
-		border-bottom: 1px solid var(--soft);
+		padding-block: 2px;
 		color: var(--muted);
+	}
+
+	/* The same chip as the search options beside the fields (FEAT-151). */
+	.toggle {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 24px;
+		padding: 0 9px;
+		border: 1px solid var(--soft);
+		border-radius: var(--r-row);
+		color: var(--muted);
+		font-size: var(--fs-secondary);
+		white-space: nowrap;
+	}
+
+	.toggle:hover {
+		background: var(--hover);
+		color: var(--ink);
+	}
+
+	.toggle.on {
+		border-color: var(--accent);
+		background: var(--accent-soft);
+		color: var(--accent);
 	}
 
 	.crumbs button:hover {

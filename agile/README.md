@@ -206,6 +206,7 @@ rather than an audit.
 | [FEAT-150](items/FEAT-150-open-a-file-from-anywhere-with-a-click.md) | Open a file from anywhere with a click | every screen | Done |
 | [FEAT-151](items/FEAT-151-search-the-text-of-files.md) | Search the text of files, by word or regular expression | 1U | Done |
 | [FEAT-152](items/FEAT-152-the-files-tree-widens-and-copies.md) | The Files tree widens by dragging, copies from a right-click, and a long selection holds | 1U | Done |
+| [FEAT-153](items/FEAT-153-blame-on-click-can-be-turned-off.md) | Blame on click can be turned off | 1U | Done |
 
 ## Bugs
 
@@ -307,6 +308,7 @@ rather than an audit.
 | [BUG-093](items/BUG-093-the-farm-wizard-s-search-box-and-step-markers-are-broken.md) | The farm wizard's search box and step markers are broken | 1Q | Fixed |
 | [BUG-094](items/BUG-094-a-resumed-agent-skips-files-that-changed-since.md) | A resumed agent skips files that changed since its first run | 1R, 1S | Fixed |
 | [BUG-095](items/BUG-095-the-terminal-s-plus-says-no-server-running.md) | The Terminal's `+` says *no server running on session* | 1T | Fixed |
+| [BUG-096](items/BUG-096-the-working-copy-s-hunks-are-not-coloured.md) | The working copy's hunks are not coloured | Working copy (1C) | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -387,6 +389,7 @@ of its own.
 | [TASK-071](items/TASK-071-remove-agy.md) | agy is removed | 1K, 1Q, 1R, 1S | Done |
 | [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Done |
 | [TASK-073](items/TASK-073-the-sweeps-refreshed-and-run-from-a-portal.md) | The sweeps, refreshed and run from a portal | — | Done |
+| [TASK-074](items/TASK-074-pull-requests-no-longer-list-gates-5-and-6.md) | Pull requests no longer list gates 5 and 6 | — | Done |
 
 ## Skipped identifiers
 
