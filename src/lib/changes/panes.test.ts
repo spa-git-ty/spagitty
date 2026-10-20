@@ -257,6 +257,35 @@ describe('HunkPane', () => {
 		view.destroy();
 	});
 
+	it('colours the code by its language, and still marks the changed words (BUG-096)', () => {
+		control.setSelection({ path: 'src/lib.rs', side: 'unstaged' });
+		control.setFile(
+			diff({
+				path: 'src/lib.rs',
+				hunks: [
+					{
+						oldStart: 1,
+						oldLines: 1,
+						newStart: 1,
+						newLines: 1,
+						header: '@@ -1 +1 @@',
+						lines: [
+							{ origin: 'removed', old: 1, new: null, text: 'fn one() -> u8 { 1 }' },
+							{ origin: 'added', old: null, new: 1, text: 'fn one() -> u8 { 2 }' }
+						]
+					}
+				]
+			})
+		);
+		const view = render(HunkPane, {});
+
+		const added = view.get('.line.added');
+		expect(added.querySelector('.tok-keyword')?.textContent).toBe('fn');
+		expect(added.querySelector('.tok-number.word')?.textContent).toBe('2');
+		expect(added.querySelector('.text')?.textContent).toBe('fn one() -> u8 { 2 }');
+		view.destroy();
+	});
+
 	it('offers to stage a hunk when the unstaged side is open', () => {
 		control.setSelection({ path: 'core.txt', side: 'unstaged' });
 		control.setFile(diff());

@@ -20,6 +20,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 - **Blame on click can be turned off in Files.** A *Blame on click* toggle sits at the right of the path above the file. On, a click on a line shows who wrote it, when and why, as before. Off, a click only moves the cursor, for reading and selecting without the card opening; Enter still opens it. The choice is kept per repository.
 
+### Fixed
+
+- **Code in the Working copy is coloured.** Its hunks were plain text with only the changed words marked; they are now coloured by language as in Diff, with the changed words still marked.
+
 ### Changed
 
 - **Pull requests no longer list *5 · build* and *6 · release* as skipped.** Those two run only when a change reaches `main`, and now exist only there; a pull request runs gates 0 to 4.

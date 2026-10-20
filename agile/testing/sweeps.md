@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1899 tickets in 291 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1661 not run, 2 with a note only.
+**1901 tickets in 292 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1663 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -307,3 +307,4 @@ not committed.
 | BUG-083 | Hiding the blame in Files breaks every line | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-083-sweep.md](BUG-083-sweep.md) |
 | BUG-094 | A resumed agent skips files that changed since its first run | Fixed | 3 | 0 | 0 | 0 | 0 | 3 | [BUG-094-sweep.md](BUG-094-sweep.md) |
 | BUG-095 | The Terminal's `+` says *no server running on session* | Fixed | 3 | 0 | 0 | 0 | 0 | 3 | [BUG-095-sweep.md](BUG-095-sweep.md) |
+| BUG-096 | The working copy's hunks are not coloured | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-096-sweep.md](BUG-096-sweep.md) |
