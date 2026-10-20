@@ -14,6 +14,28 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-10-20
+
+### Added
+
+- **Untrack**, a new screen under Tools. Choose a branch, tick the files and folders it should stop tracking, and Spagitty untracks them in a commit and pushes it. The files stay on disk. Before anything is written, the screen shows each path, the `.gitignore` line it gets (so the next `git add .` does not track it again), and the commit message. On the branch you have checked out, the commit is made in place with your hooks, and it is refused while anything else is staged. On any other branch, it is made without touching your working copy. A branch that is not on the remote yet is created there.
+
+### Fixed
+
+- **Pushing and fetching use the account you connected.** With an account connected in Settings › You for a host, git signs in to that host with its token. Before this, the system's credential helper could open its own sign-in window and ask for a user name and token again, as on a first push of a new branch to GitLab. Hosts with no connected account use git's credential helpers as before. The token must be allowed to push (on GitLab, `write_repository` or `api`).
+- **Pull requests on a GitLab that fails to send the list.** Some GitLab servers answer the merge request list with *500 Internal Server Error* when they cannot send one merge request in it. Spagitty now reads the merge requests one at a time instead and shows every one the server can send. When the server fails at that too, the message says the fault is the server's.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.7.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.7.0] - 2026-10-20
 
 ### Added
