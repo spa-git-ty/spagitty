@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1901 tickets in 292 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1663 not run, 2 with a note only.
+**1908 tickets in 293 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1670 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -157,6 +157,7 @@ not committed.
 | FEAT-151 | Search the text of files, by word or regular expression | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-151-sweep.md](FEAT-151-sweep.md) |
 | FEAT-152 | The Files tree widens by dragging, copies from a right-click, and a long selection holds | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-152-sweep.md](FEAT-152-sweep.md) |
 | FEAT-153 | Blame on click can be turned off | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-153-sweep.md](FEAT-153-sweep.md) |
+| FEAT-154 | Usages: where a name is defined and used | Done | 7 | 0 | 0 | 0 | 0 | 7 | [FEAT-154-sweep.md](FEAT-154-sweep.md) |
 | TASK-001 | Records baseline | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-001-sweep.md](TASK-001-sweep.md) |
 | TASK-002 | Test and CI baseline | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-002-sweep.md](TASK-002-sweep.md) |
 | TASK-003 | Make the Tauri layer generic over `Runtime` | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-003-sweep.md](TASK-003-sweep.md) |

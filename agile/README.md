@@ -207,6 +207,7 @@ rather than an audit.
 | [FEAT-151](items/FEAT-151-search-the-text-of-files.md) | Search the text of files, by word or regular expression | 1U | Done |
 | [FEAT-152](items/FEAT-152-the-files-tree-widens-and-copies.md) | The Files tree widens by dragging, copies from a right-click, and a long selection holds | 1U | Done |
 | [FEAT-153](items/FEAT-153-blame-on-click-can-be-turned-off.md) | Blame on click can be turned off | 1U | Done |
+| [FEAT-154](items/FEAT-154-usages-of-a-name.md) | Usages: where a name is defined and used | 1U | Done |
 
 ## Bugs
 
