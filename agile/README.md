@@ -206,6 +206,7 @@ rather than an audit.
 | [FEAT-150](items/FEAT-150-open-a-file-from-anywhere-with-a-click.md) | Open a file from anywhere with a click | every screen | Done |
 | [FEAT-151](items/FEAT-151-search-the-text-of-files.md) | Search the text of files, by word or regular expression | 1U | Done |
 | [FEAT-152](items/FEAT-152-the-files-tree-widens-and-copies.md) | The Files tree widens by dragging, copies from a right-click, and a long selection holds | 1U | Done |
+| [FEAT-153](items/FEAT-153-blame-on-click-can-be-turned-off.md) | Blame on click can be turned off | 1U | Done |
 
 ## Bugs
 
@@ -387,6 +388,7 @@ of its own.
 | [TASK-071](items/TASK-071-remove-agy.md) | agy is removed | 1K, 1Q, 1R, 1S | Done |
 | [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Done |
 | [TASK-073](items/TASK-073-the-sweeps-refreshed-and-run-from-a-portal.md) | The sweeps, refreshed and run from a portal | — | Done |
+| [TASK-074](items/TASK-074-pull-requests-no-longer-list-gates-5-and-6.md) | Pull requests no longer list gates 5 and 6 | — | Done |
 
 ## Skipped identifiers
 

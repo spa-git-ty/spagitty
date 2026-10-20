@@ -14,6 +14,27 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-10-20
+
+### Added
+
+- **Blame on click can be turned off in Files.** A *Blame on click* toggle sits at the right of the path above the file. On, a click on a line shows who wrote it, when and why, as before. Off, a click only moves the cursor, for reading and selecting without the card opening; Enter still opens it. The choice is kept per repository.
+
+### Changed
+
+- **Pull requests no longer list *5 · build* and *6 · release* as skipped.** Those two run only when a change reaches `main`, and now exist only there; a pull request runs gates 0 to 4.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.5.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.5.0] - 2026-10-20
 
 ### Added

@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1892 tickets in 289 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1654 not run, 2 with a note only.
+**1899 tickets in 291 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1661 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -156,6 +156,7 @@ not committed.
 | FEAT-147 | Own copies, and intake at the door | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-147-sweep.md](FEAT-147-sweep.md) |
 | FEAT-151 | Search the text of files, by word or regular expression | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-151-sweep.md](FEAT-151-sweep.md) |
 | FEAT-152 | The Files tree widens by dragging, copies from a right-click, and a long selection holds | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-152-sweep.md](FEAT-152-sweep.md) |
+| FEAT-153 | Blame on click can be turned off | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-153-sweep.md](FEAT-153-sweep.md) |
 | TASK-001 | Records baseline | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-001-sweep.md](TASK-001-sweep.md) |
 | TASK-002 | Test and CI baseline | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-002-sweep.md](TASK-002-sweep.md) |
 | TASK-003 | Make the Tauri layer generic over `Runtime` | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-003-sweep.md](TASK-003-sweep.md) |
@@ -223,6 +224,7 @@ not committed.
 | TASK-071 | agy is removed | Done | 5 | 0 | 0 | 0 | 0 | 5 | [TASK-071-sweep.md](TASK-071-sweep.md) |
 | TASK-072 | The declared minimum Rust is older than a dependency needs | Done | 2 | 0 | 0 | 0 | 0 | 2 | [TASK-072-sweep.md](TASK-072-sweep.md) |
 | TASK-073 | The sweeps, refreshed and run from a portal | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-073-sweep.md](TASK-073-sweep.md) |
+| TASK-074 | Pull requests no longer list gates 5 and 6 | Done | 2 | 0 | 0 | 0 | 0 | 2 | [TASK-074-sweep.md](TASK-074-sweep.md) |
 | BUG-002 | The primary button has no fill | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-002-sweep.md](BUG-002-sweep.md) |
 | BUG-003 | The lane canvas paints over the messages | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-003-sweep.md](BUG-003-sweep.md) |
 | BUG-004 | The packaged Linux app opens a blank window | Fixed | 7 | 0 | 0 | 0 | 0 | 7 | [BUG-004-sweep.md](BUG-004-sweep.md) |
