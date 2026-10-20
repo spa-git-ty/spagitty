@@ -5008,7 +5008,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty"
-version = "3.6.0"
+version = "3.7.0"
 dependencies = [
  "notify",
  "serde",
@@ -5026,7 +5026,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-core"
-version = "3.6.0"
+version = "3.7.0"
 dependencies = [
  "gix",
  "jsonschema",
@@ -5037,6 +5037,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "toml 0.9.12+spec-1.1.0",
+ "tree-sitter",
  "tree-sitter-bash",
  "tree-sitter-c",
  "tree-sitter-c-sharp",
@@ -5062,7 +5063,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-extensions"
-version = "3.6.0"
+version = "3.7.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -5078,7 +5079,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-farm"
-version = "3.6.0"
+version = "3.7.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -5090,7 +5091,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-process"
-version = "3.6.0"
+version = "3.7.0"
 dependencies = [
  "libc",
  "portable-pty",

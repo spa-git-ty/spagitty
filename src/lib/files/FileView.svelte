@@ -3,6 +3,7 @@
 	import { tick, untrack } from 'svelte';
 	import ImageDiff from '$lib/diff/ImageDiff.svelte';
 	import { fullDate } from '$lib/format';
+	import { mod } from '$lib/platform';
 	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
@@ -15,6 +16,7 @@
 	import Peek from './Peek.svelte';
 	import SearchToggles from './SearchToggles.svelte';
 	import { files, revisionLabel } from './store.svelte';
+	import { nameClicked } from './usages';
 
 	/**
 	 * One file at a revision, read and never written (FEAT-131).
@@ -229,8 +231,27 @@
 		}
 	}
 
+	/**
+	 * Ctrl (⌘ on a Mac) is held: names in the file are underlined under the
+	 * pointer, as an editor shows what a click would follow (FEAT-154).
+	 */
+	let reaching = $state(false);
+
+	function reach(event: KeyboardEvent) {
+		reaching = event.ctrlKey || event.metaKey;
+	}
+
 	/** A press on a line's text: the peek, unless it was a drag to select. */
 	function pressLine(line: number, event: MouseEvent) {
+		// Ctrl-click (⌘ on a Mac): where the name clicked is defined and used.
+		if (event.ctrlKey || event.metaKey) {
+			const name = nameClicked(event, event.currentTarget as HTMLElement, lines[line] ?? '');
+			if (name) {
+				files.moveTo(line);
+				void files.findUsages(name);
+			}
+			return;
+		}
 		if (window.getSelection()?.isCollapsed === false) return;
 		if (event.shiftKey) {
 			files.moveTo(line, true);
@@ -251,6 +272,8 @@
 		return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 	}
 </script>
+
+<svelte:window onkeydown={reach} onkeyup={reach} onblur={() => (reaching = false)} />
 
 <section class="file" aria-label={file ? `${file.path} at ${files.rev}` : 'No file open'}>
 	<div class="tabs" role="tablist" aria-label="Open files">
@@ -313,6 +336,7 @@
 		class="pane"
 		class:blamed={files.blameOn}
 		class:wrap={files.wrap}
+		class:reaching
 		style:--digits={digits}
 		bind:this={pane}
 		{onkeydown}
@@ -463,7 +487,7 @@
 		{/if}
 		<span class="gap"></span>
 		{#if content?.kind === 'text'}
-			<span class="cell muted keys">/ search · ]b next blame · b blame</span>
+			<span class="cell muted keys">/ search · ]b next blame · b blame · {mod()}click usages</span>
 			<span class="cell muted">
 				{files.language}{#if files.treeSitter}&nbsp;· tree-sitter{/if}
 			</span>
@@ -750,6 +774,12 @@
 		overflow: hidden;
 		cursor: text;
 		tab-size: 4;
+	}
+
+	/* What a Ctrl-click would look up: a run that can hold a name. */
+	.reaching .text :is(.tok-plain, .tok-function, .tok-type, .tok-tag, .tok-attr, .tok-meta):hover {
+		text-decoration: underline;
+		cursor: pointer;
 	}
 
 	.wrap .text {

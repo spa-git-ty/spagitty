@@ -36,6 +36,10 @@ pub enum Error {
     #[error("not a pattern: {0}")]
     Pattern(String),
 
+    /// *Usages* asked for something that is not a name (FEAT-154).
+    #[error("not a name: {0}")]
+    NotAName(String),
+
     #[error("could not read the repository: {0}")]
     Open(String),
 

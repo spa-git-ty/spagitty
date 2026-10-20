@@ -487,12 +487,13 @@ fn utf16(text: &str) -> u32 {
     text.encode_utf16().count() as u32
 }
 
-/// The first match on `line`, as a hit, with a long line cut around it.
-fn hit_on(path: &str, number: usize, line: &str, found: regex::Match<'_>) -> Hit {
+/// The match at bytes `start..end` of `line`, as a hit, with a long line
+/// cut around it. `number` is zero-based.
+pub(crate) fn hit_on(path: &str, number: usize, line: &str, start: usize, end: usize) -> Hit {
     let (mut from, mut to) = (0, line.len());
     if line.len() > HIT_BEFORE + HIT_AFTER {
-        from = found.start().saturating_sub(HIT_BEFORE);
-        to = (found.end() + HIT_AFTER).min(line.len());
+        from = start.saturating_sub(HIT_BEFORE);
+        to = (end + HIT_AFTER).min(line.len());
         while !line.is_char_boundary(from) {
             from -= 1;
         }
@@ -502,39 +503,25 @@ fn hit_on(path: &str, number: usize, line: &str, found: regex::Match<'_>) -> Hit
     }
     let lead = if from > 0 { "…" } else { "" };
     let text = format!("{lead}{}", &line[from..to]);
-    let start = utf16(lead) + utf16(&line[from..found.start()]);
+    let found = &line[start..end];
+    let begins = utf16(lead) + utf16(&line[from..start]);
     Hit {
         path: path.to_string(),
         line: number as u32 + 1,
-        column: utf16(&line[..found.start()]),
-        length: utf16(found.as_str()),
-        start,
-        end: start + utf16(found.as_str()),
+        column: utf16(&line[..start]),
+        length: utf16(found),
+        start: begins,
+        end: begins + utf16(found),
         text,
     }
 }
 
-/// Every line of every text file at `rev` that `query` matches, the first
-/// match on each, in path order (FEAT-151). Binary files, Git LFS pointers
-/// and files over 2 MB are left out. Reads blobs only, like the rest of this
-/// module.
-pub fn search(
+/// Every blob at `rev`, in path order, and whether the walk stopped at its
+/// limit before the end.
+pub(crate) fn blobs_at(
     repo: &gix::Repository,
     rev: &str,
-    query: &str,
-    options: SearchOptions,
-    limit: usize,
-) -> Result<Searched> {
-    let empty = Searched {
-        hits: Vec::new(),
-        files: 0,
-        more: false,
-    };
-    if query.is_empty() || limit == 0 {
-        return Ok(empty);
-    }
-    let matcher = pattern(query, options)?;
-
+) -> Result<(Vec<(String, gix::ObjectId)>, bool)> {
     let mut blobs: Vec<(String, gix::ObjectId)> = Vec::new();
     let mut walked = 0usize;
     let mut cut = false;
@@ -559,26 +546,58 @@ pub fn search(
         }
     }
     blobs.sort();
+    Ok((blobs, cut))
+}
+
+/// A blob's text, or `None` for one a search leaves out: binary, a Git LFS
+/// pointer, or over 2 MB.
+pub(crate) fn searchable_text(repo: &gix::Repository, id: gix::ObjectId) -> Result<Option<String>> {
+    let size = repo
+        .find_header(id)
+        .map_err(|error| Error::Diff(error.to_string()))?
+        .size();
+    if size > GREP_MAX_BYTES {
+        return Ok(None);
+    }
+    let data = repo
+        .find_object(id)
+        .map_err(|error| Error::Diff(error.to_string()))?
+        .detach()
+        .data;
+    if data[..data.len().min(BINARY_SNIFF_BYTES)].contains(&0) || lfs_pointer(&data).is_some() {
+        return Ok(None);
+    }
+    Ok(Some(String::from_utf8_lossy(&data).into_owned()))
+}
+
+/// Every line of every text file at `rev` that `query` matches, the first
+/// match on each, in path order (FEAT-151). Binary files, Git LFS pointers
+/// and files over 2 MB are left out. Reads blobs only, like the rest of this
+/// module.
+pub fn search(
+    repo: &gix::Repository,
+    rev: &str,
+    query: &str,
+    options: SearchOptions,
+    limit: usize,
+) -> Result<Searched> {
+    let empty = Searched {
+        hits: Vec::new(),
+        files: 0,
+        more: false,
+    };
+    if query.is_empty() || limit == 0 {
+        return Ok(empty);
+    }
+    let matcher = pattern(query, options)?;
+    let (blobs, mut cut) = blobs_at(repo, rev)?;
 
     let mut hits = Vec::new();
     let mut files = 0u32;
     'files: for (path, id) in blobs {
-        let size = repo
-            .find_header(id)
-            .map_err(|error| Error::Diff(error.to_string()))?
-            .size();
-        if size > GREP_MAX_BYTES {
+        let Some(text) = searchable_text(repo, id)? else {
             continue;
-        }
-        let data = repo
-            .find_object(id)
-            .map_err(|error| Error::Diff(error.to_string()))?
-            .detach()
-            .data;
-        if data[..data.len().min(BINARY_SNIFF_BYTES)].contains(&0) || lfs_pointer(&data).is_some() {
-            continue;
-        }
-        let text = String::from_utf8_lossy(&data);
+        };
         let mut any = false;
         for (number, line) in text.lines().enumerate() {
             if let Some(found) = matcher.find(line) {
@@ -587,7 +606,7 @@ pub fn search(
                     break 'files;
                 }
                 any = true;
-                hits.push(hit_on(&path, number, line, found));
+                hits.push(hit_on(&path, number, line, found.start(), found.end()));
             }
         }
         files += u32::from(any);

@@ -14,6 +14,23 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-10-20
+
+### Added
+
+- **Usages in Files.** Ctrl-click a name in a file (⌘-click on a Mac) — a function, a class, a method, a module — and the tree lists where it is **defined**, where it is **used**, and where it is only **mentioned** in comments, strings and documents, with a count of each and of the files. A click opens the place with the name marked. Holding Ctrl or ⌘ underlines what a click would look up, and *Usages* in the tree takes a typed name too. It works at any branch, tag or commit, and tells definitions from uses in Rust, TypeScript, JavaScript, Python, Go, Java, C, C++ and C#. It goes by name, not by type, so other things with the same name are listed as well.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.6.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.6.0] - 2026-10-20
 
 ### Added

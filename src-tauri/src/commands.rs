@@ -42,6 +42,7 @@ use spagitty_core::submodules::{self, Submodule};
 use spagitty_core::tags;
 use spagitty_core::tools::{self, ExternalToolsConfig};
 use spagitty_core::update;
+use spagitty_core::usages;
 use spagitty_core::work;
 use spagitty_core::worktrees::{self, Worktree};
 use spagitty_core::{Error, Result};
@@ -198,6 +199,7 @@ const READERS: &[&str] = &[
     "files_read",
     "files_find",
     "files_search",
+    "files_usages",
     "files_before",
     "files_blame",
     "files_spans",
@@ -1314,6 +1316,25 @@ pub fn files_search(
         &query,
         options,
         FILES_SEARCH_LIMIT,
+    )
+}
+
+/// How many places *Usages* returns. Past this it says there are more.
+const FILES_USAGES_LIMIT: usize = 2_000;
+
+/// Where `name` is defined, used and mentioned in the files at `rev`
+/// (FEAT-154).
+#[tauri::command(async)]
+pub fn files_usages(
+    state: State<'_, AppState>,
+    rev: String,
+    name: String,
+) -> Result<usages::Usages> {
+    usages::usages(
+        &files_repo(&state, "files_usages")?,
+        &rev,
+        &name,
+        FILES_USAGES_LIMIT,
     )
 }
 
