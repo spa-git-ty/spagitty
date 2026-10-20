@@ -808,6 +808,23 @@ export interface FilesUsages {
 	more: boolean;
 }
 
+/** A path to stop tracking (FEAT-155). Mirrors `untrack::Target`. */
+export interface UntrackTarget {
+	/** From the top of the repository. */
+	path: string;
+	folder: boolean;
+}
+
+/** What an untracking commit made. Mirrors `untrack::Untracked`. */
+export interface Untracked {
+	commit: string;
+	branch: string;
+	/** Where the branch is pushed, or null when there is nowhere. */
+	remote: string | null;
+	/** Whether the commit ran the hooks; not on a branch not checked out here. */
+	hooksRan: boolean;
+}
+
 /** One commit a blamed file's lines come from. Mirrors `blame::BlameCommit`. */
 export interface BlameCommit {
 	id: string;

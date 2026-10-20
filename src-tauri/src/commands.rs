@@ -41,6 +41,7 @@ use spagitty_core::status::{self, RepoCounts, WorkingCopy};
 use spagitty_core::submodules::{self, Submodule};
 use spagitty_core::tags;
 use spagitty_core::tools::{self, ExternalToolsConfig};
+use spagitty_core::untrack;
 use spagitty_core::update;
 use spagitty_core::usages;
 use spagitty_core::work;
@@ -158,6 +159,7 @@ const WRITERS: &[&str] = &[
     "worktree_unlock",
     "worktree_prune",
     "review_check_out",
+    "untrack",
 ];
 
 /// The commands that only read. Listed so that a new command is put in one
@@ -873,6 +875,27 @@ pub fn stash_push(
 ) -> Result<()> {
     state.with_session("stash_push", |session| {
         stash::push(&session.repo.to_thread_local(), &message, include_untracked)
+    })
+}
+
+/// Stop tracking files and folders on a branch, in a commit (FEAT-155).
+/// Pushing it is the network worker's, as every push is.
+#[tauri::command(async)]
+pub fn untrack(
+    state: State<'_, AppState>,
+    branch: String,
+    paths: Vec<untrack::Target>,
+    ignore: bool,
+    message: String,
+) -> Result<untrack::Untracked> {
+    state.with_session("untrack", |session| {
+        untrack::untrack(
+            &session.repo.to_thread_local(),
+            &branch,
+            &paths,
+            ignore,
+            &message,
+        )
     })
 }
 

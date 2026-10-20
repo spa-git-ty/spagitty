@@ -208,6 +208,7 @@ rather than an audit.
 | [FEAT-152](items/FEAT-152-the-files-tree-widens-and-copies.md) | The Files tree widens by dragging, copies from a right-click, and a long selection holds | 1U | Done |
 | [FEAT-153](items/FEAT-153-blame-on-click-can-be-turned-off.md) | Blame on click can be turned off | 1U | Done |
 | [FEAT-154](items/FEAT-154-usages-of-a-name.md) | Usages: where a name is defined and used | 1U | Done |
+| [FEAT-155](items/FEAT-155-untrack.md) | Untrack: stop tracking files on a branch, in a commit, and push it | 2B | Done |
 
 ## Bugs
 
@@ -310,6 +311,8 @@ rather than an audit.
 | [BUG-094](items/BUG-094-a-resumed-agent-skips-files-that-changed-since.md) | A resumed agent skips files that changed since its first run | 1R, 1S | Fixed |
 | [BUG-095](items/BUG-095-the-terminal-s-plus-says-no-server-running.md) | The Terminal's `+` says *no server running on session* | 1T | Fixed |
 | [BUG-096](items/BUG-096-the-working-copy-s-hunks-are-not-coloured.md) | The working copy's hunks are not coloured | Working copy (1C) | Fixed |
+| [BUG-097](items/BUG-097-a-push-opens-the-credential-helpers-sign-in-window.md) | A push opens the credential helper's sign-in window instead of using the connected account | every push | Fixed |
+| [BUG-098](items/BUG-098-pull-requests-says-only-500-internal-server-error.md) | Pull requests says only "500 Internal Server Error" on the author's GitLab | 1H, 1R | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

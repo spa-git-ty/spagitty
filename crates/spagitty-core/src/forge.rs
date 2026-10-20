@@ -512,6 +512,16 @@ pub(crate) fn status_error(
             host: host.to_string(),
             detail: host_message(body).unwrap_or_else(|| "the request was rejected (422)".into()),
         },
+        // A server's own failure (BUG-098). Its message alone — "500 Internal
+        // Server Error" — read as Spagitty's fault, and as something to fix here.
+        other if other >= 500 => Error::Forge {
+            host: host.to_string(),
+            detail: format!(
+                "{} — the server failed, not the request. Try again later; if it keeps \
+                 happening, the server's administrators can find why in its logs.",
+                host_message(body).unwrap_or_else(|| format!("responded {other}"))
+            ),
+        },
         other => Error::Forge {
             host: host.to_string(),
             detail: host_message(body).unwrap_or_else(|| format!("responded {other}")),

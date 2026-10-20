@@ -237,6 +237,7 @@ pub fn run() {
             commands::stashes,
             commands::home_overview,
             commands::stash_push,
+            commands::untrack,
             commands::recent_repos,
             commands::forget_repo,
             commands::clone_plan,
@@ -408,6 +409,10 @@ pub fn run() {
             // Registered before any command can run, so the first execution of
             // the session is already being forwarded.
             command_log::forward_to(app.handle().clone());
+
+            // git signs in to a connected account's host with its token, not
+            // through a credential helper's sign-in window (BUG-097).
+            accounts::share_with_git(&accounts::load(app.handle()));
 
             // The farm's state, empty until a repository is opened.
             farm::manage(app.handle());

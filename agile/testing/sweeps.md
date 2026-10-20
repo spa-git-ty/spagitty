@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1908 tickets in 293 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1670 not run, 2 with a note only.
+**1917 tickets in 296 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1679 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -158,6 +158,7 @@ not committed.
 | FEAT-152 | The Files tree widens by dragging, copies from a right-click, and a long selection holds | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-152-sweep.md](FEAT-152-sweep.md) |
 | FEAT-153 | Blame on click can be turned off | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-153-sweep.md](FEAT-153-sweep.md) |
 | FEAT-154 | Usages: where a name is defined and used | Done | 7 | 0 | 0 | 0 | 0 | 7 | [FEAT-154-sweep.md](FEAT-154-sweep.md) |
+| FEAT-155 | Untrack: stop tracking files on a branch, in a commit, and push it | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-155-sweep.md](FEAT-155-sweep.md) |
 | TASK-001 | Records baseline | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-001-sweep.md](TASK-001-sweep.md) |
 | TASK-002 | Test and CI baseline | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-002-sweep.md](TASK-002-sweep.md) |
 | TASK-003 | Make the Tauri layer generic over `Runtime` | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-003-sweep.md](TASK-003-sweep.md) |
@@ -309,3 +310,5 @@ not committed.
 | BUG-094 | A resumed agent skips files that changed since its first run | Fixed | 3 | 0 | 0 | 0 | 0 | 3 | [BUG-094-sweep.md](BUG-094-sweep.md) |
 | BUG-095 | The Terminal's `+` says *no server running on session* | Fixed | 3 | 0 | 0 | 0 | 0 | 3 | [BUG-095-sweep.md](BUG-095-sweep.md) |
 | BUG-096 | The working copy's hunks are not coloured | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-096-sweep.md](BUG-096-sweep.md) |
+| BUG-097 | A push opens the credential helper's sign-in window instead of using the connected account | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-097-sweep.md](BUG-097-sweep.md) |
+| BUG-098 | Pull requests says only "500 Internal Server Error" on the author's GitLab | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-098-sweep.md](BUG-098-sweep.md) |

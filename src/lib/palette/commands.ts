@@ -73,6 +73,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.pipelines', title: 'Go to Pipelines', path: '/pipelines', keywords: ['build', 'workflow', 'jobs', 'CI', 'preview'] },
 	{ id: 'go.tags', title: 'Go to Tags', path: '/tags', keywords: ['refs', 'release'] },
 	{ id: 'go.reflog', title: 'Go to Reflog', path: '/reflog', keywords: ['undo', 'recover', 'lost'] },
+	{ id: 'go.untrack', title: 'Go to Untrack', path: '/untrack', keywords: ['rm', 'cached', 'gitignore', 'ignore', 'stop tracking'] },
 	{ id: 'go.rebase', title: 'Go to Interactive rebase', path: '/rebase', keywords: ['reorder', 'squash'] },
 	{ id: 'go.home', title: 'Go to Home', path: '/home', keywords: ['needs', 'dashboard', 'overview', 'waiting'] },
 	{ id: 'go.farm', title: 'Go to Farm', path: '/farm', keywords: ['tasks', 'dag', 'goal'] },

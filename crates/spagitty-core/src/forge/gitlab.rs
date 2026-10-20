@@ -139,7 +139,94 @@ pub fn pull_requests(repo: &Repo, token: &str, me: &str) -> Result<Vec<PullReque
         "{}/merge_requests?state=opened&per_page=50&order_by=updated_at&sort=desc",
         project_url(repo)
     );
-    Ok(parse_merge_requests(&get(&url, token, &repo.host)?, me))
+    merge_request_list(&url, token, &repo.host, me)
+}
+
+/// A list of merge requests, whole when GitLab can send it whole (BUG-098).
+///
+/// A GitLab can answer a list with *500 Internal Server Error* while every
+/// merge request in it reads one at a time: the list serialises each merge
+/// request's every field in one request, and one the server cannot
+/// serialise, or a query that runs past its time limit, fails them all. The
+/// Pull requests screen then said only the 500, every time.
+///
+/// So a server error is answered by asking for the list's simple view —
+/// ids and titles, which GitLab serves without the heavy fields — and then
+/// each merge request on its own, a few at a time. One that still fails is
+/// left out rather than failing the rest. Only when the simple view fails
+/// too is the server's error the answer.
+fn merge_request_list(url: &str, token: &str, host: &str, me: &str) -> Result<Vec<PullRequest>> {
+    listed(url, host, me, &|url: &str| http::get_json(url, token, host))
+}
+
+/// How [`merge_request_list`] asks for a page, so a test can answer.
+type Fetch<'a> = dyn Fn(&str) -> Result<http::Response> + Sync + 'a;
+
+fn listed(url: &str, host: &str, me: &str, fetch: &Fetch<'_>) -> Result<Vec<PullRequest>> {
+    let response = fetch(url)?;
+    if (200..300).contains(&response.status) {
+        let json: Value = serde_json::from_str(&response.body).map_err(|e| json_err(host, e))?;
+        return Ok(parse_merge_requests(&json, me));
+    }
+    let refused = status_error(
+        host,
+        response.status,
+        &response.body,
+        response.retry_after.as_deref(),
+    );
+    if response.status < 500 {
+        return Err(refused);
+    }
+    one_by_one(url, host, me, fetch).ok_or(refused)
+}
+
+/// A JSON answer, when the host sent a good one.
+fn fetched(fetch: &Fetch<'_>, url: &str) -> Option<Value> {
+    let response = fetch(url).ok()?;
+    if !(200..300).contains(&response.status) {
+        return None;
+    }
+    serde_json::from_str(&response.body).ok()
+}
+
+/// [`merge_request_list`]'s way round a server error: the simple view, then
+/// each merge request by itself. `None` when the simple view fails as well.
+fn one_by_one(url: &str, host: &str, me: &str, fetch: &Fetch<'_>) -> Option<Vec<PullRequest>> {
+    let simple = fetched(fetch, &format!("{url}&view=simple"))?;
+    let api = crate::forge::Kind::GitLab.api_base(host);
+    let wanted: Vec<String> = simple
+        .as_array()?
+        .iter()
+        .filter_map(|item| {
+            Some(format!(
+                "{api}/projects/{}/merge_requests/{}",
+                item.get("project_id")?.as_u64()?,
+                item.get("iid")?.as_u64()?
+            ))
+        })
+        .collect();
+
+    let next = AtomicUsize::new(0);
+    let found = Mutex::new(Vec::new());
+    std::thread::scope(|scope| {
+        for _ in 0..WORKERS.min(wanted.len()) {
+            scope.spawn(|| loop {
+                let index = next.fetch_add(1, Ordering::Relaxed);
+                let Some(one) = wanted.get(index) else {
+                    break;
+                };
+                let read = fetched(fetch, one).and_then(|json| parse_single_mr(&json, me));
+                if let Some(request) = read {
+                    found.lock().expect("merge requests").push((index, request));
+                }
+            });
+        }
+    });
+
+    // In the list's own order: most recently updated first.
+    let mut found = found.into_inner().expect("merge requests");
+    found.sort_by_key(|(index, _)| *index);
+    Some(found.into_iter().map(|(_, request)| request).collect())
 }
 
 /// Open merge requests anywhere on the host that `me` is a reviewer of
@@ -159,7 +246,7 @@ pub fn involved_merge_requests(host: &str, token: &str, me: &str) -> Result<Vec<
         crate::forge::Kind::GitLab.api_base(host),
         crate::forge::encode_segment(me),
     );
-    Ok(parse_merge_requests(&get(&url, token, host)?, me))
+    merge_request_list(&url, token, host, me)
 }
 
 pub fn create_merge_request(
@@ -925,6 +1012,106 @@ mod tests {
             owner: "team/backend".into(),
             name: "payments".into(),
         }
+    }
+
+    fn answer(status: u16, body: Value) -> Result<http::Response> {
+        Ok(http::Response {
+            status,
+            body: body.to_string(),
+            retry_after: None,
+        })
+    }
+
+    fn merge_request(iid: u64) -> Value {
+        serde_json::json!({
+            "id": 1000 + iid,
+            "iid": iid,
+            "project_id": 7,
+            "title": format!("Change {iid}"),
+            "state": "opened",
+            "author": { "username": "dev" },
+            "updated_at": "2026-10-20T08:00:00Z",
+            "source_branch": format!("feature/{iid}"),
+            "target_branch": "main"
+        })
+    }
+
+    const LIST: &str = "https://gitlab.example.com/api/v4/projects/7/merge_requests?state=opened";
+
+    #[test]
+    fn a_list_the_server_fails_on_is_read_one_merge_request_at_a_time() {
+        // BUG-098: the list answers 500; its simple view and two of the
+        // three merge requests read, and the third is left out.
+        let asked = Mutex::new(Vec::new());
+        let fetch = |url: &str| {
+            asked.lock().unwrap().push(url.to_string());
+            if url == LIST {
+                return answer(
+                    500,
+                    serde_json::json!({ "message": "500 Internal Server Error" }),
+                );
+            }
+            if url == format!("{LIST}&view=simple") {
+                let simple: Vec<Value> = [3, 2, 1]
+                    .iter()
+                    .map(|iid| serde_json::json!({ "iid": iid, "project_id": 7, "title": "t" }))
+                    .collect();
+                return answer(200, Value::Array(simple));
+            }
+            let iid: u64 = url.rsplit('/').next().unwrap().parse().unwrap();
+            if iid == 2 {
+                return answer(
+                    500,
+                    serde_json::json!({ "message": "500 Internal Server Error" }),
+                );
+            }
+            answer(200, merge_request(iid))
+        };
+
+        let found = listed(LIST, "gitlab.example.com", "me", &fetch).expect("a list");
+        let numbers: Vec<u64> = found.iter().map(|request| request.number).collect();
+        assert_eq!(
+            numbers,
+            [3, 1],
+            "in the list's order, without the one that failed"
+        );
+        assert!(asked.lock().unwrap().contains(
+            &"https://gitlab.example.com/api/v4/projects/7/merge_requests/3".to_string()
+        ));
+    }
+
+    #[test]
+    fn the_servers_error_stands_when_the_simple_view_fails_too_and_a_refusal_is_not_retried() {
+        let broken = |_: &str| {
+            answer(
+                500,
+                serde_json::json!({ "message": "500 Internal Server Error" }),
+            )
+        };
+        let error = listed(LIST, "gitlab.example.com", "me", &broken).unwrap_err();
+        assert!(
+            error.to_string().contains("500 Internal Server Error"),
+            "{error}"
+        );
+
+        let asked = Mutex::new(0);
+        let refused = |_: &str| {
+            *asked.lock().unwrap() += 1;
+            answer(403, serde_json::json!({ "message": "403 Forbidden" }))
+        };
+        assert!(listed(LIST, "gitlab.example.com", "me", &refused).is_err());
+        assert_eq!(
+            *asked.lock().unwrap(),
+            1,
+            "a refusal is the answer, not a server fault"
+        );
+    }
+
+    #[test]
+    fn a_whole_list_is_read_as_it_comes() {
+        let whole = |_: &str| answer(200, Value::Array(vec![merge_request(5), merge_request(4)]));
+        let found = listed(LIST, "gitlab.example.com", "me", &whole).expect("a list");
+        assert_eq!(found.len(), 2);
     }
 
     #[test]

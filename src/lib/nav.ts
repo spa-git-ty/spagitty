@@ -56,9 +56,13 @@ export type CountKey = keyof RepoCounts;
  * 2A is Home (FEAT-140), the first code past the alphabet: what the open
  * repository needs from you, then its state at a glance. It is the top of the
  * rail, above the Farm, and the screen a launch opens on.
+ *
+ * 2B is Untrack (FEAT-155): files and folders a branch should stop tracking,
+ * in a commit, pushed. A tool, after the Reflog.
  */
 export type ScreenCode =
 	| '2A'
+	| '2B'
 	| '1A'
 	| '1B'
 	| '1C'
@@ -251,6 +255,8 @@ export const NAV_ITEMS: NavItem[] = [
 	{ code: '1G', label: 'Stash', href: '/stash', group: 'tools', icon: 'stash' },
 	{ code: '1N', label: 'Tags', href: '/tags', group: 'tools', icon: 'tag' },
 	{ code: '1M', label: 'Reflog', href: '/reflog', group: 'tools', icon: 'history' },
+	// FEAT-155. Stop tracking files on a branch, in a commit.
+	{ code: '2B', label: 'Untrack', href: '/untrack', group: 'tools', icon: 'untrack', since: '3.8' },
 	{
 		code: '1P',
 		label: 'Badges',
