@@ -76,6 +76,14 @@ The top of the rail, above a divider and the Farm, and the screen a launch opens
 
 **Needs you** lists what waits on the person now, most urgent first — merge ready, review requested, task stuck, checks failed, changes requested, assigned to you — with All, Reviews, Failing and Farm chips. A row leaves when its thing is done. Each kind's colour, icon and button come from `src/lib/notifications/kinds.ts`, which the notification center reads too. Beside it, the Farm card and Working copy; below, Branches, Pull requests and Latest commits, then sixteen weeks of commits, Pipelines and Releases. The git half is one read (`home_overview`); the forge half rides the watcher's clock and Home adds no timer.
 
+## 2B — Untrack
+
+**Item:** [FEAT-155](../agile/items/FEAT-155-untrack.md). **Route:** `/untrack`.
+
+A tool, after the Reflog. Two panes. On the left, a local branch — the one checked out, at first — and its tracked files read from git at that branch, with a field to find one by name; each file and folder has a box to tick. A folder ticked takes in everything in it. On the right, what will happen before anything does: the paths, the `.gitignore` line for each (on by default, since otherwise the next `git add .` tracks them again), the commit's message, suggested from the paths until it is typed over, and *Push after committing*. One button does it: `git rm --cached`, the `.gitignore` lines, a commit, and the push through the network worker, which creates the branch on the remote if it is not there yet.
+
+On the branch checked out, the commit is made in place with the hooks, and is refused while anything else is staged, or while `.gitignore` has changes of its own it would sweep in. On another branch it is made in a worktree with nothing checked out, so the working copy does not move; hooks do not run there, and the screen says so.
+
 ## 1Z — Releases
 
 **Item:** [FEAT-139](../agile/items/FEAT-139-releases.md). **Route:** `/releases`.

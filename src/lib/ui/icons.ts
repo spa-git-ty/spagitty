@@ -90,7 +90,8 @@ export type IconName =
 	| 'split-down'
 	| 'home'
 	| 'bell'
-	| 'comment';
+	| 'comment'
+	| 'untrack';
 
 /**
  * The paths, keyed by name. A value is one or more `d` attributes, drawn in
@@ -213,6 +214,8 @@ export const ICONS: Record<IconName, string[]> = {
 		'M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
 		'M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'
 	],
+	// A page with a line through its middle: taken out of what git tracks (FEAT-155).
+	untrack: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z', 'M14 3v5h5', 'M9 14h6'],
 	// A page with code on it: Files reads, and never writes.
 	files: [
 		'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z',

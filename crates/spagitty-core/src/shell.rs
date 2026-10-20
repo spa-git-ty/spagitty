@@ -71,11 +71,79 @@ pub fn program(name: impl AsRef<OsStr>) -> Command {
 /// failure the UI can act on, rather than hanging the app forever.
 fn command(repo: &Path, args: &[&str]) -> Command {
     let mut command = program("git");
+    command.current_dir(repo).env("GIT_TERMINAL_PROMPT", "0");
+    if reaches_a_remote(args) {
+        sign_in(&mut command);
+    }
+    command.args(args);
     command
-        .current_dir(repo)
-        .args(args)
-        .env("GIT_TERMINAL_PROMPT", "0");
-    command
+}
+
+/// Does this git command talk to a remote, and so may need to sign in?
+fn reaches_a_remote(args: &[&str]) -> bool {
+    matches!(
+        args.first(),
+        Some(&("fetch" | "push" | "pull" | "clone" | "ls-remote" | "submodule"))
+    )
+}
+
+/// The connected accounts git signs in with, as host and login (BUG-097).
+fn logins() -> &'static std::sync::RwLock<Vec<(String, String)>> {
+    static LOGINS: OnceLock<std::sync::RwLock<Vec<(String, String)>>> = OnceLock::new();
+    LOGINS.get_or_init(Default::default)
+}
+
+/// Sign git in to each of these hosts with its connected account's token,
+/// over HTTPS (BUG-097). The application calls this when it starts and
+/// whenever an account is connected or removed.
+///
+/// A push to a GitLab whose credential helper had nothing usable opened the
+/// helper's own sign-in window, asking for the user name and token the person
+/// had already given Spagitty. With an account connected for the host, git
+/// is handed that token instead; a host with no account is left to the
+/// credential helpers git is configured with, as before.
+pub fn sign_in_with_accounts(accounts: Vec<(String, String)>) {
+    if let Ok(mut held) = logins().write() {
+        *held = accounts;
+    }
+}
+
+/// Give `command` the connected accounts' tokens, for their hosts only.
+fn sign_in(command: &mut Command) {
+    let accounts = logins().read().map(|held| held.clone()).unwrap_or_default();
+    let signed: Vec<(String, String, String)> = accounts
+        .into_iter()
+        .filter_map(|(host, user)| {
+            let token = crate::forge::keychain::read(&host, &user).ok().flatten()?;
+            Some((host, user, token))
+        })
+        .collect();
+    sign_in_as(command, &signed);
+}
+
+/// For each host, a credential helper that answers with that login and
+/// token, in place of the helpers configured for the host.
+///
+/// `credential.https://<host>.helper` set empty clears the list git has
+/// gathered for that host, the system's helper included; the helper after it
+/// is then the only one asked. The token reaches it through the environment,
+/// so it is never in the command line or in Spagitty's record of what ran.
+fn sign_in_as(command: &mut Command, accounts: &[(String, String, String)]) {
+    for (index, (host, user, token)) in accounts.iter().enumerate() {
+        let key = format!("credential.https://{host}.helper");
+        let helper = format!(
+            "!f() {{ if test \"$1\" = get; then \
+             echo \"username=$SPAGITTY_GIT_USER_{index}\"; \
+             echo \"password=$SPAGITTY_GIT_TOKEN_{index}\"; fi; }}; f"
+        );
+        command
+            .arg("-c")
+            .arg(format!("{key}="))
+            .arg("-c")
+            .arg(format!("{key}={helper}"))
+            .env(format!("SPAGITTY_GIT_USER_{index}"), user)
+            .env(format!("SPAGITTY_GIT_TOKEN_{index}"), token);
+    }
 }
 
 /// Run a prepared command to completion, record what happened, and turn a
@@ -764,6 +832,7 @@ pub fn clone_start(url: &str, destination: &Path) -> Result<std::process::Child>
     ];
 
     let mut command = program("git");
+    sign_in(&mut command);
     command
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
@@ -1515,6 +1584,60 @@ pub fn worktree_unlock(repo: &Path, target: &Path) -> Result<()> {
     })?;
     run(repo, &["worktree", "unlock", target_str])?;
     Ok(())
+}
+
+/// A worktree at `branch` with nothing checked out (FEAT-155): its index is
+/// the branch's tree and its folder is empty. A commit can be made on a
+/// branch that is not checked out here without writing its files to disk.
+pub fn worktree_add_unchecked(repo: &Path, target: &Path, branch: &str) -> Result<()> {
+    let target_str = target.to_str().ok_or_else(|| Error::Git {
+        command: "worktree add".into(),
+        stderr: "target path is not valid utf-8".into(),
+    })?;
+    run(
+        repo,
+        &[
+            "worktree",
+            "add",
+            "--no-checkout",
+            "--quiet",
+            target_str,
+            branch,
+        ],
+    )?;
+    run(target, &["read-tree", "HEAD"])?;
+    Ok(())
+}
+
+/// Stop tracking `paths` (FEAT-155): out of the index, and left on disk.
+/// A folder is untracked with everything in it.
+pub fn untrack_paths(repo: &Path, paths: &[String]) -> Result<()> {
+    let mut args = vec!["rm", "-r", "--cached", "--quiet", "--"];
+    args.extend(paths.iter().map(String::as_str));
+    run(repo, &args)?;
+    Ok(())
+}
+
+/// The paths staged for the next commit.
+pub fn staged_names(repo: &Path) -> Result<Vec<String>> {
+    let out = run(repo, &["diff", "--cached", "--name-only", "-z"])?;
+    Ok(out
+        .split('\0')
+        .filter(|name| !name.is_empty())
+        .map(String::from)
+        .collect())
+}
+
+/// Which of `paths` have changes that are not staged.
+pub fn unstaged_names(repo: &Path, paths: &[&str]) -> Result<Vec<String>> {
+    let mut args = vec!["diff", "--name-only", "-z", "--"];
+    args.extend_from_slice(paths);
+    let out = run(repo, &args)?;
+    Ok(out
+        .split('\0')
+        .filter(|name| !name.is_empty())
+        .map(String::from)
+        .collect())
 }
 
 /// Prune stale worktree administrative metadata (FEAT-062).
@@ -2418,6 +2541,74 @@ pub fn ran_ok(repo: &Path, args: &[&str]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What git's credential machinery answers for `host`, with `command`'s
+    /// configuration. A helper configured before ours stands in for the
+    /// system's, which must not be asked for a host with an account.
+    fn filled(host: &str, accounts: &[(String, String, String)]) -> String {
+        use std::io::Write;
+        use std::process::Stdio;
+
+        let mut command = program("git");
+        command
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env(
+                "GIT_CONFIG_GLOBAL",
+                if cfg!(windows) { "NUL" } else { "/dev/null" },
+            )
+            .args([
+                "-c",
+                "credential.helper=!f() { echo username=system; echo password=system-secret; }; f",
+            ]);
+        sign_in_as(&mut command, accounts);
+        let mut child = command
+            .args(["credential", "fill"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("git credential fill");
+        child
+            .stdin
+            .take()
+            .expect("stdin")
+            .write_all(format!("protocol=https\nhost={host}\n\n").as_bytes())
+            .expect("ask");
+        String::from_utf8_lossy(&child.wait_with_output().expect("answer").stdout).into_owned()
+    }
+
+    #[test]
+    fn git_signs_in_to_a_host_with_its_account_and_asks_nothing_else() {
+        let accounts = vec![(
+            "gitlab.example.test".to_string(),
+            "mahmoud".to_string(),
+            "glpat-secret".to_string(),
+        )];
+        let answer = filled("gitlab.example.test", &accounts);
+        assert!(answer.contains("username=mahmoud\n"), "{answer}");
+        assert!(answer.contains("password=glpat-secret\n"), "{answer}");
+        assert!(!answer.contains("system"), "{answer}");
+
+        // Another host is left to the helpers git was configured with.
+        let elsewhere = filled("github.com", &accounts);
+        assert!(elsewhere.contains("password=system-secret"), "{elsewhere}");
+    }
+
+    #[test]
+    fn only_commands_that_reach_a_remote_sign_in() {
+        for args in [
+            ["push", "origin"],
+            ["fetch", "--all"],
+            ["clone", "x"],
+            ["pull", "origin"],
+        ] {
+            assert!(reaches_a_remote(&args), "{args:?}");
+        }
+        for args in [["status", "-z"], ["commit", "-m"], ["rm", "--cached"]] {
+            assert!(!reaches_a_remote(&args), "{args:?}");
+        }
+    }
 
     #[test]
     fn status_z_reads_each_path_with_its_code() {

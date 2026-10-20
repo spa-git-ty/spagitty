@@ -1289,6 +1289,7 @@ describe('NavRail', () => {
 			'Stash',
 			'Tags',
 			'Reflog',
+			'Untrack',
 			'All repositories',
 			'Settings'
 		]);

@@ -50,6 +50,8 @@ import type {
 	FilesRevision,
 	FilesSearched,
 	FilesUsages,
+	Untracked,
+	UntrackTarget,
 	SearchOptions,
 	IdentityKey,
 	IdentityScope,
@@ -354,6 +356,20 @@ export function filesFind(rev: string, query: string): Promise<FilesFound> {
 /** Every line of every text file at `rev` that `query` matches (FEAT-151). */
 export function filesSearch(rev: string, query: string, options: SearchOptions): Promise<FilesSearched> {
 	return invoke('files_search', { rev, query, options });
+}
+
+/**
+ * Stop tracking `paths` on `branch` and commit it (FEAT-155), with a
+ * `.gitignore` line for each when `ignore` is set. The push is the network
+ * worker's, as every push is.
+ */
+export function untrack(
+	branch: string,
+	paths: UntrackTarget[],
+	ignore: boolean,
+	message: string
+): Promise<Untracked> {
+	return invoke('untrack', { branch, paths, ignore, message });
 }
 
 /**

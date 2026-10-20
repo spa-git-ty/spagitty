@@ -76,7 +76,19 @@ fn without(mut accounts: Vec<Account>, host: &str, user: &str) -> Vec<Account> {
     accounts
 }
 
+/// Let git sign in to each account's host with its token (BUG-097): when
+/// the application starts, and whenever the accounts change.
+pub fn share_with_git(accounts: &[Account]) {
+    spagitty_core::shell::sign_in_with_accounts(
+        accounts
+            .iter()
+            .map(|account| (account.host.clone(), account.user.clone()))
+            .collect(),
+    );
+}
+
 fn save<R: Runtime>(app: &AppHandle<R>, accounts: &[Account]) {
+    share_with_git(accounts);
     let Some(path) = file(app) else {
         return;
     };

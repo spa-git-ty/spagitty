@@ -66,6 +66,11 @@ pub enum Error {
     #[error("{0}")]
     NotStageable(String),
 
+    /// Untrack (FEAT-155) would take more into its commit than it was asked
+    /// to, or was asked for nothing. The sentence says which and what to do.
+    #[error("{0}")]
+    Untrack(String),
+
     /// The screen is showing something the repository no longer has. Raised
     /// rather than applying a stale patch, which would half-stage a file.
     #[error("{0} changed since it was read; reload and try again")]

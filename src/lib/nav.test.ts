@@ -132,6 +132,8 @@ describe('NAV_ITEMS', () => {
 			'/stash',
 			'/tags',
 			'/reflog',
+			// FEAT-155. Stopping tracking files, a tool after the Reflog.
+			'/untrack',
 			'/badges',
 			'/repos',
 			'/settings'
@@ -261,6 +263,7 @@ describe('isShown', () => {
 			'/stash',
 			'/tags',
 			'/reflog',
+			'/untrack',
 			'/repos',
 			'/settings'
 		]);
