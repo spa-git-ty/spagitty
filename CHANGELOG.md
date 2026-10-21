@@ -29,7 +29,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ### Security
 
-- **Distrusted certificate authorities are no longer trusted.** The bundled root certificates used for update checks and forge requests were updated to drop the distrusted emSign intermediates (RUSTSEC-2026-0383).
+- **Updated the root certificate list built into Spagitty's HTTP library** to drop the distrusted emSign intermediates (RUSTSEC-2026-0383). Spagitty checks certificates against your system's store, so this is a precaution.
 
 ### Downloads
 
