@@ -27,6 +27,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Calmer colours.** The light theme is on white and grey instead of cream, so the window no longer looks yellow. The dark theme is a little softer and less brown, and keeps its glow.
 - **The terminal follows the theme.** An open terminal now changes colour with the theme and the accent instead of keeping the colours it opened with.
 
+### Security
+
+- **Distrusted certificate authorities are no longer trusted.** The bundled root certificates used for update checks and forge requests were updated to drop the distrusted emSign intermediates (RUSTSEC-2026-0383).
+
 ### Downloads
 
 - **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
