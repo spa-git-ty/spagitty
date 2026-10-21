@@ -80,16 +80,16 @@
 }
 
 :root {
-	--bg: #fbf7f1;
-	--panel: #f3ece2;
-	--ink: #2a1f1a;
-	--muted: rgba(42, 31, 26, 0.7);
-	--line: rgba(42, 31, 26, 0.24);
-	--soft: rgba(42, 31, 26, 0.1);
-	--placeholder: rgba(42, 31, 26, 0.32);
+	--bg: #fdfdfc;
+	--panel: #f1f0ee;
+	--ink: #24201e;
+	--muted: rgba(36, 32, 30, 0.68);
+	--line: rgba(36, 32, 30, 0.2);
+	--soft: rgba(36, 32, 30, 0.09);
+	--placeholder: rgba(36, 32, 30, 0.34);
 	--accent: #b8321f;
 	--selection: rgba(184, 50, 31, 0.12);
-	--stripe: rgba(42, 31, 26, 0.04);
+	--stripe: rgba(36, 32, 30, 0.035);
 
 	/*
 	 * What a result means, said in colour.
@@ -255,12 +255,12 @@
 	--side-b: #f0a64a;
 	/* The agent's mint, lighter on a dark ground (2.0). */
 	--agent: #86e3d2;
-	--bg: #1c1613;
-	--panel: #161110;
-	--ink: #f3e9dd;
-	--muted: rgba(243, 233, 221, 0.62);
-	--line: rgba(243, 233, 221, 0.22);
-	--soft: rgba(243, 233, 221, 0.1);
+	--bg: #1e1b1a;
+	--panel: #171514;
+	--ink: #ebe4dc;
+	--muted: rgba(235, 228, 220, 0.62);
+	--line: rgba(235, 228, 220, 0.2);
+	--soft: rgba(235, 228, 220, 0.09);
 
 	/*
 	 * Dark reverses which half does the work. The edge has to be *lighter* than
@@ -288,10 +288,10 @@
 	 * becoming a rule.
 	 */
 	--shadow-edge: rgba(205, 214, 244, 0.11);
-	--placeholder: rgba(243, 233, 221, 0.28);
+	--placeholder: rgba(235, 228, 220, 0.3);
 	--accent: #f2715a;
 	--selection: rgba(242, 113, 90, 0.18);
-	--stripe: rgba(243, 233, 221, 0.045);
+	--stripe: rgba(235, 228, 220, 0.04);
 	--on-accent: #2a0e07;
 	--danger: #ff5c7c;
 	--warn: #f0b54a;
@@ -810,7 +810,9 @@ a {
  * as ornaments — small floating objects rather than bars across the window.
  *
  * - The **environment** is the window's ground, lit by soft washes of the
- *   theme's own accent and first lane. It is static and it is painted once,
+ *   accent, with a cool one opposite for depth (FEAT-156: the accent and the
+ *   tomato lane together turned a light window yellow, and a picked accent
+ *   would have fought the tomato). It is static and it is painted once,
  *   which is what makes the glass over it cheap: blurring a field this smooth
  *   costs one pass and changes almost nothing, so only small things are
  *   blurred and nothing large is.
@@ -822,9 +824,9 @@ a {
  */
 :root {
 	--environment:
-		radial-gradient(120% 90% at 8% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
-		radial-gradient(90% 80% at 100% 110%, color-mix(in srgb, var(--lane-1) 14%, transparent), transparent 62%),
-		radial-gradient(70% 60% at 60% 40%, color-mix(in srgb, var(--lane-2) 7%, transparent), transparent 70%),
+		radial-gradient(120% 90% at 8% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+		radial-gradient(90% 80% at 100% 110%, color-mix(in srgb, var(--lane-5) 7%, transparent), transparent 62%),
+		radial-gradient(70% 60% at 60% 40%, color-mix(in srgb, var(--accent) 3%, transparent), transparent 70%),
 		var(--panel);
 	--pane-edge: color-mix(in srgb, var(--line) 55%, transparent);
 	--pane-shadow:
@@ -843,10 +845,10 @@ a {
 
 :root[data-theme='dark'] {
 	--environment:
-		radial-gradient(120% 90% at 8% -10%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
-		radial-gradient(90% 80% at 100% 110%, color-mix(in srgb, var(--lane-1) 30%, transparent), transparent 62%),
-		radial-gradient(70% 60% at 60% 40%, color-mix(in srgb, var(--lane-2) 14%, transparent), transparent 70%),
-		color-mix(in srgb, var(--panel) 80%, #000);
+		radial-gradient(120% 90% at 8% -10%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 60%),
+		radial-gradient(90% 80% at 100% 110%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 62%),
+		radial-gradient(70% 60% at 60% 40%, color-mix(in srgb, var(--lane-4) 9%, transparent), transparent 70%),
+		color-mix(in srgb, var(--panel) 82%, #000);
 	--pane-edge: color-mix(in srgb, #fff 9%, transparent);
 	--pane-shadow:
 		0 18px 44px color-mix(in srgb, #000 42%, transparent),

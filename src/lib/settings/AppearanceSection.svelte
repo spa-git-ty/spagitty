@@ -4,7 +4,7 @@
 	import { mod } from '$lib/platform';
 	import Chip from '$lib/ui/Chip.svelte';
 	import { theme } from '$lib/theme.svelte';
-	import type { Mode } from '$lib/themes';
+	import { ACCENTS, type Mode } from '$lib/themes';
 	import {
 		scale,
 		TEXT_MAX,
@@ -51,6 +51,13 @@
 	 * which is the defect BUG-030 was about.
 	 */
 	const desktop = $derived(theme.source === 'omarchy');
+
+	/**
+	 * The accent (FEAT-156): a swatch for each, in the shade the current mode
+	 * paints. The tomato is the family's own and comes first. While the
+	 * desktop's palette is followed, its accent is on and none of these is.
+	 */
+	const mode = $derived(theme.mode);
 </script>
 
 <section class="section">
@@ -103,6 +110,22 @@
 			{/if}
 		</div>
 	{/if}
+
+	<div class="row" role="radiogroup" aria-label="Accent">
+		<span class="note label">Accent</span>
+		{#each ACCENTS as option (option.id)}
+			<button
+				class="swatch"
+				class:on={!desktop && theme.accent === option.id}
+				role="radio"
+				aria-checked={!desktop && theme.accent === option.id}
+				aria-label={option.name}
+				title={option.name}
+				style:--swatch={option[mode].accent}
+				onclick={() => theme.setAccent(option.id)}
+			></button>
+		{/each}
+	</div>
 
 	<div class="hr"></div>
 
@@ -194,6 +217,28 @@
 
 
 
+
+	.swatch {
+		width: 22px;
+		height: 22px;
+		flex: none;
+		border-radius: 50%;
+		background-color: var(--swatch);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent);
+		transition: box-shadow var(--t-fast) var(--ease);
+	}
+
+	.swatch:hover {
+		box-shadow:
+			inset 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent),
+			0 0 0 3px var(--hover);
+	}
+
+	.swatch.on {
+		box-shadow:
+			0 0 0 2px var(--bg),
+			0 0 0 4px var(--swatch);
+	}
 
 	.slider {
 		flex: 1;

@@ -101,7 +101,8 @@ const DEFAULTS: Settings = {
 	rail: RAIL_DEFAULT,
 	home: HOME_DEFAULT,
 	terminalShell: '',
-	terminalMultiplexer: true
+	terminalMultiplexer: true,
+	terminalColours: true
 };
 
 function isSection(value: string): value is Section {

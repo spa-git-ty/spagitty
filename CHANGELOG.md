@@ -14,6 +14,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Pick an accent colour** in Settings › Appearance: Tomato, Spagitty's own and the default, or Ocean, Violet, Jade or Graphite. It recolours buttons, selections, focus rings, tabs and the window's glow, in a shade drawn for light and one for dark. Graph lanes and the red, amber and green that mean danger, warning and success stay as they are.
+- **Close a terminal session.** Every Terminal tab now has a close button, and the header has *Close* beside *Detach*. Spagitty asks first, then ends the session with every window in it. *Detach* still leaves it running.
+- **tmux and psmux in Spagitty's colours.** The multiplexer's status line, window tabs, pane borders and messages take the theme and its accent, and change with them. Your own config's key bindings and plugins still apply; only its colours are replaced, and only in Spagitty's own sessions. Turn it off in Settings › Behaviour to keep your config's colours.
+
+### Changed
+
+- **Calmer colours.** The light theme is on white and grey instead of cream, so the window no longer looks yellow. The dark theme is a little softer and less brown, and keeps its glow.
+- **The terminal follows the theme.** An open terminal now changes colour with the theme and the accent instead of keeping the colours it opened with.
+
 ## [3.8.0] - 2026-10-20
 
 ### Added

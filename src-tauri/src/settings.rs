@@ -210,6 +210,10 @@ pub struct Settings {
     /// On, because that is what keeps a session alive when Spagitty closes.
     /// Off is a plain terminal for each tab.
     pub terminal_multiplexer: bool,
+    /// Give the multiplexer's bars and borders the theme's colours
+    /// (FEAT-157). On, so the terminal matches the window around it. Off
+    /// leaves the colours of the person's own tmux or psmux config.
+    pub terminal_colours: bool,
 }
 
 /// How often the screen offers to look, in minutes. The first is the floor:
@@ -275,6 +279,7 @@ impl Default for Settings {
             // The platform's own shell, inside a multiplexer when one can run.
             terminal_shell: String::new(),
             terminal_multiplexer: true,
+            terminal_colours: true,
         }
     }
 }
@@ -441,6 +446,7 @@ mod tests {
             },
             terminal_shell: "/usr/bin/fish".to_string(),
             terminal_multiplexer: false,
+            terminal_colours: false,
         };
         let text = serde_json::to_string_pretty(&written).expect("serialising");
 
@@ -545,9 +551,11 @@ mod tests {
 
         assert_eq!(settings.terminal_shell, "");
         assert!(settings.terminal_multiplexer);
+        assert!(settings.terminal_colours);
         // A file from before the terminal keeps what it carries and gains these.
         let older = parse(r#"{"showGitCommands": true}"#);
         assert!(older.terminal_multiplexer);
+        assert!(older.terminal_colours);
         assert!(older.show_git_commands);
         // A shell that is not text costs only the shell.
         let odd = parse(r#"{"terminalShell": 7, "terminalMultiplexer": false}"#);

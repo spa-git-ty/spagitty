@@ -64,7 +64,8 @@ fetchAvatars: false,
 			rail: { hidden: [], order: [], where: 'more' },
 			home: { hidden: [], order: [] },
 			terminalShell: '',
-			terminalMultiplexer: true
+			terminalMultiplexer: true,
+			terminalColours: true
 };
 
 const LIST: Licenses = {
@@ -503,7 +504,8 @@ describe('checking for a newer Spagitty', () => {
 			rail: { hidden: [], order: [], where: 'more' },
 			home: { hidden: [], order: [] },
 			terminalShell: '',
-			terminalMultiplexer: true
+			terminalMultiplexer: true,
+			terminalColours: true
 		});
 		await settings.load();
 		checkUpdate.mockResolvedValueOnce(RELEASED);

@@ -13,7 +13,7 @@
  */
 
 import type { Emulator, EmulatorHooks } from '$lib/terminal/emulator';
-import type { TerminalInfo, TerminalSession, TerminalWindow } from '$lib/types';
+import type { TerminalInfo, TerminalSession, TerminalStyle, TerminalWindow } from '$lib/types';
 
 export interface Recorded extends Emulator {
 	hooks: EmulatorHooks;
@@ -25,6 +25,8 @@ export interface Recorded extends Emulator {
 	focused: number;
 	pasted: string[];
 	disposed: boolean;
+	/** How many times it took the theme's colours again. */
+	rethemed: number;
 	/** What the next fit says the element holds. */
 	size: { cols: number; rows: number };
 }
@@ -45,6 +47,7 @@ export function makeRecorded(hooks: EmulatorHooks): Recorded {
 		focused: 0,
 		pasted: [],
 		disposed: false,
+		rethemed: 0,
 		size: { cols: 132, rows: 40 },
 		text: () => written,
 		write(bytes) {
@@ -61,6 +64,9 @@ export function makeRecorded(hooks: EmulatorHooks): Recorded {
 		selection: () => '',
 		paste(text) {
 			made.pasted.push(text);
+		},
+		retheme() {
+			made.rethemed += 1;
 		},
 		dispose() {
 			made.disposed = true;
@@ -87,6 +93,19 @@ export const TMUX: TerminalInfo = {
 export const PSMUX: TerminalInfo = {
 	mux: { name: 'psmux', version: '3.3.8', path: 'C:\\app\\multiplexer\\psmux.exe', bundled: true },
 	shell: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe'
+};
+
+/** The theme's colours as the screen reads them for the multiplexer (FEAT-157). */
+export const STYLE: TerminalStyle = {
+	ground: '#171514',
+	ink: '#ebe4dc',
+	muted: '#9a948e',
+	line: '#45403d',
+	accent: '#f2715a',
+	onAccent: '#2a0e07',
+	selection: '#4a2c26',
+	ok: '#7cc68d',
+	danger: '#ff5c7c'
 };
 
 export const PLAIN: TerminalInfo = { mux: null, shell: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe' };

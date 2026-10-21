@@ -23,6 +23,8 @@ export interface Emulator {
 	selection(): string;
 	/** Text as if typed, sent as a paste where the program asked for that. */
 	paste(text: string): void;
+	/** Take the theme's colours again: the theme changed (FEAT-157). */
+	retheme(): void;
 	dispose(): void;
 }
 

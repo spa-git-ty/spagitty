@@ -173,6 +173,7 @@ pub fn run() {
             terminal::terminal_sessions,
             terminal::terminal_windows,
             terminal::terminal_act,
+            terminal::terminal_style,
             recipes::recipes_list,
             recipes::recipes_save,
             recipes::recipes_delete,

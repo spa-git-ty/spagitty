@@ -209,6 +209,8 @@ rather than an audit.
 | [FEAT-153](items/FEAT-153-blame-on-click-can-be-turned-off.md) | Blame on click can be turned off | 1U | Done |
 | [FEAT-154](items/FEAT-154-usages-of-a-name.md) | Usages: where a name is defined and used | 1U | Done |
 | [FEAT-155](items/FEAT-155-untrack.md) | Untrack: stop tracking files on a branch, in a commit, and push it | 2B | Done |
+| [FEAT-156](items/FEAT-156-calmer-palettes-and-an-accent-of-your-own.md) | Calmer light and dark palettes, and an accent of your own | every screen | Done |
+| [FEAT-157](items/FEAT-157-close-a-terminal-session-and-give-tmux-our-colours.md) | Close a terminal session, and give tmux Spagitty's colours | 1T | Done |
 
 ## Bugs
 

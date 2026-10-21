@@ -50,7 +50,8 @@ function stored(home: Partial<HomeLayout> = {}): Settings {
 		rail: { hidden: [], order: [], where: 'more' },
 		home: { hidden: [], order: [], ...home },
 		terminalShell: '',
-		terminalMultiplexer: true
+		terminalMultiplexer: true,
+		terminalColours: true
 	};
 }
 

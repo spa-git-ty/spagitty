@@ -14,6 +14,7 @@ import {
 	PSMUX,
 	SESSIONS,
 	settle as wait,
+	STYLE,
 	TMUX,
 	WINDOWS,
 	type Opened
@@ -30,9 +31,13 @@ vi.mock('$lib/graph/store.svelte', () => ({ graph: { want } }));
 vi.mock('$lib/repo.svelte', async () => await import('../../testing/repo-store.svelte'));
 // The emulator is xterm.js, which wants a canvas. The screen is tested with
 // one that records what it was given.
-vi.mock('$lib/terminal/xterm', async () => ({
-	makeXterm: (await import('../../testing/terminal-fixtures')).makeRecorded
-}));
+vi.mock('$lib/terminal/xterm', async () => {
+	const fixtures = await import('../../testing/terminal-fixtures');
+	return {
+		makeXterm: fixtures.makeRecorded,
+		multiplexerStyle: () => fixtures.STYLE
+	};
+});
 vi.mock('@tauri-apps/api/event', () => ({
 	listen: vi.fn(async (_name: string, handler: (typeof exits)['handler']) => {
 		exits.handler = handler;
@@ -51,11 +56,13 @@ vi.mock('$lib/api', async (importOriginal) => ({
 	terminalSessions: vi.fn(),
 	terminalWindows: vi.fn(),
 	terminalAct: vi.fn(),
+	terminalStyle: vi.fn(async () => {}),
 	terminalLinks: vi.fn()
 }));
 
 import * as api from '$lib/api';
 import { terminal } from '$lib/terminal/store.svelte';
+import { dialog } from '$lib/ui/dialog.svelte';
 import Terminal from './+page.svelte';
 
 const info = vi.mocked(api.terminalInfo);
@@ -67,6 +74,7 @@ const sessionName = vi.mocked(api.terminalSessionName);
 const sessions = vi.mocked(api.terminalSessions);
 const windows = vi.mocked(api.terminalWindows);
 const act = vi.mocked(api.terminalAct);
+const style = vi.mocked(api.terminalStyle);
 const links = vi.mocked(api.terminalLinks);
 
 function repository(name = 'thing'): RepoInfo {
@@ -123,6 +131,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	dialog.dismiss();
 	view?.destroy();
 	view = null;
 });
@@ -154,8 +163,8 @@ describe('with a multiplexer', () => {
 			['quiblo', 'false']
 		]);
 		expect(tabs()[1].title).toBe('quiblo — detached');
-		// A session is detached from, never closed: no tab has a way to close it.
-		expect(view!.all('.shut')).toEqual([]);
+		// Every tab can be closed, after asking (FEAT-157).
+		expect(view!.all('.shut')).toHaveLength(2);
 
 		click(labelled('New window')!);
 		await settle();
@@ -219,6 +228,40 @@ describe('with a multiplexer', () => {
 			['thing', { kind: 'splitDown' }],
 			['thing', { kind: 'detach' }]
 		]);
+	});
+
+	/** FEAT-157: Close ends the session, and only once the person has said yes. */
+	it('closes a session from its tab or the header, after asking', async () => {
+		await show();
+
+		click(labelled('Close quiblo')!);
+		await settle();
+		expect(dialog.question).toMatchObject({
+			title: 'Close quiblo?',
+			confirmLabel: 'Close',
+			danger: true
+		});
+		dialog.dismiss();
+		await settle();
+		expect(act).not.toHaveBeenCalled();
+
+		click(button('Close')!);
+		await settle();
+		expect(dialog.question?.title).toBe('Close thing?');
+		sessions.mockResolvedValue([{ name: 'quiblo', windows: 1, attached: false }]);
+		dialog.accept();
+		await settle();
+
+		expect(act).toHaveBeenCalledWith('thing', { kind: 'close' });
+		expect(close).toHaveBeenCalledWith(1);
+		expect(tabs().map((tab) => tab.textContent?.trim())).toEqual(['quiblo']);
+		expect(view!.get('.pane').childElementCount).toBe(0);
+	});
+
+	it("gives the multiplexer the theme's colours when a client starts", async () => {
+		await show();
+
+		expect(style).toHaveBeenCalledWith(STYLE);
 	});
 
 	it('says a session is detached once its client has ended, and attaches again', async () => {
@@ -345,6 +388,9 @@ describe('with no multiplexer', () => {
 
 		click(labelled('Close pwsh 2')!);
 		await settle();
+		expect(close).not.toHaveBeenCalled();
+		dialog.accept();
+		await settle();
 		expect(close).toHaveBeenCalledWith(2);
 		expect(tabs().map((tab) => tab.textContent?.trim())).toEqual(['pwsh']);
 	});
@@ -353,6 +399,8 @@ describe('with no multiplexer', () => {
 		await show();
 
 		click(labelled('Close pwsh')!);
+		await settle();
+		dialog.accept();
 		await settle();
 
 		expect(view!.get('.pane').childElementCount).toBe(0);

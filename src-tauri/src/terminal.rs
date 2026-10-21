@@ -14,14 +14,17 @@
 //! **Closing Spagitty detaches; it never kills.** With a multiplexer, what is
 //! in the PTY is the *client*. Dropping it — here, or when the process ends —
 //! ends the client, and the session carries on in the multiplexer's server.
+//! A session ends only when the person closes it from the screen, and says
+//! yes when asked (FEAT-157).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use spagitty_process::mux::{self, Action, Mux};
+use spagitty_process::mux::{self, Action, Mux, Style};
 use spagitty_process::pty::{Pty, PtySpec};
 use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
@@ -31,6 +34,14 @@ const BUNDLED_DIR: &str = "multiplexer";
 
 /// The event a terminal's exit is announced with.
 const EXIT_EVENT: &str = "terminal-exit";
+
+/// The file the theme's colours are written to for the multiplexer, in the
+/// application's cache folder.
+const STYLE_FILE: &str = "terminal-colours.conf";
+
+/// How long a new client is given to start the server before its colours are
+/// loaded into it.
+const SERVER_WAIT: Duration = Duration::from_secs(3);
 
 #[derive(Default)]
 pub struct TerminalState {
@@ -363,11 +374,17 @@ pub fn terminal_windows<R: Runtime>(
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Ask {
-    NewWindow { cwd: String },
-    SelectWindow { index: u32 },
+    NewWindow {
+        cwd: String,
+    },
+    SelectWindow {
+        index: u32,
+    },
     SplitRight,
     SplitDown,
     Detach,
+    /// End the session. The screen asks the person first (FEAT-157).
+    Close,
 }
 
 impl From<Ask> for Action {
@@ -380,6 +397,7 @@ impl From<Ask> for Action {
             Ask::SplitRight => Action::SplitRight,
             Ask::SplitDown => Action::SplitDown,
             Ask::Detach => Action::Detach,
+            Ask::Close => Action::Close,
         }
     }
 }
@@ -394,6 +412,75 @@ pub fn terminal_act<R: Runtime>(
     let mux = mux_in_use(&app, &state).ok_or_else(|| "no multiplexer is in use".to_string())?;
     mux.act(&session, &action.into())
         .map_err(|error| error.to_string())
+}
+
+/// The theme's colours, as the webview read them. Mirrors `TerminalStyle`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Colours {
+    pub ground: String,
+    pub ink: String,
+    pub muted: String,
+    pub line: String,
+    pub accent: String,
+    pub on_accent: String,
+    pub selection: String,
+    pub ok: String,
+    pub danger: String,
+}
+
+impl From<Colours> for Style {
+    fn from(colours: Colours) -> Style {
+        Style {
+            ground: colours.ground,
+            ink: colours.ink,
+            muted: colours.muted,
+            line: colours.line,
+            accent: colours.accent,
+            on_accent: colours.on_accent,
+            selection: colours.selection,
+            ok: colours.ok,
+            danger: colours.danger,
+        }
+    }
+}
+
+/// Give the multiplexer's bars and borders the theme's colours (FEAT-157).
+///
+/// Sent when a session's client starts and when the theme changes. They are
+/// loaded into Spagitty's own server after the person's config, so only its
+/// colours are replaced. Nothing is done with the setting off, with no
+/// multiplexer, or with no server to load them into: a client that has just
+/// started is given a moment to start one.
+#[tauri::command(async)]
+pub fn terminal_style<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, TerminalState>,
+    colours: Colours,
+) -> Result<(), String> {
+    if !crate::settings::load(&app).terminal_colours {
+        return Ok(());
+    }
+    let Some(mux) = mux_in_use(&app, &state) else {
+        return Ok(());
+    };
+    let conf = mux::style_conf(&colours.into()).ok_or("not a colour")?;
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    let file = dir.join(STYLE_FILE);
+    std::fs::write(&file, conf).map_err(|error| error.to_string())?;
+
+    let started = Instant::now();
+    while mux.sessions().is_empty() {
+        if started.elapsed() > SERVER_WAIT {
+            return Ok(());
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    mux.source(&file).map_err(|error| error.to_string())
 }
 
 #[cfg(test)]
@@ -555,11 +642,13 @@ mod tests {
             (r#"{"kind":"splitRight"}"#, Action::SplitRight),
             (r#"{"kind":"splitDown"}"#, Action::SplitDown),
             (r#"{"kind":"detach"}"#, Action::Detach),
+            (r#"{"kind":"close"}"#, Action::Close),
         ] {
             let asked: Ask = serde_json::from_str(text).expect("ask");
             assert_eq!(Action::from(asked), action);
         }
-        // Nothing the screen can ask kills a session.
+        // Close is the one way to end a session, and the server is never ended.
         assert!(serde_json::from_str::<Ask>(r#"{"kind":"killSession"}"#).is_err());
+        assert!(serde_json::from_str::<Ask>(r#"{"kind":"killServer"}"#).is_err());
     }
 }

@@ -6,8 +6,10 @@
 	import { repo } from '$lib/repo.svelte';
 	import SessionsPanel from '$lib/terminal/SessionsPanel.svelte';
 	import { REFRESH_MS, terminal } from '$lib/terminal/store.svelte';
-	import { makeXterm } from '$lib/terminal/xterm';
+	import { makeXterm, multiplexerStyle } from '$lib/terminal/xterm';
+	import { theme } from '$lib/theme.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
+	import { dialog } from '$lib/ui/dialog.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 
 	/**
@@ -31,6 +33,7 @@
 	let pane = $state<HTMLDivElement | null>(null);
 
 	terminal.use(makeXterm);
+	terminal.styleWith(multiplexerStyle);
 	terminal.onOpen((link) => {
 		if (link.kind === 'commit') {
 			graph.want(link.commit);
@@ -50,6 +53,29 @@
 			void terminal.enter(path);
 		});
 	});
+
+	/** The theme changed, or the screen came back: the terminals take its colours (FEAT-157). */
+	$effect(() => {
+		void theme.revision;
+		untrack(() => terminal.restyle());
+	});
+
+	/**
+	 * Close a terminal, after asking (FEAT-157). A session ends with every
+	 * window and program in it, which Detach would have kept.
+	 */
+	async function shut(key: string, title: string) {
+		const session = terminal.multiplexed;
+		const sure = await dialog.confirm({
+			title: `Close ${title}?`,
+			body: session
+				? 'The session ends, with every window in it and what is running there.'
+				: 'The shell ends, with what is running in it.',
+			confirmLabel: 'Close',
+			danger: true
+		});
+		if (sure) await terminal.close(key);
+	}
 
 	/** The terminal shown is put in the page; the one that was is taken out, and kept. */
 	$effect(() => {
@@ -97,11 +123,9 @@
 						title={tab.detached ? `${tab.title} — detached` : tab.title}
 						onclick={() => terminal.select(tab.key, cwd)}>{tab.title}</button
 					>
-					{#if !terminal.multiplexed}
-						<button class="shut" aria-label="Close {tab.title}" title="Close" onclick={() => terminal.close(tab.key)}>
-							<Icon name="close" size={10} weight={2} />
-						</button>
-					{/if}
+					<button class="shut" aria-label="Close {tab.title}" title="Close" onclick={() => shut(tab.key, tab.title)}>
+						<Icon name="close" size={10} weight={2} />
+					</button>
 				</span>
 			{/each}
 			<button
@@ -130,6 +154,12 @@
 				disabled={!terminal.has(key)}
 				title="Let go of this session. It carries on, and can be attached to again"
 				onclick={() => terminal.act({ kind: 'detach' })}>Detach</Btn
+			>
+			<Btn
+				danger
+				disabled={!key}
+				title="End this session, with every window in it"
+				onclick={() => key && shut(key, key)}>Close</Btn
 			>
 		{/if}
 	</header>
