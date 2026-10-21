@@ -14,6 +14,8 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.9.0] - 2026-10-21
+
 ### Added
 
 - **Pick an accent colour** in Settings › Appearance: Tomato, Spagitty's own and the default, or Ocean, Violet, Jade or Graphite. It recolours buttons, selections, focus rings, tabs and the window's glow, in a shade drawn for light and one for dark. Graph lanes and the red, amber and green that mean danger, warning and success stay as they are.
@@ -24,6 +26,17 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 - **Calmer colours.** The light theme is on white and grey instead of cream, so the window no longer looks yellow. The dark theme is a little softer and less brown, and keeps its glow.
 - **The terminal follows the theme.** An open terminal now changes colour with the theme and the accent instead of keeping the colours it opened with.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.8.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
 
 ## [3.8.0] - 2026-10-20
 
