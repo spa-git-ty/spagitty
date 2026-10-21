@@ -8,7 +8,8 @@
  * With a multiplexer, a terminal is its client attached to a **session** on
  * Spagitty's own socket — one session for each repository, named for its
  * folder. The tabs are the sessions, the panel lists them with their windows,
- * and closing a terminal detaches: the session carries on.
+ * and leaving a terminal detaches: the session carries on. Closing one ends
+ * the session, after the screen has asked (FEAT-157).
  *
  * With none, a terminal is a plain shell, the tabs are the shells that are
  * open, and there is no panel. Nothing on the screen says a multiplexer is
@@ -30,7 +31,13 @@
 
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from '../api';
-import type { TerminalAsk, TerminalInfo, TerminalSession, TerminalWindow } from '../types';
+import type {
+	TerminalAsk,
+	TerminalInfo,
+	TerminalSession,
+	TerminalStyle,
+	TerminalWindow
+} from '../types';
 import { Batcher } from './batch';
 import type { Emulator, MakeEmulator } from './emulator';
 import { linksIn, pathsIn, wordsIn, type Link } from './links';
@@ -90,6 +97,16 @@ const known = { commits: new Map<string, string>(), paths: new Set<string>() };
 const asked = new Set<string>();
 /** What the link checker opens a commit and a file with. Set by the screen. */
 let opener: (link: Link) => void = () => {};
+/** The theme's colours for the multiplexer, read when asked. Set by the screen. */
+let styler: (() => TerminalStyle) | null = null;
+
+/** Give the multiplexer's bars the theme's colours (FEAT-157). */
+function style(): void {
+	if (!styler || info?.mux == null) return;
+	void api.terminalStyle(styler()).catch(() => {
+		// The colours stay as they were. The next change sends them again.
+	});
+}
 
 function readFollow(): boolean {
 	try {
@@ -195,7 +212,12 @@ function open(key: string, session: string | null, title: string, cwd: string): 
 			if (created.size && (created.size.cols !== size.cols || created.size.rows !== size.rows)) {
 				void api.terminalResize(id, created.size.cols, created.size.rows);
 			}
-			if (session !== null) void terminal.refresh();
+			if (session !== null) {
+				// A client that has just started may have started the server
+				// with it, from the person's own config: the colours go in after.
+				style();
+				void terminal.refresh();
+			}
 		},
 		(error) => {
 			if (terminals.get(key) !== created) return;
@@ -266,6 +288,17 @@ export const terminal = {
 		make = next;
 	},
 
+	/** What the multiplexer's colours are read with: the theme's tokens. */
+	styleWith(next: () => TerminalStyle): void {
+		styler = next;
+	},
+
+	/** The theme changed: every terminal takes its colours again, and the multiplexer. */
+	restyle(): void {
+		for (const entry of terminals.values()) entry.emulator.retheme();
+		if (terminals.size > 0) style();
+	},
+
 	/** What opening a link does: the Graph for a commit, Files for a place in a file. */
 	onOpen(next: (link: Link) => void): void {
 		opener = next;
@@ -318,8 +351,14 @@ export const terminal = {
 
 	/** `+`: a new window in the session, or a new shell. */
 	async add(cwd: string | null): Promise<void> {
-		if (!this.multiplexed || !current) {
+		if (!this.multiplexed) {
 			this.newTab(cwd);
+			return;
+		}
+		// Nothing shown, as after the last session was closed: this
+		// repository's session, made again.
+		if (!current) {
+			await this.followRepository(cwd);
 			return;
 		}
 		// No client of ours on it: its last shell exited, or the multiplexer
@@ -337,13 +376,38 @@ export const terminal = {
 		else if (terminals.has(key)) current = key;
 	},
 
-	/** Close a plain shell. A session is never closed from here, only detached. */
-	close(key: string): void {
+	/**
+	 * Close a terminal: a plain shell, or a session with every window in it
+	 * (FEAT-157). The screen asks first; this does not.
+	 */
+	async close(key: string): Promise<void> {
 		const gone = terminals.get(key);
-		if (!gone || gone.session !== null) return;
-		if (gone.id !== null) void api.terminalClose(gone.id);
-		remove(key);
-		if (current === key) current = [...terminals.keys()].at(-1) ?? null;
+		if (!this.multiplexed || gone?.session === null) {
+			if (!gone) return;
+			if (gone.id !== null) void api.terminalClose(gone.id);
+			remove(key);
+			if (current === key) current = [...terminals.keys()].at(-1) ?? null;
+			return;
+		}
+		try {
+			await api.terminalAct(key, { kind: 'close' });
+			failure = null;
+		} catch (error) {
+			failure = String(error);
+			return;
+		}
+		// Ending the session ends our client too; it is let go of here rather
+		// than when its exit arrives, so the tab goes at once.
+		if (gone) {
+			if (gone.id !== null) void api.terminalClose(gone.id);
+			remove(key);
+		}
+		sessions = sessions.filter((session) => session.name !== key);
+		if (current === key) {
+			current = null;
+			current = this.tabs.find((tab) => tab.key !== key)?.key ?? null;
+		}
+		await this.refresh();
 	},
 
 	/** Ask the multiplexer for something on the session shown. */
@@ -424,6 +488,7 @@ export const terminal = {
 		plainCount = 0;
 		make = null;
 		opener = () => {};
+		styler = null;
 		this.forgetLinks();
 	}
 };

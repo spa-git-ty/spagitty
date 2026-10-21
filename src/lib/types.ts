@@ -1483,6 +1483,8 @@ export interface Settings {
 	terminalShell: string;
 	/** Run the terminal inside tmux, or psmux on Windows, when one can run. */
 	terminalMultiplexer: boolean;
+	/** Give the multiplexer's bars and borders the theme's colours (FEAT-157). */
+	terminalColours: boolean;
 }
 
 // --- Terminal (FEAT-130) ---------------------------------------------------
@@ -1525,7 +1527,24 @@ export type TerminalAsk =
 	| { kind: 'selectWindow'; index: number }
 	| { kind: 'splitRight' }
 	| { kind: 'splitDown' }
-	| { kind: 'detach' };
+	| { kind: 'detach' }
+	| { kind: 'close' };
+
+/**
+ * The theme's colours for the multiplexer's bars and borders, each `#rrggbb`.
+ * Mirrors `terminal::Colours` (FEAT-157).
+ */
+export interface TerminalStyle {
+	ground: string;
+	ink: string;
+	muted: string;
+	line: string;
+	accent: string;
+	onAccent: string;
+	selection: string;
+	ok: string;
+	danger: string;
+}
 
 /** Which of what a terminal printed is real. Mirrors `commands::TerminalLinks`. */
 export interface TerminalLinks {

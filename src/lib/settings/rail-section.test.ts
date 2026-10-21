@@ -56,7 +56,8 @@ function stored(rail: Partial<RailSettings> = {}): Settings {
 		rail: { ...RAIL_DEFAULT, ...rail },
 		home: { hidden: [], order: [] },
 		terminalShell: '',
-		terminalMultiplexer: true
+		terminalMultiplexer: true,
+		terminalColours: true
 	};
 }
 

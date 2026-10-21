@@ -59,11 +59,15 @@
 
 import { fingerprint, paletteFrom, modeOf, type DesktopTheme } from './omarchy';
 import {
+	DEFAULT_ACCENT,
 	DEFAULT_FAMILY,
+	isAccent,
 	isFamily,
 	paletteOf,
 	properties,
 	variantOf,
+	withAccent,
+	type AccentId,
 	type FamilyId,
 	type Mode,
 	type Palette,
@@ -75,6 +79,8 @@ const MODE_KEY = 'spagitty.theme';
 const FAMILY_KEY = 'spagitty.theme.family';
 /** Where the mode comes from, as opposed to what it currently is. */
 const SOURCE_KEY = 'spagitty.theme.source';
+/** The accent picked in Appearance (FEAT-156). */
+const ACCENT_KEY = 'spagitty.theme.accent';
 /** The resolved palette, for the boot script. Never read by this module. */
 export const PALETTE_KEY = 'spagitty.theme.palette';
 
@@ -86,6 +92,7 @@ const SOURCES: Source[] = ['manual', 'system', 'omarchy'];
 let mode = $state<Mode>('light');
 let family = $state<FamilyId>(DEFAULT_FAMILY);
 let source = $state<Source>('manual');
+let accent = $state<AccentId>(DEFAULT_ACCENT);
 let revision = $state(0);
 
 /**
@@ -141,10 +148,13 @@ function systemMode(): Mode {
  * family's otherwise. The fallback is not a failure path — it is what a machine
  * with no Omarchy gets, and what a followed machine gets before the first read
  * lands.
+ *
+ * The accent replaces the family's own, and never the desktop's: a followed
+ * palette is followed whole.
  */
 function current(): Palette {
 	if (source === 'omarchy' && desktop) return desktop;
-	return paletteOf(family, mode);
+	return withAccent(paletteOf(family, mode), accent, mode);
 }
 
 /** Put the current palette on the document. */
@@ -265,6 +275,10 @@ export const theme = {
 	get family(): FamilyId {
 		return family;
 	},
+	/** The accent picked in Appearance; the family's own by default. */
+	get accent(): AccentId {
+		return accent;
+	},
 	/** Where the light/dark answer comes from, as opposed to what it is. */
 	get source(): Source {
 		return source;
@@ -368,6 +382,17 @@ export const theme = {
 		commit(next, mode);
 	},
 
+	/**
+	 * Pick the accent. It is a choice about the family's colours, so like
+	 * picking a family it stops following the desktop's palette.
+	 */
+	setAccent(next: AccentId): void {
+		if (source === 'omarchy') setSource('manual');
+		accent = next;
+		remember(ACCENT_KEY, next);
+		commit(family, mode);
+	},
+
 	toggle(): void {
 		this.setMode(mode === 'dark' ? 'light' : 'dark');
 	},
@@ -392,6 +417,9 @@ export const theme = {
 		// A family that no longer exists — one of the eight TASK-051 removed —
 		// is not one, and falls to the default like anything unreadable.
 		family = storedFamily && isFamily(storedFamily) ? storedFamily : DEFAULT_FAMILY;
+
+		const storedAccent = stored(ACCENT_KEY);
+		accent = storedAccent && isAccent(storedAccent) ? storedAccent : DEFAULT_ACCENT;
 
 		const storedMode = stored(MODE_KEY);
 		const validMode = storedMode === 'light' || storedMode === 'dark' ? storedMode : null;

@@ -9,7 +9,9 @@
  * the web-links add-on, for addresses. Commits and files are links too, by a
  * provider of our own that asks the repository first.
  *
- * Its colours are the theme's, read when it is made.
+ * Its colours are the theme's, read when it is made and again when the theme
+ * changes (FEAT-157). The multiplexer's bars and borders are given the same
+ * ones, by `multiplexerStyle`.
  */
 
 import { FitAddon } from '@xterm/addon-fit';
@@ -18,6 +20,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal, type ILink, type ITheme } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { isMac } from '$lib/platform';
+import type { TerminalStyle } from '$lib/types';
 import type { Emulator, EmulatorHooks } from './emulator';
 import { kept, pressedOf } from './keys';
 
@@ -28,12 +31,13 @@ export const SCROLLBACK = 10_000;
  * A theme token as a colour xterm can read.
  *
  * A token may be a `color-mix()`, which the renderer's own parser does not
- * know. A canvas does: the token is painted and read back.
+ * know. A canvas does: the token is painted and read back. `token` may also be
+ * a whole colour expression, such as a `color-mix()` of two tokens.
  */
 function colourOf(token: string, fallback: string): string {
 	try {
 		const probe = document.createElement('span');
-		probe.style.color = `var(${token})`;
+		probe.style.color = token.startsWith('--') ? `var(${token})` : token;
 		document.body.appendChild(probe);
 		const computed = getComputedStyle(probe).color;
 		probe.remove();
@@ -82,6 +86,26 @@ function theme(): ITheme {
 		brightMagenta: magenta,
 		brightCyan: cyan,
 		brightWhite: ink
+	};
+}
+
+/**
+ * The theme's colours for the multiplexer's status line and borders
+ * (FEAT-157). The ground is the panel, a step off the terminal's own, so the
+ * status line reads as a bar; the current window is the accent, faint, over
+ * that ground, as a selected tab is.
+ */
+export function multiplexerStyle(): TerminalStyle {
+	return {
+		ground: colourOf('--panel', '#171514'),
+		ink: colourOf('--ink', '#ebe4dc'),
+		muted: colourOf('color-mix(in srgb, var(--ink) 62%, var(--panel))', '#9a948e'),
+		line: colourOf('color-mix(in srgb, var(--ink) 22%, var(--bg))', '#45403d'),
+		accent: colourOf('--accent', '#f2715a'),
+		onAccent: colourOf('--on-accent', '#2a0e07'),
+		selection: colourOf('color-mix(in srgb, var(--accent) 26%, var(--panel))', '#4a2c26'),
+		ok: colourOf('--ok', '#7cc68d'),
+		danger: colourOf('--danger', '#ff5c7c')
 	};
 }
 
@@ -195,6 +219,9 @@ export function makeXterm(hooks: EmulatorHooks): Emulator {
 		focus: () => terminal.focus(),
 		selection: () => terminal.getSelection(),
 		paste: (text) => terminal.paste(text),
+		retheme: () => {
+			terminal.options.theme = theme();
+		},
 		dispose: () => {
 			terminal.dispose();
 			element.remove();

@@ -5008,7 +5008,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty"
-version = "3.8.0"
+version = "3.9.0"
 dependencies = [
  "notify",
  "serde",
@@ -5026,7 +5026,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-core"
-version = "3.8.0"
+version = "3.9.0"
 dependencies = [
  "gix",
  "jsonschema",
@@ -5063,7 +5063,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-extensions"
-version = "3.8.0"
+version = "3.9.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -5079,7 +5079,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-farm"
-version = "3.8.0"
+version = "3.9.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -5091,7 +5091,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-process"
-version = "3.8.0"
+version = "3.9.0"
 dependencies = [
  "libc",
  "portable-pty",
@@ -6561,9 +6561,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
+checksum = "58ec80e73fd8baf57bf0d9615554c75348bda990d6d5bbeab964dd068319fecb"
 dependencies = [
  "rustls-pki-types",
 ]

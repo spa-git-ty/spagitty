@@ -38,7 +38,7 @@ vi.mock('$lib/api', () => ({
 
 import * as api from '$lib/api';
 import { theme } from '$lib/theme.svelte';
-import { FAMILIES, paletteOf } from '$lib/themes';
+import { ACCENTS, FAMILIES, paletteOf } from '$lib/themes';
 import AccountsSection from './AccountsSection.svelte';
 import LicenseSection from './LicenseSection.svelte';
 import AppearanceSection from './AppearanceSection.svelte';
@@ -107,7 +107,8 @@ fetchAvatars: false,
 			rail: { hidden: [], order: [], where: 'more' },
 			home: { hidden: [], order: [] },
 			terminalShell: '',
-			terminalMultiplexer: true
+			terminalMultiplexer: true,
+			terminalColours: true
 	});
 	licenses.mockResolvedValue(LIST);
 	about.mockResolvedValue({ version: '0.1.0', commit: 'abc1234', license: 'GPL-3.0-or-later' });
@@ -298,7 +299,8 @@ describe('BehaviourSection', () => {
 			rail: { hidden: [], order: [], where: 'more' },
 			home: { hidden: [], order: [] },
 			terminalShell: '',
-			terminalMultiplexer: true
+			terminalMultiplexer: true,
+			terminalColours: true
 		});
 		mounted.destroy();
 	});
@@ -322,20 +324,22 @@ describe('BehaviourSection', () => {
 			rail: { hidden: [], order: [], where: 'more' },
 			home: { hidden: [], order: [] },
 			terminalShell: '',
-			terminalMultiplexer: true
+			terminalMultiplexer: true,
+			terminalColours: true
 		});
 		await settings.load();
 		const mounted = render(BehaviourSection, {});
 
-		// Five toggles, in the order they are declared: FEAT-018 added pruning,
+		// Six toggles, in the order they are declared: FEAT-018 added pruning,
 		// FEAT-019 took signing away — it is now `commit.gpgsign` under You
 		// rather than a preference here — FEAT-079 added the author pictures,
-		// and FEAT-130 the terminal's multiplexer.
+		// FEAT-130 the terminal's multiplexer and FEAT-157 its colours.
 		expect(mounted.all('button.chip').map((chip) => chip.textContent?.trim())).toEqual([
 			'off',
 			'on',
 			'off',
 			'off',
+			'on',
 			'on'
 		]);
 		mounted.destroy();
@@ -371,6 +375,26 @@ describe('BehaviourSection', () => {
 		fire(field, 'input');
 		press(field, 'Enter');
 		expect(setSettings.mock.calls[0][0]).toMatchObject({ terminalShell: 'nu' });
+		mounted.destroy();
+	});
+
+	/** FEAT-156: the tomato by default, and any of the others on a click. */
+	it('offers a swatch for each accent, and marks the one in use', () => {
+		theme.setAccent('tomato');
+		const mounted = render(AppearanceSection, {});
+
+		const swatches = mounted.all('button.swatch');
+		expect(swatches.map((swatch) => swatch.getAttribute('aria-label'))).toEqual(
+			ACCENTS.map((accent) => accent.name)
+		);
+		expect(swatches[0].getAttribute('aria-checked')).toBe('true');
+
+		click(swatches[1]);
+		expect(theme.accent).toBe(ACCENTS[1].id);
+		expect(swatches[1].getAttribute('aria-checked')).toBe('true');
+		expect(swatches[0].getAttribute('aria-checked')).toBe('false');
+
+		theme.setAccent('tomato');
 		mounted.destroy();
 	});
 });

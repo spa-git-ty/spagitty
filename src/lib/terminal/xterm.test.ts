@@ -11,7 +11,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EmulatorHooks } from './emulator';
-import { makeXterm, SCROLLBACK } from './xterm';
+import { makeXterm, multiplexerStyle, SCROLLBACK } from './xterm';
 
 const hooks = (): EmulatorHooks => ({ onData: vi.fn(), links: vi.fn(async () => []), open: vi.fn() });
 const made: { dispose(): void }[] = [];
@@ -62,5 +62,24 @@ describe('the emulator', () => {
 		emulator.dispose();
 
 		expect(emulator.element.isConnected).toBe(false);
+	});
+});
+
+/** FEAT-157: the multiplexer is sent nothing but colours it can write. */
+describe("the multiplexer's colours", () => {
+	it('are every one a #rrggbb', () => {
+		const style = multiplexerStyle();
+
+		expect(Object.keys(style).sort()).toEqual(
+			['accent', 'danger', 'ground', 'ink', 'line', 'muted', 'ok', 'onAccent', 'selection'].sort()
+		);
+		for (const [name, colour] of Object.entries(style))
+			expect(colour, name).toMatch(/^#[0-9a-f]{6}$/);
+	});
+
+	it('are taken again by an open terminal when the theme changes', () => {
+		const emulator = make();
+
+		expect(() => emulator.retheme()).not.toThrow();
 	});
 });

@@ -72,6 +72,14 @@
 			label: 'Run the terminal inside tmux, or psmux on Windows',
 			what: 'Keeps a session for each repository on a socket of Spagitty\'s own, alive when Spagitty closes. Off runs a plain terminal in each tab. Where no multiplexer can run, a plain terminal is used either way.',
 			pending: null
+		},
+		{
+			key: 'terminalColours',
+			// FEAT-157. Only the colours of the person's config are replaced,
+			// and only on Spagitty's own socket.
+			label: "Give tmux Spagitty's colours",
+			what: 'Colours the status line, borders and messages with the theme and its accent. Your key bindings and plugins stay. Off keeps the colours in your own tmux or psmux config, from the next start of its server.',
+			pending: null
 		}
 	];
 

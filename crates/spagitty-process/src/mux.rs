@@ -23,12 +23,22 @@
 //!   and otherwise the one Spagitty ships;
 //! - on Windows, the psmux Spagitty ships, and otherwise one on the `PATH`.
 //!
-//! # Detaching, never killing
+//! # Detaching, and closing only when asked
 //!
 //! A session is attached to with `new-session -A`, which makes it when it is
 //! not there and joins it when it is. Leaving is killing the *client* — the
 //! process in Spagitty's PTY. The server and the session carry on, which is
-//! what a multiplexer is for.
+//! what a multiplexer is for. The one thing that ends a session is
+//! [`Action::Close`], which the screen sends only after the person has said
+//! yes to it (FEAT-157).
+//!
+//! # Its own colours
+//!
+//! [`style_conf`] writes the theme's colours as tmux options, and
+//! [`Mux::source`] loads them into Spagitty's server after the person's own
+//! config, so the bars and borders match the terminal around them while
+//! their key bindings and plugins stay (FEAT-157). Only the colours, and the
+//! two status lines that carry colours inline, are replaced.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -373,6 +383,8 @@ pub enum Action {
     SplitDown,
     /// Let go of the session. It carries on.
     Detach,
+    /// End the session, with every window and program in it (FEAT-157).
+    Close,
 }
 
 /// The arguments for `action` on `session`, after `-L spagitty`.
@@ -392,7 +404,114 @@ pub fn action_args(session: &str, action: &Action) -> Vec<String> {
         Action::SplitRight => own(&["split-window", "-h", "-t", &target]),
         Action::SplitDown => own(&["split-window", "-v", "-t", &target]),
         Action::Detach => own(&["detach-client", "-s", session]),
+        Action::Close => own(&["kill-session", "-t", session]),
     }
+}
+
+/// The theme's colours, for the multiplexer's bars and borders. Each is
+/// `#rrggbb`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Style {
+    /// Behind the status line: the theme's panel.
+    pub ground: String,
+    pub ink: String,
+    pub muted: String,
+    /// Pane borders.
+    pub line: String,
+    pub accent: String,
+    /// Text on the accent: the session's name.
+    pub on_accent: String,
+    /// The current window, and copy mode's selection: the accent, faint.
+    pub selection: String,
+    pub ok: String,
+    pub danger: String,
+}
+
+/// Only `#rrggbb`: what goes into the file is never more than a colour.
+fn hex(colour: &str) -> bool {
+    colour.len() == 7
+        && colour.starts_with('#')
+        && colour[1..].chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// `style` as a tmux config, or `None` when a colour is not one.
+///
+/// Every line is `set -gq`: global, on Spagitty's own server only, and quiet
+/// about an option this multiplexer does not have — `pane-border-hover-style`
+/// is psmux's, `popup-border-style` arrived in tmux 3.3 — so one file
+/// serves both.
+pub fn style_conf(style: &Style) -> Option<String> {
+    let Style {
+        ground,
+        ink,
+        muted,
+        line,
+        accent,
+        on_accent,
+        selection,
+        ok,
+        danger,
+    } = style;
+    let colours = [
+        ground, ink, muted, line, accent, on_accent, selection, ok, danger,
+    ];
+    if !colours.iter().all(|colour| hex(colour)) {
+        return None;
+    }
+    let options = [
+        ("status-style", format!("bg={ground},fg={muted}")),
+        ("status-left-style", format!("bg={ground},fg={muted}")),
+        ("status-right-style", format!("bg={ground},fg={muted}")),
+        (
+            "status-left",
+            format!("#[bg={accent},fg={on_accent},bold] #S #[default] "),
+        ),
+        (
+            "status-right",
+            format!("#[fg={muted}]#{{pane_current_command}} #[fg={line}]| #[fg={muted}]%H:%M "),
+        ),
+        ("window-status-style", format!("bg={ground},fg={muted}")),
+        (
+            "window-status-last-style",
+            format!("bg={ground},fg={muted}"),
+        ),
+        (
+            "window-status-current-style",
+            format!("bg={selection},fg={ink},bold"),
+        ),
+        (
+            "window-status-activity-style",
+            format!("bg={ground},fg={ok},bold"),
+        ),
+        (
+            "window-status-bell-style",
+            format!("bg={ground},fg={danger},bold"),
+        ),
+        ("pane-border-style", format!("fg={line},bg=default")),
+        (
+            "pane-active-border-style",
+            format!("fg={accent},bg=default"),
+        ),
+        ("pane-border-hover-style", format!("fg={accent},bg=default")),
+        ("popup-border-style", format!("fg={line}")),
+        ("message-style", format!("bg={ground},fg={ink}")),
+        ("message-command-style", format!("bg={ground},fg={accent}")),
+        ("mode-style", format!("bg={selection},fg={ink}")),
+        ("clock-mode-colour", accent.to_string()),
+        ("display-panes-colour", line.to_string()),
+        ("display-panes-active-colour", accent.to_string()),
+    ];
+    Some(
+        options
+            .iter()
+            .map(|(name, value)| {
+                format!(
+                    "set -gq {name} \"{value}\"
+"
+                )
+            })
+            .collect(),
+    )
 }
 
 impl Mux {
@@ -434,6 +553,12 @@ impl Mux {
 
     pub fn act(&self, session: &str, action: &Action) -> std::io::Result<()> {
         self.run(&action_args(session, action)).map(|_| ())
+    }
+
+    /// Load a config file into Spagitty's server: [`style_conf`]'s.
+    pub fn source(&self, path: &Path) -> std::io::Result<()> {
+        self.run(&["source-file".into(), path.to_string_lossy().into_owned()])
+            .map(|_| ())
     }
 }
 
@@ -678,10 +803,10 @@ mod tests {
         assert_eq!(attach_args("s", Path::new("/r"), Some("  ")).len(), 8);
     }
 
-    /// Closing Spagitty detaches and never kills: nothing here can kill a
-    /// session or the server.
+    /// Closing Spagitty detaches and never kills: only Close ends a session,
+    /// and nothing here ends the server.
     #[test]
-    fn no_action_kills_a_session() {
+    fn only_close_kills_a_session() {
         let actions = [
             Action::NewWindow {
                 cwd: PathBuf::from("/r"),
@@ -703,6 +828,10 @@ mod tests {
             ["detach-client", "-s", "spagitty"]
         );
         assert_eq!(
+            action_args("api-1a2b3c", &Action::Close),
+            ["kill-session", "-t", "api-1a2b3c"]
+        );
+        assert_eq!(
             action_args("spagitty", &Action::SplitRight),
             ["split-window", "-h", "-t", "spagitty:"]
         );
@@ -715,6 +844,61 @@ mod tests {
             action_args("spagitty", &actions[0]),
             ["new-window", "-t", "spagitty:", "-c", "/r"]
         );
+    }
+
+    fn a_style() -> Style {
+        let colour = |c: &str| c.to_string();
+        Style {
+            ground: colour("#171514"),
+            ink: colour("#ebe4dc"),
+            muted: colour("#a39d97"),
+            line: colour("#45403d"),
+            accent: colour("#f2715a"),
+            on_accent: colour("#2a0e07"),
+            selection: colour("#4a2c26"),
+            ok: colour("#7cc68d"),
+            danger: colour("#ff5c7c"),
+        }
+    }
+
+    /// FEAT-157: the bars, borders and messages in the theme's colours.
+    #[test]
+    fn the_style_is_the_themes_colours_as_quiet_global_options() {
+        let conf = style_conf(&a_style()).expect("a config");
+        let lines: Vec<&str> = conf.lines().collect();
+
+        assert!(
+            lines.iter().all(|line| line.starts_with("set -gq ")),
+            "{conf}"
+        );
+        assert!(lines.contains(&r#"set -gq status-style "bg=#171514,fg=#a39d97""#));
+        assert!(lines.contains(&r#"set -gq pane-active-border-style "fg=#f2715a,bg=default""#));
+        assert!(lines.contains(&r#"set -gq mode-style "bg=#4a2c26,fg=#ebe4dc""#));
+        // The session's name on the accent, as the tab above it is.
+        assert!(lines
+            .contains(&r##"set -gq status-left "#[bg=#f2715a,fg=#2a0e07,bold] #S #[default] ""##));
+        assert!(conf.contains("#{pane_current_command}"));
+        // Nothing but colours and the two status lines: no key is bound, no
+        // plugin is run, nothing of the person's own config is unset.
+        assert!(!conf.contains("bind") && !conf.contains("run") && !conf.contains("-u "));
+    }
+
+    /// The file is written from what the webview sent. A value that is not a
+    /// colour could end the quoted string and add a command of its own.
+    #[test]
+    fn a_style_with_anything_but_hex_colours_is_refused() {
+        for bad in [
+            "red",
+            "#f2715",
+            "#f2715a\"
+run-shell \"calc",
+            "#gggggg",
+            "",
+        ] {
+            let mut style = a_style();
+            style.accent = bad.to_string();
+            assert_eq!(style_conf(&style), None, "{bad:?}");
+        }
     }
 
     #[test]

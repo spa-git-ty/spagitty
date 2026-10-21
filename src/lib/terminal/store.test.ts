@@ -12,6 +12,7 @@ import {
 	PLAIN,
 	SESSIONS,
 	settle,
+	STYLE,
 	TMUX,
 	WINDOWS,
 	type Opened
@@ -42,6 +43,7 @@ vi.mock('$lib/api', () => ({
 	terminalSessions: vi.fn(),
 	terminalWindows: vi.fn(),
 	terminalAct: vi.fn(),
+	terminalStyle: vi.fn(async () => {}),
 	terminalLinks: vi.fn()
 }));
 
@@ -57,6 +59,7 @@ const sessionName = vi.mocked(api.terminalSessionName);
 const sessions = vi.mocked(api.terminalSessions);
 const windows = vi.mocked(api.terminalWindows);
 const act = vi.mocked(api.terminalAct);
+const style = vi.mocked(api.terminalStyle);
 const links = vi.mocked(api.terminalLinks);
 
 /** Every terminal the "backend" opened, oldest first. */
@@ -251,14 +254,60 @@ describe('with a multiplexer', () => {
 		expect(terminal.has('thing')).toBe(true);
 	});
 
-	it('never closes a session from here', async () => {
+	/** FEAT-157: closing ends the session in the multiplexer, and its client here. */
+	it('closes a session by ending it, and shows the one beside it', async () => {
 		await terminal.enter('/repos/thing');
 		await settle();
+		sessions.mockResolvedValue([{ name: 'quiblo', windows: 1, attached: false }]);
 
-		terminal.close('thing');
+		await terminal.close('thing');
+
+		expect(act).toHaveBeenCalledWith('thing', { kind: 'close' });
+		expect(close).toHaveBeenCalledWith(1);
+		expect(emulators[0].disposed).toBe(true);
+		expect(terminal.has('thing')).toBe(false);
+		expect(terminal.current).toBe('quiblo');
+		expect(terminal.tabs.map((tab) => tab.key)).toEqual(['quiblo']);
+	});
+
+	it('keeps a session the multiplexer would not end, and says why', async () => {
+		await terminal.enter('/repos/thing');
+		await settle();
+		act.mockRejectedValueOnce('no such session');
+
+		await terminal.close('thing');
 
 		expect(close).not.toHaveBeenCalled();
 		expect(terminal.has('thing')).toBe(true);
+		expect(terminal.failure).toBe('no such session');
+	});
+
+	it("makes the repository's session again on `+` once the last was closed", async () => {
+		sessions.mockResolvedValue([{ name: 'thing', windows: 1, attached: true }]);
+		await terminal.enter('/repos/thing');
+		await settle();
+		sessions.mockResolvedValue([]);
+		await terminal.close('thing');
+		expect(terminal.current).toBeNull();
+
+		await terminal.add('/repos/thing');
+		await settle();
+
+		expect(opened.map((one) => one.ask.session)).toEqual(['thing', 'thing']);
+		expect(terminal.current).toBe('thing');
+	});
+
+	it("gives every terminal and the multiplexer the theme's colours again on a change", async () => {
+		terminal.styleWith(() => STYLE);
+		await terminal.enter('/repos/thing');
+		await settle();
+		expect(style).toHaveBeenCalledTimes(1);
+
+		terminal.restyle();
+
+		expect(emulators[0].rethemed).toBe(1);
+		expect(style).toHaveBeenCalledTimes(2);
+		expect(style).toHaveBeenLastCalledWith(STYLE);
 	});
 
 	it('keeps the lists it has when they cannot be read', async () => {

@@ -141,7 +141,8 @@ describe('command names and arguments', () => {
 			rail: { hidden: [], order: [], where: 'more' as const },
 			home: { hidden: [], order: [] },
 			terminalShell: '',
-			terminalMultiplexer: true
+			terminalMultiplexer: true,
+			terminalColours: true
 		};
 		await api.setSettings(settings);
 		expect(invoked).toHaveBeenCalledWith('set_settings', { settings });

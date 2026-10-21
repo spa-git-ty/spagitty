@@ -2,11 +2,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PALETTE_KEY, theme } from './theme.svelte';
-import { DEFAULT_FAMILY, paletteOf, properties } from './themes';
+import { DEFAULT_ACCENT, DEFAULT_FAMILY, paletteOf, properties, withAccent } from './themes';
 
 const MODE_KEY = 'spagitty.theme';
 const FAMILY_KEY = 'spagitty.theme.family';
 const SOURCE_KEY = 'spagitty.theme.source';
+const ACCENT_KEY = 'spagitty.theme.accent';
 
 function stubStorage(initial: Record<string, string> = {}) {
 	const store = new Map(Object.entries(initial));
@@ -33,6 +34,7 @@ function property(name: string): string {
 beforeEach(() => {
 	stubStorage();
 	stubPrefersDark(false);
+	theme.setAccent(DEFAULT_ACCENT);
 	theme.setFamily(DEFAULT_FAMILY);
 	theme.setMode('light');
 });
@@ -597,5 +599,68 @@ describe('the palette revision', () => {
 		theme.receiveDesktop(desktopTheme('#191724', '#cf6348'));
 
 		expect(theme.revision).toBe(before);
+	});
+});
+
+describe('the accent (FEAT-156)', () => {
+	it("opens on the family's own, the tomato", () => {
+		stubStorage();
+		theme.init();
+
+		expect(theme.accent).toBe('tomato');
+		expect(property('--accent')).toBe(paletteOf('pomodoro', theme.mode).accent);
+	});
+
+	it('replaces the accent, the text on it and the selection, and nothing else', () => {
+		const own = paletteOf('pomodoro', 'light');
+		theme.setAccent('ocean');
+
+		const picked = withAccent(own, 'ocean', 'light');
+		expect(property('--accent')).toBe('#2563c9');
+		expect(property('--on-accent')).toBe(picked.onAccent);
+		expect(property('--selection')).toBe(picked.selection);
+		expect(property('--lane-1')).toBe(own.lanes[0]);
+		expect(property('--danger')).toBe(own.danger);
+		expect(property('--bg')).toBe(own.bg);
+	});
+
+	it('takes the shade drawn for the mode', () => {
+		theme.setAccent('ocean');
+		theme.setMode('dark');
+
+		expect(property('--accent')).toBe('#6ea8ff');
+	});
+
+	it('is remembered, and restored on the next start', () => {
+		const store = stubStorage();
+		theme.setAccent('jade');
+		expect(store.get(ACCENT_KEY)).toBe('jade');
+
+		stubStorage({ [ACCENT_KEY]: 'violet' });
+		theme.init();
+		expect(theme.accent).toBe('violet');
+	});
+
+	it('falls to the tomato on an accent it does not know', () => {
+		stubStorage({ [ACCENT_KEY]: 'chartreuse' });
+		theme.init();
+
+		expect(theme.accent).toBe('tomato');
+	});
+
+	/** The first frame of the next start paints it, not the tomato. */
+	it('is in the palette cached for the boot script', () => {
+		const store = stubStorage();
+		theme.setAccent('violet');
+
+		const cached = JSON.parse(store.get(PALETTE_KEY) ?? '{}');
+		expect(cached.tokens['--accent']).toBe('#7048c8');
+	});
+
+	it('moves the revision, so the graph repaints', () => {
+		const before = theme.revision;
+		theme.setAccent('graphite');
+
+		expect(theme.revision).toBeGreaterThan(before);
 	});
 });

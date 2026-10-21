@@ -40,6 +40,7 @@ import type {
 	LifePage,
 	LifeToday,
 	TerminalAsk,
+	TerminalStyle,
 	TerminalInfo,
 	TerminalLinks,
 	TerminalSession,
@@ -499,6 +500,11 @@ export function terminalWindows(session: string): Promise<TerminalWindow[]> {
 
 export function terminalAct(session: string, action: TerminalAsk): Promise<void> {
 	return invoke('terminal_act', { session, action });
+}
+
+/** Give the multiplexer's bars and borders the theme's colours (FEAT-157). */
+export function terminalStyle(colours: TerminalStyle): Promise<void> {
+	return invoke('terminal_style', { colours });
 }
 
 /** Which of the hex words and paths a terminal printed are real. */

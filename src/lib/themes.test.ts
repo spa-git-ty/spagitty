@@ -2,13 +2,18 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+	ACCENTS,
+	DEFAULT_ACCENT,
 	DEFAULT_FAMILY,
 	FAMILIES,
+	accentOf,
+	isAccent,
 	familyOf,
 	isFamily,
 	paletteOf,
 	properties,
 	variantOf,
+	withAccent,
 	type Mode,
 	type Palette
 } from './themes';
@@ -256,6 +261,71 @@ describe('readability', () => {
 	});
 });
 
+/**
+ * The accents (FEAT-156), each in each mode, on the family it is laid over:
+ * the same bars as a family's own accent.
+ */
+describe('accents', () => {
+	const PICKED = ACCENTS.flatMap((accent) =>
+		(
+			FAMILIES.flatMap((family) => ['light', 'dark'].map((mode) => [family, mode])) as [
+				(typeof FAMILIES)[number],
+				Mode
+			][]
+		).map(([family, mode]) => ({
+			label: `${accent.name} on ${family[mode].name}`,
+			palette: withAccent(family[mode].palette, accent.id, mode)
+		}))
+	);
+
+	it("opens on the family's own, which is first", () => {
+		expect(DEFAULT_ACCENT).toBe('tomato');
+		expect(ACCENTS[0].id).toBe(DEFAULT_ACCENT);
+		expect(withAccent(paletteOf('pomodoro', 'light'), DEFAULT_ACCENT, 'light')).toBe(
+			paletteOf('pomodoro', 'light')
+		);
+	});
+
+	it('keeps text on a filled accent at 4.5:1, and the accent at 3:1 on the ground', () => {
+		for (const { label, palette } of PICKED) {
+			expect(
+				contrast(palette.onAccent, palette.accent),
+				`${label} onAccent`
+			).toBeGreaterThanOrEqual(4.5);
+			expect(contrast(palette.accent, palette.bg), `${label} on bg`).toBeGreaterThanOrEqual(3);
+			expect(contrast(palette.accent, palette.panel), `${label} on panel`).toBeGreaterThanOrEqual(
+				3
+			);
+		}
+	});
+
+	it('replaces the accent, the text on it and the selection, and nothing else', () => {
+		const own = paletteOf('pomodoro', 'dark');
+		const picked = withAccent(own, 'ocean', 'dark');
+
+		expect(picked.accent).toBe('#6ea8ff');
+		expect(picked.selection).toBe('rgba(110, 168, 255, 0.18)');
+		const { accent: _a, onAccent: _o, selection: _s, ...rest } = picked;
+		const { accent: _b, onAccent: _p, selection: _t, ...ownRest } = own;
+		expect(rest).toEqual(ownRest);
+	});
+
+	it('uses colours this application can actually parse', () => {
+		for (const { label, palette } of PICKED) {
+			for (const token of ['accent', 'onAccent', 'selection'] as const) {
+				expect(() => parse(palette[token]), `${label} ${token}`).not.toThrow();
+			}
+		}
+	});
+
+	it('recognises exactly the accents in the list, and falls back on any other', () => {
+		for (const accent of ACCENTS) expect(isAccent(accent.id)).toBe(true);
+		for (const nonsense of ['', 'red', 'pomodoro'])
+			expect(isAccent(nonsense), nonsense).toBe(false);
+		expect(accentOf('nonsense' as never).id).toBe(DEFAULT_ACCENT);
+	});
+});
+
 describe('lookup', () => {
 	it('finds a family by id', () => {
 		expect(familyOf('pomodoro').name).toBe('Pomodoro');
@@ -276,7 +346,7 @@ describe('lookup', () => {
 	it('returns the variant for the mode asked for', () => {
 		expect(variantOf('pomodoro', 'light').name).toBe('Giorno');
 		expect(variantOf('pomodoro', 'dark').name).toBe('Notte');
-		expect(paletteOf('pomodoro', 'dark').bg).toBe('#1c1613');
+		expect(paletteOf('pomodoro', 'dark').bg).toBe('#1e1b1a');
 	});
 });
 
@@ -284,7 +354,7 @@ describe('properties', () => {
 	it('names every token the way the stylesheet names it', () => {
 		const tokens = properties(paletteOf('pomodoro', 'light'));
 
-		expect(tokens['--bg']).toBe('#fbf7f1');
+		expect(tokens['--bg']).toBe('#fdfdfc');
 		expect(tokens['--on-accent']).toBe('#ffffff');
 		expect(tokens['--lane-1']).toBe('#c23b22');
 		expect(tokens['--lane-5']).toBe('#2f6fb0');
