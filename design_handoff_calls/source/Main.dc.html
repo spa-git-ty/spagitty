@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Calls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#f2715a}a:hover{color:#ff8f7a}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel);--a-g:#2f7d45;--a-r:#b3124a;--a-y:#8a5a00;--a-b:#1f5fae;--a-m:#7a3fae;--a-c:#075c52}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000);--a-g:#7cc68d;--a-r:#ff7a85;--a-y:#f0b54a;--a-b:#6aa7e0;--a-m:#c6a0f6;--a-c:#86e3d2}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button,input{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+input{cursor:text}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+a.btn:hover{color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:650}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool.l{border-radius:999px 0 0 999px;padding-right:6px}
+.caret{height:32px;padding:0 10px 0 5px;border-radius:0 999px 999px 0;color:var(--muted);font-size:var(--fs-mono)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.rail-item.new::after{content:'';position:absolute;bottom:7px;left:50%;width:14px;margin-left:-7px;height:2px;border-radius:2px;background:var(--agent)}
+.seg{height:26px;padding:0 10px;border-radius:999px;font-size:12px;display:inline-flex;align-items:center;gap:5px}
+.seg.on{background:var(--surface-2);box-shadow:var(--shadow-1);font-weight:600}
+.sw{width:34px;height:20px;border-radius:999px;position:relative;flex:none;border:1px solid var(--pane-edge)}
+.sw span{position:absolute;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.m{font-family:var(--font-mono);font-size:10.5px;font-weight:700;width:46px;flex:none;letter-spacing:.02em}
+.m-GET{color:var(--ok)}.m-POST{color:var(--a-b)}.m-PUT{color:var(--warn)}.m-PATCH{color:var(--a-m)}.m-DELETE{color:var(--danger)}.m-SOAP{color:var(--agent)}
+.item{display:flex;align-items:center;gap:6px;height:30px;padding:0 8px;border-radius:8px;width:100%;box-sizing:border-box;text-align:left;font-size:var(--fs-secondary);white-space:nowrap;overflow:hidden}
+.item:hover{background:var(--hover)}
+.item.on{background:var(--surface-2);box-shadow:var(--shadow-1)}
+.v{color:var(--a-b);background:color-mix(in srgb,var(--a-b) 15%,transparent);border-radius:5px;padding:0 4px}
+.v-cap{color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}
+.jl{display:flex;align-items:center;white-space:pre;min-height:1.7em;padding-right:8px}
+.jv{border-radius:4px;padding:0 3px;margin:0 -3px}
+.jv:hover{background:var(--hover);outline:1px dashed var(--line)}
+.jv.sel{background:color-mix(in srgb,var(--accent) 20%,transparent);outline:1px solid color-mix(in srgb,var(--accent) 60%,transparent)}
+.jv.kept{text-decoration:underline dotted var(--ok);text-underline-offset:3px}
+.kept-tag{margin-left:10px;font-size:11px;color:var(--ok);font-family:var(--font-mono)}
+.x{width:18px;height:18px;border-radius:999px;display:inline-grid;place-items:center;font-size:10px;color:var(--muted)}
+.x:hover{background:var(--hover);color:var(--ink)}
+.btn.pressed{border-color:color-mix(in srgb,var(--accent) 55%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 12%,var(--surface));box-shadow:none}
+.kbd{font-family:var(--font-mono);font-size:10.5px;padding:0 5px;border-radius:4px;border:1px solid var(--pane-edge);background:var(--sunken);color:var(--muted)}
+.var-row{display:flex;flex-direction:column;gap:1px;padding:7px 8px;border-radius:8px}
+.var-row:hover{background:var(--hover)}
+.in{height:28px;box-sizing:border-box;padding:0 9px;border-radius:7px;border:1px solid var(--pane-edge);background:var(--sunken);font-family:var(--font-mono);font-size:12px}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">orders-service<button aria-label="Close orders-service" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">spagitty</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="14">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<span style="font-size: 22px; margin-right: 6px">Calls</span>
+<div role="tablist" aria-label="Open calls" style="display: flex; flex-wrap: wrap; gap: 6px">
+<span class="chip on" style="padding-right: 4px"><button role="tab" aria-selected="true" style="display: inline-flex; align-items: center; gap: 6px"><span class="m m-POST" style="width: auto">POST</span>Log in</button><button class="x" aria-label="Close Log in" title="Close (Ctrl W)">✕</button></span>
+<span class="chip" style="padding-right: 4px"><button role="tab" aria-selected="false" style="display: inline-flex; align-items: center; gap: 6px"><span class="m m-GET" style="width: auto">GET</span>Get user</button><button class="x" aria-label="Close Get user" title="Close (Ctrl W)">✕</button></span>
+<span class="chip" style="padding-right: 4px"><button role="tab" aria-selected="false" style="display: inline-flex; align-items: center; gap: 6px"><span class="m m-POST" style="width: auto">POST</span>Create order</button><button class="x" aria-label="Close Create order" title="Close (Ctrl W)">✕</button></span>
+<button class="chip" aria-label="New call">+</button>
+</div>
+<span style="flex: 1"></span>
+<button class="btn" aria-haspopup="menu" aria-label="Environment: staging"><span class="note" style="font-size: 12px">Env</span><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--warn)"></span>staging<span class="note">▾</span></button>
+<a class="btn" href="Scan.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Import</a>
+<a class="btn" href="Share.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M7.5 7.5 12 3l4.5 4.5"></path><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg>Share</a>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; gap: 10px; padding: 0 12px 12px">
+
+<aside aria-label="Collections" style="flex: 1 1 220px; max-width: 250px; display: flex; flex-direction: column; gap: 2px; padding: 10px; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: hidden">
+<label style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 9px; margin-bottom: 6px; border-radius: 8px; background: var(--sunken); border: 1px solid var(--pane-edge); color: var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"></path><path d="M16.5 16.5 21 21"></path></svg><input aria-label="Filter calls" placeholder="Filter calls" style="flex: 1; min-width: 0; font-size: var(--fs-secondary)"><span class="kbd">Ctrl K</span></label>
+<div style="display: flex; align-items: baseline; gap: 6px; padding: 4px 8px 2px">
+<span style="font-weight: 650; font-size: var(--fs-secondary)">orders-api</span>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: 11px">8 calls</span>
+</div>
+<span style="padding: 0 8px 6px; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted)">.spagitty/calls/orders-api.json</span>
+<sc-for list="{{tree}}" as="g" hint-placeholder-count="3">
+<div style="display: contents">
+<span class="note" style="font-size: 12px; padding: 6px 8px 2px; display: flex; align-items: center; gap: 6px"><span aria-hidden="true">▾</span>{{g.name}}</span>
+<sc-for list="{{g.calls}}" as="c" hint-placeholder-count="3">
+<button class="item {{c.cls}}" style="padding-left: 20px"><span class="m m-{{c.m}}">{{c.m}}</span><span style="overflow: hidden; text-overflow: ellipsis">{{c.name}}</span></button>
+</sc-for>
+</div>
+</sc-for>
+<a href="SoapCall.dc.html" class="item" style="margin-top: 8px; font-weight: 650; color: var(--ink); text-decoration: none"><span class="note" aria-hidden="true">▸</span>billing-ws<span style="flex: 1"></span><span class="m m-SOAP" style="width: auto">SOAP</span><span class="note" style="font-size: 11px; font-weight: 400">4</span></a>
+<div style="height: 1px; background: var(--soft); margin: 10px 4px 8px"></div>
+<span class="note" style="font-size: 12px; padding: 0 8px 6px">Found in this repository</span>
+<a href="Scan.dc.html" style="display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--agent) 45%, transparent); text-decoration: none; color: var(--ink)">
+<span style="font-size: var(--fs-secondary); display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--agent)"></span>6 endpoints not in a collection</span>
+<span class="note" style="font-size: 11.5px">OrderController.java, openapi.yaml · Review</span>
+</a>
+<span style="flex: 1"></span>
+<button class="item" style="color: var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"></path><path d="M3.5 4v4h4"></path><path d="M12 8v4l3 2"></path></svg>History<span style="flex: 1"></span><span style="font-size: 11px">23 today</span></button>
+</aside>
+
+<section aria-label="Call" style="flex: 999 1 520px; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px">
+
+<div style="flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px">
+<div style="display: flex; align-items: center; gap: 8px">
+<button aria-haspopup="menu" aria-label="Method" style="height: 36px; padding: 0 12px; border-radius: 9px; background: var(--sunken); border: 1px solid var(--pane-edge); display: flex; align-items: center; gap: 6px"><span class="m m-POST" style="width: auto; font-size: 12px">POST</span><span class="note" style="font-size: 11px">▾</span></button>
+<label style="flex: 1; min-width: 0; height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: var(--sunken); border: 1px solid var(--pane-edge); display: flex; align-items: center; font-family: var(--font-mono); font-size: 13px; white-space: pre; overflow: hidden"><span class="v">{{v.baseUrl}}</span>/auth/login</label>
+<button class="btn primary" style="height: 36px; padding: 0 18px">Send<span style="opacity: .7; font-size: 11px; font-weight: 400">Ctrl ↵</span></button>
+</div>
+<div style="display: flex; align-items: center; gap: 2px; flex-wrap: wrap">
+<button class="seg">Params</button>
+<button class="seg">Headers<span class="note" style="font-size: 11px">2</span></button>
+<button class="seg on">Body</button>
+<button class="seg">Auth</button>
+<button class="seg">Keep<span style="font-size: 11px; color: var(--ok)">{{keptCount}}</span></button>
+<span style="flex: 1"></span>
+<span class="chip">JSON ▾</span>
+</div>
+<div style="padding: 10px 12px; border-radius: 10px; background: var(--sunken); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7">
+<div style="color: var(--muted)">{</div>
+<div style="padding-left: 18px; white-space: pre"><span style="color: var(--a-b)">"email"</span><span style="color: var(--muted)">: </span><span style="color: var(--a-y)">"</span><span class="v">{{v.email}}</span><span style="color: var(--a-y)">"</span><span style="color: var(--muted)">,</span></div>
+<div style="padding-left: 18px; white-space: pre"><span style="color: var(--a-b)">"password"</span><span style="color: var(--muted)">: </span><span style="color: var(--a-y)">"</span><span class="v">{{v.password}}</span><span style="color: var(--a-y)">"</span></div>
+<div style="color: var(--muted)">}</div>
+</div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: hidden">
+<div style="flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px 8px">
+<span style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; color: var(--ok)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--ok)"></span>200 OK</span>
+<span class="note" style="font-family: var(--font-mono); font-size: 12px">142 ms · 1.4 KB</span>
+<span class="vr"></span>
+<button class="seg on">Body</button>
+<button class="seg">Headers<span class="note" style="font-size: 11px">9</span></button>
+<button class="seg">Cookies</button>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: 12px">{{prettyHint}}</span>
+<button class="btn {{prettyCls}}" aria-pressed="{{prettyOn}}" onClick="{{togglePretty}}" title="Beautify (Ctrl Shift F)" style="padding: 3px 10px; font-size: 12px"><span style="font-family: var(--font-mono)">{ }</span>Beautify</button>
+</div>
+<div style="flex: 1; min-height: 0; overflow: auto; margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px; background: var(--sunken); font-family: var(--font-mono); font-size: 12.5px">
+<sc-if value="{{raw}}" hint-placeholder-val="{{false}}"><div style="white-space: pre-wrap; word-break: break-all; line-height: 1.7; color: var(--ink)">{{rawText}}</div></sc-if>
+<sc-if value="{{pretty}}" hint-placeholder-val="{{true}}">
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="12">
+<div style="display: contents">
+<div class="jl" style="padding-left: {{l.pad}}">
+<sc-if value="{{l.hasKey}}" hint-placeholder-val="{{true}}"><span style="color: var(--a-b)">{{l.key}}</span><span style="color: var(--muted)">: </span></sc-if>
+<sc-if value="{{l.hasVal}}" hint-placeholder-val="{{true}}"><button class="jv {{l.cls}}" style="color: {{l.ink}}" onClick="{{l.pick}}" aria-label="Keep {{l.path}}">{{l.val}}</button></sc-if>
+<span style="color: var(--muted)">{{l.text}}</span>
+<sc-if value="{{l.isKept}}" hint-placeholder-val="{{false}}"><span class="kept-tag">→ {{l.keptLabel}}</span></sc-if>
+</div>
+<sc-if value="{{l.showPop}}" hint-placeholder-val="{{false}}">
+<div class="ornament" role="dialog" aria-label="Keep this value" style="margin: 6px 0 10px {{l.pad}}; max-width: 620px; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-ui); white-space: normal">
+<span style="font-size: var(--fs-secondary)">Keep <span style="font-family: var(--font-mono); font-size: 12px; color: var(--muted)">{{l.path}}</span></span>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted)">as<input class="in" aria-label="Variable name" value="{{draft}}" onChange="{{onName}}" style="width: 150px; color: var(--ink)"></label>
+<label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted)">in<button class="in" aria-haspopup="menu" style="display: flex; align-items: center; gap: 6px; color: var(--ink); font-family: var(--font-ui)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--warn)"></span>staging ▾</button></label>
+<label style="display: flex; align-items: center; gap: 7px; font-size: 12px"><button class="sw" role="switch" aria-checked="{{auto}}" aria-label="Update on every call" onClick="{{toggleAuto}}" style="background: {{autoBg}}"><span style="left: {{autoKnob}}"></span></button>Update on every call</label>
+<span style="flex: 1"></span>
+<button class="btn" onClick="{{cancel}}" style="box-shadow: none">Cancel</button>
+<button class="btn primary" onClick="{{keep}}">Keep</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{l.showKept}}" hint-placeholder-val="{{false}}">
+<div style="margin: 4px 0 8px {{l.pad}}; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; max-width: 620px; box-sizing: border-box; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 9%, transparent); font-family: var(--font-ui); font-size: 12.5px; white-space: normal">
+<span>Kept as <span class="v v-cap" style="font-family: var(--font-mono)">{{l.keptVar}}</span> in staging{{l.keptWhen}}</span>
+<span style="flex: 1"></span>
+<button class="note" style="font-size: 12px" onClick="{{l.forget}}">Forget</button>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</sc-if>
+</div>
+</div>
+</section>
+
+<aside aria-label="Variables in staging" style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 2px; padding: 10px; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 7px; padding: 2px 8px 8px">
+<span style="width: 7px; height: 7px; border-radius: 50%; background: var(--warn)"></span>
+<span style="font-weight: 650; font-size: var(--fs-secondary)">staging</span>
+<span class="note" style="font-size: 12px">{{varCount}} variables</span>
+<span style="flex: 1"></span>
+<a href="Environments.dc.html" style="font-size: 12px">Manage</a>
+</div>
+<sc-for list="{{vars}}" as="x" hint-placeholder-count="6">
+<div class="var-row">
+<span style="display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 600"><span style="color: {{x.ink}}">{{x.name}}</span><sc-if value="{{x.secret}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.2" stroke-linecap="round" aria-label="Secret" role="img"><path d="M6.5 11h11v9h-11z"></path><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg></sc-if></span>
+<span style="font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{x.value}}</span>
+<sc-if value="{{x.captured}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; color: var(--ok)">{{x.src}}</span></sc-if>
+</div>
+</sc-for>
+<span style="flex: 1"></span>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 8px 4px; border-top: 1px solid var(--soft)">
+<span class="note" style="font-size: 12px">Type <span class="kbd">{{open}}</span> anywhere to insert one.</span>
+<span class="note" style="font-size: 12px">Secrets stay on this computer and never go into the repository.</span>
+</div>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · 1 changed file · fetched 2 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<div style="display: flex; align-items: center; gap: 2px">
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button><button class="caret" aria-label="How to pull" aria-haspopup="menu">▾</button></span>
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button><button class="caret" aria-label="What to fetch" aria-haspopup="menu">▾</button></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+<span class="vr" style="margin: 0 6px"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"></path><path d="M7 4.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 8.5a2.5 2.5 0 1 0 0-.02"></path></svg>Branch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 8l2-4h14l2 4"></path><path d="M9.5 13h5"></path></svg>Stash</button>
+</div>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">412 commits · Tags 6 · Submodules 0<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v3.1.0</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z'],
+ calls: ['M4 7.5h12','M12.5 4l3.5 3.5-3.5 3.5','M20 16.5H8','M11.5 13 8 16.5l3.5 3.5'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ more: ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','calls','|','investigate','search','more','|','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', calls:'Calls', investigate:'Investigate', search:'Log', settings:'Settings', more:'More'};
+var ACTIVE = 'calls';
+function railList() {
+ return RAIL.map(function (k) {
+  if (k === '|') return { sep: true, btn: false, paths: [] };
+  return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === ACTIVE ? 'on' : '' };
+ });
+}
+function b(n) { return '{' + '{' + n + '}' + '}'; }
+var STR = 'var(--a-y)', NUM = 'var(--a-m)', BOOL = 'var(--a-c)';
+var JSON_LINES = [
+ { d: 0, text: '{' },
+ { d: 1, key: '"data"', text: '{' },
+ { d: 2, key: '"accessToken"', val: '"eyJhbGciOiJIUzI1NiIsInR5cCI6…"', ink: STR, path: '$.data.accessToken', name: 'token', text: ',' },
+ { d: 2, key: '"refreshToken"', val: '"rt_9f2c71b0e4a8"', ink: STR, path: '$.data.refreshToken', name: 'refreshToken', text: ',' },
+ { d: 2, key: '"expiresIn"', val: '3600', ink: NUM, path: '$.data.expiresIn', name: 'expiresIn', text: ',' },
+ { d: 2, key: '"user"', text: '{' },
+ { d: 3, key: '"id"', val: '"usr_4821"', ink: STR, path: '$.data.user.id', name: 'userId', text: ',' },
+ { d: 3, key: '"email"', val: '"mira@example.com"', ink: STR, path: '$.data.user.email', name: 'userEmail', text: ',' },
+ { d: 3, key: '"role"', val: '"admin"', ink: STR, path: '$.data.user.role', name: 'role', text: ',' },
+ { d: 3, key: '"verified"', val: 'true', ink: BOOL, path: '$.data.user.verified', name: 'verified', text: '' },
+ { d: 2, text: '}' },
+ { d: 1, text: '},' },
+ { d: 1, key: '"requestId"', val: '"req_7Hc2Qm"', ink: STR, path: '$.requestId', name: 'requestId', text: '' },
+ { d: 0, text: '}' }
+];
+var VALS = { '$.data.accessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6…', '$.data.refreshToken': 'rt_9f2c71b0e4a8', '$.data.expiresIn': '3600', '$.data.user.id': 'usr_4821', '$.data.user.email': 'mira@example.com', '$.data.user.role': 'admin', '$.data.user.verified': 'true', '$.requestId': 'req_7Hc2Qm' };
+function nameFor(p) { for (var i = 0; i < JSON_LINES.length; i++) if (JSON_LINES[i].path === p) return JSON_LINES[i].name; return 'value'; }
+class Component extends DCLogic {
+ constructor(props) {
+  super(props);
+  this.state = { pretty: true, sel: '$.data.accessToken', draft: 'token', auto: true, kept: { '$.data.user.id': { name: 'userId', auto: true } }, order: ['$.data.user.id'] };
+ }
+ renderVals() {
+  var self = this, st = this.state, kept = st.kept;
+  var lines = JSON_LINES.map(function (l) {
+   var k = l.path && kept[l.path];
+   var isSel = !!l.path && st.sel === l.path;
+   return {
+    pad: (l.d * 18) + 'px', hasKey: !!l.key, key: l.key || '', hasVal: !!l.val, val: l.val || '', ink: l.ink || 'var(--ink)', text: l.text || '',
+    path: l.path || '', cls: (isSel ? 'sel ' : '') + (k ? 'kept' : ''),
+    isKept: !!k && !isSel, keptLabel: k ? k.name : '',
+    showPop: isSel && !k, showKept: isSel && !!k,
+    keptVar: k ? b(k.name) : '', keptWhen: k ? (k.auto ? ' · updates on every call' : ' · kept once') : '',
+    pick: function () { if (!l.path) return; self.setState({ sel: l.path, draft: kept[l.path] ? kept[l.path].name : nameFor(l.path) }); },
+    forget: function () { var nk = Object.assign({}, kept); delete nk[l.path]; self.setState({ kept: nk, order: st.order.filter(function (p) { return p !== l.path; }) }); }
+   };
+  });
+  var base = [
+   { name: 'baseUrl', value: 'https://staging.orders.local/api', ink: 'var(--ink)', secret: false, captured: false, src: '' },
+   { name: 'email', value: 'mira@example.com', ink: 'var(--ink)', secret: false, captured: false, src: '' },
+   { name: 'password', value: '••••••••••', ink: 'var(--ink)', secret: true, captured: false, src: '' }
+  ];
+  var caps = st.order.map(function (p) {
+   var k = kept[p];
+   return { name: k.name, value: VALS[p], ink: 'var(--ok)', secret: false, captured: true, src: 'from POST Log in' + (k.auto ? ' · every call' : ' · once') };
+  });
+  var vars = base.concat(caps);
+  return {
+   theme: this.props.theme || 'dark', rail: railList(),
+   tree: [
+    { name: 'Auth', calls: [{ m: 'POST', name: 'Log in', cls: 'on' }, { m: 'POST', name: 'Refresh token', cls: '' }] },
+    { name: 'Users', calls: [{ m: 'GET', name: 'Get user', cls: '' }, { m: 'PATCH', name: 'Update user', cls: '' }] },
+    { name: 'Orders', calls: [{ m: 'GET', name: 'List orders', cls: '' }, { m: 'POST', name: 'Create order', cls: '' }, { m: 'PUT', name: 'Replace items', cls: '' }, { m: 'DELETE', name: 'Cancel order', cls: '' }] }
+   ],
+   v: { baseUrl: b('baseUrl'), email: b('email'), password: b('password') },
+   open: '{' + '{',
+   pretty: !!st.pretty, raw: !st.pretty, prettyOn: st.pretty ? 'true' : 'false', prettyCls: st.pretty ? 'pressed' : '',
+   prettyHint: st.pretty ? 'Click a value to keep it' : 'Minified as received · beautify to pick values',
+   rawText: '{"data":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6…","refreshToken":"rt_9f2c71b0e4a8","expiresIn":3600,"user":{"id":"usr_4821","email":"mira@example.com","role":"admin","verified":true}},"requestId":"req_7Hc2Qm"}',
+   togglePretty: function () { self.setState({ pretty: !self.state.pretty }); },
+   lines: lines, vars: vars, varCount: vars.length, keptCount: st.order.length,
+   draft: st.draft, auto: st.auto ? 'true' : 'false', autoBg: st.auto ? 'var(--ok)' : 'var(--soft)', autoKnob: st.auto ? '16px' : '2px',
+   onName: function (e) { self.setState({ draft: (e && e.target ? e.target.value : self.state.draft).replace(/[^A-Za-z0-9_]/g, '') }); },
+   toggleAuto: function () { self.setState({ auto: !self.state.auto }); },
+   cancel: function () { self.setState({ sel: '' }); },
+   keep: function () {
+    var p = self.state.sel; if (!p) return;
+    var nk = Object.assign({}, self.state.kept); nk[p] = { name: self.state.draft || nameFor(p), auto: self.state.auto };
+    var ord = self.state.order.indexOf(p) < 0 ? self.state.order.concat([p]) : self.state.order;
+    self.setState({ kept: nk, order: ord });
+   }
+  };
+ }
+}
+</script>
+</body>
+</html>

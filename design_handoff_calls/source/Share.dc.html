@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Share a collection</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#f2715a}a:hover{color:#ff8f7a}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel);--scrim:rgba(42,31,26,.28)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000);--scrim:rgba(0,0,0,.5)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+a.btn:hover{color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:650}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink)}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.seg{height:26px;padding:0 10px;border-radius:999px;font-size:12px;display:inline-flex;align-items:center;gap:5px}
+.seg.on{background:var(--surface-2);box-shadow:var(--shadow-1);font-weight:600}
+.segs{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--sunken);border:1px solid var(--pane-edge)}
+.sw{width:34px;height:20px;border-radius:999px;position:relative;flex:none;border:1px solid var(--pane-edge)}
+.sw span{position:absolute;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.fmt{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:12px;text-align:left;border:1px solid var(--pane-edge);background:var(--surface);min-width:0}
+.fmt:hover{background:var(--surface-2)}
+.fmt.on{border-color:color-mix(in srgb,var(--accent) 70%,transparent);background:color-mix(in srgb,var(--accent) 10%,var(--surface));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 50%,transparent)}
+.chk{display:flex;align-items:center;gap:10px;height:32px;padding:0 8px;border-radius:8px;width:100%;box-sizing:border-box;text-align:left;font-size:var(--fs-secondary)}
+.chk:hover{background:var(--hover)}
+.box{width:16px;height:16px;flex:none;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;box-sizing:border-box}
+.box.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.box.lock{background:var(--soft);border-color:transparent;color:var(--muted)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden; position: relative">
+
+<div aria-hidden="true" style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div style="display: flex; align-items: center; gap: 4px"><span style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); font-weight: 550">orders-service</span><span style="padding: 0 12px; color: var(--muted)">spagitty</span></div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+<div aria-hidden="true" style="flex: 1; min-height: 0; display: flex; gap: 12px; padding: 4px 14px 14px 12px">
+<div style="width: 52px; flex: none">
+<div class="ornament" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="14">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><span class="rail-item {{it.cls}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></span></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--pane-edge); border-radius: 18px; box-shadow: var(--pane-shadow); padding: 14px 18px">
+<span style="font-size: 22px">Calls</span>
+<div style="flex: 1; display: flex; gap: 10px; margin-top: 12px">
+<div style="width: 250px; border-radius: 14px; background: var(--surface)"></div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 10px"><div style="height: 170px; border-radius: 14px; background: var(--surface)"></div><div style="flex: 1; border-radius: 14px; background: var(--surface)"></div></div>
+<div style="width: 270px; border-radius: 14px; background: var(--surface)"></div>
+</div>
+</div>
+</div>
+
+<div style="position: absolute; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; overflow: auto">
+<div class="ornament" role="dialog" aria-modal="true" aria-label="Share orders-api" style="width: 100%; max-width: 860px; border-radius: 20px; background-color: var(--bg); padding: 22px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-size: 20px">Share orders-api</span>
+<span class="note" style="font-size: 12px">8 calls · 3 environments</span>
+<span style="flex: 1"></span>
+<a href="Main.dc.html" aria-label="Close" style="width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); text-decoration: none">✕</a>
+</div>
+
+<div role="radiogroup" aria-label="How" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{formats}}" as="f" hint-placeholder-count="3">
+<button role="radio" aria-checked="{{f.on}}" class="fmt {{f.cls}}" onClick="{{f.pick}}">
+<span style="display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 14px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.icon}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg>{{f.title}}</span>
+<span class="note" style="font-size: 12.5px">{{f.sub}}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 18px">
+<div style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 4px">
+<span class="note" style="font-size: 12px; padding: 0 8px 4px">What goes in</span>
+<sc-for list="{{parts}}" as="p" hint-placeholder-count="6">
+<button class="chk" role="checkbox" aria-checked="{{p.on}}" onClick="{{p.toggle}}">
+<span class="box {{p.boxCls}}" aria-hidden="true"><sc-if value="{{p.checked}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>
+<sc-if value="{{p.hasDot}}" hint-placeholder-val="{{false}}"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{p.dot}}"></span></sc-if>
+<span style="flex: 1">{{p.label}}</span>
+<span class="note" style="font-size: 12px">{{p.meta}}</span>
+</button>
+</sc-for>
+<div style="display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 9%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); font-size: 12.5px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M6.5 11h11v9h-11z"></path><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>
+<span>Secrets and kept values never leave this computer. <span class="note" style="font-size: 12.5px">password, token and userId go in empty, so teammates are asked for them on first use.</span></span>
+</div>
+</div>
+
+<div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="note" style="font-size: 12px">{{previewLabel}}</span>
+<span style="flex: 1"></span>
+<sc-if value="{{showFlavour}}" hint-placeholder-val="{{true}}">
+<div class="segs" role="radiogroup" aria-label="File flavour">
+<button role="radio" aria-checked="{{spOn}}" class="seg {{spCls}}" onClick="{{pickSp}}">Spagitty</button>
+<button role="radio" aria-checked="{{pmOn}}" class="seg {{pmCls}}" onClick="{{pickPm}}">Postman 2.1</button>
+</div>
+</sc-if>
+</div>
+<div style="flex: 1; padding: 12px 14px; border-radius: 12px; background: var(--sunken); border: 1px solid var(--pane-edge); font-family: var(--font-mono); font-size: 12px; line-height: 1.8">
+<sc-for list="{{tree}}" as="t" hint-placeholder-count="5">
+<div style="display: flex; gap: 10px; padding-left: {{t.pad}}; white-space: nowrap"><span style="color: {{t.ink}}; overflow: hidden; text-overflow: ellipsis">{{t.name}}</span><span style="flex: 1"></span><span style="color: var(--muted)">{{t.size}}</span></div>
+</sc-for>
+</div>
+<span class="note" style="font-size: 12px">{{hint}}</span>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; border-top: 1px solid var(--soft)">
+<span class="note" style="font-size: 12px; padding-top: 12px">Opens with Import on any Spagitty. The .json also opens in Postman.</span>
+<span style="flex: 1"></span>
+<a class="btn" href="Main.dc.html" style="margin-top: 12px">Cancel</a>
+<a class="btn primary" href="Main.dc.html" style="margin-top: 12px; height: 34px; box-sizing: border-box">{{cta}}</a>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z'],
+ calls: ['M4 7.5h12','M12.5 4l3.5 3.5-3.5 3.5','M20 16.5H8','M11.5 13 8 16.5l3.5 3.5'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ more: ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','calls','|','investigate','search','more','|','settings'];
+function railList() {
+ return RAIL.map(function (k) {
+  if (k === '|') return { sep: true, btn: false, paths: [] };
+  return { sep: false, btn: true, paths: ICONS[k], cls: k === 'calls' ? 'on' : '' };
+ });
+}
+var FORMATS = [
+ { id: 'json', title: 'One file', sub: 'A single .json. Easy to drop in a chat or a ticket.', icon: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z', 'M14 3v5h5'] },
+ { id: 'zip', title: 'Zip bundle', sub: 'Calls, environments and example responses together.', icon: ['M4 7h16v13H4z', 'M4 7l2-3h12l2 3', 'M12 7v4', 'M11 11h2v3h-2z'] },
+ { id: 'repo', title: 'Commit to the repository', sub: 'Teammates get it with their next pull.', icon: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9', 'M7 4.5a2.5 2.5 0 1 0 0-.02', 'M17 8.5a2.5 2.5 0 1 0 0-.02'] }
+];
+class Component extends DCLogic {
+ constructor(props) {
+  super(props);
+  this.state = { fmt: 'zip', flavour: 'sp', inc: { local: true, staging: true, production: false, examples: true, history: false } };
+ }
+ renderVals() {
+  var self = this, st = this.state, inc = st.inc;
+  function part(id, label, meta, dot) {
+   var on = !!inc[id];
+   return { label: label, meta: meta, hasDot: !!dot, dot: dot || '', checked: on, on: on ? 'true' : 'false', boxCls: on ? 'on' : '',
+    toggle: function () { var n = Object.assign({}, self.state.inc); n[id] = !n[id]; self.setState({ inc: n }); } };
+  }
+  var parts = [
+   { label: 'Calls and folders', meta: '8 calls', hasDot: false, dot: '', checked: true, on: 'true', boxCls: 'lock', toggle: function () {} },
+   part('local', 'Environment local', '5 variables', 'var(--ok)'),
+   part('staging', 'Environment staging', '5 variables', 'var(--warn)'),
+   part('production', 'Environment production', '5 variables', 'var(--danger)'),
+   part('examples', 'Last response of each call, as an example', '8 responses'),
+   part('history', 'History', '23 calls today')
+  ];
+  var envs = ['local', 'staging', 'production'].filter(function (e) { return inc[e]; });
+  var tree, cta, label, hint;
+  if (st.fmt === 'zip') {
+   tree = [{ name: 'orders-api.zip', size: '', pad: '0', ink: 'var(--ink)' }, { name: 'collection.json', size: '14 KB', pad: '18px', ink: 'var(--ink)' }];
+   if (envs.length) tree.push({ name: 'env/', size: '', pad: '18px', ink: 'var(--muted)' });
+   envs.forEach(function (e) { tree.push({ name: e + '.json', size: '0.4 KB', pad: '36px', ink: 'var(--ink)' }); });
+   if (inc.examples) tree.push({ name: 'examples/  8 files', size: '11 KB', pad: '18px', ink: 'var(--ink)' });
+   if (inc.history) tree.push({ name: 'history.json', size: '31 KB', pad: '18px', ink: 'var(--ink)' });
+   tree.push({ name: 'README.md', size: '1 KB', pad: '18px', ink: 'var(--muted)' });
+   cta = 'Save orders-api.zip…'; label = 'In the zip'; hint = 'The README lists which values each person has to fill in.';
+  } else if (st.fmt === 'json') {
+   tree = [{ name: st.flavour === 'pm' ? 'orders-api.postman_collection.json' : 'orders-api.calls.json', size: '16 KB', pad: '0', ink: 'var(--ink)' }];
+   tree.push({ name: '8 calls in 3 folders', size: '', pad: '18px', ink: 'var(--muted)' });
+   if (envs.length) tree.push({ name: envs.length + ' environment' + (envs.length > 1 ? 's' : '') + ' inside', size: '', pad: '18px', ink: 'var(--muted)' });
+   if (inc.examples) tree.push({ name: '8 example responses', size: '', pad: '18px', ink: 'var(--muted)' });
+   cta = 'Save .json…'; label = 'The file'; hint = st.flavour === 'pm' ? 'Kept values become Postman test scripts that set the same variables.' : 'Keeps kept-value rules and environment colours.';
+  } else {
+   tree = [{ name: '.spagitty/calls/', size: '', pad: '0', ink: 'var(--muted)' }, { name: 'orders-api.json', size: 'changed', pad: '18px', ink: 'var(--warn)' }];
+   envs.forEach(function (e) { tree.push({ name: 'env/' + e + '.json', size: e === 'production' ? 'new' : 'unchanged', pad: '18px', ink: e === 'production' ? 'var(--ok)' : 'var(--muted)' }); });
+   if (inc.examples) tree.push({ name: 'examples/  8 files', size: 'new', pad: '18px', ink: 'var(--ok)' });
+   var n = 1 + (inc.production ? 1 : 0) + (inc.examples ? 8 : 0);
+   cta = 'Commit ' + n + (n > 1 ? ' files' : ' file') + ' on main'; label = 'Changes'; hint = 'Message: “Calls: update orders-api”. You still push it yourself.';
+  }
+  var pm = st.flavour === 'pm';
+  return {
+   theme: this.props.theme || 'dark', rail: railList(), parts: parts, tree: tree, cta: cta, previewLabel: label, hint: hint,
+   formats: FORMATS.map(function (f) { var on = st.fmt === f.id; return { title: f.title, sub: f.sub, icon: f.icon, on: on ? 'true' : 'false', cls: on ? 'on' : '', pick: function () { self.setState({ fmt: f.id }); } }; }),
+   showFlavour: st.fmt === 'json', spOn: pm ? 'false' : 'true', spCls: pm ? '' : 'on', pmOn: pm ? 'true' : 'false', pmCls: pm ? 'on' : '',
+   pickSp: function () { self.setState({ flavour: 'sp' }); }, pickPm: function () { self.setState({ flavour: 'pm' }); }
+  };
+ }
+}
+</script>
+</body>
+</html>
