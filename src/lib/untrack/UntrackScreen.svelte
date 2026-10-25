@@ -8,6 +8,7 @@
 	import { repo } from '$lib/repo.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { speedSearch } from '$lib/ui/speedsearch.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
 	import ScreenHead from '$lib/ui/ScreenHead.svelte';
 	import type { FilesEntry } from '$lib/types';
@@ -72,7 +73,11 @@
 	const action = $derived(untrack.push ? 'Untrack, commit and push' : 'Untrack and commit');
 </script>
 
-<div class="screen">
+<!-- Typing anywhere on the screen types into the find field (FEAT-158). -->
+<div
+	class="screen"
+	use:speedSearch={{ field: () => document.querySelector<HTMLInputElement>('.screen .find input:not(:disabled)') }}
+>
 	<ScreenHead title="Untrack">
 		{#snippet detail()}
 			<span class="note">Stop tracking files on a branch. They stay on disk.</span>

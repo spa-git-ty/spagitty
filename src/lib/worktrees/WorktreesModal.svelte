@@ -6,6 +6,7 @@
 	import { repo } from '$lib/repo.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import type { Worktree } from '$lib/types';
 
 	let removingPath = $state<string | null>(null);
@@ -14,6 +15,9 @@
 	let isActionRunning = $state(false);
 
 	const list = $derived(worktrees.list);
+	/** Type in the dialog to narrow by name, branch or path (FEAT-158). */
+	const search = createSearch();
+	const shown = $derived(search.filter(list, (wt) => [wt.name, wt.branch, wt.path]));
 
 	async function openWorktree(wt: Worktree): Promise<void> {
 		try {
@@ -120,8 +124,16 @@
 				{#if list.length === 0}
 					<div class="empty">No worktrees found for this repository.</div>
 				{:else}
-					<div class="worktree-list">
-						{#each list as wt (wt.path)}
+					<div
+						class="worktree-list"
+						use:speedSearch={{
+							search,
+							label: 'worktrees',
+							count: () => [shown.length, list.length],
+							onenter: () => shown[0] && void openWorktree(shown[0])
+						}}
+					>
+						{#each shown as wt (wt.path)}
 							<div class="worktree-card" class:main={wt.isMain}>
 								<div class="card-info">
 									<div class="card-top">

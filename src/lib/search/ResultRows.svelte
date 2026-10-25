@@ -3,6 +3,7 @@
 	import { relativeTime } from '$lib/format';
 	import { search } from '$lib/search/store.svelte';
 	import RefChip from '$lib/ui/RefChip.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import AuthorAvatar from '$lib/graph/AuthorAvatar.svelte';
 
 	/**
@@ -24,7 +25,19 @@
 
 	let { onopen, ondiff }: Props = $props();
 
-	const rows = $derived(search.rows());
+	/**
+	 * Type over the results to narrow them further (FEAT-158). The fields
+	 * above ask git; this only looks through what it answered.
+	 */
+	const within = createSearch();
+	const rows = $derived(
+		within.filter(search.rows(), (row) => [
+			row.summary,
+			row.short,
+			row.authorName,
+			...row.refs.map((ref) => ref.name)
+		])
+	);
 
 	function activate(id: string, event: MouseEvent | KeyboardEvent) {
 		search.select(id);
@@ -39,7 +52,20 @@
 	}
 </script>
 
-<ol class="results">
+<ol
+	class="results"
+	use:speedSearch={{
+		search: within,
+		label: 'results',
+		count: () => [rows.length, search.rows().length],
+		onenter: () => {
+			if (rows[0]) {
+				search.select(rows[0].id);
+				onopen?.(rows[0].id);
+			}
+		}
+	}}
+>
 	{#each rows as row (row.id)}
 		<li>
 			<button

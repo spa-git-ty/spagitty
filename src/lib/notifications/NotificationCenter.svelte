@@ -5,6 +5,7 @@
 	import { repo } from '$lib/repo.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { act, follow } from './act';
 	import { center } from './center.svelte';
 	import {
@@ -92,6 +93,7 @@
 		aria-labelledby="notifications-title"
 		tabindex="-1"
 		bind:this={panel}
+		use:speedSearch={{ field: () => panel?.querySelector<HTMLInputElement>('.search input') }}
 	>
 		<header class="head">
 			<div class="title-row">

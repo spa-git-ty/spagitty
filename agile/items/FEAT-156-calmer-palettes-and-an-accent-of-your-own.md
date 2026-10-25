@@ -2,7 +2,7 @@
 
 # FEAT-156 — Calmer light and dark palettes, and an accent of your own
 
-**Status:** Done — on `feature/FEAT-156-palettes-and-accents`; unmerged. Covered by palette, theme store and Appearance tests; not looked at in the running application (the author is checking it).
+**Status:** Done — shipped in 3.9.0, through pull request #88. Covered by palette, theme store and Appearance tests; not looked at in the running application (the author is checking it).
 **Branch:** `feature/FEAT-156-palettes-and-accents`.
 **Screens:** every screen; Settings › Appearance.
 **Raised by:** the author, 2026-10-21: "light theme looks yellowish! and its not pretty :P , also dark it's good ambiant spatial but lets enhance colors for dark mode and light mode to be more comfy , plus allow users to pick acent colors instead of our orange one , on appernce settings( include our color by deafut allow change to others pick what you see suitable )".

@@ -7,6 +7,7 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import Markdown from '$lib/ui/Markdown.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { safeUrl } from '$lib/ui/markdown';
 	import { notice } from '$lib/ui/notice.svelte';
 	import { releases } from './store.svelte';
@@ -15,6 +16,9 @@
 	let preview = $state(false), since = $state(''), branch = $state(''), writeChangelog = $state(false), deleteTag = $state(false);
 	let menu = $state<string | null>(null), pipeline = $state(false);
 	const draft = $derived(releases.draft);
+	/** Type on the screen to narrow the releases read so far by tag, title or author (FEAT-158). */
+	const search = createSearch();
+	const visible = $derived(search.filter(releases.visible, (release) => [release.tag, release.title, release.author]));
 	const size = (bytes: number | null) => bytes == null ? '' : bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
 	const date = (at: string) => at ? new Date(at).toLocaleDateString() : 'Not published';
 	async function copy(text: string) { try { await navigator.clipboard.writeText(text); notice.ok('Link copied'); } catch (error) { notice.failed('Could not copy link', error); } }
@@ -48,10 +52,19 @@
 	{:else if !releases.host}<p class="empty note">{repo.info ? 'Add a supported hosted remote to read its releases.' : 'Open a repository to read its releases.'}</p>
 	{:else if releases.host.repo.kind === 'bitbucket'}<p class="empty note">Bitbucket · soon</p>
 	{:else}<div class="body">
-		<section class="list pane" aria-label="Release list">
+		<section
+			class="list pane"
+			aria-label="Release list"
+			use:speedSearch={{
+				search,
+				label: 'releases',
+				count: () => [visible.length, releases.visible.length],
+				onenter: () => visible[0] && select(visible[0])
+			}}
+		>
 			<div class="filters">{#each [['all', 'All'], ['drafts', 'Drafts'], ['prereleases', 'Pre-releases']] as [key, label]}<button class:on={releases.filter === key} onclick={() => { releases.filter = key as 'all' | 'drafts' | 'prereleases'; }}>{label} {releases.rows.filter((release) => key === 'all' || (key === 'drafts' ? release.draft : release.prerelease)).length}{releases.more ? '+' : ''}</button>{/each}</div>
 			{#if releases.provisional}<p class="note cached">Saved list · checking the host</p>{/if}
-			<VirtualRows items={releases.visible} key={(release) => release.id} estimate={() => 90} label="Releases" onrange={(_, end) => { if (end >= releases.visible.length - 3 && releases.more && !releases.reading) void releases.read(); }}>
+			<VirtualRows items={visible} key={(release) => release.id} estimate={() => 90} label="Releases" onrange={(_, end) => { if (end >= releases.visible.length - 3 && releases.more && !releases.reading) void releases.read(); }}>
 				{#snippet row(release)}
 					<div class="release-row" class:selected={releases.selected === release.id}>
 						<button class="release-copy" onclick={() => select(release)}><span class="row-title"><strong class="mono">{release.tag}</strong>{#if release.draft}<span class="badge draft">Draft</span>{:else if release.prerelease}<span class="badge pre">Pre-release</span>{:else if release.latest}<span class="badge latest">Latest</span>{/if}</span><span class="note">{date(release.created)}{release.author ? ` · ${release.author}` : ''}</span>{#if release.assets.some((asset) => asset.downloads != null)}<span class="note">{release.assets.reduce((sum, asset) => sum + (asset.downloads ?? 0), 0).toLocaleString()} ↓</span>{/if}</button>
@@ -60,7 +73,7 @@
 					</div>
 				{/snippet}
 			</VirtualRows>
-			{#if !releases.visible.length && !releases.reading && !Object.values(releases.errors).some(Boolean)}<p class="empty note">No releases match this filter.</p>{/if}
+			{#if !visible.length && !releases.reading && !Object.values(releases.errors).some(Boolean)}<p class="empty note">No releases match this filter.</p>{/if}
 			{#if releases.more}<Btn busy={releases.reading} onclick={() => releases.read()}>More releases</Btn>{/if}
 		</section>
 		<section class="editor pane" aria-label="Release editor">

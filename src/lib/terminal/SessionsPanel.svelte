@@ -2,6 +2,7 @@
 <script lang="ts">
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { terminal } from './store.svelte';
 
 	/**
@@ -24,12 +25,29 @@
 		(terminal.info?.shell ?? '').split(/[\\/]/).pop()?.replace(/\.exe$/i, '') ?? ''
 	);
 	const plural = (count: number, one: string) => (count === 1 ? one : `${one}s`);
+
+	/**
+	 * Typing narrows the sessions only once the panel has been clicked in
+	 * (FEAT-158): on this screen letters are the shell's.
+	 */
+	const search = createSearch();
+	const sessions = $derived(search.filter(terminal.sessions, (session) => session.name));
 </script>
 
-<aside class="panel" aria-label="Sessions">
+<aside
+	class="panel"
+	aria-label="Sessions"
+	use:speedSearch={{
+		search,
+		label: 'sessions',
+		primary: false,
+		count: () => [sessions.length, terminal.sessions.length],
+		onenter: () => sessions[0] && terminal.attach(sessions[0].name, cwd ?? '')
+	}}
+>
 	<span class="note name">Sessions</span>
 	<div class="list">
-		{#each terminal.sessions as session (session.name)}
+		{#each sessions as session (session.name)}
 			<button
 				class="session"
 				class:on={session.name === terminal.current}

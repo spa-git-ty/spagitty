@@ -5,12 +5,16 @@
 	import { repo } from '$lib/repo.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import type { Submodule } from '$lib/types';
 
 	let isRunning = $state(false);
 	let output = $state<string | null>(null);
 
 	const list = $derived(submodules.list);
+	/** Type in the dialog to narrow by name, path or URL (FEAT-158). */
+	const search = createSearch();
+	const shown = $derived(search.filter(list, (sub) => [sub.name, sub.path, sub.url]));
 
 	async function updateAll(): Promise<void> {
 		isRunning = true;
@@ -121,8 +125,11 @@
 				{#if list.length === 0}
 					<div class="empty">No submodules declared in this repository.</div>
 				{:else}
-					<div class="submodule-list">
-						{#each list as sub (sub.path)}
+					<div
+						class="submodule-list"
+						use:speedSearch={{ search, label: 'submodules', count: () => [shown.length, list.length] }}
+					>
+						{#each shown as sub (sub.path)}
 							<div class="submodule-card">
 								<div class="card-info">
 									<div class="card-top">

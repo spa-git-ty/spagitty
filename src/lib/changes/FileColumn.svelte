@@ -6,6 +6,7 @@
 	import { repo } from '$lib/repo.svelte';
 	import FileName from '$lib/ui/FileName.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import type { DiffSide, StatusEntry } from '$lib/types';
 
 	/**
@@ -29,6 +30,27 @@
 
 	const work = $derived(changes.work);
 
+	/**
+	 * Type on the screen to narrow every group by path (FEAT-158). Only the
+	 * rows narrow: *Stage all* and *Unstage all* still mean all of them.
+	 */
+	const search = createSearch();
+	const byPath = (entry: StatusEntry) => entry.path;
+	const shown = $derived({
+		conflicted: search.filter(work.conflicted, byPath),
+		staged: search.filter(work.staged, byPath),
+		unstaged: search.filter(work.unstaged, byPath)
+	});
+	const total = $derived(work.conflicted.length + work.staged.length + work.unstaged.length);
+	const found = $derived(shown.conflicted.length + shown.staged.length + shown.unstaged.length);
+
+	function openFirst() {
+		const staged = shown.staged[0];
+		const unstaged = shown.unstaged[0];
+		if (staged) changes.open({ path: staged.path, side: 'staged' });
+		else if (unstaged) changes.open({ path: unstaged.path, side: 'unstaged' });
+	}
+
 	function selected(entry: StatusEntry, side: DiffSide): boolean {
 		return changes.selection?.path === entry.path && changes.selection?.side === side;
 	}
@@ -49,7 +71,10 @@
 	}
 </script>
 
-<div class="column">
+<div
+	class="column"
+	use:speedSearch={{ search, label: 'changes', count: () => [found, total], onenter: openFirst }}
+>
 	{#if work.conflicted.length > 0}
 		<section class="group">
 			<header class="head">
@@ -57,7 +82,7 @@
 				<span class="count mono">{work.conflicted.length}</span>
 			</header>
 			<p class="note explain">Nothing can be committed until these are resolved.</p>
-			{#each work.conflicted as entry (entry.path)}
+			{#each shown.conflicted as entry (entry.path)}
 				<div class="row conflicted" title={entry.path} {...inFiles(entry)}>
 					<span class="open">
 						<FileName path={entry.path} status="conflicted" />
@@ -83,7 +108,7 @@
 			{/if}
 		</header>
 
-		{#each work.staged as entry (entry.path)}
+		{#each shown.staged as entry (entry.path)}
 			<div class="row solid" class:selected={selected(entry, 'staged')} {...inFiles(entry)}>
 				<button
 					class="open"
@@ -133,7 +158,7 @@
 			{/if}
 		</header>
 
-		{#each work.unstaged as entry (entry.path)}
+		{#each shown.unstaged as entry (entry.path)}
 			<div class="row dashed" class:selected={selected(entry, 'unstaged')} {...inFiles(entry)}>
 				<button
 					class="open"

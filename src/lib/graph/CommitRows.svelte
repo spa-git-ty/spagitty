@@ -32,6 +32,8 @@
 	import { avatars } from '$lib/graph/avatars.svelte';
 	import { scale } from '$lib/scale.svelte';
 	import RefChip from '$lib/ui/RefChip.svelte';
+	import Hit from '$lib/ui/Hit.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import type { MenuItem } from '$lib/ui/menu';
 	import type { GraphRow, RefChip as Chip } from '$lib/types';
@@ -715,6 +717,51 @@
 		}
 	}
 
+	// --- Type to search (FEAT-158) ----------------------------------------
+	//
+	// The graph jumps to what matches rather than narrowing to it: a row taken
+	// out would break the lanes drawn through it. The rows that do not match
+	// are dimmed, as the author filter dims them, and the arrow keys step
+	// from one match to the next. Only the rows walked so far are searched.
+
+	const search = createSearch();
+
+	function searchedBy(row: GraphRow) {
+		return [row.summary, row.short, row.authorName, ...row.refs.map((ref) => ref.name)];
+	}
+
+	/** The indices of the rows that match, in order; empty when nothing is typed. */
+	const hits = $derived.by(() => {
+		void graph.version;
+		if (!search.active) return [];
+		const found: number[] = [];
+		for (let index = 0; index < graph.count; index++) {
+			const row = graph.row(index);
+			if (row && search.test(searchedBy(row))) found.push(index);
+		}
+		return found;
+	});
+	const hitSet = $derived(search.active ? new Set(hits) : null);
+
+	/** Select a match: the first from the selection on (0), or the next one either way. */
+	function jump(by: 0 | 1 | -1) {
+		if (hits.length === 0) return;
+		const current = graph.selectedIndex ?? -1;
+		let target: number;
+		if (by === 0) target = hits.find((index) => index >= current) ?? hits[0];
+		else if (by === 1) target = hits.find((index) => index > current) ?? hits[0];
+		else target = hits.findLast((index) => index < current) ?? hits[hits.length - 1];
+		selection.only(target);
+		graph.select(target);
+		scrollIntoView(target);
+	}
+
+	// Every letter typed moves to the first match from where the reader is.
+	$effect(() => {
+		void search.query;
+		untrack(() => jump(0));
+	});
+
 	/** Time is shown only on the first row of each day, as a landmark. */
 	function notableTime(index: number, time: number): string | null {
 		const previous = graph.row(index - 1);
@@ -722,7 +769,19 @@
 	}
 </script>
 
-<div class="body">
+<div
+	class="body"
+	use:speedSearch={{
+		search,
+		label: 'commits',
+		count: () => [hits.length, graph.count],
+		onstep: jump,
+		onenter: () => {
+			const row = graph.selectedIndex === null ? undefined : graph.row(graph.selectedIndex);
+			if (row && hitSet?.has(row.index)) onopen?.(row.id);
+		}
+	}}
+>
 	<GraphHeader
 		{laneWidth}
 		{scrollLeft}
@@ -812,7 +871,9 @@
 				{#each rows as row (row.index)}
 					{@const time = notableTime(row.index, row.time)}
 					{@const extra = row.refs.length - MAX_CHIPS}
-					{@const dim = highlight !== null && !highlight.has(row.index)}
+					{@const dim =
+						(highlight !== null && !highlight.has(row.index)) ||
+						(hitSet !== null && !hitSet.has(row.index))}
 					{@const node = nodeAt(row)}
 					{@const laneColor = `var(${laneColorVar(row.color)})`}
 					{@const lead = LANE_STROKE * scale.zoom}
@@ -983,7 +1044,7 @@
 										screen, and would stack a native tooltip on the full
 										message (FEAT-081).
 									-->
-									<span class="summary">{row.summary}</span>
+									<span class="summary"><Hit text={row.summary} {search} /></span>
 									{#if time}<span class="mono muted when">{time}</span>{/if}
 								</div>
 							{:else if column.id === 'author'}

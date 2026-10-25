@@ -211,6 +211,7 @@ rather than an audit.
 | [FEAT-155](items/FEAT-155-untrack.md) | Untrack: stop tracking files on a branch, in a commit, and push it | 2B | Done |
 | [FEAT-156](items/FEAT-156-calmer-palettes-and-an-accent-of-your-own.md) | Calmer light and dark palettes, and an accent of your own | every screen | Done |
 | [FEAT-157](items/FEAT-157-close-a-terminal-session-and-give-tmux-our-colours.md) | Close a terminal session, and give tmux Spagitty's colours | 1T | Done |
+| [FEAT-158](items/FEAT-158-type-to-search-any-list.md) | Type to search any list | every screen with a list | Done |
 
 ## Bugs
 

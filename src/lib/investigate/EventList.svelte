@@ -6,6 +6,7 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { byOf, dayOf, inkOf, KIND_INK } from './chart';
 	import { investigate, LIFE_MAX } from './store.svelte';
 
@@ -16,7 +17,19 @@
 	 * A virtual list, because a file five thousand commits have touched is
 	 * five thousand rows and the screen shows nine of them.
 	 */
-	const entries = $derived(investigate.listed);
+	/** Type on the screen to narrow the events by what was said, who, or the path (FEAT-158). */
+	const search = createSearch();
+	const entries = $derived(
+		search.filter(investigate.listed, (entry) => [
+			entry.summary,
+			entry.note,
+			entry.authorName,
+			entry.agent,
+			entry.kind,
+			entry.short,
+			entry.path
+		])
+	);
 
 	/** Two events of one commit — a branch's reset and its commit — are two rows. */
 	const keyOf = (entry: LifeEntry) => `${entry.commit}:${entry.kind}:${entry.time}`;
@@ -35,13 +48,23 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<section class="card events" aria-label="Events" {onkeydown}>
+<section
+	class="card events"
+	aria-label="Events"
+	{onkeydown}
+	use:speedSearch={{
+		search,
+		label: 'events',
+		count: () => [entries.length, investigate.listed.length],
+		onenter: () => entries[0] && investigate.select(entries[0])
+	}}
+>
 	{#if investigate.error}
 		<p class="note said error">{investigate.error}</p>
 	{:else if entries.length === 0 && investigate.reading}
 		<Loader />
 	{:else if entries.length === 0}
-		<p class="note said">Nothing in this range</p>
+		<p class="note said">{search.active ? 'No event matches' : 'Nothing in this range'}</p>
 	{:else}
 		<VirtualRows bind:this={list} items={entries} key={keyOf} estimate={() => 58} label="Events, newest first">
 			{#snippet row(entry: LifeEntry)}

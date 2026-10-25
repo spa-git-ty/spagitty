@@ -6,12 +6,18 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import Markdown from '$lib/ui/Markdown.svelte';
 	import VirtualRows from '$lib/ui/VirtualRows.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { safeUrl } from '$lib/ui/markdown';
 	import { issues } from './store.svelte';
 	import { issueHandoff } from './handoff.svelte';
 	import type { Label } from './types';
 
 	let query = $state('is:open'), creating = $state(false), branching = $state(false);
+	/** Type on the screen to narrow the issues read so far (FEAT-158); the field above asks the host. */
+	const search = createSearch();
+	const rows = $derived(
+		search.filter(issues.rows, (item) => [item.title, `#${item.number}`, item.author, ...item.labels.map((label) => label.name)])
+	);
 	let title = $state(''), body = $state(''), comment = $state(''), branch = $state('');
 	let handing = $state(false);
 	let previousIssue = '';
@@ -59,7 +65,21 @@
 	{:else if issues.host.repo.kind === 'bitbucket'}<p class="empty note">Bitbucket · soon</p>
 	{:else}
 		<div class="body">
-			<section class="list pane" aria-label="Issue list">
+			<section
+				class="list pane"
+				aria-label="Issue list"
+				use:speedSearch={{
+					search,
+					label: 'issues',
+					count: () => [rows.length, issues.rows.length],
+					onenter: () => {
+						if (rows[0]) {
+							creating = false;
+							void issues.open(rows[0].number);
+						}
+					}
+				}}
+			>
 				<div class="filters">
 					<button class:on={issues.query.includes('is:open')} onclick={() => term('is', 'open')}>Open {issues.metadata?.open ?? '·'}</button>
 					<button class:on={issues.query.includes('is:closed')} onclick={() => term('is', 'closed')}>Closed {issues.metadata?.closed ?? '·'}</button>
@@ -69,7 +89,7 @@
 					<select aria-label="Sort issues" onchange={(event) => term('sort', event.currentTarget.value)}><option value="updated">Updated</option><option value="created">Newest</option>{#if issues.host.repo.kind === 'gitHub'}<option value="comments">Replies</option>{/if}</select>
 				</div>
 				{#if issues.provisional}<p class="cached note">Saved list · checking the host</p>{/if}
-				<VirtualRows items={issues.rows} key={(row) => row.id} estimate={() => 100} label="Issues" onrange={(_, end) => { if (end >= issues.rows.length - 4 && issues.more && !issues.reading) void issues.read(); }}>
+				<VirtualRows items={rows} key={(row) => row.id} estimate={() => 100} label="Issues" onrange={(_, end) => { if (end >= issues.rows.length - 4 && issues.more && !issues.reading) void issues.read(); }}>
 					{#snippet row(item)}
 						<button class="issue-row" class:selected={issue?.number === item.number} onclick={() => { creating = false; void issues.open(item.number); }}>
 							<span class="state" class:closed={item.state === 'closed'} title={item.state}>{item.state === 'closed' ? '✓' : '○'}</span>
@@ -78,7 +98,7 @@
 						</button>
 					{/snippet}
 				</VirtualRows>
-				{#if !issues.rows.length && !issues.reading}<p class="empty note">{issues.errors.list ? 'No saved issues for this filter.' : 'No issues match this filter.'}</p>{/if}
+				{#if !rows.length && !issues.reading}<p class="empty note">{issues.errors.list ? 'No saved issues for this filter.' : 'No issues match this filter.'}</p>{/if}
 				{#if issues.more}<Btn busy={issues.reading} onclick={() => issues.read()}>More issues</Btn>{/if}
 			</section>
 			<section class="thread pane" aria-label="Issue thread">

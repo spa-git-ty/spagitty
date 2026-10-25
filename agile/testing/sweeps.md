@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1927 tickets in 298 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1689 not run, 2 with a note only.
+**1936 tickets in 299 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1698 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -161,6 +161,7 @@ not committed.
 | FEAT-155 | Untrack: stop tracking files on a branch, in a commit, and push it | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-155-sweep.md](FEAT-155-sweep.md) |
 | FEAT-156 | Calmer light and dark palettes, and an accent of your own | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-156-sweep.md](FEAT-156-sweep.md) |
 | FEAT-157 | Close a terminal session, and give tmux Spagitty's colours | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-157-sweep.md](FEAT-157-sweep.md) |
+| FEAT-158 | Type to search any list | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-158-sweep.md](FEAT-158-sweep.md) |
 | TASK-001 | Records baseline | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-001-sweep.md](TASK-001-sweep.md) |
 | TASK-002 | Test and CI baseline | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-002-sweep.md](TASK-002-sweep.md) |
 | TASK-003 | Make the Tauri layer generic over `Runtime` | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-003-sweep.md](TASK-003-sweep.md) |

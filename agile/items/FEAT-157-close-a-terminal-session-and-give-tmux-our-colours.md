@@ -2,7 +2,7 @@
 
 # FEAT-157 — Close a terminal session, and give tmux Spagitty's colours
 
-**Status:** Done — on `feature/FEAT-156-palettes-and-accents`; unmerged. Covered by Rust, store and screen tests, and the psmux commands were tried against the bundled psmux 3.3.8 on a throwaway socket; not looked at in the running application (the author is checking it).
+**Status:** Done — shipped in 3.9.0, through pull request #88. Covered by Rust, store and screen tests, and the psmux commands were tried against the bundled psmux 3.3.8 on a throwaway socket; not looked at in the running application (the author is checking it).
 **Branch:** `feature/FEAT-156-palettes-and-accents`.
 **Screens:** 1T (Terminal); Settings › Behaviour.
 **Raised by:** the author, 2026-10-21: "in terminal i cant close terminal only detach ! make close button and confirm dialog , match tmux profile colors with spagitty terminal colors + accent ( idk if we want to ignore global tmux pmux configs on the pc )".

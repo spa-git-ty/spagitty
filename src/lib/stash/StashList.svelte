@@ -3,6 +3,8 @@
 	import { relativeTime } from '$lib/format';
 	import { ELBOW_RADIUS, LANE_PITCH, LANE_X0, NODE_R, ROW_PITCH } from '$lib/metrics';
 	import { stash } from '$lib/stash/store.svelte';
+	import Hit from '$lib/ui/Hit.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 
 	/**
 	 * Stash entries, each drawn hanging off the commit it was made on.
@@ -16,7 +18,11 @@
 	 * a handful of SVG paths is the smaller thing that reads the same.
 	 */
 
-	const entries = $derived(stash.entries);
+	/** Type on the screen to narrow the list (FEAT-158); `j`/`k` stay the diff's. */
+	const search = createSearch();
+	const entries = $derived(
+		search.filter(stash.entries, (entry) => [note(entry.message), entry.name, entry.parentSummary])
+	);
 
 	/**
 	 * What you wrote, without the prefix git puts on every stash (TASK-046).
@@ -59,7 +65,17 @@
 	].join(' ');
 </script>
 
-<nav class="list" aria-label="Stash entries">
+<nav
+	class="list"
+	aria-label="Stash entries"
+	use:speedSearch={{
+		search,
+		label: 'stashes',
+		reserve: 'jk',
+		count: () => [entries.length, stash.entries.length],
+		onenter: () => entries[0] && stash.select(entries[0].id)
+	}}
+>
 	{#each entries as entry (entry.id)}
 		<button
 			class="entry"
@@ -77,7 +93,7 @@
 				wrote, then which entry and when, then the commit it hangs off.
 			-->
 			<div class="text">
-				<span class="message" title={entry.message}>{note(entry.message)}</span>
+				<span class="message" title={entry.message}><Hit text={note(entry.message)} {search} /></span>
 				<span class="meta">
 					<span class="mono">{entry.name}</span> · {relativeTime(entry.time)}
 				</span>
@@ -91,7 +107,7 @@
 
 	{#if entries.length === 0}
 		<div class="empty note">
-			<p>Nothing is stashed.</p>
+			<p>{stash.entries.length === 0 ? 'Nothing is stashed.' : 'No stash matches.'}</p>
 		</div>
 	{/if}
 </nav>

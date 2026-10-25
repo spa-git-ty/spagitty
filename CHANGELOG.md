@@ -14,6 +14,11 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Type to search any list.** With no text box focused, just start typing: the list on screen narrows to what matches, and a small pill shows what you typed and how many match. Backspace takes a letter back, Escape brings the whole list back, and Enter opens the first match. It matches the start of each word too, so `fb` finds `feature/BUG-098`. It works in Branches, Tags, Reflog, Stash, Working copy, Repositories, Pull requests, Review, Issues, Releases, Investigate, Search results, Files, Untrack, Notifications, Terminal sessions, and the Worktrees and Submodules dialogs. Where a list already has a filter box, your letters go into that box.
+- **Type to jump in the graph.** Typing selects the first commit whose message, author, short ID or branch matches, dims the rest, and ↓ and ↑ step between matches. The graph keeps every row, so its lanes stay whole.
+
 ## [3.9.0] - 2026-10-21
 
 ### Added

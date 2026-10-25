@@ -56,6 +56,7 @@
 	import HookRunWindow from '$lib/hooks/HookRunWindow.svelte';
 	import ExtensionHost from '$lib/extensions/ExtensionHost.svelte';
 	import NoticeToast from '$lib/ui/NoticeToast.svelte';
+	import SpeedSearchBox from '$lib/ui/SpeedSearchBox.svelte';
 	import { settings as settingsStore } from '$lib/settings/store.svelte';
 	import { theme } from '$lib/theme.svelte';
 	import { resumeSession } from '$lib/session';
@@ -501,6 +502,8 @@
 <DialogHost />
 <HookRunWindow />
 <NoticeToast />
+<!-- What has been typed into a list's search, on any screen (FEAT-158). -->
+<SpeedSearchBox />
 <!-- Over any screen, from the title bar's bell (FEAT-142). -->
 <NotificationCenter />
 
