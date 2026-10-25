@@ -99,7 +99,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.4
 
       - id: next
         run: |
@@ -189,7 +189,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.4
       - run: bun install --frozen-lockfile
 
       # Sets `$UPDATE_INFORMATION`, which the AppImage bundler forwards to
