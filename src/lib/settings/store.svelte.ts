@@ -48,7 +48,7 @@ export type Section =
 
 /** The settings that are a yes or a no, and so can be flipped. */
 export type BooleanSetting = {
-	[K in keyof Settings]: Settings[K] extends boolean ? K : never;
+	[K in keyof Settings]-?: Settings[K] extends boolean ? K : never;
 }[keyof Settings];
 
 /** The settings that are one of several named values. */
