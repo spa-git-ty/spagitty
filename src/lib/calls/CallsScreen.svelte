@@ -10,6 +10,7 @@
 	import type { MenuItem } from '$lib/ui/menu';
 	import CollectionTree from './CollectionTree.svelte';
 	import HistoryPanel from './HistoryPanel.svelte';
+	import { importer } from './import.svelte';
 	import { envColour, findCall, lookup, methodColour, methodOf } from './model';
 	import RequestEditor from './RequestEditor.svelte';
 	import ResponseView from './ResponseView.svelte';
@@ -41,9 +42,23 @@
 		void repo.generation;
 		untrack(() => {
 			if (!path || !appApi.inTauri()) return;
-			void calls.load(path);
+			void (async () => {
+				await calls.load(path);
+				await importer.load(path);
+			})();
 		});
 	});
+
+	/** FEAT-162: endpoints the code declares that no collection has, as a card. */
+	const card = $derived.by(() => {
+		const missing = importer.notInACollection;
+		if (!missing.length) return null;
+		const files = [...new Set(missing.map((endpoint) => endpoint.file?.split('/').pop() ?? endpoint.group))];
+		return { count: missing.length, files };
+	});
+	const askScan = $derived(
+		calls.settings?.scanOnOpen === 'ask' && !importer.found && !importer.scanning && !importer.dismissed
+	);
 
 	/** Every name a field can offer: what each scope defines. */
 	const names = $derived(
@@ -191,6 +206,12 @@
 				{/if}
 				<span class="muted">▾</span>
 			</button>
+			<button
+				type="button"
+				class="env"
+				title="Bring calls in from the code, or from a Postman, Insomnia, Bruno, OpenAPI, .http, HAR or cURL file"
+				onclick={() => goto('/calls/import')}>Import</button
+			>
 		</header>
 
 		{#if calls.error}
@@ -216,6 +237,12 @@
 				onremove={(opened) => calls.remove(opened)}
 				onhistory={toggleHistory}
 				bind:search
+				found={calls.found}
+				{card}
+				{askScan}
+				onscan={() => importer.scan()}
+				onreview={() => goto('/calls/import')}
+				ondismiss={() => importer.dismiss()}
 			/>
 
 			<main class="middle">

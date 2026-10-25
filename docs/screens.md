@@ -1367,6 +1367,25 @@ kept value with a switch that freezes it. A secret is typed in as dots and
 shown only while the eye is held. A new environment named `production`, or
 red, asks before sending. Ctrl+E opens the picker from anywhere in Calls.
 
+**Import** (FEAT-162, `/calls/import`, from *Import* in the header): sources
+on the left (the code; collection files in the repository; *Choose a file…*
+and *Paste cURL* from outside), endpoints in the middle by controller or
+folder, each *New*, *Changed* (with what changed) or *In* a collection, and
+*Bring in* on the right: into a collection or a new one, folders per
+controller or by path, example bodies, path variables as variables, and a
+`local` environment from `application.yml`. *New* and *Changed* are ticked.
+The scan reads the files git sees, less Settings' skip globs, up to 20,000,
+in the background; nothing is built or run. It reads Spring MVC and WebFlux,
+JAX-RS and NestJS controllers, OpenAPI 3 and Swagger 2, Postman 2.0 and 2.1,
+Insomnia, Bruno, `.http`, HAR, cURL and Spagitty collections. Postman lines
+that copy a response value become keep rules; other script lines go into the
+call's notes. Endpoints match by method and normalised path; bringing a
+changed one in adds its new fields, drops the gone ones and keeps your
+values. The tree's *Found in this repository* lists collection files opened
+in place, never rewritten; a dashed card there counts endpoints the code
+declares that no collection has, or, when Settings says *Ask*, offers to
+scan.
+
 **Secrets and kept values** are in the OS keychain, one entry per
 repository and environment, through `forge/keychain.rs`; the files hold only
 their names. Where each kept value came from, and whether it is stale, is in

@@ -10,9 +10,12 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type {
+	BroughtIn,
 	Call,
 	CallsSettings,
+	Choices,
 	Collection,
+	Found,
 	Environment,
 	Environments,
 	HistoryEntry,
@@ -140,4 +143,48 @@ export function keep(ask: {
 
 export function forgetKept(environment: string | null, name: string): Promise<Environments> {
 	return invoke('calls_forget_kept', { environment, name });
+}
+
+// --- Import (FEAT-162) ---
+
+/** A scan's progress. */
+export const SCAN_EVENT = 'calls-scan';
+/** A scan ended. */
+export const SCAN_DONE_EVENT = 'calls-scan-done';
+
+/** Scan the working tree; the answer is a `calls-scan-done` event. */
+export function scan(scanId: string): Promise<void> {
+	return invoke('calls_scan', { scanId });
+}
+
+export function cancelScan(scanId: string): Promise<void> {
+	return invoke('calls_scan_cancel', { scanId });
+}
+
+/** What the last scan found, marked against the collections as they are now. */
+export function found(): Promise<Found | null> {
+	return invoke('calls_found');
+}
+
+/** The collection files in the repository, read without the code: opened in place. */
+export function foundFiles(): Promise<Found> {
+	return invoke('calls_found_files');
+}
+
+export function importFile(path: string): Promise<Found> {
+	return invoke('calls_import_file', { path });
+}
+
+export function importText(text: string): Promise<Found> {
+	return invoke('calls_import_text', { text });
+}
+
+export function bringIn(ask: {
+	ids: string[];
+	into: string | null;
+	name: string | null;
+	choices: Choices;
+	serverAddress: boolean;
+}): Promise<BroughtIn> {
+	return invoke('calls_bring_in', { ask });
 }

@@ -32,7 +32,7 @@ const DEFAULTS: CallsSettings = {
 	openFound: true,
 	lookFor: ['postman', 'insomnia', 'bruno', 'openapi', 'http', 'wsdl'],
 	scanOnOpen: 'ask',
-	frameworks: ['springMvc', 'springWebflux', 'jaxRs', 'jaxWs', 'springWs'],
+	frameworks: ['springMvc', 'springWebflux', 'jaxRs', 'nestjs', 'jaxWs', 'springWs'],
 	skipPaths: '**/test/**, **/generated/**',
 	clickToKeep: true,
 	keepEvery: true,

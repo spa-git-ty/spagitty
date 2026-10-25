@@ -264,3 +264,83 @@ export interface HistoryEntry {
 	error: string | null;
 	cut: boolean;
 }
+
+// --- Import (FEAT-162) ---
+
+export type SourceKind =
+	| 'spring'
+	| 'jaxRs'
+	| 'nest'
+	| 'openApi'
+	| 'postman'
+	| 'insomnia'
+	| 'bruno'
+	| 'http'
+	| 'har'
+	| 'curl'
+	| 'spagitty';
+
+export interface Source {
+	id: string;
+	kind: SourceKind;
+	label: string;
+	file: string | null;
+	count: number;
+	error: string | null;
+	/** A file in the repository, which can be opened in place. */
+	inRepository: boolean;
+}
+
+export type EndpointStatus =
+	| { kind: 'new' }
+	| { kind: 'changed'; collection: string; callId: string; what: string }
+	| { kind: 'in'; collection: string; callId: string };
+
+export interface Endpoint {
+	id: string;
+	key: string;
+	source: string;
+	group: string;
+	file: string | null;
+	line: number | null;
+	method: string;
+	path: string;
+	hint: string;
+	call: Call;
+	status: EndpointStatus;
+}
+
+export interface Found {
+	sources: Source[];
+	endpoints: Endpoint[];
+	environments: Environment[];
+	/** Calls whose Postman script lines went into their notes. */
+	scripted: number;
+	baseUrl: string | null;
+	filesRead: number;
+	capped: boolean;
+}
+
+export interface Choices {
+	folders: 'perGroup' | 'byPath';
+	bodies: boolean;
+	pathVars: boolean;
+}
+
+export interface BroughtIn {
+	stem: string;
+	brought: { added: number; changed: number; unchanged: number };
+	environments: number;
+}
+
+export interface ScanProgress {
+	scanId: string;
+	files: number;
+}
+
+export interface ScanDone {
+	scanId: string;
+	found: Found | null;
+	error: string | null;
+	cancelled: boolean;
+}

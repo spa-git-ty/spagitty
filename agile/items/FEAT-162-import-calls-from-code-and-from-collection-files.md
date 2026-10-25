@@ -2,7 +2,9 @@
 
 # FEAT-162 — Import calls from code and from collection files
 
-**Status:** Backlog — after FEAT-161.
+**Status:** Open — built on `feature/FEAT-162-import`, stacked on FEAT-165, for release 4.0.0. Covered by Rust tests in `calls/import/` (Spring, WebFlux, JAX-RS and NestJS sources; OpenAPI 3 and Swagger 2; Postman 2.0 and 2.1, Insomnia, Bruno, `.http`, HAR and cURL; change detection and bringing in; a scan of a fixture repository), and by `ImportScreen.test.ts`. A Spagitty zip is read once FEAT-164 writes one; until then a Spagitty collection is read as its single `.json`. Not yet looked at in the running application.
+**Branch:** `feature/FEAT-162-import`.
+**Added 2026-10-26:** the author asked for NestJS too. It is read like Spring, from TypeScript: `@Controller` and its methods' `@Get` and others, `@Param`, `@Query`, `@Headers` and `@Body`; bodies from the DTO with class-validator and `@ApiProperty({ example })`; `setGlobalPrefix` and the `listen` port from `main.ts`. *NestJS* is a framework in Settings › Calls, on by default.
 **Screens:** 2C (Calls › Import, at `/calls/import`; the *Found in this repository* card on Calls).
 **Raised by:** the author, 2026-10-25: when there is a collection file in the repository, detect it, or select one from outside; or better, scan all endpoints and let the person choose whether to create collections or calls from them.
 **Proposal:** [`docs/proposals/calls.md`](../../docs/proposals/calls.md) §8 and §7.3. **Designs:** [`design_handoff_calls/`](../../design_handoff_calls/) — `Scan.dc.html`.

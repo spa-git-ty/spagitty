@@ -215,7 +215,7 @@ rather than an audit.
 | [FEAT-159](items/FEAT-159-clear-all-notifications.md) | Clear all notifications | the notification drawer | Done |
 | [FEAT-160](items/FEAT-160-calls-send-a-rest-call-and-keep-the-collection-in-the-repository.md) | Calls: send a REST call and keep the collection in the repository | 2C | Open |
 | [FEAT-161](items/FEAT-161-environments-secrets-and-values-kept-from-responses.md) | Environments, secrets and values kept from responses | 2C | Open |
-| [FEAT-162](items/FEAT-162-import-calls-from-code-and-from-collection-files.md) | Import calls from code and from collection files | 2C | Backlog |
+| [FEAT-162](items/FEAT-162-import-calls-from-code-and-from-collection-files.md) | Import calls from code and from collection files | 2C | Open |
 | [FEAT-163](items/FEAT-163-soap-calls-from-a-wsdl.md) | SOAP calls from a WSDL | 2C | Backlog |
 | [FEAT-164](items/FEAT-164-share-a-collection-as-a-file-a-zip-or-a-commit.md) | Share a collection as a file, a zip or a commit | 2C | Backlog |
 | [FEAT-165](items/FEAT-165-settings-calls.md) | Settings › Calls | 1K | Open |

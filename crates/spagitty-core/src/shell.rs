@@ -2380,6 +2380,22 @@ pub fn restore_paths(dir: &Path, paths: &[String]) -> Result<()> {
     Ok(())
 }
 
+/// The working tree's files as git sees them, `-z`: tracked ones and
+/// untracked ones that are not ignored. What Calls' Import reads
+/// (FEAT-162), so a `.gitignore`d build folder is never scanned.
+pub fn working_files(repo: &Path) -> Result<String> {
+    run(
+        repo,
+        &[
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+        ],
+    )
+}
+
 /// The index's unmerged entries, `-z`: `<mode> <blob> <stage>\t<path>`.
 pub fn unmerged_entries(repo: &Path) -> Result<String> {
     run(repo, &["ls-files", "-u", "-z"])

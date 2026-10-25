@@ -49,7 +49,16 @@ vi.mock('./api', () => ({
 	reveal: vi.fn(async () => null),
 	setPrivate: vi.fn(async () => {}),
 	keep: vi.fn(),
-	forgetKept: vi.fn()
+	forgetKept: vi.fn(),
+	SCAN_EVENT: 'calls-scan',
+	SCAN_DONE_EVENT: 'calls-scan-done',
+	scan: vi.fn(async () => {}),
+	cancelScan: vi.fn(async () => {}),
+	found: vi.fn(async () => null),
+	foundFiles: vi.fn(async () => ({ sources: [], endpoints: [], environments: [], scripted: 0, baseUrl: null, filesRead: 0, capped: false })),
+	importFile: vi.fn(),
+	importText: vi.fn(),
+	bringIn: vi.fn()
 }));
 
 import * as api from './api';

@@ -46,7 +46,9 @@ import type {
 	Done,
 	Environment,
 	Environments,
+	Found,
 	HistoryEntry,
+	Item,
 	KeepRule,
 	Loaded,
 	Opened,
@@ -97,6 +99,11 @@ let history = $state<HistoryEntry[] | null>(null);
 let privateValues = $state<Private>({ kept: [], secrets: [] });
 /** Why the keychain could not be read. */
 let privateError = $state<string | null>(null);
+/** Collection files found in the repository, opened in place (FEAT-162). */
+let foundFiles = $state<Stored<Collection>[]>([]);
+
+/** The stem a found file's collection has: never a file name of the calls folder. */
+const FOUND = 'found:';
 
 let repoPath: string | null = null;
 let privateSeq = 0;
@@ -113,7 +120,39 @@ function sendId(): string {
 }
 
 function storedOf(stem: string): Stored<Collection> | null {
-	return collections.find((stored) => stored.stem === stem) ?? null;
+	return (
+		collections.find((stored) => stored.stem === stem) ??
+		foundFiles.find((stored) => stored.stem === stem) ??
+		null
+	);
+}
+
+/** A collection file found in the repository, opened in place: never written. */
+export const isFound = (stem: string) => stem.startsWith(FOUND);
+
+/** The calls a found file holds, as a collection to draw and send from (FEAT-162, §8.3). */
+function asCollection(read: Found): Stored<Collection>[] {
+	return read.sources
+		.filter((source) => source.inRepository && source.file)
+		.map((source) => {
+			const items: Item[] = [];
+			for (const endpoint of read.endpoints.filter((e) => e.source === source.id)) {
+				const folder = endpoint.group && endpoint.group !== 'Requests' && endpoint.group !== source.label ? endpoint.group : null;
+				if (!folder) {
+					items.push(endpoint.call);
+					continue;
+				}
+				const at = items.findIndex((item) => 'folder' in item && item.folder === folder);
+				if (at === -1) items.push({ folder, items: [endpoint.call] });
+				else (items[at] as { folder: string; items: Item[] }).items.push(endpoint.call);
+			}
+			return {
+				stem: `${FOUND}${source.file}`,
+				file: source.file ?? source.label,
+				value: { v: 1, name: source.label, items },
+				error: null
+			};
+		});
 }
 
 function activeEnvironment(): Environment | null {
@@ -169,6 +208,13 @@ async function flush(): Promise<void> {
 }
 
 function changeCollection(stem: string, change: (collection: Collection) => Collection): void {
+	if (isFound(stem)) {
+		// Edited on screen to send, and never written: the file is someone else's.
+		const at = foundFiles.findIndex((stored) => stored.stem === stem);
+		const found = foundFiles[at]?.value;
+		if (found) foundFiles[at] = { ...foundFiles[at], value: change(found) };
+		return;
+	}
 	const index = collections.findIndex((stored) => stored.stem === stem);
 	const value = collections[index]?.value;
 	if (!value) return;
@@ -299,6 +345,10 @@ export const calls = {
 	get folder(): string {
 		return folder;
 	},
+	/** Collection files found in the repository, opened in place. */
+	get found(): Stored<Collection>[] {
+		return foundFiles;
+	},
 	get collections(): Stored<Collection>[] {
 		return collections;
 	},
@@ -386,6 +436,16 @@ export const calls = {
 			if (person.active && !environments.some((stored) => stored.stem === person.active)) person.active = null;
 			if (!person.active && environments[0]?.value) person.active = environments[0].stem;
 			loadError = read.sharedError ? `shared.json: ${read.sharedError}` : null;
+			if (read.settings?.openFound) {
+				void api
+					.foundFiles()
+					.then((files) => {
+						if (repoPath === path) foundFiles = asCollection(files);
+					})
+					.catch(() => (foundFiles = []));
+			} else {
+				foundFiles = [];
+			}
 			await refreshPrivate();
 		} catch (cause) {
 			loadError = describe(cause);
@@ -607,6 +667,10 @@ export const calls = {
 		const call = collection ? findCall(collection.items, opened.id) : null;
 		const name = ask.name.trim();
 		if (!call || !name) return false;
+		if (isFound(opened.stem)) {
+			notice.failed('Import this collection first', 'A file found in the repository is never rewritten, so a value cannot be kept on it. Import brings its calls into a collection of your own.');
+			return false;
+		}
 		const rule: KeepRule = { var: name, from: ask.path, ...(ask.every ? { every: true } : {}) };
 		if (ask.ns && Object.keys(ask.ns).length) rule.ns = ask.ns;
 		try {
@@ -757,6 +821,7 @@ export const calls = {
 		envTimers.clear();
 		privateValues = { kept: [], secrets: [] };
 		privateError = null;
+		foundFiles = [];
 		for (const timer of saveTimers.values()) clearTimeout(timer);
 		saveTimers.clear();
 		if (stateTimer) clearTimeout(stateTimer);

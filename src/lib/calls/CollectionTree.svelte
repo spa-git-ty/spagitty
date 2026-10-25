@@ -30,6 +30,15 @@
 		onremove: (opened: Opened) => void;
 		onhistory: () => void;
 		search?: HTMLInputElement | null;
+		/** Collection files found in the repository, opened in place (FEAT-162). */
+		found?: Stored<Collection>[];
+		/** Endpoints the code declares that are in no collection, and their files. */
+		card?: { count: number; files: string[] } | null;
+		/** Settings says to ask before scanning, and nobody has answered. */
+		askScan?: boolean;
+		onscan?: () => void;
+		onreview?: () => void;
+		ondismiss?: () => void;
 	}
 
 	let {
@@ -46,7 +55,13 @@
 		onduplicate,
 		onremove,
 		onhistory,
-		search = $bindable(null)
+		search = $bindable(null),
+		found = [],
+		card = null,
+		askScan = false,
+		onscan,
+		onreview,
+		ondismiss
 	}: Props = $props();
 
 	let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
@@ -153,6 +168,54 @@
 				<button type="button" class="empty" onclick={() => oncreate(null, null)}>+ New call</button>
 			</div>
 		{/each}
+
+		{#if found.length || card || askScan}
+			<h3 class="found-head">Found in this repository</h3>
+		{/if}
+		{#each found as stored (stored.stem)}
+			{@const shut = !collapsed.includes(`open:${stored.stem}`) && !filter.trim()}
+			{#if stored.value}
+				{@const items = filterItems(stored.value.items, filter)}
+				{#if !filter.trim() || items.length}
+					<section class="collection found">
+						<button
+							type="button"
+							class="head"
+							aria-expanded={!shut}
+							title={`${stored.file}: opened in place, never rewritten. Import it to keep changes.`}
+							onclick={() => ontoggle(`open:${stored.stem}`)}
+						>
+							<span class="arrow" aria-hidden="true">{shut ? '▸' : '▾'}</span>
+							<span class="name">{stored.value.name}</span>
+							<span class="gap"></span>
+							<span class="count">{callsIn(stored.value.items).length}</span>
+						</button>
+						{#if !shut}
+							<p class="file mono">{stored.file}</p>
+							{@render tree(stored.stem, items, 0)}
+						{/if}
+					</section>
+				{/if}
+			{/if}
+		{/each}
+		{#if card}
+			<button type="button" class="card" onclick={onreview}>
+				<span class="card-line"
+					><span class="dot" aria-hidden="true"></span>{card.count}
+					{card.count === 1 ? 'endpoint' : 'endpoints'} not in a collection</span
+				>
+				<span class="card-note">{card.files.slice(0, 3).join(', ')}{card.files.length > 3 ? ', …' : ''} · Review</span>
+			</button>
+		{:else if askScan}
+			<div class="card ask">
+				<span class="card-line">Look for endpoints in this repository's code?</span>
+				<span class="card-note">Reads the source files only. Nothing is built or run.</span>
+				<span class="card-actions">
+					<button type="button" class="empty" onclick={ondismiss}>Not now</button>
+					<button type="button" class="empty" onclick={onscan}>Scan</button>
+				</span>
+			</div>
+		{/if}
 	</div>
 
 	<button type="button" class="history" class:on={historyOpen} aria-pressed={historyOpen} onclick={onhistory}>
@@ -377,6 +440,61 @@
 
 	.empty:hover {
 		color: var(--ink);
+	}
+
+	.found-head {
+		margin: 8px 8px 0;
+		padding-top: 10px;
+		border-top: 1px solid var(--line);
+		color: var(--muted);
+		font-size: var(--fs-secondary);
+		font-weight: normal;
+	}
+
+	.collection.found .name {
+		font-weight: normal;
+	}
+
+	.card {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin: 0 4px;
+		padding: 10px 12px;
+		border: 1px dashed var(--soft);
+		border-radius: var(--r-field);
+		text-align: left;
+	}
+
+	button.card:hover {
+		background: var(--hover);
+	}
+
+	.card-line {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.card .dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--lane-2);
+	}
+
+	.card-note {
+		color: var(--muted);
+		font-size: var(--fs-secondary);
+	}
+
+	.card-actions {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.card-actions .empty {
+		margin: 0 0 0 6px;
 	}
 
 	.history {

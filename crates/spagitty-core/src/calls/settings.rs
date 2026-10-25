@@ -52,7 +52,7 @@ pub struct CallsSettings {
     pub look_for: Vec<String>,
     // Scanning code.
     pub scan_on_open: ScanOnOpen,
-    /// `springMvc`, `springWebflux`, `jaxRs`, `jaxWs`, `springWs`.
+    /// `springMvc`, `springWebflux`, `jaxRs`, `nestjs`, `jaxWs`, `springWs`.
     pub frameworks: Vec<String>,
     /// Globs, separated by commas.
     pub skip_paths: String,
@@ -90,9 +90,16 @@ impl Default for CallsSettings {
                 .map(String::from)
                 .to_vec(),
             scan_on_open: ScanOnOpen::Ask,
-            frameworks: ["springMvc", "springWebflux", "jaxRs", "jaxWs", "springWs"]
-                .map(String::from)
-                .to_vec(),
+            frameworks: [
+                "springMvc",
+                "springWebflux",
+                "jaxRs",
+                "nestjs",
+                "jaxWs",
+                "springWs",
+            ]
+            .map(String::from)
+            .to_vec(),
             skip_paths: "**/test/**, **/generated/**".to_string(),
             click_to_keep: true,
             keep_every: true,

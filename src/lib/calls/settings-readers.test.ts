@@ -25,11 +25,11 @@ const SCREEN = 'src/lib/calls/CallsScreen.svelte';
 
 const READERS: Record<string, Reader> = {
 	folder: { file: APP, reads: /taken\.folder/ },
-	openFound: { pending: 'FEAT-162' },
-	lookFor: { pending: 'FEAT-162' },
-	scanOnOpen: { pending: 'FEAT-162' },
-	frameworks: { pending: 'FEAT-162' },
-	skipPaths: { pending: 'FEAT-162' },
+	openFound: { file: APP, reads: /settings\.open_found/ },
+	lookFor: { file: APP, reads: /settings\.look_for/ },
+	scanOnOpen: { file: 'src/lib/calls/import.svelte.ts', reads: /settings\?\.scanOnOpen/ },
+	frameworks: { file: APP, reads: /settings\.frameworks/ },
+	skipPaths: { file: APP, reads: /settings\.skip_paths/ },
 	clickToKeep: { file: SCREEN, reads: /settings\?\.clickToKeep/ },
 	keepEvery: { file: SCREEN, reads: /settings\?\.keepEvery/ },
 	suggestNames: { file: SCREEN, reads: /settings\?\.suggestNames/ },

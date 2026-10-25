@@ -36,6 +36,7 @@
 		{ id: 'springMvc', label: 'Spring MVC' },
 		{ id: 'springWebflux', label: 'Spring WebFlux' },
 		{ id: 'jaxRs', label: 'JAX-RS' },
+		{ id: 'nestjs', label: 'NestJS' },
 		{ id: 'jaxWs', label: 'JAX-WS · SOAP' },
 		{ id: 'springWs', label: 'Spring-WS · SOAP' }
 	];

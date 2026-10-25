@@ -35,6 +35,8 @@ use serde::{Deserialize, Serialize};
 use spagitty_core::calls::body::{self, Shape, Utf8Stream};
 use spagitty_core::calls::build::{self, Shown};
 use spagitty_core::calls::history::{Entry, History};
+use spagitty_core::calls::import::scan::{self, Options as ScanOptions};
+use spagitty_core::calls::import::{self, Brought, Choices, Found};
 use spagitty_core::calls::keep::{self, Kept, KeptLog};
 use spagitty_core::calls::model::{new_id, Call, Collection, Environment, Shared, Variable};
 use spagitty_core::calls::send::{self, ClientCert, Failure};
@@ -67,6 +69,7 @@ pub struct CallsState {
 
 pub fn manage<R: Runtime>(app: &AppHandle<R>) {
     app.manage(CallsState::default());
+    app.manage(ImportState::default());
 }
 
 /// The folder a repository's state and history are in.
@@ -1033,4 +1036,386 @@ pub fn calls_overridden<R: Runtime>(
     };
     let (_, _, overridden) = place(&app, &repo)?;
     Ok(overridden)
+}
+
+// --- Import (FEAT-162) -------------------------------------------------------
+
+/// A scan's progress: how many files it has looked at.
+pub const SCAN: &str = "calls-scan";
+/// A scan ended: what it found, or why it did not.
+pub const SCAN_DONE: &str = "calls-scan-done";
+
+/// What Import has found for each repository, and the scans running.
+#[derive(Default)]
+pub struct ImportState {
+    found: Mutex<HashMap<PathBuf, Found>>,
+    scans: Mutex<HashMap<String, Arc<AtomicBool>>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanProgress {
+    pub scan_id: String,
+    pub files: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanDone {
+    pub scan_id: String,
+    pub found: Option<Found>,
+    pub error: Option<String>,
+    pub cancelled: bool,
+}
+
+fn import_options(settings: &CallsSettings, folder: &Folder) -> ScanOptions {
+    ScanOptions {
+        frameworks: settings.frameworks.clone(),
+        look_for: settings.look_for.clone(),
+        skip: settings.skip_paths.clone(),
+        calls_folder: folder.relative.clone(),
+    }
+}
+
+/// The repository's collections, readable ones only, for marking.
+fn collections_of(folder: &Folder) -> Vec<(String, Collection)> {
+    folder
+        .collections()
+        .into_iter()
+        .filter_map(|stored| stored.value.map(|value| (stored.stem, value)))
+        .collect()
+}
+
+/// Mark what was found against the collections, and keep it for *Bring in*.
+fn keep_found<R: Runtime>(app: &AppHandle<R>, repo: &Path, mut found: Found) -> Result<Found> {
+    let (folder, _, _) = place(app, repo)?;
+    import::mark(&mut found.endpoints, &collections_of(&folder));
+    let state = app.state::<ImportState>();
+    state
+        .found
+        .lock()
+        .map_err(|e| e.to_string())?
+        .insert(repo.to_path_buf(), found.clone());
+    Ok(found)
+}
+
+/// Add what one file or a paste found to what this repository already has,
+/// in place of an earlier read of the same source.
+fn add_found<R: Runtime>(app: &AppHandle<R>, repo: &Path, more: Found) -> Result<Found> {
+    let state = app.state::<ImportState>();
+    let mut all = state
+        .found
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get(repo)
+        .cloned()
+        .unwrap_or_default();
+    for source in &more.sources {
+        all.sources.retain(|s| s.id != source.id);
+        all.endpoints.retain(|e| e.source != source.id);
+    }
+    all.sources.extend(more.sources);
+    all.endpoints.extend(more.endpoints);
+    all.environments.extend(more.environments);
+    all.scripted += more.scripted;
+    if all.base_url.is_none() {
+        all.base_url = more.base_url;
+    }
+    keep_found(app, repo, all)
+}
+
+/// Scan the working tree on a thread; `calls-scan` and `calls-scan-done`
+/// say how it goes.
+#[tauri::command(async)]
+pub fn calls_scan<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    imports: State<'_, ImportState>,
+    scan_id: String,
+) -> Result<()> {
+    let repo = state.open_path("calls_scan").map_err(|e| e.to_string())?;
+    let (folder, settings, _) = place(&app, &repo)?;
+    let options = import_options(&settings, &folder);
+    let cancel = Arc::new(AtomicBool::new(false));
+    imports
+        .scans
+        .lock()
+        .map_err(|e| e.to_string())?
+        .insert(scan_id.clone(), cancel.clone());
+    std::thread::spawn(move || {
+        let result = scan::scan(&repo, &options, &cancel, |files| {
+            let _ = app.emit(
+                SCAN,
+                &ScanProgress {
+                    scan_id: scan_id.clone(),
+                    files,
+                },
+            );
+        });
+        if let Ok(mut scans) = app.state::<ImportState>().scans.lock() {
+            scans.remove(&scan_id);
+        }
+        let cancelled = cancel.load(Ordering::Relaxed);
+        let done = match result {
+            _ if cancelled => ScanDone {
+                scan_id,
+                found: None,
+                error: None,
+                cancelled: true,
+            },
+            Ok(found) => match keep_found(&app, &repo, found) {
+                Ok(found) => ScanDone {
+                    scan_id,
+                    found: Some(found),
+                    error: None,
+                    cancelled: false,
+                },
+                Err(error) => ScanDone {
+                    scan_id,
+                    found: None,
+                    error: Some(error),
+                    cancelled: false,
+                },
+            },
+            Err(error) => ScanDone {
+                scan_id,
+                found: None,
+                error: Some(error.to_string()),
+                cancelled: false,
+            },
+        };
+        let _ = app.emit(SCAN_DONE, &done);
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub fn calls_scan_cancel(imports: State<'_, ImportState>, scan_id: String) -> Result<()> {
+    if let Some(flag) = imports
+        .scans
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get(&scan_id)
+    {
+        flag.store(true, Ordering::Relaxed);
+    }
+    Ok(())
+}
+
+/// What this repository's last scan found, marked again against the
+/// collections as they are now; `None` before any scan.
+#[tauri::command(async)]
+pub fn calls_found<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    imports: State<'_, ImportState>,
+) -> Result<Option<Found>> {
+    let repo = state.open_path("calls_found").map_err(|e| e.to_string())?;
+    let held = imports
+        .found
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get(&repo)
+        .cloned();
+    held.map(|found| keep_found(&app, &repo, found)).transpose()
+}
+
+/// The collection files in the repository, without reading any code: what
+/// Calls opens in place when Settings says to (§8.3).
+#[tauri::command(async)]
+pub fn calls_found_files<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Found> {
+    let repo = state
+        .open_path("calls_found_files")
+        .map_err(|e| e.to_string())?;
+    let (folder, settings, _) = place(&app, &repo)?;
+    if !settings.open_found {
+        return Ok(Found::default());
+    }
+    let mut options = import_options(&settings, &folder);
+    options.frameworks.clear();
+    // OpenAPI files declare endpoints rather than holding calls: Import has
+    // them, the tree does not.
+    options.look_for.retain(|kind| kind != "openapi");
+    let mut found =
+        scan::scan(&repo, &options, &AtomicBool::new(false), |_| {}).map_err(|e| e.to_string())?;
+    import::mark(&mut found.endpoints, &collections_of(&folder));
+    Ok(found)
+}
+
+/// A file chosen from outside the repository.
+#[tauri::command(async)]
+pub fn calls_import_file<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<Found> {
+    let repo = state
+        .open_path("calls_import_file")
+        .map_err(|e| e.to_string())?;
+    let path = PathBuf::from(&path);
+    // A Postman environment is an environment, not calls: it goes in at once.
+    if let Some((environment, secrets)) =
+        scan::environment_file(&path).map_err(|e| e.to_string())?
+    {
+        let (folder, _, _) = place(&app, &repo)?;
+        let mut found = Found::default();
+        found.environments.push(environment.clone());
+        bring_environments(&folder, &repo, &[environment], &[(String::new(), secrets)])?;
+        return add_found(&app, &repo, found);
+    }
+    let found = scan::read_file(&path).map_err(|e| e.to_string())?;
+    add_found(&app, &repo, found)
+}
+
+/// A cURL command pasted in.
+#[tauri::command(async)]
+pub fn calls_import_text<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    text: String,
+) -> Result<Found> {
+    let repo = state
+        .open_path("calls_import_text")
+        .map_err(|e| e.to_string())?;
+    let found = scan::read_text(&text).map_err(|e| e.to_string())?;
+    add_found(&app, &repo, found)
+}
+
+/// Environments a file brought, made where none of that name is; their
+/// secrets go to the keychain.
+fn bring_environments(
+    folder: &Folder,
+    repo: &Path,
+    environments: &[Environment],
+    secrets: &[(String, Vec<(String, String)>)],
+) -> Result<usize> {
+    let existing: Vec<String> = folder
+        .environments()
+        .into_iter()
+        .map(|stored| stored.stem)
+        .collect();
+    let mut made = 0;
+    for env in environments {
+        if existing.contains(&env.name) {
+            continue;
+        }
+        folder
+            .write_environment(env, None)
+            .map_err(|e| e.to_string())?;
+        made += 1;
+        for (_, values) in secrets
+            .iter()
+            .filter(|(name, _)| name.is_empty() || *name == env.name)
+        {
+            vault::set_many(&Keychain, &repo_key(repo), Some(&env.name), values)
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(made)
+}
+
+/// What *Bring in* was asked.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BringAsk {
+    pub ids: Vec<String>,
+    /// An existing collection's stem; absent for a new one named `name`.
+    pub into: Option<String>,
+    pub name: Option<String>,
+    pub choices: Choices,
+    /// *Server address from application.yml*: a `local` environment with
+    /// the `baseUrl` found, when there is no `local` yet.
+    pub server_address: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BroughtIn {
+    pub stem: String,
+    pub brought: Brought,
+    pub environments: usize,
+}
+
+#[tauri::command(async)]
+pub fn calls_bring_in<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    imports: State<'_, ImportState>,
+    ask: BringAsk,
+) -> Result<BroughtIn> {
+    let repo = state
+        .open_path("calls_bring_in")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    let mut found = imports
+        .found
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get(&repo)
+        .cloned()
+        .ok_or("nothing has been found to bring in; scan again")?;
+    import::mark(&mut found.endpoints, &collections_of(&folder));
+    let chosen: Vec<&import::Endpoint> = ask
+        .ids
+        .iter()
+        .filter_map(|id| found.endpoints.iter().find(|e| e.id == *id))
+        .collect();
+    if chosen.is_empty() {
+        return Err("none of those endpoints is found any more; scan again".into());
+    }
+    let (mut collection, stem) = match &ask.into {
+        Some(stem) => (
+            folder.collection(stem).map_err(|e| e.to_string())?,
+            Some(stem.clone()),
+        ),
+        None => {
+            let name = ask
+                .name
+                .clone()
+                .filter(|n| !n.trim().is_empty())
+                .ok_or("the new collection needs a name")?;
+            (
+                Collection {
+                    v: 1,
+                    name: name.trim().to_string(),
+                    wsdl: None,
+                    vars: Vec::new(),
+                    items: Vec::new(),
+                },
+                None,
+            )
+        }
+    };
+    let target = stem
+        .clone()
+        .unwrap_or_else(|| spagitty_core::calls::store::slug(&collection.name));
+    let brought = import::bring_in(&mut collection, &target, &chosen, ask.choices);
+    let written = folder
+        .write_collection(&collection, stem.as_deref(), stem.as_deref())
+        .map_err(|e| e.to_string())?;
+
+    let mut environments = bring_environments(&folder, &repo, &found.environments, &[])?;
+    if ask.server_address {
+        if let Some(base) = &found.base_url {
+            let has_local = folder.environments().iter().any(|s| s.stem == "local");
+            if !has_local {
+                let mut local = Environment::new("local", Default::default());
+                local.vars.push(Variable::plain("baseUrl", base));
+                folder
+                    .write_environment(&local, None)
+                    .map_err(|e| e.to_string())?;
+                environments += 1;
+            }
+        }
+    }
+    // Marked again, so Import shows them as in the collection now.
+    let _ = keep_found(&app, &repo, found);
+    Ok(BroughtIn {
+        stem: written,
+        brought,
+        environments,
+    })
 }
