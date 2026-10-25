@@ -2,7 +2,8 @@
 
 # FEAT-166 — Copy a call as cURL, and paste one in
 
-**Status:** Backlog — after FEAT-161.
+**Status:** Open — built on `feature/FEAT-166-curl`, stacked on FEAT-164, for release 4.0.0. Covered by Rust tests in `calls/import/curl.rs` (round trips for each body kind in both quoting styles, the flags read and not read, and a copy that keeps a secret as its name unless asked, a SOAP call included), and by `CurlWindow.test.ts`. Not yet looked at in the running application.
+**Branch:** `feature/FEAT-166-curl`.
 **Screens:** 2C (Calls: the cURL window).
 **Raised by:** the author, 2026-10-25: "a popup to export or import a curl". The proposal had *Paste cURL* only inside Import (FEAT-162) and nothing to copy a call out.
 

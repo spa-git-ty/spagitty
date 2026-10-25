@@ -1411,6 +1411,17 @@ lists every file and its size; secrets and kept values go in empty in every
 format. The way it starts with is Settings' *Share as*. Import reads the zip
 back.
 
+**cURL** (FEAT-166, the *cURL* button on the request bar): *Copy* gives the
+open call as one `curl` command, resolved in the active environment, with
+secrets and kept values as `{{name}}` unless *Fill in secrets* is ticked (off
+every time the window opens). It is quoted for Linux and macOS or for
+Windows `cmd`, and writes the method only when it is not implied, the
+headers, the body (`--data-raw`, `--data-urlencode` or `--form`), `-u` for
+basic auth, `-L`, `-k` when TLS is not checked, and `--compressed`. A SOAP
+call copies as a POST of its envelope with its SOAP headers. *Paste* reads a
+command, says which flags it read and which it did not, and replaces the
+open call's request or adds a new call in a collection and folder.
+
 **Secrets and kept values** are in the OS keychain, one entry per
 repository and environment, through `forge/keychain.rs`; the files hold only
 their names. Where each kept value came from, and whether it is stale, is in

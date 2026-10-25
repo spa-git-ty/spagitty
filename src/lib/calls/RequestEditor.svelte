@@ -26,10 +26,12 @@
 		refusal: string | null;
 		onsend: () => void;
 		oncancel: () => void;
+		/** Open the cURL window (FEAT-166). */
+		oncurl?: () => void;
 		url?: HTMLInputElement | HTMLTextAreaElement | null;
 	}
 
-	let { call, onchange, find, names, sending, refusal, onsend, oncancel, url = $bindable(null) }: Props = $props();
+	let { call, onchange, find, names, sending, refusal, onsend, oncancel, oncurl, url = $bindable(null) }: Props = $props();
 
 	type Tab = 'params' | 'headers' | 'body' | 'auth' | 'keep';
 	const TABS: { id: Tab; label: string }[] = [
@@ -174,6 +176,9 @@
 			onkeydown={keydown}
 			bind:input={url}
 		/>
+		{#if oncurl}
+			<button type="button" class="curl mono" title="Copy this call as cURL, or paste one in" onclick={oncurl}>cURL</button>
+		{/if}
 		{#if sending}
 			<button type="button" class="send cancel" title="Stop waiting for the answer" onclick={oncancel}>Cancel</button>
 		{:else}
@@ -402,6 +407,20 @@
 
 	.line :global(input) {
 		background: var(--sunken);
+	}
+
+	.curl {
+		flex: none;
+		padding: 6px 10px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-button);
+		color: var(--muted);
+		font-size: var(--fs-secondary);
+	}
+
+	.curl:hover {
+		background: var(--hover);
+		color: var(--ink);
 	}
 
 	.send {

@@ -20,8 +20,10 @@ import type {
 	Environments,
 	HistoryEntry,
 	Loaded,
+	Pasted,
 	PersonState,
 	Private,
+	Quoting,
 	ShareAsk,
 	Shared,
 	SharePlan,
@@ -213,6 +215,23 @@ export function bringIn(ask: {
 	serverAddress: boolean;
 }): Promise<BroughtIn> {
 	return invoke('calls_bring_in', { ask });
+}
+
+// --- cURL (FEAT-166) ---
+
+/** The call as one `curl` command; secrets stay `{{name}}` unless `secrets`. */
+export function curl(ask: {
+	stem: string | null;
+	call: Call;
+	environment: string | null;
+	quoting: Quoting;
+	secrets: boolean;
+}): Promise<string> {
+	return invoke('calls_curl', { ask });
+}
+
+export function curlParse(text: string): Promise<Pasted> {
+	return invoke('calls_curl_parse', { text });
 }
 
 // --- Share (FEAT-164) ---

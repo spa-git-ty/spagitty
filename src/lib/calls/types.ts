@@ -369,6 +369,17 @@ export interface ScanDone {
 	cancelled: boolean;
 }
 
+// --- cURL (FEAT-166) ---
+
+export type Quoting = 'posix' | 'cmd';
+
+/** A pasted command: the call, and which flags were read and which were not. */
+export interface Pasted {
+	call: Call;
+	read: string[];
+	ignored: string[];
+}
+
 // --- Share (FEAT-164) ---
 
 export type ShareFormat = 'spagitty' | 'postman' | 'zip' | 'commit';

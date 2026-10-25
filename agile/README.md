@@ -219,7 +219,7 @@ rather than an audit.
 | [FEAT-163](items/FEAT-163-soap-calls-from-a-wsdl.md) | SOAP calls from a WSDL | 2C | Open |
 | [FEAT-164](items/FEAT-164-share-a-collection-as-a-file-a-zip-or-a-commit.md) | Share a collection as a file, a zip or a commit | 2C | Open |
 | [FEAT-165](items/FEAT-165-settings-calls.md) | Settings › Calls | 1K | Open |
-| [FEAT-166](items/FEAT-166-copy-a-call-as-curl-and-paste-one-in.md) | Copy a call as cURL, and paste one in | 2C | Backlog |
+| [FEAT-166](items/FEAT-166-copy-a-call-as-curl-and-paste-one-in.md) | Copy a call as cURL, and paste one in | 2C | Open |
 | [FEAT-167](items/FEAT-167-signed-ws-security.md) | Signed WS-Security for SOAP calls | 2C, 1K | Backlog |
 
 ## Bugs

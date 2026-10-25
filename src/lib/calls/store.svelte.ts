@@ -510,8 +510,7 @@ export const calls = {
 	 * collection that can be edited, or in a new collection named after the
 	 * repository.
 	 */
-	async create(stem: string | null = null, folderName: string | null = null): Promise<void> {
-		const call = blankCall();
+	async create(stem: string | null = null, folderName: string | null = null, call: Call = blankCall()): Promise<void> {
 		let target = stem ?? collections.find((stored) => stored.value)?.stem ?? null;
 		if (!target) {
 			const collection: Collection = { v: 1, name: collectionName(), items: [call] };
@@ -532,6 +531,23 @@ export const calls = {
 			}));
 		}
 		this.open({ stem: target, id: call.id });
+	},
+
+	/**
+	 * Put a pasted request in place of `opened`'s (FEAT-166): its method,
+	 * URL, headers, body and auth. The name, the keep rules and the notes are
+	 * the call's own and stay.
+	 */
+	replaceRequest(opened: Opened, from: Call): void {
+		this.edit(opened, (current) => ({
+			...current,
+			kind: 'rest',
+			method: from.method,
+			url: from.url,
+			headers: from.headers,
+			body: from.body,
+			auth: from.auth
+		}));
 	},
 
 	duplicate(opened: Opened): void {

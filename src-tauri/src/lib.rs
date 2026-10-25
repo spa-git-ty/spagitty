@@ -207,6 +207,8 @@ pub fn run() {
             calls::calls_import_wsdl_url,
             calls::calls_share_plan,
             calls::calls_share,
+            calls::calls_curl,
+            calls::calls_curl_parse,
             recipes::recipes_list,
             recipes::recipes_save,
             recipes::recipes_delete,

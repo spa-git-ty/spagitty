@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use spagitty_core::calls::body::{self, Shape, Utf8Stream};
 use spagitty_core::calls::build::{self, Shown};
 use spagitty_core::calls::history::{Entry, History};
+use spagitty_core::calls::import::curl;
 use spagitty_core::calls::import::scan::{self, Options as ScanOptions};
 use spagitty_core::calls::import::wsdl_source::SoapChoices;
 use spagitty_core::calls::import::{self, Brought, Choices, Found};
@@ -1879,4 +1880,85 @@ pub fn calls_share<R: Runtime>(
             Ok(path)
         }
     }
+}
+
+// --- cURL (FEAT-166) ---------------------------------------------------------
+
+/// *Copy as cURL* asked for one call.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurlAsk {
+    pub stem: Option<String>,
+    pub call: Call,
+    pub environment: Option<String>,
+    pub quoting: curl::Quoting,
+    /// *Fill in secrets*: off unless ticked, every time the window opens.
+    pub secrets: bool,
+}
+
+/// The call as one `curl` command, resolved in the environment. Secrets and
+/// kept values stay `{{name}}` unless asked for.
+#[tauri::command(async)]
+pub fn calls_curl<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    ask: CurlAsk,
+) -> Result<String> {
+    let repo = state.open_path("calls_curl").map_err(|e| e.to_string())?;
+    let (folder, settings, _) = place(&app, &repo)?;
+    let environment = ask.environment.as_deref().and_then(|stem| {
+        folder
+            .environments()
+            .into_iter()
+            .find(|stored| stored.stem == stem)
+            .and_then(|stored| stored.value)
+    });
+    let shared = folder.shared().unwrap_or_default();
+    let collection_vars = ask
+        .stem
+        .as_deref()
+        .and_then(|stem| folder.collection(stem).ok())
+        .map(|collection| collection.vars)
+        .unwrap_or_default();
+    let env_stem = environment.as_ref().and(ask.environment.as_deref());
+    let env_private = private_values(
+        &repo,
+        env_stem,
+        environment
+            .as_ref()
+            .map(|env| env.vars.as_slice())
+            .unwrap_or(&[]),
+    )?;
+    let shared_private = private_values(&repo, None, &shared.vars)?;
+    let scope = scope_of(
+        environment.as_ref().map(|env| (env, &env_private)),
+        (&shared, &shared_private),
+        &collection_vars,
+    );
+    let version = app.package_info().version.to_string();
+    let envelope = secured(&ask.call, &scope)?;
+    let check_tls = settings.check_tls
+        && environment
+            .as_ref()
+            .map(|env| env.check_tls)
+            .unwrap_or(true);
+    curl::copy(
+        &ask.call,
+        &scope,
+        &settings.every_headers(&version),
+        &repo,
+        envelope.as_deref(),
+        ask.secrets,
+        curl::CopyOptions {
+            quoting: ask.quoting,
+            follow: settings.follow_redirects,
+            insecure: !check_tls,
+        },
+    )
+}
+
+/// A pasted `curl` command as a call, and which flags it read.
+#[tauri::command]
+pub fn calls_curl_parse(text: String) -> Result<curl::Pasted> {
+    curl::parse_noting(&text)
 }

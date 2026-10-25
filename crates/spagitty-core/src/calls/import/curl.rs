@@ -30,7 +30,8 @@ pub fn words(text: &str) -> Result<Vec<String>, String> {
                 }
                 None => {}
             },
-            '^' if matches!(chars.peek(), Some('\n') | Some('\r')) => {
+            // `cmd`'s `^` and PowerShell's backtick continue a line.
+            '^' | '`' if matches!(chars.peek(), Some('\n') | Some('\r')) => {
                 chars.next_if_eq(&'\r');
                 chars.next_if_eq(&'\n');
             }
@@ -98,8 +99,24 @@ pub fn words(text: &str) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
+/// A pasted command: the call, and which of its flags were read and which
+/// were not (FEAT-166).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct Pasted {
+    pub call: Call,
+    pub read: Vec<String>,
+    pub ignored: Vec<String>,
+}
+
 /// A cURL command as a call.
 pub fn parse(text: &str) -> Result<Call, String> {
+    parse_noting(text).map(|pasted| pasted.call)
+}
+
+/// A cURL command as a call, saying which flags it read.
+pub fn parse_noting(text: &str) -> Result<Pasted, String> {
+    let mut read: Vec<String> = Vec::new();
+    let mut ignored: Vec<String> = Vec::new();
     let words = words(text.trim())?;
     let mut rest = words.iter().map(String::as_str).peekable();
     match rest.peek() {
@@ -142,6 +159,46 @@ pub fn parse(text: &str) -> Result<Call, String> {
                 .or_else(|| rest.next().map(str::to_string))
                 .unwrap_or_default()
         };
+        let known = matches!(
+            flag.as_str(),
+            "-X" | "--request"
+                | "-H"
+                | "--header"
+                | "-d"
+                | "--data"
+                | "--data-raw"
+                | "--data-binary"
+                | "--data-ascii"
+                | "--data-urlencode"
+                | "--json"
+                | "-F"
+                | "--form"
+                | "--form-string"
+                | "-u"
+                | "--user"
+                | "-A"
+                | "--user-agent"
+                | "-b"
+                | "--cookie"
+                | "-e"
+                | "--referer"
+                | "--url"
+                | "-G"
+                | "--get"
+                | "-I"
+                | "--head"
+                | "-L"
+                | "--location"
+                | "-k"
+                | "--insecure"
+                | "--compressed"
+        );
+        if flag.starts_with('-') {
+            let list = if known { &mut read } else { &mut ignored };
+            if !list.contains(&flag) {
+                list.push(flag.clone());
+            }
+        }
         match flag.as_str() {
             "-X" | "--request" => method = Some(value().to_ascii_uppercase()),
             "-H" | "--header" => {
@@ -277,7 +334,7 @@ pub fn parse(text: &str) -> Result<Call, String> {
     ) {
         headers.retain(|h| !h.name.eq_ignore_ascii_case("content-type"));
     }
-    let method = method.unwrap_or_else(|| {
+    let call_method = method.unwrap_or_else(|| {
         if head {
             "HEAD".into()
         } else if body.is_some() {
@@ -286,16 +343,219 @@ pub fn parse(text: &str) -> Result<Call, String> {
             "GET".into()
         }
     });
-    Ok(Call {
-        id: new_id(),
-        name: name_for(&method, &path_of(&url), None),
-        method: Some(method),
-        url,
-        headers,
-        body,
-        auth,
-        ..Call::default()
+    Ok(Pasted {
+        call: Call {
+            id: new_id(),
+            name: name_for(&call_method, &path_of(&url), None),
+            method: Some(call_method),
+            url,
+            headers,
+            body,
+            auth,
+            ..Call::default()
+        },
+        read,
+        ignored,
     })
+}
+
+/// How a copied command is quoted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Quoting {
+    /// Single quotes, `\` at line ends: Linux and macOS.
+    Posix,
+    /// Double quotes, `^` at line ends: Windows' `cmd`.
+    Cmd,
+}
+
+/// A body as a command sends it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CopyBody {
+    None,
+    /// `--data-raw`.
+    Raw(String),
+    /// `--data-urlencode`, each.
+    Form(Vec<(String, String)>),
+    /// `--form`, each; a file as `@path`.
+    Multipart(Vec<(String, String, bool)>),
+}
+
+/// What a copy says besides the request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CopyOptions {
+    pub quoting: Quoting,
+    /// `-L`: Settings follow redirects.
+    pub follow: bool,
+    /// `-k`: TLS is not checked for this environment.
+    pub insecure: bool,
+}
+
+/// `word` quoted for `quoting`, or as it is when nothing in it needs it.
+pub fn quote(word: &str, quoting: Quoting) -> String {
+    let plain = !word.is_empty()
+        && word
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_./:=@+,".contains(c));
+    if plain {
+        return word.to_string();
+    }
+    match quoting {
+        Quoting::Posix => format!("'{}'", word.replace('\'', "'\\''")),
+        Quoting::Cmd => format!("\"{}\"", word.replace('"', "\\\"").replace('\n', "\\n")),
+    }
+}
+
+/// A request as one `curl` command (FEAT-166). The method is written only
+/// when it is not what the rest implies; `basic` is `-u` in place of its
+/// header.
+pub fn to_curl(
+    method: &str,
+    url: &str,
+    headers: &[(String, String)],
+    body: &CopyBody,
+    basic: Option<(String, String)>,
+    options: CopyOptions,
+) -> String {
+    let q = |w: &str| quote(w, options.quoting);
+    let mut parts: Vec<String> = vec!["curl".into()];
+    let method = method.to_ascii_uppercase();
+    let has_body = !matches!(body, CopyBody::None);
+    match (method.as_str(), has_body) {
+        ("GET", false) | ("POST", true) => {}
+        ("HEAD", false) => parts.push("-I".into()),
+        (other, _) => parts.push(format!("-X {other}")),
+    }
+    parts.push(q(url));
+    for (name, value) in headers {
+        if name.eq_ignore_ascii_case("content-length")
+            || (basic.is_some() && name.eq_ignore_ascii_case("authorization"))
+        {
+            continue;
+        }
+        parts.push(format!("-H {}", q(&format!("{name}: {value}"))));
+    }
+    if let Some((user, password)) = &basic {
+        parts.push(format!("-u {}", q(&format!("{user}:{password}"))));
+    }
+    match body {
+        CopyBody::None => {}
+        CopyBody::Raw(text) => parts.push(format!("--data-raw {}", q(text))),
+        CopyBody::Form(fields) => {
+            for (name, value) in fields {
+                parts.push(format!(
+                    "--data-urlencode {}",
+                    q(&format!("{name}={value}"))
+                ));
+            }
+        }
+        CopyBody::Multipart(fields) => {
+            for (name, value, file) in fields {
+                let part = if *file {
+                    format!("{name}=@{value}")
+                } else {
+                    format!("{name}={value}")
+                };
+                parts.push(format!("--form {}", q(&part)));
+            }
+        }
+    }
+    if options.follow {
+        parts.push("-L".into());
+    }
+    if options.insecure {
+        parts.push("-k".into());
+    }
+    parts.push("--compressed".into());
+    let joiner = match options.quoting {
+        Quoting::Posix => " \\\n  ",
+        Quoting::Cmd => " ^\n  ",
+    };
+    parts.join(joiner)
+}
+
+/// A call as one `curl` command, resolved in `scope` (FEAT-166). Secrets
+/// and kept values stay `{{name}}` unless `secrets` is set. `envelope` is a
+/// SOAP call's envelope with its WS-Security header, when it has one.
+pub fn copy(
+    call: &Call,
+    scope: &super::super::vars::Scope,
+    every: &[(String, String)],
+    root: &std::path::Path,
+    envelope: Option<&str>,
+    secrets: bool,
+    options: CopyOptions,
+) -> Result<String, String> {
+    use super::super::model::Kind;
+    let fill = |text: &str| -> Result<String, String> {
+        if secrets {
+            scope.resolve(text).map_err(|e| e.to_string())
+        } else {
+            scope.redacted(text).map_err(|e| e.to_string())
+        }
+    };
+    let built = super::super::build::build(call, scope, every, root, envelope)
+        .map_err(|e| e.to_string())?;
+    let (url, headers, body_text) = if secrets {
+        (
+            built.out.url.clone(),
+            built.out.headers.clone(),
+            built
+                .out
+                .body
+                .as_ref()
+                .map(|b| String::from_utf8_lossy(b).into_owned()),
+        )
+    } else {
+        (
+            built.shown.url.clone(),
+            built.shown.headers.clone(),
+            built.shown.body.clone(),
+        )
+    };
+    // A form's or a multipart's parts are written as curl's own options,
+    // and curl sets their Content-Type, with its boundary.
+    let fields = |multipart: bool| -> Result<CopyBody, String> {
+        let list: Vec<(String, String, bool)> = call
+            .body
+            .iter()
+            .flat_map(|b| b.fields.iter().filter(|f| f.on))
+            .map(|f| Ok((fill(&f.name)?, fill(&f.value)?, f.file)))
+            .collect::<Result<_, String>>()?;
+        Ok(if multipart {
+            CopyBody::Multipart(list)
+        } else {
+            CopyBody::Form(list.into_iter().map(|(n, v, _)| (n, v)).collect())
+        })
+    };
+    let body = match call.body.as_ref().map(|b| b.kind) {
+        _ if call.kind == Kind::Soap => body_text.map(CopyBody::Raw).unwrap_or(CopyBody::None),
+        Some(BodyType::Form) => fields(false)?,
+        Some(BodyType::Multipart) => fields(true)?,
+        _ => body_text.map(CopyBody::Raw).unwrap_or(CopyBody::None),
+    };
+    let headers: Vec<(String, String)> = headers
+        .into_iter()
+        .filter(|(name, _)| {
+            !(matches!(body, CopyBody::Form(_) | CopyBody::Multipart(_))
+                && name.eq_ignore_ascii_case("content-type"))
+        })
+        .collect();
+    let basic = match &call.auth {
+        Some(auth) if auth.kind == AuthType::Basic => Some((
+            fill(auth.user.as_deref().unwrap_or(""))?,
+            fill(auth.password.as_deref().unwrap_or(""))?,
+        )),
+        _ => None,
+    };
+    Ok(to_curl(
+        &built.out.method,
+        &url,
+        &headers,
+        &body,
+        basic,
+        options,
+    ))
 }
 
 #[cfg(test)]
@@ -346,5 +606,207 @@ mod tests {
 
         assert!(parse("wget http://h").is_err());
         assert!(parse("curl -s").is_err());
+    }
+
+    #[test]
+    fn a_paste_says_what_it_read_and_what_it_did_not() {
+        let pasted =
+            parse_noting("curl -L -k -s --retry 3 -X PUT http://h/x `\n -H 'A: b' --compressed")
+                .unwrap();
+        assert_eq!(pasted.read, ["-L", "-k", "-X", "-H", "--compressed"]);
+        assert_eq!(pasted.ignored, ["-s", "--retry"]);
+        assert_eq!(pasted.call.method.as_deref(), Some("PUT"));
+        assert_eq!(pasted.call.headers, vec![Pair::new("A", "b")]);
+    }
+
+    fn options(quoting: Quoting) -> CopyOptions {
+        CopyOptions {
+            quoting,
+            follow: true,
+            insecure: false,
+        }
+    }
+
+    #[test]
+    fn a_copy_is_quoted_for_its_shell_and_reads_back_the_same() {
+        let headers = vec![
+            ("Accept".to_string(), "application/json".to_string()),
+            ("X-Why".to_string(), "it's \"ok\"".to_string()),
+        ];
+        let body = CopyBody::Raw("{\"note\": \"it's\"}".into());
+        let posix = to_curl(
+            "POST",
+            "https://h/orders?a=1&b=2",
+            &headers,
+            &body,
+            None,
+            options(Quoting::Posix),
+        );
+        assert_eq!(
+            posix,
+            "curl \\\n  'https://h/orders?a=1&b=2' \\\n  -H 'Accept: application/json' \\\n  -H 'X-Why: it'\\''s \"ok\"' \\\n  --data-raw '{\"note\": \"it'\\''s\"}' \\\n  -L \\\n  --compressed"
+        );
+        let cmd = to_curl(
+            "POST",
+            "https://h/orders?a=1&b=2",
+            &headers,
+            &body,
+            None,
+            options(Quoting::Cmd),
+        );
+        assert!(cmd.contains(" ^\n  -H \"X-Why: it's \\\"ok\\\"\""));
+        for text in [posix, cmd] {
+            let back = parse(&text).unwrap();
+            assert_eq!(back.method.as_deref(), Some("POST"));
+            assert_eq!(back.url, "https://h/orders?a=1&b=2");
+            assert_eq!(back.headers[1].value, "it's \"ok\"");
+            assert_eq!(
+                back.body.unwrap().text.as_deref(),
+                Some("{\"note\": \"it's\"}")
+            );
+        }
+    }
+
+    #[test]
+    fn a_copy_keeps_secrets_as_names_unless_asked() {
+        use crate::calls::model::{Auth, Body, Colour, Environment, Kind, Variable};
+        use std::collections::HashMap;
+        let mut env = Environment::new("staging", Colour::Warn);
+        env.vars = vec![
+            Variable::plain("baseUrl", "https://staging"),
+            Variable {
+                name: "password".into(),
+                secret: true,
+                ..Variable::default()
+            },
+        ];
+        let private = HashMap::from([("password".to_string(), "SECRET-hunter2".to_string())]);
+        let shared = crate::calls::model::Shared::default();
+        let scope =
+            crate::calls::vars::scope_of(Some((&env, &private)), (&shared, &HashMap::new()), &[]);
+        let call = Call {
+            id: "c".into(),
+            name: "Log in".into(),
+            method: Some("POST".into()),
+            url: "{{baseUrl}}/login".into(),
+            body: Some(Body {
+                kind: BodyType::Json,
+                text: Some("{\"password\": \"{{password}}\"}".into()),
+                ..Body::default()
+            }),
+            auth: Some(Auth {
+                kind: AuthType::Basic,
+                user: Some("mira".into()),
+                password: Some("{{password}}".into()),
+                ..Auth::default()
+            }),
+            ..Call::default()
+        };
+        let root = std::path::Path::new(".");
+        let shown = copy(
+            &call,
+            &scope,
+            &[],
+            root,
+            None,
+            false,
+            options(Quoting::Posix),
+        )
+        .unwrap();
+        assert!(!shown.contains("SECRET-"), "{shown}");
+        assert!(shown.contains("https://staging/login"));
+        assert!(shown.contains("-u 'mira:{{password}}'"));
+        assert!(shown.contains("{{password}}"));
+        assert!(!shown.contains("Authorization"));
+        let filled = copy(
+            &call,
+            &scope,
+            &[],
+            root,
+            None,
+            true,
+            options(Quoting::Posix),
+        )
+        .unwrap();
+        assert!(filled.contains("SECRET-hunter2"));
+
+        // A SOAP call is a POST of its envelope with its SOAP headers.
+        let soap = Call {
+            id: "s".into(),
+            name: "Get".into(),
+            kind: Kind::Soap,
+            url: "{{baseUrl}}/ws".into(),
+            version: Some("1.1".into()),
+            action: Some("urn:Get".into()),
+            envelope: Some("<e/>".into()),
+            ..Call::default()
+        };
+        let text = copy(
+            &soap,
+            &scope,
+            &[],
+            root,
+            None,
+            false,
+            options(Quoting::Posix),
+        )
+        .unwrap();
+        assert!(text.contains("-H 'SOAPAction: \"urn:Get\"'"));
+        assert!(text.contains("--data-raw '<e/>'"));
+        assert!(!text.contains("-X"));
+    }
+
+    #[test]
+    fn every_body_kind_round_trips() {
+        let form = CopyBody::Form(vec![("a".into(), "1".into()), ("b".into(), "x y".into())]);
+        let back = parse(&to_curl(
+            "PUT",
+            "http://h/f",
+            &[],
+            &form,
+            Some(("me".into(), "pw".into())),
+            options(Quoting::Posix),
+        ))
+        .unwrap();
+        assert_eq!(back.method.as_deref(), Some("PUT"));
+        assert_eq!(back.body.as_ref().unwrap().fields.len(), 2);
+        assert_eq!(back.auth.as_ref().unwrap().user.as_deref(), Some("me"));
+
+        let parts = CopyBody::Multipart(vec![
+            ("doc".into(), "a.pdf".into(), true),
+            ("note".into(), "hi".into(), false),
+        ]);
+        let back = parse(&to_curl(
+            "POST",
+            "http://h/up",
+            &[],
+            &parts,
+            None,
+            options(Quoting::Cmd),
+        ))
+        .unwrap();
+        let body = back.body.unwrap();
+        assert_eq!(body.kind, BodyType::Multipart);
+        assert!(body.fields[0].file);
+
+        let get = to_curl(
+            "GET",
+            "http://h/x",
+            &[],
+            &CopyBody::None,
+            None,
+            options(Quoting::Posix),
+        );
+        assert!(!get.contains("-X"));
+        let delete = to_curl(
+            "DELETE",
+            "http://h/x",
+            &[],
+            &CopyBody::None,
+            None,
+            options(Quoting::Posix),
+        );
+        assert!(delete.contains("-X DELETE"));
+        assert_eq!(parse(&delete).unwrap().method.as_deref(), Some("DELETE"));
     }
 }

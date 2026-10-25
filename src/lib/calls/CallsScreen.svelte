@@ -13,6 +13,7 @@
 	import { importer } from './import.svelte';
 	import { envColour, findCall, lookup, methodColour, methodOf } from './model';
 	import RequestEditor from './RequestEditor.svelte';
+	import CurlWindow from './CurlWindow.svelte';
 	import ShareDialog from './ShareDialog.svelte';
 	import SoapEditor from './SoapEditor.svelte';
 	import ResponseView from './ResponseView.svelte';
@@ -82,6 +83,8 @@
 	let envButton = $state<HTMLButtonElement | null>(null);
 	/** FEAT-164: the Share dialog is open. */
 	let sharing = $state(false);
+	/** FEAT-166: the cURL window is open. */
+	let curling = $state(false);
 
 	const envItems = $derived<MenuItem[]>([
 		...calls.environments.map((stored) => ({
@@ -291,6 +294,7 @@
 								refusal={calls.refusalFor(opened)}
 								onsend={() => calls.send()}
 								oncancel={() => calls.cancel(opened)}
+								oncurl={() => (curling = true)}
 								bind:url
 							/>
 						{:else}
@@ -303,6 +307,7 @@
 								refusal={calls.refusalFor(opened)}
 								onsend={() => calls.send()}
 								oncancel={() => calls.cancel(opened)}
+								oncurl={() => (curling = true)}
 								bind:url
 							/>
 						{/if}
@@ -350,6 +355,18 @@
 			/>
 		</div>
 	</div>
+{/if}
+
+{#if curling && current}
+	<CurlWindow
+		opened={current.opened}
+		call={current.call}
+		environment={calls.person.active}
+		collections={calls.collections}
+		onreplace={(call) => current && calls.replaceRequest(current.opened, call)}
+		oncreate={(call, stem, folder) => calls.create(stem, folder, call)}
+		onclose={() => (curling = false)}
+	/>
 {/if}
 
 {#if sharing}

@@ -22,6 +22,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Import calls** into Calls: from Spring MVC, WebFlux, JAX-RS and NestJS controllers in the repository (with example bodies from the request class or DTO), OpenAPI and Swagger files, and Postman, Insomnia, Bruno, `.http`, HAR and cURL. Endpoints are marked *New*, *Changed* or already in a collection, and bringing a changed one in keeps the values you typed. Collection files in the repository can be sent in place without importing, and are never rewritten (FEAT-162).
 - **SOAP calls** in Calls, from a WSDL in the repository or at a URL, or from JAX-WS and Spring-WS services in the code. The envelope is made for you with a sample and the type of every element, the `SOAPAction` is set from the WSDL, WS-Security's username token is added (text or digest), and a SOAP fault is shown as an error even when the server answered 200. *Rebuild from WSDL* keeps what you typed (FEAT-163).
 - **Share a collection** from Calls: as one Spagitty or Postman 2.1 file, as a zip with its environments, example responses and a README of what to fill in, or as a commit on the current branch. Secrets and kept values go in empty in every format, and Import reads the zip back (FEAT-164).
+- **Copy a call as cURL, and paste one in**, from the request bar. A copy is resolved in the active environment and quoted for your shell; secrets stay as their names unless you tick *Fill in secrets*. A paste says which flags it read, and replaces the request or adds a new call (FEAT-166).
 
 ## [3.10.1] - 2026-10-25
 
