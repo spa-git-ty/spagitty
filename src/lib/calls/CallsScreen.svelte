@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { goto } from '$app/navigation';
 	import * as appApi from '$lib/api';
 	import { isMac } from '$lib/platform';
 	import { repo } from '$lib/repo.svelte';
@@ -53,7 +54,15 @@
 		].map((variable) => variable.name)
 	);
 
-	const find = (name: string) => lookup(name, environment, calls.shared, current?.collection ?? null);
+	/** Where a name is defined, with a kept value's value from the keychain. */
+	const find = (name: string) => {
+		const found = lookup(name, environment, calls.shared, current?.collection ?? null);
+		if (!found?.variable?.kept) return found;
+		const view = calls.private.kept.find((kept) => kept.name === name);
+		return { ...found, variable: { ...found.variable, value: view?.value ?? undefined } };
+	};
+
+	let envButton = $state<HTMLButtonElement | null>(null);
 
 	const envItems = $derived<MenuItem[]>([
 		...calls.environments.map((stored) => ({
@@ -73,7 +82,7 @@
 		}
 	]);
 
-	function openEnv(event: MouseEvent) {
+	function openEnv(event: { currentTarget: EventTarget | null }) {
 		const anchor = event.currentTarget as HTMLElement;
 		if (envMenu?.anchor === anchor) {
 			envMenu = null;
@@ -95,6 +104,10 @@
 			if (!calls.person.current) return;
 			event.preventDefault();
 			calls.close(calls.person.current);
+		} else if (event.key === 'e' || event.key === 'E') {
+			// FEAT-161: switch environment from anywhere in Calls.
+			event.preventDefault();
+			if (envButton) openEnv({ currentTarget: envButton });
 		} else if (event.key === 'k' || event.key === 'K') {
 			event.preventDefault();
 			search?.focus();
@@ -162,7 +175,13 @@
 				>
 			</div>
 			<span class="gap"></span>
-			<button type="button" class="env" title="The environment calls are sent in" onclick={openEnv}>
+			<button
+				type="button"
+				class="env"
+				title={`The environment calls are sent in (${mod}+E)`}
+				bind:this={envButton}
+				onclick={openEnv}
+			>
 				<span class="muted">Env</span>
 				{#if environment}
 					<span class="dot" style:background={envColour(environment.color)} aria-hidden="true"></span>
@@ -252,6 +271,12 @@
 							name={current.call.name}
 							ontoggleraw={() => calls.toggleRaw(opened)}
 							onsave={(path) => calls.saveBody(opened, path)}
+							rules={current.call.keep ?? []}
+							{environment}
+							keepEvery={calls.settings?.keepEvery ?? true}
+							suggest={calls.settings?.suggestNames ?? true}
+							onkeep={calls.settings?.clickToKeep === false ? undefined : (ask) => calls.keep(opened, ask)}
+							onforget={(name) => calls.forget(opened, name)}
 						/>
 					</div>
 				{:else if calls.loaded}
@@ -261,7 +286,14 @@
 				{/if}
 			</main>
 
-			<VariablesPanel {environment} shared={calls.shared} collection={current?.collection ?? null} />
+			<VariablesPanel
+				{environment}
+				shared={calls.shared}
+				collection={current?.collection ?? null}
+				privateValues={calls.private}
+				privateError={calls.privateError}
+				onmanage={() => goto('/calls/environments')}
+			/>
 		</div>
 	</div>
 {/if}

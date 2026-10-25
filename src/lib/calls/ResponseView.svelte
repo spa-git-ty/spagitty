@@ -5,6 +5,7 @@
 	import BodyView from './BodyView.svelte';
 	import { cookiesOf, formatMillis, formatSize, statusTone } from './model';
 	import type { Outcome } from './store.svelte';
+	import type { Environment, KeepRule } from './types';
 
 	/**
 	 * The response half of Calls (FEAT-160, proposal §5.1 and §5.3): status
@@ -21,9 +22,35 @@
 		name: string;
 		ontoggleraw: () => void;
 		onsave: (path: string) => void;
+		/** Keeping a clicked value (FEAT-161); absent when Settings turns it off. */
+		rules?: KeepRule[];
+		environment?: Environment | null;
+		keepEvery?: boolean;
+		suggest?: boolean;
+		onkeep?: (ask: {
+			path: string;
+			value: string;
+			name: string;
+			every: boolean;
+			ns?: Record<string, string>;
+		}) => Promise<boolean>;
+		onforget?: (name: string) => void;
 	}
 
-	let { outcome, sending, beautify, name, ontoggleraw, onsave }: Props = $props();
+	let {
+		outcome,
+		sending,
+		beautify,
+		name,
+		ontoggleraw,
+		onsave,
+		rules = [],
+		environment = null,
+		keepEvery = true,
+		suggest = true,
+		onkeep,
+		onforget
+	}: Props = $props();
 
 	type Tab = 'body' | 'headers' | 'cookies';
 	let tab = $state<Tab>('body');
@@ -89,7 +116,9 @@
 			</div>
 			<span class="gap"></span>
 			{#if formattable && raw}
-				<span class="note">As received</span>
+				<span class="note">As received{onkeep ? ' · values cannot be kept' : ''}</span>
+			{:else if formattable && onkeep && !response.plain}
+				<span class="note">Click a value to keep it</span>
 			{/if}
 			{#if response.shape !== 'binary'}
 				<button type="button" class="act" title="Copy the body as it arrived" onclick={copy}>Copy</button>
@@ -149,7 +178,18 @@
 				{#if response.text === ''}
 					<p class="empty">No body.</p>
 				{:else}
-					<BodyView text={response.text} shape={response.shape} {raw} plain={response.plain} />
+					<BodyView
+						text={response.text}
+						shape={response.shape}
+						{raw}
+						plain={response.plain}
+						{rules}
+						{environment}
+						{keepEvery}
+						{suggest}
+						onkeep={formattable && !raw ? onkeep : undefined}
+						{onforget}
+					/>
 				{/if}
 			{/if}
 		{:else if outcome?.streamed}

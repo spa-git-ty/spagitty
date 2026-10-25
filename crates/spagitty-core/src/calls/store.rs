@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::calls::model::{to_text, Collection, Environment, Shared, VERSION};
+use crate::calls::model::{to_text, Collection, Environment, Shared, Variable, VERSION};
 use crate::{Error, Result};
 
 /// The folder's default, relative to the working tree.
@@ -126,6 +126,7 @@ impl Folder {
         }
         let mut collection = collection.clone();
         collection.v = VERSION;
+        collection.vars = collection.vars.iter().map(Variable::for_file).collect();
         write_text(&file, &to_text(&collection))?;
         if let Some(old) = was.filter(|old| *old != stem) {
             let _ = std::fs::remove_file(self.path().join(format!("{}.json", checked(old)?)));
@@ -326,7 +327,7 @@ fn remove(path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::calls::model::{Colour, Item, Variable};
+    use crate::calls::model::{Colour, Item};
 
     fn folder() -> (tempfile::TempDir, Folder) {
         let dir = tempfile::tempdir().unwrap();
@@ -429,6 +430,67 @@ mod tests {
         folder.write_shared(&shared).unwrap();
         let text = std::fs::read_to_string(dir.path().join(".spagitty/calls/shared.json")).unwrap();
         assert!(!text.contains("sk-live"));
+    }
+
+    /// FEAT-161: every kind of variable, through every writer, and no secret
+    /// or kept value in any file the folder holds.
+    #[test]
+    fn no_writer_puts_a_secret_or_kept_value_in_a_file() {
+        let (dir, folder) = folder();
+        let kinds = || {
+            vec![
+                Variable::plain("baseUrl", "https://plain.example"),
+                Variable {
+                    name: "password".into(),
+                    value: Some("SECRET-hunter2".into()),
+                    secret: true,
+                    ..Variable::default()
+                },
+                Variable {
+                    name: "token".into(),
+                    value: Some("KEPT-ey.J".into()),
+                    kept: true,
+                    ..Variable::default()
+                },
+                Variable {
+                    name: "userId".into(),
+                    value: Some("KEPT-usr".into()),
+                    kept: true,
+                    frozen: true,
+                    ..Variable::default()
+                },
+            ]
+        };
+        let mut env = Environment::new("staging", Colour::Warn);
+        env.vars = kinds();
+        folder.write_environment(&env, None).unwrap();
+        folder
+            .write_shared(&Shared {
+                v: 1,
+                vars: kinds(),
+            })
+            .unwrap();
+        let mut made = collection("orders");
+        made.vars = kinds();
+        folder.write_collection(&made, None, None).unwrap();
+
+        let mut seen = 0;
+        let mut walk = vec![dir.path().to_path_buf()];
+        while let Some(at) = walk.pop() {
+            for entry in std::fs::read_dir(&at).unwrap().flatten() {
+                if entry.file_type().unwrap().is_dir() {
+                    walk.push(entry.path());
+                    continue;
+                }
+                let text = std::fs::read_to_string(entry.path()).unwrap();
+                assert!(!text.contains("SECRET-"), "{:?}", entry.path());
+                assert!(!text.contains("KEPT-"), "{:?}", entry.path());
+                assert!(text.contains("https://plain.example"), "{:?}", entry.path());
+                assert!(text.contains("\"frozen\": true"), "{:?}", entry.path());
+                seen += 1;
+            }
+        }
+        assert_eq!(seen, 3);
     }
 
     #[test]

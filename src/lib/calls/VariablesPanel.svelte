@@ -2,7 +2,7 @@
 <script lang="ts">
 	import Icon from '$lib/ui/Icon.svelte';
 	import { envColour } from './model';
-	import type { Collection, Environment, Shared, Variable } from './types';
+	import type { Collection, Environment, Private, Shared, Variable } from './types';
 
 	/**
 	 * The variables a call can use, on the right of Calls (FEAT-160,
@@ -15,9 +15,16 @@
 		environment: Environment | null;
 		shared: Shared;
 		collection: Collection | null;
+		/** The active environment's kept values and which secrets have one (FEAT-161). */
+		privateValues?: Private;
+		privateError?: string | null;
+		onmanage?: () => void;
 	}
 
-	let { environment, shared, collection }: Props = $props();
+	let { environment, shared, collection, privateValues, privateError = null, onmanage }: Props = $props();
+
+	const kept = $derived(new Map((privateValues?.kept ?? []).map((view) => [view.name, view])));
+	const secrets = $derived(new Set(privateValues?.secrets ?? []));
 
 	const groups = $derived(
 		[
@@ -37,9 +44,19 @@
 				</dt>
 				<dd class="mono">
 					{#if variable.secret}
-						<span class="dots" aria-label="hidden">••••••••••</span>
+						{#if !privateValues || secrets.has(variable.name)}
+							<span class="dots" aria-label="hidden">••••••••••</span>
+						{:else}
+							<span class="from none">no value yet: set it in Manage</span>
+						{/if}
 					{:else if variable.kept}
-						<span class="from">{variable.frozen ? 'kept, frozen' : 'kept from a response'}</span>
+						{@const view = kept.get(variable.name)}
+						{#if view?.value}<span class="value">{view.value}</span>{/if}
+						<span class="from" class:stale={view?.stale}
+							>{#if view?.call}from {view.method} {view.call}{:else}kept from a response{/if}{#if variable.frozen}
+								· frozen{:else if view?.stale}
+								· stale: the last send found nothing{/if}</span
+						>
 					{:else}
 						{variable.value ?? ''}
 					{/if}
@@ -58,7 +75,14 @@
 		{:else}
 			<span class="name muted">No environment</span>
 		{/if}
+		<span class="gap"></span>
+		{#if onmanage}
+			<button type="button" class="manage" onclick={onmanage}>Manage</button>
+		{/if}
 	</header>
+	{#if privateError}
+		<p class="hint error" role="alert">The keychain could not be read: {privateError}</p>
+	{/if}
 
 	<div class="scroll">
 		{#if environment}
@@ -157,9 +181,39 @@
 	}
 
 	.from {
+		display: block;
 		color: var(--ok);
 		font-family: var(--font-ui);
 		font-size: var(--fs-secondary);
+	}
+
+	.from.stale {
+		color: var(--warn);
+	}
+
+	.from.none {
+		color: var(--muted);
+	}
+
+	.value {
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.gap {
+		flex: 1;
+	}
+
+	.manage {
+		color: var(--accent);
+		font-size: var(--fs-secondary);
+		text-decoration: underline;
+	}
+
+	.error {
+		color: var(--danger);
 	}
 
 	.hint {

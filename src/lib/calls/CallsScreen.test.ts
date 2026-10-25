@@ -40,7 +40,16 @@ vi.mock('./api', () => ({
 	saveBody: vi.fn(),
 	history: vi.fn(async () => []),
 	historyBody: vi.fn(),
-	clearHistory: vi.fn()
+	clearHistory: vi.fn(),
+	environments: vi.fn(),
+	saveEnvironment: vi.fn(),
+	deleteEnvironment: vi.fn(),
+	saveShared: vi.fn(),
+	privateOf: vi.fn(async () => ({ kept: [], secrets: ['password'] })),
+	reveal: vi.fn(async () => null),
+	setPrivate: vi.fn(async () => {}),
+	keep: vi.fn(),
+	forgetKept: vi.fn()
 }));
 
 import * as api from './api';
@@ -252,6 +261,8 @@ describe('Calls', () => {
 			cancelled: false,
 			sent: { method: 'POST', url: 'https://staging.orders.local/api/auth/login', headers: [], body: null },
 			historyId: 'h_1',
+			kept: [],
+			keptError: null,
 			response: {
 				status: 200,
 				reason: 'OK',
@@ -274,13 +285,104 @@ describe('Calls', () => {
 		expect(view!.get('.status').textContent?.replace(/\s+/g, ' ').trim()).toBe('200 OK');
 		expect(view!.text()).toContain('142 ms · 1.4 KB');
 		const lines = () => view!.all('.response .line').map((line) => line.textContent);
-		expect(lines()).toEqual(['{', '  "data": {', '    "accessToken": "ey.J"', '  }', '}']);
+		// The call keeps the token: it is marked where it is.
+		expect(lines()).toEqual(['{', '  "data": {', '    "accessToken": "ey.J"→ token', '  }', '}']);
 		expect(view!.text()).toContain('4 today');
 
 		// Beautify off shows the body as it arrived.
 		click(button('{ } Beautify'));
 		expect(lines()).toEqual(['{"data":{"accessToken":"ey.J"}}']);
 		expect(view!.text()).toContain('As received');
+	});
+
+	/** Send the current call and answer it with a JSON `text`. */
+	async function answer(text: string, kept: Done['kept'] = []): Promise<void> {
+		click(button('Send'));
+		await settle();
+		const ask = vi.mocked(api.send).mock.calls.at(-1)![0];
+		handlers.get('calls-done')!({
+			payload: {
+				sendId: ask.sendId,
+				callId: ask.call.id,
+				error: null,
+				cancelled: false,
+				sent: { method: 'POST', url: 'u', headers: [], body: null },
+				historyId: null,
+				kept,
+				keptError: null,
+				response: {
+					status: 200,
+					reason: 'OK',
+					headers: [['Content-Type', 'application/json']],
+					millis: 9,
+					size: text.length,
+					truncated: false,
+					shape: 'json',
+					mediaType: 'application/json',
+					text,
+					plain: false,
+					url: 'u'
+				}
+			} satisfies Done
+		});
+		await settle();
+	}
+
+	const value = (text: string) =>
+		view!.all('.response button.value').find((found) => found.textContent === text) as HTMLButtonElement;
+
+	it('keeps a clicked value, in a card under its line, and forgets one', async () => {
+		await show();
+		vi.mocked(api.keep).mockResolvedValue({ ...loaded(), sharedError: null });
+		vi.mocked(api.forgetKept).mockResolvedValue({ ...loaded(), sharedError: null });
+		await answer('{"data":{"accessToken":"ey.J","user":{"id":"usr_4821"}}}');
+		expect(view!.text()).toContain('Click a value to keep it');
+
+		click(value('"usr_4821"'));
+		await settle();
+		const card = view!.get('.card[role="dialog"]');
+		// Inline, under the line it is about.
+		expect(card.previousElementSibling?.textContent).toContain('"id": "usr_4821"');
+		expect(card.textContent).toContain('Keep $.data.user.id');
+		expect((view!.get('input[aria-label="Keep as"]') as HTMLInputElement).value).toBe('userId');
+		expect(card.textContent).toContain('staging');
+
+		click([...card.querySelectorAll('button')].find((found) => found.textContent === 'Keep') as HTMLElement);
+		await settle();
+		expect(api.keep).toHaveBeenCalledWith({
+			environment: 'staging',
+			var: 'userId',
+			value: 'usr_4821',
+			callId: 'c_login',
+			call: 'Log in',
+			method: 'POST',
+			from: '$.data.user.id'
+		});
+		expect(view!.find('.card[role="dialog"]')).toBeNull();
+		// The rule is on the call, and the value is marked.
+		expect(view!.all('.response .arrow').map((arrow) => arrow.textContent)).toEqual(['→ token', '→ userId']);
+		await new Promise((done) => setTimeout(done, SAVE_DELAY + 50));
+		const written = JSON.stringify(vi.mocked(api.saveCollection).mock.calls.at(-1)?.[0]);
+		expect(written).toContain('{"var":"userId","from":"$.data.user.id","every":true}');
+
+		// A kept value says so, and can be forgotten.
+		click(value('"ey.J"'));
+		await settle();
+		const kept = view!.get('.card[role="dialog"]');
+		expect(kept.textContent?.replace(/\s+/g, ' ')).toContain('Kept as {{token}} in staging · updates on every call');
+		click([...kept.querySelectorAll('button')].find((found) => found.textContent === 'Forget') as HTMLElement);
+		await settle();
+		expect(api.forgetKept).toHaveBeenCalledWith('staging', 'token');
+		expect(view!.all('.response .arrow').map((arrow) => arrow.textContent)).toEqual(['→ userId']);
+	});
+
+	it('reads kept values again after a send that kept some', async () => {
+		await show();
+		vi.mocked(api.environments).mockResolvedValue({ ...loaded(), sharedError: null });
+		vi.mocked(api.privateOf).mockClear();
+		await answer('{"data":{"accessToken":"ey.K"}}', [{ var: 'token', value: 'ey.K', from: '$.data.accessToken' }]);
+		expect(api.environments).toHaveBeenCalled();
+		expect(api.privateOf).toHaveBeenCalledWith('staging');
 	});
 
 	it('asks before sending in an environment that says to', async () => {

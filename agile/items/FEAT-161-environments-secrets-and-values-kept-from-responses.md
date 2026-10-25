@@ -2,7 +2,8 @@
 
 # FEAT-161 — Environments, secrets and values kept from responses
 
-**Status:** Backlog — after FEAT-160.
+**Status:** Open — built on `feature/FEAT-161-environments`, stacked on FEAT-160, for release 4.0.0. Covered by Rust tests in `calls/keep.rs`, `calls/vault.rs` and `calls/store.rs`, and by `CallsScreen.test.ts`, `EnvironmentsScreen.test.ts` and `model.test.ts`. The name suggestions are the screen's, so their tests are in `model.test.ts` rather than Rust. Not yet looked at in the running application, and the keychain round trip is tested against an in-memory vault, not a real keychain.
+**Branch:** `feature/FEAT-161-environments`.
 **Screens:** 2C (Calls › Environments, at `/calls/environments`; the keep card and the variables panel on Calls).
 **Raised by:** the author, 2026-10-25: environments that are easy to manage, values from responses filled in automatically, and an easy way to put any response value into a variable.
 **Proposal:** [`docs/proposals/calls.md`](../../docs/proposals/calls.md) §6. **Designs:** [`design_handoff_calls/`](../../design_handoff_calls/) — `Environments.dc.html`, `Main.dc.html`.

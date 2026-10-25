@@ -278,3 +278,38 @@ export function cookiesOf(headers: [string, string][]): Cookie[] {
 			};
 		});
 }
+
+/** Keys too plain to name a variable alone: `user.id` is kept as `userId`. */
+const PLAIN_KEYS = new Set(['id', 'uuid', 'key', 'name', 'value', 'code', 'type', 'url', 'href']);
+
+/**
+ * The name a value is suggested to be kept as (FEAT-161, proposal §6.2):
+ * the last key in its path, with `accessToken` becoming `token` and a plain
+ * key such as `id` taking its parent's name, so `$.data.user.id` is
+ * `userId`. An XPath gives its last element's or attribute's local name.
+ */
+export function suggestName(path: string): string {
+	const keys: string[] = [];
+	if (path.startsWith('$')) {
+		for (const match of path.matchAll(/\.([A-Za-z_$][\w$]*)|\[(['"])((?:\\.|(?!\2).)*)\2\]/g)) {
+			keys.push(match[1] ?? match[3].replace(/\\(.)/g, '$1'));
+		}
+	} else {
+		for (const step of path.split('/')) {
+			const name = step.replace(/^@/, '').replace(/\[\d+\]$/, '');
+			if (name) keys.push(name.slice(name.indexOf(':') + 1));
+		}
+	}
+	const camel = (word: string) =>
+		word
+			.replace(/[^A-Za-z0-9]+(.)?/g, (_, next: string | undefined) => (next ? next.toUpperCase() : ''))
+			.replace(/^[A-Z]/, (first) => first.toLowerCase());
+	const last = camel(keys[keys.length - 1] ?? '');
+	if (!last) return 'value';
+	if (/^accessToken$|^idToken$|^bearerToken$|^authToken$/i.test(last)) return 'token';
+	const parent = camel(keys[keys.length - 2] ?? '');
+	if (PLAIN_KEYS.has(last.toLowerCase()) && parent && parent !== 'data') {
+		return parent + last[0].toUpperCase() + last.slice(1);
+	}
+	return /^\d/.test(last) ? `v${last}` : last;
+}

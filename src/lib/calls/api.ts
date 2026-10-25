@@ -9,7 +9,17 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { Call, Collection, HistoryEntry, Loaded, PersonState } from './types';
+import type {
+	Call,
+	Collection,
+	Environment,
+	Environments,
+	HistoryEntry,
+	Loaded,
+	PersonState,
+	Private,
+	Shared
+} from './types';
 
 /** A piece of an event stream, as it arrived. */
 export const CHUNK_EVENT = 'calls-chunk';
@@ -60,4 +70,61 @@ export function historyBody(id: string): Promise<string | null> {
 
 export function clearHistory(): Promise<void> {
 	return invoke('calls_history_clear');
+}
+
+// --- Environments, secrets and kept values (FEAT-161) ---
+
+export function environments(): Promise<Environments> {
+	return invoke('calls_environments');
+}
+
+/**
+ * Save an environment. `was` is its stem before a rename; `copyFrom` the
+ * environment it duplicates, whose keychain values it is given.
+ */
+export function saveEnvironment(
+	environment: Environment,
+	was: string | null,
+	copyFrom: string | null = null
+): Promise<Environments> {
+	return invoke('calls_save_environment', { environment, was, copyFrom });
+}
+
+export function deleteEnvironment(stem: string): Promise<Environments> {
+	return invoke('calls_delete_environment', { stem });
+}
+
+export function saveShared(shared: Shared): Promise<Environments> {
+	return invoke('calls_save_shared', { shared });
+}
+
+/** An environment's kept values, and which secrets have a value; `null` is the shared variables. */
+export function privateOf(environment: string | null): Promise<Private> {
+	return invoke('calls_private', { environment });
+}
+
+/** One secret's value, while the eye is held. */
+export function reveal(environment: string | null, name: string): Promise<string | null> {
+	return invoke('calls_reveal', { environment, name });
+}
+
+/** Set a secret's value, or remove it with `null`. */
+export function setPrivate(environment: string | null, name: string, value: string | null): Promise<void> {
+	return invoke('calls_set_private', { environment, name, value });
+}
+
+export function keep(ask: {
+	environment: string | null;
+	var: string;
+	value: string;
+	callId: string;
+	call: string;
+	method: string;
+	from: string;
+}): Promise<Environments> {
+	return invoke('calls_keep', { ask });
+}
+
+export function forgetKept(environment: string | null, name: string): Promise<Environments> {
+	return invoke('calls_forget_kept', { environment, name });
 }

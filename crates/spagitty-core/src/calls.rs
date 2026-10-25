@@ -17,12 +17,16 @@
 //! | `body` | What a response body is: JSON, XML, an event stream, binary |
 //! | `history` | Each send, per repository, in application data |
 //! | `settings` | Settings › Calls, and a repository's overrides |
+//! | `keep` | Values kept from responses: JSONPath, XPath, and where each came from |
+//! | `vault` | Secret and kept values, in the keychain |
 
 pub mod body;
 pub mod build;
 pub mod history;
+pub mod keep;
 pub mod model;
 pub mod send;
 pub mod settings;
 pub mod store;
 pub mod vars;
+pub mod vault;

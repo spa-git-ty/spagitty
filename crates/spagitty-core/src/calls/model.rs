@@ -424,7 +424,7 @@ impl Variable {
         self.secret || self.kept
     }
 
-    fn for_file(&self) -> Variable {
+    pub(crate) fn for_file(&self) -> Variable {
         Variable {
             value: if self.private() {
                 None

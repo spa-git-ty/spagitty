@@ -1337,6 +1337,31 @@ body shows its type and size. An event stream is shown as it arrives.
 **Ask before sending**: an environment with it on holds each send in a bar
 in the environment's colour until the person says yes.
 
+**Keeping a value** (FEAT-161): in a formatted JSON or XML response, a
+value is a button. Clicking it opens the keep card inline under its line:
+the JSONPath or XPath, *as* (a name from the path: `$.data.accessToken` is
+`token`, `$.data.user.id` is `userId`), *in* (the active environment),
+*Update on every call*, *Cancel* and *Keep*. *Keep* puts the rule on the
+call and the value in the keychain; the value is then underlined in `--ok`
+with `→ name`, and clicking it again offers *Forget*. After every send, each
+*every call* rule is read again; a path that finds nothing keeps the old
+value and marks it stale. As received, values cannot be clicked, and the bar
+says so.
+
+**Environments** (`/calls/environments`, from *Manage* in the variables
+panel): the list with each environment's host and *in use*; one environment
+with its name, five colours, *Ask before sending*, *Duplicate* and *Delete*;
+its variables and the shared ones as tables of name, value, kind (Plain,
+Secret, Kept) and where each is kept; and *Kept from responses*, a card per
+kept value with a switch that freezes it. A secret is typed in as dots and
+shown only while the eye is held. A new environment named `production`, or
+red, asks before sending. Ctrl+E opens the picker from anywhere in Calls.
+
+**Secrets and kept values** are in the OS keychain, one entry per
+repository and environment, through `forge/keychain.rs`; the files hold only
+their names. Where each kept value came from, and whether it is stale, is in
+the data directory (`kept.json`).
+
 **Kept** in the repository, under `.spagitty/calls/`: collections as
 `<name>.json`, environments' plain values under `env/`, `shared.json`. In
 the data directory, per repository: the active environment, the open calls,

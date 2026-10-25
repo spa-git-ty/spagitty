@@ -16,6 +16,7 @@ import {
 	paramsOf,
 	removeCall,
 	statusTone,
+	suggestName,
 	tabCounts,
 	withParams
 } from './model';
@@ -116,6 +117,25 @@ describe('variables', () => {
 		const used = { ...call('a', 'A', 'GET', '{{baseUrl}}/{{id}}'), headers: [['X', '{{off}}', false]] as Call['headers'] };
 		expect(missingIn(used, env, shared, collection)).toEqual(['id']);
 		expect(missingIn(used, null, null, null)).toEqual(['baseUrl', 'id']);
+	});
+});
+
+describe('the name a kept value is offered', () => {
+	it('is the last key, as the proposal says', () => {
+		expect(suggestName('$.data.accessToken')).toBe('token');
+		expect(suggestName('$.data.user.id')).toBe('userId');
+		expect(suggestName('$.data.refreshToken')).toBe('refreshToken');
+		expect(suggestName('$.data.id')).toBe('id');
+		expect(suggestName("$['order-number']")).toBe('orderNumber');
+		expect(suggestName('$.items[0].sku')).toBe('sku');
+		expect(suggestName('$.access_token')).toBe('token');
+		expect(suggestName('$[0]')).toBe('value');
+	});
+
+	it('is the local name of an XPath’s last step', () => {
+		expect(suggestName('//inv:GetInvoiceResponse/inv:invoice/inv:total')).toBe('total');
+		expect(suggestName('//inv:invoice/@id')).toBe('invoiceId');
+		expect(suggestName('/r/line[2]')).toBe('line');
 	});
 });
 

@@ -35,11 +35,13 @@ use serde::{Deserialize, Serialize};
 use spagitty_core::calls::body::{self, Shape, Utf8Stream};
 use spagitty_core::calls::build::{self, Shown};
 use spagitty_core::calls::history::{Entry, History};
-use spagitty_core::calls::model::{new_id, Call, Collection, Environment, Shared};
+use spagitty_core::calls::keep::{self, Kept, KeptLog};
+use spagitty_core::calls::model::{new_id, Call, Collection, Environment, Shared, Variable};
 use spagitty_core::calls::send::{self, ClientCert, Failure};
 use spagitty_core::calls::settings::{effective, host_of, CallsSettings};
 use spagitty_core::calls::store::{Folder, Stored};
 use spagitty_core::calls::vars::scope_of;
+use spagitty_core::calls::vault::{self, Keychain};
 use spagitty_farm::assign::record::fnv;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
@@ -263,6 +265,11 @@ pub struct Done {
     /// What was sent, with secrets as their names.
     pub sent: Shown,
     pub history_id: Option<String>,
+    /// What the call's *every call* rules read (FEAT-161); a value of `None`
+    /// found nothing and is now stale.
+    pub kept: Vec<keep::Applied>,
+    /// Why what they read could not be kept.
+    pub kept_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -273,9 +280,20 @@ pub struct Chunk {
 }
 
 /// The values of an environment's secrets and kept values, from the
-/// keychain. FEAT-161 fills this.
-fn private_values(_repo: &Path, _environment: Option<&str>) -> HashMap<String, String> {
-    HashMap::new()
+/// keychain: `environment` is its stem, or `None` for the shared ones. Only
+/// asked when `vars` has something private, so a machine with no keychain
+/// still sends plain calls.
+fn private_values(
+    repo: &Path,
+    environment: Option<&str>,
+    vars: &[Variable],
+) -> Result<HashMap<String, String>> {
+    if !vars.iter().any(Variable::private) {
+        return Ok(HashMap::new());
+    }
+    vault::values(&Keychain, &repo_key(repo), environment)
+        .map(|values| values.into_iter().collect())
+        .map_err(|e| format!("the keychain could not be read: {e}"))
 }
 
 /// Build the call and start sending it. A variable with no value is an
@@ -305,8 +323,26 @@ pub fn calls_send<R: Runtime>(
         .and_then(|stem| folder.collection(stem).ok())
         .map(|collection| collection.vars)
         .unwrap_or_default();
-    let env_private = private_values(&repo, environment.as_ref().map(|env| env.name.as_str()));
-    let shared_private = private_values(&repo, None);
+    let env_stem = environment.as_ref().and(ask.environment.as_deref());
+    let env_private = private_values(
+        &repo,
+        env_stem,
+        environment
+            .as_ref()
+            .map(|env| env.vars.as_slice())
+            .unwrap_or(&[]),
+    )?;
+    let shared_private = private_values(&repo, None, &shared.vars)?;
+    // Where this send's kept values go, and which are switched off there.
+    let keep_in = env_stem.map(str::to_string);
+    let frozen: Vec<String> = environment
+        .as_ref()
+        .map(|env| &env.vars)
+        .unwrap_or(&shared.vars)
+        .iter()
+        .filter(|var| var.frozen)
+        .map(|var| var.name.clone())
+        .collect();
     let scope = scope_of(
         environment.as_ref().map(|env| (env, &env_private)),
         (&shared, &shared_private),
@@ -402,6 +438,8 @@ pub fn calls_send<R: Runtime>(
                 cancelled: true,
                 sent: built.shown.clone(),
                 history_id: None,
+                kept: Vec::new(),
+                kept_error: None,
             },
             Err(failure) => {
                 entry.error = Some(failure.to_string());
@@ -417,6 +455,8 @@ pub fn calls_send<R: Runtime>(
                     cancelled: false,
                     sent: built.shown.clone(),
                     history_id: kept.map(|entry| entry.id),
+                    kept: Vec::new(),
+                    kept_error: None,
                 }
             }
             Ok(incoming) => {
@@ -426,6 +466,16 @@ pub fn calls_send<R: Runtime>(
                     Shape::Binary => None,
                     _ => Some(String::from_utf8_lossy(&incoming.body).into_owned()),
                 };
+                let applied = match &text {
+                    Some(body) if !ask.call.keep.is_empty() => {
+                        keep::apply(&ask.call.keep, shape, body, |var| {
+                            frozen.iter().any(|name| name == var)
+                        })
+                    }
+                    _ => Vec::new(),
+                };
+                let kept_error =
+                    record_kept(&app, &repo, keep_in.as_deref(), &ask.call, &applied).err();
                 entry.status = Some(incoming.status);
                 entry.reason = incoming.reason.clone();
                 entry.millis = incoming.millis;
@@ -458,6 +508,8 @@ pub fn calls_send<R: Runtime>(
                     cancelled: false,
                     sent: built.shown.clone(),
                     history_id: kept.map(|entry| entry.id),
+                    kept: applied,
+                    kept_error,
                 }
             }
         };
@@ -492,6 +544,8 @@ pub fn calls_cancel<R: Runtime>(
             cancelled: true,
             sent: Shown::default(),
             history_id: None,
+            kept: Vec::new(),
+            kept_error: None,
         },
     );
     Ok(())
@@ -548,4 +602,413 @@ pub fn calls_history_clear<R: Runtime>(
     History::new(&data(&app, &repo)?.join("history"))
         .clear()
         .map_err(|e| e.to_string())
+}
+
+// --- Environments, secrets and kept values (FEAT-161) ----------------------
+
+/// The repository's key in the vault: the same hash as its data directory.
+fn repo_key(repo: &Path) -> String {
+    format!("{:016x}", fnv(repo.to_string_lossy().as_bytes()))
+}
+
+fn kept_log(dir: &Path) -> PathBuf {
+    dir.join("kept.json")
+}
+
+/// The environments and the shared variables, as the screen shows them.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Environments {
+    pub environments: Vec<Stored<Environment>>,
+    pub shared: Shared,
+    pub shared_error: Option<String>,
+}
+
+fn environments_of(folder: &Folder) -> Environments {
+    let (shared, shared_error) = match folder.shared() {
+        Ok(shared) => (shared, None),
+        Err(e) => (Shared::default(), Some(e.to_string())),
+    };
+    Environments {
+        environments: folder.environments(),
+        shared,
+        shared_error,
+    }
+}
+
+fn environment_named(folder: &Folder, stem: &str) -> Result<Environment> {
+    folder
+        .environments()
+        .into_iter()
+        .find(|stored| stored.stem == stem)
+        .and_then(|stored| stored.value)
+        .ok_or_else(|| format!("there is no environment {stem} that can be read"))
+}
+
+/// The variables of an environment, by stem, or the shared ones for `None`.
+fn vars_of(folder: &Folder, environment: Option<&str>) -> Result<Vec<Variable>> {
+    match environment {
+        Some(stem) => environment_named(folder, stem).map(|env| env.vars),
+        None => folder
+            .shared()
+            .map(|shared| shared.vars)
+            .map_err(|e| e.to_string()),
+    }
+}
+
+/// Change an environment's variables, or the shared ones, and write the file
+/// when `change` says it changed something.
+fn change_vars(
+    folder: &Folder,
+    environment: Option<&str>,
+    change: impl FnOnce(&mut Vec<Variable>) -> bool,
+) -> Result<()> {
+    match environment {
+        Some(stem) => {
+            let mut env = environment_named(folder, stem)?;
+            if change(&mut env.vars) {
+                folder
+                    .write_environment(&env, Some(stem))
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        None => {
+            let mut shared = folder.shared().map_err(|e| e.to_string())?;
+            if change(&mut shared.vars) {
+                folder.write_shared(&shared).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Declare `names` as kept in an environment's file, or `shared.json`.
+fn declare_kept(folder: &Folder, environment: Option<&str>, names: &[&str]) -> Result<()> {
+    change_vars(folder, environment, |vars| {
+        let mut changed = false;
+        for name in names {
+            changed |= keep::declare(vars, name);
+        }
+        changed
+    })
+}
+
+fn now_millis() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
+/// What a send did to the call's kept values: the values to the keychain,
+/// where they came from to the log, and their names to the file.
+fn record_kept<R: Runtime>(
+    app: &AppHandle<R>,
+    repo: &Path,
+    environment: Option<&str>,
+    call: &Call,
+    applied: &[keep::Applied],
+) -> Result<()> {
+    if applied.is_empty() {
+        return Ok(());
+    }
+    let found: Vec<(String, String)> = applied
+        .iter()
+        .filter_map(|done| done.value.clone().map(|value| (done.var.clone(), value)))
+        .collect();
+    vault::set_many(&Keychain, &repo_key(repo), environment, &found).map_err(|e| e.to_string())?;
+
+    let dir = data(app, repo)?;
+    let mut log = KeptLog::read(&kept_log(&dir));
+    let env = environment.unwrap_or(vault::SHARED);
+    let now = now_millis();
+    for done in applied {
+        if done.value.is_some() {
+            log.set(
+                env,
+                &done.var,
+                Kept {
+                    at: now,
+                    call_id: call.id.clone(),
+                    call: call.name.clone(),
+                    method: call.method().to_string(),
+                    from: done.from.clone(),
+                    stale: false,
+                },
+            );
+        } else {
+            log.stale(env, &done.var);
+        }
+    }
+    log.write(&kept_log(&dir)).map_err(|e| e.to_string())?;
+
+    let (folder, _, _) = place(app, repo)?;
+    let names: Vec<&str> = found.iter().map(|(name, _)| name.as_str()).collect();
+    declare_kept(&folder, environment, &names)
+}
+
+#[tauri::command(async)]
+pub fn calls_environments<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Environments> {
+    let repo = state
+        .open_path("calls_environments")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    Ok(environments_of(&folder))
+}
+
+/// Save an environment. `was` is its stem before a rename, and its values in
+/// the keychain move with it; `copyFrom` is the environment it duplicates,
+/// whose values it is given.
+#[tauri::command(async)]
+pub fn calls_save_environment<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    environment: Environment,
+    was: Option<String>,
+    copy_from: Option<String>,
+) -> Result<Environments> {
+    let repo = state
+        .open_path("calls_save_environment")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    folder
+        .write_environment(&environment, was.as_deref())
+        .map_err(|e| e.to_string())?;
+    let key = repo_key(&repo);
+    let dir = data(&app, &repo)?;
+    if let Some(old) = was.as_deref().filter(|old| *old != environment.name) {
+        vault::rename(&Keychain, &key, old, &environment.name).map_err(|e| e.to_string())?;
+        let mut log = KeptLog::read(&kept_log(&dir));
+        log.rename_environment(old, &environment.name);
+        log.write(&kept_log(&dir)).map_err(|e| e.to_string())?;
+    }
+    if let Some(from) = copy_from.as_deref() {
+        vault::copy(&Keychain, &key, from, &environment.name).map_err(|e| e.to_string())?;
+    }
+    Ok(environments_of(&folder))
+}
+
+/// Delete an environment's file, and its values from the keychain.
+#[tauri::command(async)]
+pub fn calls_delete_environment<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    stem: String,
+) -> Result<Environments> {
+    let repo = state
+        .open_path("calls_delete_environment")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    folder
+        .delete_environment(&stem)
+        .map_err(|e| e.to_string())?;
+    vault::drop_environment(&Keychain, &repo_key(&repo), &stem).map_err(|e| e.to_string())?;
+    let dir = data(&app, &repo)?;
+    let mut log = KeptLog::read(&kept_log(&dir));
+    log.drop_environment(&stem);
+    log.write(&kept_log(&dir)).map_err(|e| e.to_string())?;
+    Ok(environments_of(&folder))
+}
+
+#[tauri::command(async)]
+pub fn calls_save_shared<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    shared: Shared,
+) -> Result<Environments> {
+    let repo = state
+        .open_path("calls_save_shared")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    folder.write_shared(&shared).map_err(|e| e.to_string())?;
+    Ok(environments_of(&folder))
+}
+
+/// A kept value as the screen shows it: its value, in the clear, and where
+/// it came from.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeptView {
+    pub name: String,
+    pub value: Option<String>,
+    #[serde(flatten)]
+    pub kept: Kept,
+}
+
+/// An environment's private side. A secret's value is never in it, only
+/// whether it has one; *Reveal* asks for one value at a time.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Private {
+    pub kept: Vec<KeptView>,
+    /// The secrets that have a value in the keychain.
+    pub secrets: Vec<String>,
+}
+
+#[tauri::command(async)]
+pub fn calls_private<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    environment: Option<String>,
+) -> Result<Private> {
+    let repo = state
+        .open_path("calls_private")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    let vars = vars_of(&folder, environment.as_deref())?;
+    // An environment with nothing private never asks the keychain, so a
+    // machine with none still sends plain calls.
+    if !vars.iter().any(Variable::private) {
+        return Ok(Private {
+            kept: Vec::new(),
+            secrets: Vec::new(),
+        });
+    }
+    let values = vault::values(&Keychain, &repo_key(&repo), environment.as_deref())
+        .map_err(|e| e.to_string())?;
+    let log = KeptLog::read(&kept_log(&data(&app, &repo)?))
+        .environment(environment.as_deref().unwrap_or(vault::SHARED));
+    Ok(Private {
+        kept: vars
+            .iter()
+            .filter(|var| var.kept)
+            .map(|var| KeptView {
+                name: var.name.clone(),
+                value: values.get(&var.name).cloned(),
+                kept: log.get(&var.name).cloned().unwrap_or_default(),
+            })
+            .collect(),
+        secrets: vars
+            .iter()
+            .filter(|var| var.secret && values.contains_key(&var.name))
+            .map(|var| var.name.clone())
+            .collect(),
+    })
+}
+
+/// One secret's value, while the eye is held on Environments.
+#[tauri::command(async)]
+pub fn calls_reveal(
+    state: State<'_, AppState>,
+    environment: Option<String>,
+    name: String,
+) -> Result<Option<String>> {
+    let repo = state.open_path("calls_reveal").map_err(|e| e.to_string())?;
+    Ok(
+        vault::values(&Keychain, &repo_key(&repo), environment.as_deref())
+            .map_err(|e| e.to_string())?
+            .get(&name)
+            .cloned(),
+    )
+}
+
+/// Set a secret's value, or remove it with `None`.
+#[tauri::command(async)]
+pub fn calls_set_private(
+    state: State<'_, AppState>,
+    environment: Option<String>,
+    name: String,
+    value: Option<String>,
+) -> Result<()> {
+    let repo = state
+        .open_path("calls_set_private")
+        .map_err(|e| e.to_string())?;
+    vault::set(
+        &Keychain,
+        &repo_key(&repo),
+        environment.as_deref(),
+        &name,
+        value.as_deref(),
+    )
+    .map_err(|e| e.to_string())
+}
+
+/// A value the person clicked in a response, to keep.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeepAsk {
+    pub environment: Option<String>,
+    pub var: String,
+    pub value: String,
+    pub call_id: String,
+    pub call: String,
+    pub method: String,
+    pub from: String,
+}
+
+/// Keep a value: into the keychain, its name into the environment's file,
+/// and where it came from into the log. The rule itself is on the call,
+/// which the screen saves.
+#[tauri::command(async)]
+pub fn calls_keep<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    ask: KeepAsk,
+) -> Result<Environments> {
+    let repo = state.open_path("calls_keep").map_err(|e| e.to_string())?;
+    let var = ask.var.trim();
+    if var.is_empty() || var.contains(['{', '}']) || var.chars().any(char::is_whitespace) {
+        return Err(format!("{var:?} cannot be a variable's name"));
+    }
+    let (folder, _, _) = place(&app, &repo)?;
+    vault::set(
+        &Keychain,
+        &repo_key(&repo),
+        ask.environment.as_deref(),
+        var,
+        Some(&ask.value),
+    )
+    .map_err(|e| e.to_string())?;
+    let dir = data(&app, &repo)?;
+    let mut log = KeptLog::read(&kept_log(&dir));
+    log.set(
+        ask.environment.as_deref().unwrap_or(vault::SHARED),
+        var,
+        Kept {
+            at: now_millis(),
+            call_id: ask.call_id.clone(),
+            call: ask.call.clone(),
+            method: ask.method.clone(),
+            from: ask.from.clone(),
+            stale: false,
+        },
+    );
+    log.write(&kept_log(&dir)).map_err(|e| e.to_string())?;
+    declare_kept(&folder, ask.environment.as_deref(), &[var])?;
+    Ok(environments_of(&folder))
+}
+
+/// Forget a kept value: from the keychain, the log and the file.
+#[tauri::command(async)]
+pub fn calls_forget_kept<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    environment: Option<String>,
+    name: String,
+) -> Result<Environments> {
+    let repo = state
+        .open_path("calls_forget_kept")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    vault::set(
+        &Keychain,
+        &repo_key(&repo),
+        environment.as_deref(),
+        &name,
+        None,
+    )
+    .map_err(|e| e.to_string())?;
+    let dir = data(&app, &repo)?;
+    let mut log = KeptLog::read(&kept_log(&dir));
+    log.forget(environment.as_deref().unwrap_or(vault::SHARED), &name);
+    log.write(&kept_log(&dir)).map_err(|e| e.to_string())?;
+    change_vars(&folder, environment.as_deref(), |vars| {
+        let before = vars.len();
+        vars.retain(|var| !(var.kept && var.name == name));
+        vars.len() != before
+    })?;
+    Ok(environments_of(&folder))
 }

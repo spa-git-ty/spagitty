@@ -205,6 +205,42 @@ export interface Done {
 	cancelled: boolean;
 	sent: Shown;
 	historyId: string | null;
+	/** What the call's *every call* rules read; `value: null` found nothing (FEAT-161). */
+	kept: Applied[];
+	keptError: string | null;
+}
+
+export interface Applied {
+	var: string;
+	value: string | null;
+	from: string;
+}
+
+/** Where a kept value came from (`calls::keep::Kept`). */
+export interface Kept {
+	at: number;
+	callId: string;
+	call: string;
+	method: string;
+	from: string;
+	stale: boolean;
+}
+
+export interface KeptView extends Kept {
+	name: string;
+	value: string | null;
+}
+
+/** An environment's private side: kept values in the clear, and which secrets have a value. */
+export interface Private {
+	kept: KeptView[];
+	secrets: string[];
+}
+
+export interface Environments {
+	environments: Stored<Environment>[];
+	shared: Shared;
+	sharedError: string | null;
 }
 
 export interface Chunk {

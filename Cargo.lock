@@ -5020,6 +5020,7 @@ dependencies = [
  "gix",
  "jsonschema",
  "keyring",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",

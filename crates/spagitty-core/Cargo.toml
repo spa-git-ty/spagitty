@@ -39,6 +39,10 @@ yaml-rust2 = { version = "=0.10.4", default-features = false }
 jsonschema = { version = "=0.19.1", default-features = false }
 # Bounded, linear-time GitLab rule expressions. MIT OR Apache-2.0.
 regex = "1.10"
+# Calls (FEAT-161, FEAT-163): reading an XPath out of an XML or SOAP response,
+# and a WSDL. Already in the tree through Tauri, at this version, so it adds no
+# crate to the build. MIT.
+quick-xml = "0.41"
 # The one HTTP client in the application (FEAT-017). MIT OR Apache-2.0.
 #
 # Blocking, which is what this crate already is — gix and shell are both

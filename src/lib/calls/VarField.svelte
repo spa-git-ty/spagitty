@@ -61,7 +61,11 @@
 		if (found.from === 'builtin') return `{{${name}}}: ${BUILTIN_NOTES[name as keyof typeof BUILTIN_NOTES]}`;
 		const variable = found.variable;
 		if (variable?.secret) return `{{${name}}} = •••••••• (secret, ${found.from})`;
-		if (variable?.kept) return `{{${name}}} is kept from a response (${found.from})`;
+		if (variable?.kept) {
+			return variable.value
+				? `{{${name}}} = ${variable.value} (kept from a response, ${found.from})`
+				: `{{${name}}} is kept from a response, and has no value yet (${found.from})`;
+		}
 		return `{{${name}}} = ${variable?.value ?? ''} (${found.from})`;
 	}
 
