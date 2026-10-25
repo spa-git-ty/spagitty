@@ -1278,6 +1278,8 @@ describe('NavRail', () => {
 			'Review',
 			// FEAT-133.
 			'Recipes',
+			// FEAT-160.
+			'Calls',
 			'Issues',
 			'Hooks',
 			'Pipelines',

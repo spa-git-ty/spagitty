@@ -59,10 +59,14 @@ export type CountKey = keyof RepoCounts;
  *
  * 2B is Untrack (FEAT-155): files and folders a branch should stop tracking,
  * in a commit, pushed. A tool, after the Reflog.
+ *
+ * 2C is Calls (FEAT-160): REST and SOAP requests kept in the repository
+ * beside the code they exercise, after Recipes.
  */
 export type ScreenCode =
 	| '2A'
 	| '2B'
+	| '2C'
 	| '1A'
 	| '1B'
 	| '1C'
@@ -230,6 +234,8 @@ export const NAV_ITEMS: NavItem[] = [
 	{ code: '1R', label: 'Review', href: '/review', group: 'work', icon: 'review' },
 	// FEAT-133. Git steps in blocks, run a step at a time.
 	{ code: '1V', label: 'Recipes', href: '/recipes', group: 'work', icon: 'recipes', since: '3.0' },
+	// FEAT-160. Requests to the service, kept beside its code.
+	{ code: '2C', label: 'Calls', href: '/calls', group: 'work', icon: 'calls', since: '4.0' },
 	// FEAT-136 to FEAT-139, after Recipes as the artboards drew them. They are
 	// about the open repository, so they are in its group rather than a fifth
 	// group of their own that lengthened the rail (2026-10-18).

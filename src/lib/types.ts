@@ -1485,9 +1485,11 @@ export interface Settings {
 	terminalMultiplexer: boolean;
 	/** Give the multiplexer's bars and borders the theme's colours (FEAT-157). */
 	terminalColours: boolean;
+	/** Settings › Calls (FEAT-160, FEAT-165); a repository can override some. */
+	calls?: import('./calls/types').CallsSettings;
 }
 
-// --- Terminal (FEAT-130) ---------------------------------------------------
+// --- Terminal (FEAT-130)---------------------------------------------------
 
 /** The multiplexer in use. Mirrors `terminal::MuxInfo`. */
 export interface TerminalMux {

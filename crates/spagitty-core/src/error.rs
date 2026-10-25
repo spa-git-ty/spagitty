@@ -71,6 +71,11 @@ pub enum Error {
     #[error("{0}")]
     Untrack(String),
 
+    /// Calls (FEAT-160): a collection, an environment or a setting that
+    /// could not be read or written. The sentence names the file.
+    #[error("{0}")]
+    Calls(String),
+
     /// The screen is showing something the repository no longer has. Raised
     /// rather than applying a stale patch, which would half-stage a file.
     #[error("{0} changed since it was read; reload and try again")]

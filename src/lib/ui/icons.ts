@@ -83,6 +83,7 @@ export type IconName =
 	| 'files'
 	| 'investigate'
 	| 'recipes'
+	| 'calls'
 	| 'hooks'
 	| 'issues'
 	| 'pipelines'
@@ -230,6 +231,8 @@ export const ICONS: Record<IconName, string[]> = {
 	'split-down': ['M4 5h16v14H4z', 'M4 12h16'],
 	// Three blocks, stacked: a recipe is steps in order.
 	recipes: ['M4 4h10v5H4z', 'M4 9.5h14v5H4z', 'M4 15h8v5H4z'],
+	// Two opposed arrows: a request out, its answer back (FEAT-160).
+	calls: ['M4 7.5h12', 'M12.5 4l3.5 3.5-3.5 3.5', 'M20 16.5H8', 'M11.5 13 8 16.5l3.5 3.5'],
 	// The Hooks artboard's mark, at the shared stroke weight.
 	hooks: ['M14 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', 'M14 7.5V15a4.5 4.5 0 0 1-9 0v-2.5', 'M3 14.5l2-2 2 2'],
 	releases: ['M12 3 3.5 7.5v9L12 21l8.5-4.5v-9L12 3z', 'm3.5 7.5 8.5 4.5 8.5-4.5', 'M12 12v9', 'm7.5 5.4 8.5 4.5'],

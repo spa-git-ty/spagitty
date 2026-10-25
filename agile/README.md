@@ -213,12 +213,14 @@ rather than an audit.
 | [FEAT-157](items/FEAT-157-close-a-terminal-session-and-give-tmux-our-colours.md) | Close a terminal session, and give tmux Spagitty's colours | 1T | Done |
 | [FEAT-158](items/FEAT-158-type-to-search-any-list.md) | Type to search any list | every screen with a list | Done |
 | [FEAT-159](items/FEAT-159-clear-all-notifications.md) | Clear all notifications | the notification drawer | Done |
-| [FEAT-160](items/FEAT-160-calls-send-a-rest-call-and-keep-the-collection-in-the-repository.md) | Calls: send a REST call and keep the collection in the repository | 2C | Backlog |
+| [FEAT-160](items/FEAT-160-calls-send-a-rest-call-and-keep-the-collection-in-the-repository.md) | Calls: send a REST call and keep the collection in the repository | 2C | Open |
 | [FEAT-161](items/FEAT-161-environments-secrets-and-values-kept-from-responses.md) | Environments, secrets and values kept from responses | 2C | Backlog |
 | [FEAT-162](items/FEAT-162-import-calls-from-code-and-from-collection-files.md) | Import calls from code and from collection files | 2C | Backlog |
 | [FEAT-163](items/FEAT-163-soap-calls-from-a-wsdl.md) | SOAP calls from a WSDL | 2C | Backlog |
 | [FEAT-164](items/FEAT-164-share-a-collection-as-a-file-a-zip-or-a-commit.md) | Share a collection as a file, a zip or a commit | 2C | Backlog |
 | [FEAT-165](items/FEAT-165-settings-calls.md) | Settings › Calls | 1K | Backlog |
+| [FEAT-166](items/FEAT-166-copy-a-call-as-curl-and-paste-one-in.md) | Copy a call as cURL, and paste one in | 2C | Backlog |
+| [FEAT-167](items/FEAT-167-signed-ws-security.md) | Signed WS-Security for SOAP calls | 2C, 1K | Backlog |
 
 ## Bugs
 

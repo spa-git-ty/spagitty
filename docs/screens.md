@@ -39,6 +39,7 @@ defect.
 | 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
 | 1Y | Pipelines | `/pipelines/preview`, `/pipelines/live` | yes | Built | FEAT-138 |
 | 1Z | Releases | `/releases` | yes | Built | FEAT-139 |
+| 2C | Calls | `/calls` | yes | Built | FEAT-160 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -1298,6 +1299,49 @@ record. Nothing is written under `.spagitty/` in the repository.
 **Keys** are in `keys.ts`: a block's letter adds it, `j` `k` walk the stack,
 Alt with the arrows reorders, Delete removes, Ctrl+Enter runs, Ctrl+Z takes
 an edit back. None fires while a field has the focus.
+
+## 2C — Calls
+
+**Built.** `src/routes/calls/+page.svelte`, `src/lib/calls/`,
+`src-tauri/src/calls.rs`, `crates/spagitty-core/src/calls/` (FEAT-160). The
+proposal is `docs/proposals/calls.md`; the designs are `design_handoff_calls/`.
+
+REST requests saved beside the code they exercise. On the rail after
+Recipes.
+
+**The layout**: the header has a chip for each open call (method and name,
+✕; a middle-click or Ctrl+W closes one too), `+` for a new call, and the
+environment picker. Collections are on the left with a filter (Ctrl+K) and
+*History* at the foot; the request is above its response in the middle; the
+variables are on the right.
+
+**The request**: method, URL and *Send* (Ctrl+Enter, or Enter in the URL),
+which reads *Cancel* while it waits. Tabs *Params* (the URL's query as
+rows), *Headers*, *Body* (JSON, XML, form, multipart, raw or none), *Auth*
+(none, bearer, basic, API key) and *Keep*. A tab shows a count when it holds
+something. The call's name is edited above the URL.
+
+**Variables**: `{{name}}` is drawn as a pill in every field, in `--danger`
+when nothing defines it, and hovering says what it holds (dots for a
+secret). Typing `{{` offers the names. A name is looked up in the active
+environment, then the variables every environment shares, then the
+collection's own. The built-ins are `$timestamp`, `$isoNow`, `$uuid` and
+`$randomInt`. *Send* with an unknown name sends nothing and says which.
+
+**The response**: status with a dot, time and size; *Body*, *Headers* and
+*Cookies* (shown when there are any); *Copy* and *Save as…*, which give the
+bytes that arrived; *Beautify* for JSON and XML, on by default, display
+only. Over 2 MB a body is shown without colour; it is cut at 50 MB. A binary
+body shows its type and size. An event stream is shown as it arrives.
+
+**Ask before sending**: an environment with it on holds each send in a bar
+in the environment's colour until the person says yes.
+
+**Kept** in the repository, under `.spagitty/calls/`: collections as
+`<name>.json`, environments' plain values under `env/`, `shared.json`. In
+the data directory, per repository: the active environment, the open calls,
+what is collapsed, the filter, and the history (the request as resolved,
+with secrets as their names, and the response up to 1 MB).
 
 ## 1Y — Pipelines
 

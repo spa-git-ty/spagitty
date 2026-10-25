@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+### Added
+
+- **Calls (2C)**, a new screen after Recipes: send a REST request to the service you are working on and keep it, in a collection, in the repository under `.spagitty/calls/`. Requests are made by Spagitty itself, never by the window. Open calls are chips; `{{variables}}` are pills that say what they hold, and an unknown one stops *Send* and says which. JSON and XML responses are formatted, an event stream is shown as it arrives, and each send is kept in a history on this computer (FEAT-160).
+
 ## [3.10.1] - 2026-10-25
 
 ### Security

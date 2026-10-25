@@ -9,6 +9,7 @@
 mod about;
 mod accounts;
 mod agents;
+mod calls;
 mod clone_worker;
 mod command_log;
 mod commands;
@@ -173,6 +174,16 @@ pub fn run() {
             terminal::terminal_windows,
             terminal::terminal_act,
             terminal::terminal_style,
+            calls::calls_load,
+            calls::calls_save_collection,
+            calls::calls_delete_collection,
+            calls::calls_save_state,
+            calls::calls_send,
+            calls::calls_cancel,
+            calls::calls_save_body,
+            calls::calls_history,
+            calls::calls_history_body,
+            calls::calls_history_clear,
             recipes::recipes_list,
             recipes::recipes_save,
             recipes::recipes_delete,
@@ -428,6 +439,7 @@ pub fn run() {
 
             // Recipes' runs. Nothing runs until one is run.
             recipes::manage(app.handle());
+            calls::manage(app.handle());
             Ok(())
         })
         .build(tauri::generate_context!())

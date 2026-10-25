@@ -25,6 +25,7 @@ pub mod attribution;
 pub mod avatars;
 pub mod blame;
 pub mod branches;
+pub mod calls;
 pub mod clone;
 pub mod compare;
 pub mod conflicts;

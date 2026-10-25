@@ -369,12 +369,14 @@ describe('the promises this screen makes', () => {
 		}
 	});
 
-	it('makes its requests from exactly two files: the forge and the model providers', () => {
+	it('makes its requests from exactly three files: the forge, the model providers and Calls', () => {
 		// The same argument `shell.rs` makes about spawning a process: one call
 		// site means "what does this send, and where" has one answer somebody
 		// can read in an afternoon. 2.0 widened it by exactly one module, for
 		// model providers reached with the person's own key, and named it here
-		// rather than relaxing the rule. A third would have to be added here.
+		// rather than relaxing the rule. 4.0 widened it by one more, for the
+		// requests a person sends from Calls (FEAT-160), which the author
+		// accepted on 2026-10-25. A fourth would have to be added here.
 		const core = join(process.cwd(), 'crates/spagitty-core/src');
 		const rust: string[] = [];
 		const walk = (dir: string) => {
@@ -389,6 +391,7 @@ describe('the promises this screen makes', () => {
 		const touching = rust.filter((path) => /\bureq\b/.test(readFileSync(path, 'utf8')));
 
 		expect(touching.map((path) => relative(core, path).split(sep).join('/')).sort()).toEqual([
+			'calls/send.rs',
 			'forge/http.rs',
 			'models/http.rs'
 		]);

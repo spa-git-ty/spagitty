@@ -118,6 +118,8 @@ describe('NAV_ITEMS', () => {
 			'/review',
 			// FEAT-133. Git steps in blocks.
 			'/recipes',
+			// FEAT-160. Calls, after Recipes.
+			'/calls',
 			'/issues',
 			'/hooks',
 			'/pipelines',
@@ -253,6 +255,7 @@ describe('isShown', () => {
 			'/requests',
 			'/review',
 			'/recipes',
+			'/calls',
 			'/issues',
 			'/hooks',
 			'/pipelines',

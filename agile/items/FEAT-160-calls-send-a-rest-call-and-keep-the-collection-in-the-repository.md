@@ -2,7 +2,8 @@
 
 # FEAT-160 — Calls: send a REST call and keep the collection in the repository
 
-**Status:** Backlog — waits for the author's answer to the proposal's question 1 (the network boundary).
+**Status:** Open — built on `feature/FEAT-160-calls`, for release 4.0.0; the author accepted the network boundary on 2026-10-25 (see the plan). Covered by Rust tests in `calls/` and `src-tauri/src/calls.rs`, and by `src/lib/calls/*.test.ts` (helpers, model and the screen); not yet looked at in the running application.
+**Branch:** `feature/FEAT-160-calls`.
 **Screens:** 2C (Calls, new, at `/calls`), chrome (a rail row).
 **Raised by:** the author, 2026-10-25: a tab with the idea of Postman, not Postman: a simple screen, easy to use and not cluttered.
 **Proposal:** [`docs/proposals/calls.md`](../../docs/proposals/calls.md) §5 and §10. **Designs:** [`design_handoff_calls/`](../../design_handoff_calls/) — `Main.dc.html`.
