@@ -674,7 +674,7 @@ and never the directory.
 **Built.** `src/routes/settings/+page.svelte`, `src/lib/settings/`.
 
 Sections behind a chip index — You, Remotes, External Tools, Behaviour,
-Personality, God mode, Appearance, Rail, License — because these are read rarely and
+Calls, Personality, God mode, Appearance, Rail, License — because these are read rarely and
 changed rarely, and one route that says which part of itself is showing is
 easier to link to than eight rail entries. The section is in the URL fragment,
 so `/settings#accounts` lands where the Pull requests screen points.
@@ -694,6 +694,16 @@ the version, the build, the project's licence and its dependencies' licences, so
 the name described nothing it contained. `#advanced` is still accepted as a
 fragment and selects the renamed section, because a link written before the
 rename doing nothing at all is worse than one that is merely out of date.
+
+**Calls** (FEAT-165) holds every setting Calls (2C) reads, in six groups:
+where calls live, scanning code, kept values, sending, SOAP, and safety and
+sharing. A repository overrides any of them in its calls folder's
+`settings.json`, and a setting the open repository overrides says so.
+*Reset* puts the section back to what a new install has, which the backend
+answers (`calls_default_settings`). Frameworks no reader exists for are not
+shown, and *Leave secrets out when sharing* is drawn as *Always*, locked.
+`calls/settings-readers.test.ts` fails if a setting is not read by the code
+it names, or is still unread once the item it waits on is Done.
 
 **Rail** (FEAT-134) chooses what is on the nav rail. Every screen has a row, in
 its group, and is pinned or hidden; hidden screens go under the rail's More

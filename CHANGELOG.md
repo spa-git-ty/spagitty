@@ -18,6 +18,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 - **Calls (2C)**, a new screen after Recipes: send a REST request to the service you are working on and keep it, in a collection, in the repository under `.spagitty/calls/`. Requests are made by Spagitty itself, never by the window. Open calls are chips; `{{variables}}` are pills that say what they hold, and an unknown one stops *Send* and says which. JSON and XML responses are formatted, an event stream is shown as it arrives, and each send is kept in a history on this computer (FEAT-160).
 - **Environments, secrets and kept values** in Calls. Click any value in a JSON or XML response to keep it as a variable, once or after every call, so a login's token reaches every later call without a script. Environments have a colour, *Ask before sending*, plain values in the repository, and secrets and kept values in this computer's keychain, never in a file. Switch with Ctrl+E (FEAT-161).
+- **Settings › Calls**, after Behaviour: where calls live, timeouts, redirects, TLS checks, a proxy, client certificates for mutual TLS by host, the header on every call, history and more. A repository can override any of them in `.spagitty/calls/settings.json`, and Settings says which (FEAT-165).
 
 ## [3.10.1] - 2026-10-25
 

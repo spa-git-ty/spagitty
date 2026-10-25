@@ -2,7 +2,8 @@
 
 # FEAT-165 — Settings › Calls
 
-**Status:** Backlog — after FEAT-161.
+**Status:** Open — built on `feature/FEAT-165-settings-calls`, stacked on FEAT-161, for release 4.0.0. Covered by `settings/calls-section.test.ts` and `calls/settings-readers.test.ts`. The settings for Import, SOAP and Share are stored and shown, and are read once FEAT-162, FEAT-163 and FEAT-164 are built; the readers test holds them to that. Not yet looked at in the running application.
+**Branch:** `feature/FEAT-165-settings-calls`.
 **Screens:** 1K (Settings › Calls, a new section).
 **Raised by:** the author, 2026-10-25: make it easy to configure; put whatever settings Calls can have in Settings.
 **Proposal:** [`docs/proposals/calls.md`](../../docs/proposals/calls.md) §9. **Designs:** [`design_handoff_calls/`](../../design_handoff_calls/) — `SettingsCalls.dc.html`.

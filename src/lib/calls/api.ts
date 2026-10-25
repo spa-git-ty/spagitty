@@ -11,6 +11,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
 	Call,
+	CallsSettings,
 	Collection,
 	Environment,
 	Environments,
@@ -70,6 +71,18 @@ export function historyBody(id: string): Promise<string | null> {
 
 export function clearHistory(): Promise<void> {
 	return invoke('calls_history_clear');
+}
+
+// --- Settings › Calls (FEAT-165) ---
+
+/** Settings › Calls as a new install has them: what *Reset* goes back to. */
+export function defaultSettings(): Promise<CallsSettings> {
+	return invoke('calls_default_settings');
+}
+
+/** The keys the open repository's `settings.json` overrides. */
+export function overridden(): Promise<string[]> {
+	return invoke('calls_overridden');
 }
 
 // --- Environments, secrets and kept values (FEAT-161) ---

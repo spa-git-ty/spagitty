@@ -1012,3 +1012,25 @@ pub fn calls_forget_kept<R: Runtime>(
     })?;
     Ok(environments_of(&folder))
 }
+
+// --- Settings › Calls (FEAT-165) --------------------------------------------
+
+/// Settings › Calls as a new install has them: what *Reset* goes back to.
+#[tauri::command]
+pub fn calls_default_settings() -> CallsSettings {
+    CallsSettings::default()
+}
+
+/// The settings the open repository's `settings.json` overrides, by key.
+/// None when no repository is open.
+#[tauri::command(async)]
+pub fn calls_overridden<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>> {
+    let Ok(repo) = state.open_path("calls_overridden") else {
+        return Ok(Vec::new());
+    };
+    let (_, _, overridden) = place(&app, &repo)?;
+    Ok(overridden)
+}

@@ -193,6 +193,8 @@ pub fn run() {
             calls::calls_set_private,
             calls::calls_keep,
             calls::calls_forget_kept,
+            calls::calls_default_settings,
+            calls::calls_overridden,
             recipes::recipes_list,
             recipes::recipes_save,
             recipes::recipes_delete,

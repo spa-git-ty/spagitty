@@ -37,6 +37,7 @@ export type Section =
 	| 'tools'
 	| 'extensions'
 	| 'behaviour'
+	| 'calls'
 	| 'notifications'
 	| 'personality'
 	| 'godmode'
@@ -64,6 +65,8 @@ export const SECTIONS: { id: Section; label: string }[] = [
 	{ id: 'tools', label: 'External Tools' },
 	{ id: 'extensions', label: 'Extensions' },
 	{ id: 'behaviour', label: 'Behaviour' },
+	// After Behaviour: what Calls does when it sends (FEAT-165).
+	{ id: 'calls', label: 'Calls' },
 	{ id: 'notifications', label: 'Notifications' },
 	{ id: 'personality', label: 'Personality' },
 	{ id: 'godmode', label: 'God mode' },

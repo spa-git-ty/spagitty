@@ -10,6 +10,7 @@
 	import HomeSection from '$lib/settings/HomeSection.svelte';
 	import ReadingSection from '$lib/settings/ReadingSection.svelte';
 	import BehaviourSection from '$lib/settings/BehaviourSection.svelte';
+	import CallsSection from '$lib/settings/CallsSection.svelte';
 	import IdentitySection from '$lib/settings/IdentitySection.svelte';
 	import GodModeSection from '$lib/settings/GodModeSection.svelte';
 	import NotificationsSection from '$lib/settings/NotificationsSection.svelte';
@@ -113,6 +114,8 @@
 		{:else if settings.section === 'behaviour'}
 			<BehaviourSection />
 			<UpdateSection />
+		{:else if settings.section === 'calls'}
+			<CallsSection />
 		{:else if settings.section === 'notifications'}
 			<NotificationsSection />
 		{:else if settings.section === 'personality'}
