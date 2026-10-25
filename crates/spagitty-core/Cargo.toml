@@ -43,6 +43,10 @@ regex = "1.10"
 # and a WSDL. Already in the tree through Tauri, at this version, so it adds no
 # crate to the build. MIT.
 quick-xml = "0.41"
+# Calls' Share (FEAT-164): a zip's files deflated, and their CRC-32. Already
+# in the tree through ureq's gzip, at this version, so it adds no crate to the
+# build. MIT OR Apache-2.0.
+flate2 = "1.1"
 # The one HTTP client in the application (FEAT-017). MIT OR Apache-2.0.
 #
 # Blocking, which is what this crate already is — gix and shell are both

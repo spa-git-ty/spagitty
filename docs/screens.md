@@ -1400,6 +1400,17 @@ reads WSDL 1.1 files in the repository (following the XSDs they include),
 a WSDL from a URL, and JAX-WS and Spring-WS services in the code; a WSDL's
 operation is preferred to the code behind it.
 
+**Share** (FEAT-164, from the header): one collection as *One file*
+(Spagitty, or Postman 2.1 with keep rules as `pm.environment.set` lines and
+SOAP calls as raw POSTs), a *Zip bundle* (`collection.json`, `env/`,
+`examples/` from the last response of each call, `history.json` if chosen,
+and a `README.md` listing what to fill in), or *Commit to the repository*
+(only the files listed, on the current branch, as *Calls: update <name>*;
+never pushed, and refused while something else is staged). The preview
+lists every file and its size; secrets and kept values go in empty in every
+format. The way it starts with is Settings' *Share as*. Import reads the zip
+back.
+
 **Secrets and kept values** are in the OS keychain, one entry per
 repository and environment, through `forge/keychain.rs`; the files hold only
 their names. Where each kept value came from, and whether it is stale, is in

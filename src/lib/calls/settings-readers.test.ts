@@ -45,7 +45,7 @@ const READERS: Record<string, Reader> = {
 	wsSecurity: { file: APP, reads: /settings\.ws_security/ },
 	faultAsError: { file: APP, reads: /settings\.fault_as_error/ },
 	history: { file: APP, reads: /settings\.history/ },
-	shareAs: { pending: 'FEAT-164' }
+	shareAs: { file: SCREEN, reads: /settings\?\.shareAs/ }
 };
 
 /** The fields of `CallsSettings`, from the Rust struct, in camelCase. */

@@ -13,6 +13,7 @@
 	import { importer } from './import.svelte';
 	import { envColour, findCall, lookup, methodColour, methodOf } from './model';
 	import RequestEditor from './RequestEditor.svelte';
+	import ShareDialog from './ShareDialog.svelte';
 	import SoapEditor from './SoapEditor.svelte';
 	import ResponseView from './ResponseView.svelte';
 	import { calls, keyOf } from './store.svelte';
@@ -79,6 +80,8 @@
 	};
 
 	let envButton = $state<HTMLButtonElement | null>(null);
+	/** FEAT-164: the Share dialog is open. */
+	let sharing = $state(false);
 
 	const envItems = $derived<MenuItem[]>([
 		...calls.environments.map((stored) => ({
@@ -213,6 +216,13 @@
 				title="Bring calls in from the code, or from a Postman, Insomnia, Bruno, OpenAPI, .http, HAR or cURL file"
 				onclick={() => goto('/calls/import')}>Import</button
 			>
+			<button
+				type="button"
+				class="env"
+				title="A collection as one file, a zip, or a commit; secrets stay here"
+				disabled={!calls.collections.some((stored) => stored.value)}
+				onclick={() => (sharing = true)}>Share</button
+			>
 		</header>
 
 		{#if calls.error}
@@ -340,6 +350,16 @@
 			/>
 		</div>
 	</div>
+{/if}
+
+{#if sharing}
+	<ShareDialog
+		collections={calls.collections}
+		environments={calls.environments}
+		stem={current && !current.opened.stem.startsWith('found:') ? current.opened.stem : null}
+		shareAs={calls.settings?.shareAs ?? 'zip'}
+		onclose={() => (sharing = false)}
+	/>
 {/if}
 
 {#if envMenu}

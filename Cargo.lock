@@ -5017,6 +5017,7 @@ dependencies = [
 name = "spagitty-core"
 version = "3.10.1"
 dependencies = [
+ "flate2",
  "gix",
  "jsonschema",
  "keyring",

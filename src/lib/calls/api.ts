@@ -22,7 +22,9 @@ import type {
 	Loaded,
 	PersonState,
 	Private,
+	ShareAsk,
 	Shared,
+	SharePlan,
 	WsdlView
 } from './types';
 
@@ -211,4 +213,16 @@ export function bringIn(ask: {
 	serverAddress: boolean;
 }): Promise<BroughtIn> {
 	return invoke('calls_bring_in', { ask });
+}
+
+// --- Share (FEAT-164) ---
+
+/** What a share would write, with sizes. */
+export function sharePlan(ask: ShareAsk): Promise<SharePlan> {
+	return invoke('calls_share_plan', { ask });
+}
+
+/** Write the file or zip to `ask.path`, or commit; answers with the path or the commit's id. */
+export function share(ask: ShareAsk): Promise<string> {
+	return invoke('calls_share', { ask });
 }

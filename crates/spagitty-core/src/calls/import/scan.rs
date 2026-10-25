@@ -491,6 +491,17 @@ fn spagitty(path: &str, value: &Value, found: &mut Found) -> bool {
 /// One file chosen from outside the repository, whatever it is.
 pub fn read_file(path: &Path, soap: &SoapChoices) -> Result<Found> {
     let name = path.to_string_lossy().replace('\\', "/");
+    // A zip is not text: it is read before anything else is.
+    if name.to_ascii_lowercase().ends_with(".zip") {
+        let bytes = std::fs::read(path)
+            .map_err(|e| Error::Calls(format!("{name} could not be read: {e}")))?;
+        let (collection, environments) = super::super::share::unzip(&bytes)?;
+        let value = serde_json::to_value(&collection).map_err(|e| Error::Calls(e.to_string()))?;
+        let mut found = Found::default();
+        spagitty(&name, &value, &mut found);
+        found.environments = environments;
+        return Ok(found);
+    }
     let text = std::fs::read_to_string(path)
         .map_err(|e| Error::Calls(format!("{name} could not be read: {e}")))?;
     let lower = name.to_ascii_lowercase();
@@ -758,6 +769,21 @@ mod tests {
             read_file(&curl, &SoapChoices::default()).unwrap().endpoints[0].method,
             "POST"
         );
+
+        let mut env = crate::calls::model::Environment::new("staging", Default::default());
+        env.vars
+            .push(crate::calls::model::Variable::plain("baseUrl", "https://s"));
+        let shared: crate::calls::model::Collection =
+            serde_json::from_str(&std::fs::read_to_string(&collection).unwrap()).unwrap();
+        let zip =
+            crate::calls::share::zipped(&crate::calls::share::bundle(&shared, &[env], &[], None))
+                .unwrap();
+        let zip_path = dir.path().join("orders-api.zip");
+        std::fs::write(&zip_path, zip).unwrap();
+        let unzipped = read_file(&zip_path, &SoapChoices::default()).unwrap();
+        assert_eq!(unzipped.sources[0].kind, SourceKind::Spagitty);
+        assert_eq!(unzipped.endpoints.len(), 1);
+        assert_eq!(unzipped.environments[0].name, "staging");
 
         let junk = write("notes.txt", "hello");
         assert!(read_file(&junk, &SoapChoices::default()).is_err());

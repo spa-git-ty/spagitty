@@ -43,6 +43,7 @@ use spagitty_core::calls::model::{new_id, Call, Collection, Environment, Shared,
 use spagitty_core::calls::model::{random_u64, Kind, WsMode};
 use spagitty_core::calls::send::{self, ClientCert, Failure};
 use spagitty_core::calls::settings::{effective, host_of, CallsSettings};
+use spagitty_core::calls::share;
 use spagitty_core::calls::soap::security::{self, Password};
 use spagitty_core::calls::soap::{self, wsdl as soap_wsdl, Version};
 use spagitty_core::calls::store::{Folder, Stored};
@@ -1662,4 +1663,220 @@ pub fn calls_import_wsdl_url<R: Runtime>(
     found.endpoints = endpoints;
     found.base_url = server;
     add_found(&app, &repo, found)
+}
+
+// --- Share (FEAT-164) --------------------------------------------------------
+
+/// What *Share* was asked to do.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareAsk {
+    pub stem: String,
+    /// `spagitty` or `postman` (one file), `zip`, or `commit`.
+    pub format: String,
+    /// The environments that go in, by stem.
+    #[serde(default)]
+    pub environments: Vec<String>,
+    /// The last response of each call, as an example.
+    #[serde(default)]
+    pub examples: bool,
+    /// This collection's history (a zip only).
+    #[serde(default)]
+    pub history: bool,
+    /// Where a file or zip is written.
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedFile {
+    pub path: String,
+    pub size: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharePlan {
+    pub files: Vec<SharedFile>,
+    /// The one file written: the zip's size, or the file's.
+    pub total: u64,
+}
+
+/// The newest response of each of the collection's calls, from history.
+fn examples_of<R: Runtime>(
+    app: &AppHandle<R>,
+    repo: &Path,
+    stem: &str,
+    collection: &Collection,
+) -> Result<Vec<share::Example>> {
+    let history = History::new(&data(app, repo)?.join("history"));
+    let mut out = Vec::new();
+    for (_, call) in spagitty_core::calls::model::calls(&collection.items) {
+        let newest = history
+            .list()
+            .into_iter()
+            .filter(|entry| {
+                entry.collection.as_deref() == Some(stem)
+                    && entry.call_id.as_deref() == Some(call.id.as_str())
+                    && entry.status.is_some()
+            })
+            .max_by_key(|entry| entry.at);
+        if let Some(entry) = newest {
+            if let Some(body) = history.body(&entry.id).filter(|b| !b.is_empty()) {
+                let media = entry
+                    .headers
+                    .iter()
+                    .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
+                    .map(|(_, value)| value.clone())
+                    .unwrap_or_default();
+                out.push(share::Example {
+                    call: call.name.clone(),
+                    media_type: media,
+                    body,
+                });
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Files by their path, with their contents.
+type Files = Vec<(String, Vec<u8>)>;
+
+/// The files a share would write, with their contents.
+fn share_files<R: Runtime>(
+    app: &AppHandle<R>,
+    repo: &Path,
+    folder: &Folder,
+    ask: &ShareAsk,
+) -> Result<(Collection, Files)> {
+    let collection = folder.collection(&ask.stem).map_err(|e| e.to_string())?;
+    let environments: Vec<Environment> = folder
+        .environments()
+        .into_iter()
+        .filter(|stored| ask.environments.contains(&stored.stem))
+        .filter_map(|stored| stored.value)
+        .collect();
+    let examples = if ask.examples {
+        examples_of(app, repo, &ask.stem, &collection)?
+    } else {
+        Vec::new()
+    };
+    let files = match ask.format.as_str() {
+        "spagitty" => vec![(
+            format!("{}.json", ask.stem),
+            share::spagitty(&collection).into_bytes(),
+        )],
+        "postman" => vec![(
+            format!("{}.postman_collection.json", ask.stem),
+            share::postman(&collection).into_bytes(),
+        )],
+        "zip" => {
+            let history = if ask.history {
+                let entries: Vec<Entry> = History::new(&data(app, repo)?.join("history"))
+                    .list()
+                    .into_iter()
+                    .filter(|entry| entry.collection.as_deref() == Some(ask.stem.as_str()))
+                    .collect();
+                Some(serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?)
+            } else {
+                None
+            };
+            share::bundle(&collection, &environments, &examples, history.as_deref())
+        }
+        "commit" => {
+            let base = folder.relative.trim_end_matches('/').to_string();
+            let mut files = vec![(
+                format!("{base}/{}.json", ask.stem),
+                share::spagitty(&collection).into_bytes(),
+            )];
+            for env in &environments {
+                files.push((
+                    format!(
+                        "{base}/env/{}.json",
+                        spagitty_core::calls::store::slug(&env.name)
+                    ),
+                    spagitty_core::calls::model::to_text(&env.for_file()).into_bytes(),
+                ));
+            }
+            for (path, bytes) in share::bundle(&collection, &[], &examples, None) {
+                if path.starts_with("examples/") {
+                    files.push((format!("{base}/{path}"), bytes));
+                }
+            }
+            files
+        }
+        other => return Err(format!("{other} is not a way to share")),
+    };
+    Ok((collection, files))
+}
+
+#[tauri::command(async)]
+pub fn calls_share_plan<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    ask: ShareAsk,
+) -> Result<SharePlan> {
+    let repo = state
+        .open_path("calls_share_plan")
+        .map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    let (_, files) = share_files(&app, &repo, &folder, &ask)?;
+    let total = if ask.format == "zip" {
+        share::zipped(&files).map_err(|e| e.to_string())?.len() as u64
+    } else {
+        files.iter().map(|(_, b)| b.len() as u64).sum()
+    };
+    Ok(SharePlan {
+        files: files
+            .iter()
+            .map(|(path, bytes)| SharedFile {
+                path: path.clone(),
+                size: bytes.len() as u64,
+            })
+            .collect(),
+        total,
+    })
+}
+
+/// Share: write the file or the zip to `path`, or commit. Answers with
+/// where it went, or the commit's id.
+#[tauri::command(async)]
+pub fn calls_share<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    ask: ShareAsk,
+) -> Result<String> {
+    let repo = state.open_path("calls_share").map_err(|e| e.to_string())?;
+    let (folder, _, _) = place(&app, &repo)?;
+    let (collection, files) = share_files(&app, &repo, &folder, &ask)?;
+    match ask.format.as_str() {
+        "commit" => {
+            for (path, bytes) in &files {
+                let full = repo.join(path);
+                if let Some(parent) = full.parent() {
+                    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                }
+                // The collection and environment files are already there as
+                // Calls wrote them; only an example is new.
+                if path.contains("/examples/") || !full.exists() {
+                    std::fs::write(&full, bytes).map_err(|e| e.to_string())?;
+                }
+            }
+            let paths: Vec<String> = files.iter().map(|(p, _)| p.clone()).collect();
+            share::commit(&repo, &paths, &format!("Calls: update {}", collection.name))
+                .map_err(|e| e.to_string())
+        }
+        format => {
+            let path = ask.path.clone().ok_or("choose where to save it")?;
+            let bytes = if format == "zip" {
+                share::zipped(&files).map_err(|e| e.to_string())?
+            } else {
+                files.into_iter().next().map(|(_, b)| b).unwrap_or_default()
+            };
+            std::fs::write(&path, bytes)
+                .map_err(|e| format!("{path} could not be written: {e}"))?;
+            Ok(path)
+        }
+    }
 }

@@ -2,7 +2,8 @@
 
 # FEAT-164 — Share a collection as a file, a zip or a commit
 
-**Status:** Backlog — after FEAT-163.
+**Status:** Open — built on `feature/FEAT-164-share`, stacked on FEAT-163, for release 4.0.0. Covered by Rust tests in `calls/share.rs` (every format with every kind of variable, the zip read back, a Postman round trip through the importer, the commit) and `calls/zip.rs`, by the zip case in `import/scan.rs`, and by `ShareDialog.test.ts`. The zip is written by Spagitty itself on `flate2`, which was already in the tree. Not yet looked at in the running application.
+**Branch:** `feature/FEAT-164-share`.
 **Screens:** 2C (the Share dialog).
 **Raised by:** the author, 2026-10-25: make it easy to compact and share, as collection JSON or a zip file.
 **Proposal:** [`docs/proposals/calls.md`](../../docs/proposals/calls.md) §5.5 and §7.3. **Designs:** [`design_handoff_calls/`](../../design_handoff_calls/) — `Share.dc.html`.

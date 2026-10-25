@@ -368,3 +368,22 @@ export interface ScanDone {
 	error: string | null;
 	cancelled: boolean;
 }
+
+// --- Share (FEAT-164) ---
+
+export type ShareFormat = 'spagitty' | 'postman' | 'zip' | 'commit';
+
+export interface ShareAsk {
+	stem: string;
+	format: ShareFormat;
+	environments: string[];
+	examples: boolean;
+	history: boolean;
+	path: string | null;
+}
+
+export interface SharePlan {
+	files: { path: string; size: number }[];
+	/** What is written: the zip's size, or the files'. */
+	total: number;
+}

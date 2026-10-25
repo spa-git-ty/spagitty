@@ -2,7 +2,7 @@
 
 # FEAT-162 — Import calls from code and from collection files
 
-**Status:** Open — built on `feature/FEAT-162-import`, stacked on FEAT-165, for release 4.0.0. Covered by Rust tests in `calls/import/` (Spring, WebFlux, JAX-RS and NestJS sources; OpenAPI 3 and Swagger 2; Postman 2.0 and 2.1, Insomnia, Bruno, `.http`, HAR and cURL; change detection and bringing in; a scan of a fixture repository), and by `ImportScreen.test.ts`. A Spagitty zip is read once FEAT-164 writes one; until then a Spagitty collection is read as its single `.json`. Not yet looked at in the running application.
+**Status:** Open — built on `feature/FEAT-162-import`, stacked on FEAT-165, for release 4.0.0. Covered by Rust tests in `calls/import/` (Spring, WebFlux, JAX-RS and NestJS sources; OpenAPI 3 and Swagger 2; Postman 2.0 and 2.1, Insomnia, Bruno, `.http`, HAR and cURL; change detection and bringing in; a scan of a fixture repository), and by `ImportScreen.test.ts`. A Spagitty collection is read as its single `.json`, and the zip FEAT-164 writes is read back with its environments. Not yet looked at in the running application.
 **Branch:** `feature/FEAT-162-import`.
 **Added 2026-10-26:** the author asked for NestJS too. It is read like Spring, from TypeScript: `@Controller` and its methods' `@Get` and others, `@Param`, `@Query`, `@Headers` and `@Body`; bodies from the DTO with class-validator and `@ApiProperty({ example })`; `setGlobalPrefix` and the `listen` port from `main.ts`. *NestJS* is a framework in Settings › Calls, on by default.
 **Screens:** 2C (Calls › Import, at `/calls/import`; the *Found in this repository* card on Calls).

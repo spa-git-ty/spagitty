@@ -16,12 +16,14 @@
 //! | `send` | The only file here that reaches a network |
 //! | `body` | What a response body is: JSON, XML, an event stream, binary |
 //! | `history` | Each send, per repository, in application data |
+//! | `share` | Share: one file (Spagitty or Postman 2.1), a zip, a commit |
 //! | `soap` | SOAP: a WSDL and its schemas, envelopes, WS-Security, faults |
 //! | `settings` | Settings › Calls, and a repository's overrides |
 //! | `import` | Import: endpoints from Java, NestJS and OpenAPI, calls from collection files |
 //! | `keep` | Values kept from responses: JSONPath, XPath, and where each came from |
 //! | `vault` | Secret and kept values, in the keychain |
 //! | `xml` | XML as a small tree with its namespaces in scope |
+//! | `zip` | Zip files, written deflated and read back |
 
 pub mod body;
 pub mod build;
@@ -31,8 +33,10 @@ pub mod keep;
 pub mod model;
 pub mod send;
 pub mod settings;
+pub mod share;
 pub mod soap;
 pub mod store;
 pub mod vars;
 pub mod vault;
 pub mod xml;
+pub mod zip;

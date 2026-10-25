@@ -21,6 +21,7 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **Settings › Calls**, after Behaviour: where calls live, timeouts, redirects, TLS checks, a proxy, client certificates for mutual TLS by host, the header on every call, history and more. A repository can override any of them in `.spagitty/calls/settings.json`, and Settings says which (FEAT-165).
 - **Import calls** into Calls: from Spring MVC, WebFlux, JAX-RS and NestJS controllers in the repository (with example bodies from the request class or DTO), OpenAPI and Swagger files, and Postman, Insomnia, Bruno, `.http`, HAR and cURL. Endpoints are marked *New*, *Changed* or already in a collection, and bringing a changed one in keeps the values you typed. Collection files in the repository can be sent in place without importing, and are never rewritten (FEAT-162).
 - **SOAP calls** in Calls, from a WSDL in the repository or at a URL, or from JAX-WS and Spring-WS services in the code. The envelope is made for you with a sample and the type of every element, the `SOAPAction` is set from the WSDL, WS-Security's username token is added (text or digest), and a SOAP fault is shown as an error even when the server answered 200. *Rebuild from WSDL* keeps what you typed (FEAT-163).
+- **Share a collection** from Calls: as one Spagitty or Postman 2.1 file, as a zip with its environments, example responses and a README of what to fill in, or as a commit on the current branch. Secrets and kept values go in empty in every format, and Import reads the zip back (FEAT-164).
 
 ## [3.10.1] - 2026-10-25
 
