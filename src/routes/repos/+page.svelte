@@ -8,6 +8,7 @@
 	import BrandMark from '$lib/ui/BrandMark.svelte';
 	import Wordmark from '$lib/ui/Wordmark.svelte';
 	import Btn from '$lib/ui/Btn.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 
 	/**
 	 * Every repository you work in, and which ones need attention.
@@ -21,8 +22,12 @@
 		repos.load();
 	});
 
-	const needing = $derived(repos.needingAttention);
-	const idle = $derived(repos.idle);
+	/** Type on the screen to narrow the cards by name, branch or path (FEAT-158). */
+	const search = createSearch();
+	const text = (card: { name: string; branch: string | null; path: string }) => [card.name, card.branch, card.path];
+	const needing = $derived(search.filter(repos.needingAttention, text));
+	const idle = $derived(search.filter(repos.idle, text));
+	const found = $derived([...needing, ...idle]);
 </script>
 
 <div class="screen">
@@ -45,7 +50,15 @@
 		</div>
 	</header>
 
-	<div class="body">
+	<div
+		class="body"
+		use:speedSearch={{
+			search,
+			label: 'repositories',
+			count: () => [found.length, repos.cards.length],
+			onenter: () => found[0] && repos.open(found[0])
+		}}
+	>
 		{#if repos.error}
 			<p class="note error">{repos.error}</p>
 		{:else if !repos.loaded}
@@ -65,6 +78,10 @@
 				</div>
 			</div>
 		{:else}
+			{#if found.length === 0}
+				<p class="note">No repository matches.</p>
+			{/if}
+
 			{#if needing.length > 0}
 				<section class="group">
 					<h2 class="note heading">Needs you</h2>

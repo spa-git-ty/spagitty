@@ -173,10 +173,17 @@ impl Inbox {
         }
     }
 
-    /// Forget everything said before `before`. Returns how many went.
-    pub fn clear(&mut self, before: u64) -> usize {
+    /// Forget everything said before `before`, about one repository or all
+    /// of them. Returns how many went.
+    pub fn clear(&mut self, before: u64, repository: Option<&str>) -> usize {
         let was = self.entries.len();
-        self.entries.retain(|entry| entry.created_ms >= before);
+        self.entries.retain(|entry| {
+            let about = match repository {
+                Some(repository) => entry.repository == repository,
+                None => true,
+            };
+            !about || entry.created_ms >= before
+        });
         let gone = was - self.entries.len();
         if gone > 0 {
             self.save();
@@ -262,8 +269,9 @@ pub fn inbox_clear<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, InboxState>,
     before_ms: u64,
+    repository: Option<String>,
 ) -> usize {
-    state.with(&app, |inbox| inbox.clear(before_ms))
+    state.with(&app, |inbox| inbox.clear(before_ms, repository.as_deref()))
 }
 
 #[cfg(test)]
@@ -342,8 +350,18 @@ mod tests {
         let mut inbox = Inbox::open(None);
         inbox.add(said("old", "/r"), 100);
         inbox.add(said("new", "/r"), 200);
-        assert_eq!(inbox.clear(150), 1);
+        assert_eq!(inbox.clear(150, None), 1);
         assert_eq!(inbox.list()[0].title, "new");
+    }
+
+    #[test]
+    fn clearing_one_repository_leaves_the_others() {
+        let mut inbox = Inbox::open(None);
+        inbox.add(said("here", "/r"), 100);
+        inbox.add(said("there", "/s"), 100);
+        assert_eq!(inbox.clear(u64::MAX, Some("/r")), 1);
+        assert_eq!(inbox.list().len(), 1);
+        assert_eq!(inbox.list()[0].title, "there");
     }
 
     #[test]

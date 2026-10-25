@@ -13,7 +13,6 @@
 		ConflictResolver,
 		FarmSettings,
 		Permissions,
-		SupplementalPolicy,
 		WorkspaceMode
 	} from '../types';
 
@@ -21,7 +20,7 @@
 	 * The farm's rules, in Setup and in the Rules sheet (FEAT-111, FEAT-109).
 	 *
 	 * Where the person comes in, what every task must pass, how many agents
-	 * work at once and how many tries a task gets. The rarer rules — CodeRabbit,
+	 * work at once and how many tries a task gets. The rarer rules — conflicts,
 	 * permissions, leftover worktrees — wait behind `More rules`.
 	 *
 	 * The form is a working copy seeded once from `settings` and written back
@@ -66,23 +65,12 @@
 		deleteBranch: false
 	};
 
-	const DEFAULT_SUPPLEMENTAL: SupplementalPolicy = {
-		mode: 'off',
-		provider: 'spagitty.coderabbit/review',
-		threshold: 'medium',
-		maxRepairs: 2,
-		revision: 1
-	};
-
 	let autonomy = $state<Autonomy>(untrack(() => settings.autonomy ?? 'semiAuto'));
 	let checks = $state<string[]>(untrack(() => [...(settings.verification ?? [])]));
 	let parallel = $state(untrack(() => settings.maxParallel ?? 2));
 	let attempts = $state(untrack(() => settings.maxAttempts ?? 3));
 	let permissions = $state<Permissions>(
 		untrack(() => ({ ...DEFAULT_PERMISSIONS, ...settings.permissions }))
-	);
-	let supplemental = $state<SupplementalPolicy>(
-		untrack(() => ({ ...DEFAULT_SUPPLEMENTAL, ...settings.supplemental }))
 	);
 	let workspace = $state<WorkspaceMode>(untrack(() => settings.workspace ?? 'worktree'));
 	/** Who resolves a conflict (FEAT-146): you, the task's agent, or a command. */
@@ -99,7 +87,6 @@
 			...untrack(() => settings),
 			autonomy,
 			permissions: { ...permissions },
-			supplemental: { ...supplemental },
 			verification: checks.map((check) => check.trim()).filter(Boolean),
 			maxParallel: parallel,
 			maxAttempts: attempts,
@@ -231,7 +218,6 @@
 				{C.policyWrite}
 			</Btn>
 		{/if}
-		· Extra CodeRabbit review: {supplemental.mode === 'off' ? 'off' : supplemental.mode}
 	</p>
 
 	<details>
@@ -265,41 +251,6 @@
 					{/if}
 				</p>
 			</section>
-			<section>
-				<h4>{C.supplemental}</h4>
-				<div class="inline">
-					<label>
-						Review
-						<select bind:value={supplemental.mode} disabled={busy}>
-							<option value="off">Off</option>
-							<option value="advisory">Advisory</option>
-							<option value="required">Required</option>
-						</select>
-					</label>
-					{#if supplemental.mode !== 'off'}
-						<label>
-							Stops on
-							<select bind:value={supplemental.threshold} disabled={busy}>
-								<option value="low">Low and above</option>
-								<option value="medium">Medium and above</option>
-								<option value="high">High and above</option>
-								<option value="critical">Critical only</option>
-							</select>
-						</label>
-						<label>
-							Repair attempts
-							<input
-								type="number"
-								min="0"
-								max="10"
-								bind:value={supplemental.maxRepairs}
-								disabled={busy}
-							/>
-						</label>
-					{/if}
-				</div>
-			</section>
-
 			<section>
 				<h4>{C.permission}</h4>
 				<div class="inline">

@@ -2,7 +2,7 @@
 
 # FEAT-135 — Farm sessions in the terminal
 
-**Status:** Backlog — recorded 2026-10-13, split from FEAT-130. Not started, and not in 3.0.0.
+**Status:** Dropped — decided by the author on 2026-10-25: "farms should work on normal terminal not tmux". Farm agents keep running as they do now, outside the multiplexer.
 **Branch:** `feature/FEAT-135-farm-sessions-in-the-terminal`.
 **Screens:** 1T (Terminal: the Sessions panel), 1A (Farm: where a local agent is run).
 **Raised by:** the author, 2026-10-13, answering the proposal's question 5: farm sessions in the terminal come later, as their own item. The terminal and the multiplexer are in 3.0.

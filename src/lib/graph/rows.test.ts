@@ -229,10 +229,35 @@ describe('CommitRows', () => {
 
 	it('leaves keys it does not handle alone', () => {
 		const view = render(CommitRows, {});
-		const event = press(view.get('.scroller'), 'x');
+		const event = press(view.get('.scroller'), 'F2');
 
 		expect(event.defaultPrevented).toBe(false);
 		expect(calls.selected).toEqual([]);
+
+		view.destroy();
+	});
+
+	/**
+	 * FEAT-158. A letter starts a search that jumps rather than narrows: a
+	 * row taken out of the graph would break the lanes drawn through it.
+	 */
+	it('jumps to what is typed, and steps between matches with the arrows', () => {
+		control.setRows([row(0), row(1, { refs: [chip('release/3.9')] }), row(2), row(3, { summary: 'release notes' })]);
+		const view = render(CommitRows, {});
+		const scroller = view.get('.scroller');
+
+		for (const letter of 'rel') press(scroller, letter);
+		expect(calls.selected.at(-1)).toBe(1);
+		expect(view.all('[role="option"]')).toHaveLength(4);
+		expect(view.all('[role="option"].dim').map((option) => option.id)).toEqual(['commit-0', 'commit-2']);
+
+		press(scroller, 'ArrowDown');
+		expect(calls.selected.at(-1)).toBe(3);
+		press(scroller, 'ArrowDown');
+		expect(calls.selected.at(-1)).toBe(1);
+
+		press(scroller, 'Escape');
+		expect(view.all('[role="option"].dim')).toHaveLength(0);
 
 		view.destroy();
 	});

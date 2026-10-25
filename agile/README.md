@@ -150,9 +150,9 @@ rather than an audit.
 | [FEAT-094](items/FEAT-094-review-reads-like-code.md) | Review reads like code | 1R, 1H, diff | Done |
 | [FEAT-095](items/FEAT-095-check-out-a-pull-request.md) | Check out a pull request | 1R | Done |
 | [FEAT-096](items/FEAT-096-an-extension-host-anyone-can-build-for.md) | An extension host anyone can build for | 1K, 1C, 1Q, 1H, palette | Done |
-| [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Done |
-| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Done |
-| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Done |
+| [FEAT-097](items/FEAT-097-coderabbit-reviews-local-changes.md) | CodeRabbit reviews local changes | 1C, 1K, palette | Dropped |
+| [FEAT-098](items/FEAT-098-coderabbit-as-a-farm-review-gate.md) | CodeRabbit as a farm review gate | Farm (1Q) | Dropped |
+| [FEAT-099](items/FEAT-099-coderabbit-on-github-pull-requests.md) | CodeRabbit on GitHub pull requests | 1H | Dropped |
 | [FEAT-100](items/FEAT-100-a-merger-that-shows-the-result-first.md) | A merger that shows the result first | 1S, chrome | Done |
 | [FEAT-101](items/FEAT-101-merge-without-conflicts.md) | Merge without conflicts | 1S | Done |
 | [FEAT-102](items/FEAT-102-resolve-every-conflict-every-way.md) | Resolve every conflict, every way | 1S, 1D | Done |
@@ -188,7 +188,7 @@ rather than an audit.
 | [FEAT-132](items/FEAT-132-investigate-the-life-of-a-file-folder-branch-or-line.md) | Investigate: the life of a file, a folder, a branch or a line | 1O | Done |
 | [FEAT-133](items/FEAT-133-recipes-git-steps-in-blocks-run-with-an-agent.md) | Recipes: git steps in blocks, run with an agent | 1V | Done |
 | [FEAT-134](items/FEAT-134-pin-or-hide-what-is-on-the-rail.md) | Pin or hide what is on the rail | 1K | Done |
-| [FEAT-135](items/FEAT-135-farm-sessions-in-the-terminal.md) | Farm sessions in the terminal | 1T, 1A | Backlog |
+| [FEAT-135](items/FEAT-135-farm-sessions-in-the-terminal.md) | Farm sessions in the terminal | 1T, 1A | Dropped |
 | [FEAT-136](items/FEAT-136-issues.md) | Issues beside the code | 1W | Done |
 | [FEAT-137](items/FEAT-137-hooks.md) | Hooks that run in steps and are built from blocks | 1X | Done |
 | [FEAT-138](items/FEAT-138-pipelines.md) | Preview workflows and follow their runs | 1Y | Done |
@@ -211,6 +211,8 @@ rather than an audit.
 | [FEAT-155](items/FEAT-155-untrack.md) | Untrack: stop tracking files on a branch, in a commit, and push it | 2B | Done |
 | [FEAT-156](items/FEAT-156-calmer-palettes-and-an-accent-of-your-own.md) | Calmer light and dark palettes, and an accent of your own | every screen | Done |
 | [FEAT-157](items/FEAT-157-close-a-terminal-session-and-give-tmux-our-colours.md) | Close a terminal session, and give tmux Spagitty's colours | 1T | Done |
+| [FEAT-158](items/FEAT-158-type-to-search-any-list.md) | Type to search any list | every screen with a list | Done |
+| [FEAT-159](items/FEAT-159-clear-all-notifications.md) | Clear all notifications | the notification drawer | Done |
 
 ## Bugs
 
@@ -315,6 +317,7 @@ rather than an audit.
 | [BUG-096](items/BUG-096-the-working-copy-s-hunks-are-not-coloured.md) | The working copy's hunks are not coloured | Working copy (1C) | Fixed |
 | [BUG-097](items/BUG-097-a-push-opens-the-credential-helpers-sign-in-window.md) | A push opens the credential helper's sign-in window instead of using the connected account | every push | Fixed |
 | [BUG-098](items/BUG-098-pull-requests-says-only-500-internal-server-error.md) | Pull requests says only "500 Internal Server Error" on the author's GitLab | 1H, 1R | Fixed |
+| [BUG-099](items/BUG-099-the-hooks-side-panel-cards-do-nothing.md) | The Hooks screen's side panel cards do nothing when clicked | 1X | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the
@@ -376,7 +379,7 @@ of its own.
 | [TASK-052](items/TASK-052-nothing-waits-in-line.md) | Nothing waits in line | all | Open |
 | [TASK-053](items/TASK-053-the-review-room-after-first-use.md) | The review room after first use | 1R | Done |
 | [TASK-054](items/TASK-054-build-macos-on-a-mac.md) | Build macOS on a Mac | — | Done |
-| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Done |
+| [TASK-055](items/TASK-055-extensions-ship-in-the-release.md) | Extensions ship in the release | — | Dropped |
 | [TASK-056](items/TASK-056-the-rail-as-the-author-chose-it.md) | The rail as the author chose it | chrome, 1A | Done |
 | [TASK-057](items/TASK-057-the-log-screen-in-the-house-style.md) | The Log screen in the house style | 1I | Done |
 | [TASK-058](items/TASK-058-restore-the-patch-release.md) | Restore the patch release after the bug-fix merges | CI | Done |
@@ -396,6 +399,7 @@ of its own.
 | [TASK-072](items/TASK-072-the-declared-minimum-rust-is-older-than-a-dependency-needs.md) | The declared minimum Rust is older than a dependency needs | — | Done |
 | [TASK-073](items/TASK-073-the-sweeps-refreshed-and-run-from-a-portal.md) | The sweeps, refreshed and run from a portal | — | Done |
 | [TASK-074](items/TASK-074-pull-requests-no-longer-list-gates-5-and-6.md) | Pull requests no longer list gates 5 and 6 | — | Done |
+| [TASK-075](items/TASK-075-remove-coderabbit.md) | Remove CodeRabbit | 1Q, 1A, Settings | Done |
 
 ## Skipped identifiers
 

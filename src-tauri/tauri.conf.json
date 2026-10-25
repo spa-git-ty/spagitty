@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Spagitty",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "identifier": "dev.spagitty.app",
   "build": {
-    "beforeDevCommand": "bun tools/extensions/bundle.ts --debug && bun tools/multiplexer.ts && bun run dev",
+    "beforeDevCommand": "bun tools/multiplexer.ts && bun run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun tools/extensions/bundle.ts && bun tools/multiplexer.ts && bun run build",
+    "beforeBuildCommand": "bun tools/multiplexer.ts && bun run build",
     "frontendDist": "../build"
   },
   "app": {
@@ -44,11 +44,10 @@
     },
     "windows": {
       "wix": {
-        "version": "3.9.0.0"
+        "version": "3.10.0.0"
       }
     },
     "resources": {
-      "../extensions/coderabbit/bundle/spagitty.coderabbit/": "extensions/spagitty.coderabbit/",
       "../multiplexer/bundle/": "multiplexer/"
     }
   }

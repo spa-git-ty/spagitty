@@ -228,6 +228,40 @@ describe('the drawer', () => {
 		flushSync();
 		expect(container.textContent).toContain('Nothing here. You’re caught up.');
 	});
+
+	it('clears all, read or not, once it is agreed to (FEAT-159)', async () => {
+		const { center } = await import('./center.svelte');
+		const { dialog } = await import('$lib/ui/dialog.svelte');
+		const { default: NotificationCenter } = await import('./NotificationCenter.svelte');
+		center.reset([entry('a'), entry('b', { readMs: 5, repository: '/r/other' })]);
+		center.show();
+		const { target: container } = render(NotificationCenter, {});
+		flushSync();
+
+		const clearAll = () => [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Clear all')!;
+		click(clearAll());
+		await Promise.resolve();
+		expect(dialog.question?.title).toBe('Clear all notifications');
+		expect(dialog.question?.body).toContain('All 2 notifications, from every repository');
+		dialog.dismiss();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(center.entries).toHaveLength(2);
+
+		click(clearAll());
+		await Promise.resolve();
+		dialog.accept();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		flushSync();
+		expect(center.entries).toHaveLength(0);
+		expect((clearAll() as HTMLButtonElement).disabled).toBe(true);
+	});
+
+	it('clears one repository and keeps the others', async () => {
+		const { center } = await import('./center.svelte');
+		center.reset([entry('a'), entry('b', { repository: '/r/other' })]);
+		expect(await center.clearAll('/r/spagitty')).toBe(1);
+		expect(center.entries.map((e) => e.id)).toEqual(['b']);
+	});
 });
 
 describe('which pull request a host page is', () => {

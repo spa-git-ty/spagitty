@@ -33,19 +33,11 @@ fn engines(path: &str) -> Option<(String, String)> {
 #[test]
 fn every_manifest_we_ship_admits_this_version_of_spagitty() {
     let version = env!("CARGO_PKG_VERSION");
-    // The second is generated from the first and absent until
-    // `bun run ext bundle`; the other three are in the tree and have to be.
-    const GENERATED: &str = "extensions/coderabbit/bundle/spagitty.coderabbit/extension.json";
     for path in [
-        "extensions/coderabbit/extension.json",
-        GENERATED,
         "examples/extensions/hello/extension.json",
         "packages/extension-sdk/templates/basic/extension.json",
     ] {
-        let Some((spagitty, api)) = engines(path) else {
-            assert_eq!(path, GENERATED, "{path} was not found");
-            continue;
-        };
+        let (spagitty, api) = engines(path).unwrap_or_else(|| panic!("{path} was not found"));
         assert!(
             satisfies(&spagitty, version),
             "{path} needs Spagitty {spagitty}, and this is {version}"

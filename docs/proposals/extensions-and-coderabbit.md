@@ -4,7 +4,7 @@
 
 **Prepared:** 2026-10-06  
 **Audience:** Claude Code implementing this feature in the Spagitty repository  
-**Status:** Proposed; no application implementation is included in this document
+**Status:** Proposed; no application implementation is included in this document. The extension host was built (FEAT-096) and is kept; the CodeRabbit extension and the farm's extra review rule were built (FEAT-097 to FEAT-099) and removed at the author's request in 3.10.0 (TASK-075).
 
 ## 1. Outcome
 

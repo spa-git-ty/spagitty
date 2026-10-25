@@ -14,6 +14,33 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-10-25
+
+### Added
+
+- **Type to search any list.** With no text box focused, just start typing: the list on screen narrows to what matches, and a small pill shows what you typed and how many match. Backspace takes a letter back, Escape brings the whole list back, and Enter opens the first match. It matches the start of each word too, so `fb` finds `feature/BUG-098`. It works in Branches, Tags, Reflog, Stash, Working copy, Repositories, Pull requests, Review, Issues, Releases, Investigate, Search results, Files, Untrack, Notifications, Terminal sessions, and the Worktrees and Submodules dialogs. Where a list already has a filter box, your letters go into that box.
+- **Type to jump in the graph.** Typing selects the first commit whose message, author, short ID or branch matches, dims the rest, and ↓ and ↑ step between matches. The graph keeps every row, so its lanes stay whole.
+- **Clear all notifications** from the bell's drawer, beside *Mark all read*. It clears every repository's, or only this one's when *This repo* is picked, and asks first.
+
+### Fixed
+
+- **The Hooks screen's cards answer a click.** In a repository whose hooks belong to Husky, lefthook or pre-commit, the *Add* cards were switched off without looking it and did nothing. Clicking one now offers to import those hooks, then adds the block. On *Runs*, a manager's hooks are no longer drawn as cards that cannot be clicked.
+
+### Removed
+
+- **CodeRabbit.** The CodeRabbit extension is no longer bundled, and the farm's extra CodeRabbit review rule and its button are gone. A farm saved with that review required no longer waits for it. Extensions you install yourself work as before.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.9.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.9.0] - 2026-10-21
 
 ### Added

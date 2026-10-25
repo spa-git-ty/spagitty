@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import Loader from '$lib/ui/Loader.svelte';
+	import { speedSearch } from '$lib/ui/speedsearch.svelte';
 	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { untrack } from 'svelte';
 	import BranchTable from '$lib/branches/BranchTable.svelte';
@@ -68,9 +69,12 @@
 
 	/** Local, merged, and not the one you are standing on. */
 	const merged = $derived(mergedBranches(branches.rows));
+
+	// Typing anywhere on the screen types into the filter (FEAT-158).
+	let filterField = $state<HTMLInputElement | null>(null);
 </script>
 
-<div class="screen">
+<div class="screen" use:speedSearch={{ field: () => filterField, label: 'branches' }}>
 	<header class="head">
 		<div class="left">
 			<RefTabs />
@@ -107,6 +111,7 @@
 	{:else}
 		<div class="filters">
 			<input
+				bind:this={filterField}
 				class="field"
 				type="text"
 				placeholder="Filter by name"

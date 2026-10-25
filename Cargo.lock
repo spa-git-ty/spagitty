@@ -587,17 +587,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "coderabbit-extension"
-version = "1.0.0"
-dependencies = [
- "serde_json",
- "sha2",
- "spagitty-core",
- "spagitty-extensions",
- "tempfile",
-]
-
-[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5008,7 +4997,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "notify",
  "serde",
@@ -5026,7 +5015,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-core"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "gix",
  "jsonschema",
@@ -5063,7 +5052,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-extensions"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -5079,7 +5068,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-farm"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -5091,7 +5080,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-process"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "libc",
  "portable-pty",

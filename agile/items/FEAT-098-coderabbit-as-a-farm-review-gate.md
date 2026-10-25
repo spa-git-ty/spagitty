@@ -2,7 +2,7 @@
 
 # FEAT-098 — CodeRabbit as a farm review gate
 
-**Status:** Done — merged into `main` on 2026-10-06 in `e819aeb`, whose message called it work in progress; its farm tests pass. A live CodeRabbit account and a paid repair cycle are owed to the sweep.
+**Status:** Dropped — built and shipped (3.3.0), then removed at the author's request on 2026-10-25, in TASK-075: CodeRabbit was its only reviewer. The rule is gone from the farm's settings, and a farm saved with it on no longer waits for it; the saved policy and evidence are still read, so older farms open.
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** Farm (1Q).
 **Raised by:** the author, through

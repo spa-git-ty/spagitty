@@ -11,6 +11,8 @@
 	import Btn from '$lib/ui/Btn.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ScreenHead from '$lib/ui/ScreenHead.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
+	import type { PullRequest } from '$lib/types';
 
 	/**
 	 * What is waiting on you, above what is waiting on everyone else.
@@ -24,8 +26,18 @@
 	 * somebody deciding whether to wait or to go and fix something, and offline,
 	 * rate limited, refused and no-account are four different decisions.
 	 */
-	const needingYou = $derived(requests.needingYou);
-	const waiting = $derived(requests.waitingOnOthers);
+	/** Type on the screen to narrow by number, title, author or branch (FEAT-158). */
+	const search = createSearch();
+	const text = (request: PullRequest) => [
+		`#${request.number}`,
+		request.title,
+		request.authorName,
+		request.sourceBranch,
+		request.targetBranch
+	];
+	const needingYou = $derived(search.filter(requests.needingYou, text));
+	const waiting = $derived(search.filter(requests.waitingOnOthers, text));
+	const found = $derived([...needingYou, ...waiting]);
 
 	/**
 	 * No account for this host is a state, not an error (BUG-056): said as
@@ -72,7 +84,15 @@
 		</ScreenHead>
 
 		<div class="body">
-			<div class="lists">
+			<div
+				class="lists"
+				use:speedSearch={{
+					search,
+					label: 'pull requests',
+					count: () => [found.length, requests.all.length],
+					onenter: () => found[0] && requests.openWorkspace(found[0].id)
+				}}
+			>
 				{#if requests.loading && requests.all.length === 0}
 					<Loader label="Reading pull requests…" />
 				{:else if requests.repo === null && !requests.error}
@@ -97,6 +117,10 @@
 				{:else if requests.all.length === 0}
 					<EmptyState message="Nothing open. Every pull request on this repository is closed." />
 				{:else}
+					{#if found.length === 0}
+						<EmptyState message="No pull request matches." />
+					{/if}
+
 					{#if needingYou.length > 0}
 						<section class="group">
 							<h2 class="note heading">Needs you</h2>

@@ -1,6 +1,6 @@
 {
   "name": "spagitty",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "description": "Your gateway to a Git-managed agent farm \u2014 a local-first desktop Git client",
   "license": "GPL-3.0-or-later",
   "private": true,
@@ -34,7 +34,7 @@
     "@tauri-apps/cli": "^2",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.11",
-    "happy-dom": "^20.11.2",
+    "happy-dom": "^21.0.4",
     "svelte": "^5",
     "svelte-check": "^4",
     "typescript": "^5",

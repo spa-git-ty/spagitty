@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script lang="ts">
 	import Loader from '$lib/ui/Loader.svelte';
+	import { speedSearch } from '$lib/ui/speedsearch.svelte';
 	import RefTabs from '$lib/branches/RefTabs.svelte';
 	import { onMount, untrack } from 'svelte';
 	import * as api from '$lib/api';
@@ -44,9 +45,12 @@
 	});
 
 	const entries = $derived(reflog.entries);
+
+	// Typing anywhere on the screen types into the filter (FEAT-158).
+	let filterField = $state<HTMLInputElement | null>(null);
 </script>
 
-<div class="screen">
+<div class="screen" use:speedSearch={{ field: () => filterField, label: 'the reflog' }}>
 	<header class="head">
 		<div class="left">
 			<RefTabs />
@@ -61,6 +65,7 @@
 		<div class="right">
 			{#if reflog.loading}<Loader size="inline" label="Reading…" />{/if}
 			<input
+				bind:this={filterField}
 				class="field"
 				type="text"
 				placeholder="Filter by operation or message"

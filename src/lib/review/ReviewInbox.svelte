@@ -7,6 +7,7 @@
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ScreenHead from '$lib/ui/ScreenHead.svelte';
 	import Splitter from '$lib/ui/Splitter.svelte';
+	import { createSearch, speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { notice } from '$lib/ui/notice.svelte';
 	import InboxCard from './InboxCard.svelte';
 	import InboxPreview from './InboxPreview.svelte';
@@ -22,7 +23,24 @@
 	 * The Review inbox (FEAT-087): pull requests grouped by what each needs
 	 * from you, and a preview of the chosen one.
 	 */
-	const groups = $derived(review.groups);
+	/** Type on the screen to narrow by number, title, author or branch (FEAT-158). */
+	const search = createSearch();
+	const groups = $derived(
+		review.groups
+			.map((group) => ({
+				...group,
+				items: search.filter(group.items, (pr) => [
+					`#${pr.number}`,
+					pr.title,
+					pr.authorName,
+					pr.sourceBranch,
+					pr.targetBranch
+				])
+			}))
+			.filter((group) => group.items.length > 0 || !search.active)
+	);
+	const found = $derived(groups.flatMap((group) => group.items));
+	const total = $derived(review.groups.reduce((sum, group) => sum + group.items.length, 0));
 	const selected = $derived(review.selected);
 	let opening = $state(false);
 
@@ -116,7 +134,15 @@
 	</ScreenHead>
 
 	<div class="body">
-		<div class="lists">
+		<div
+			class="lists"
+			use:speedSearch={{
+				search,
+				label: 'pull requests',
+				count: () => [found.length, total],
+				onenter: () => found[0] && review.select(found[0].id)
+			}}
+		>
 			{#if review.loading && groups.length === 0 && !review.error}
 				<Loader label="Reading pull requests…" />
 			{:else if requests.repo === null && !review.error && !review.loading}
@@ -134,7 +160,7 @@
 					{/snippet}
 				</EmptyState>
 			{:else if groups.length === 0 && !review.loading}
-				<EmptyState message="Nothing to review." />
+				<EmptyState message={search.active ? 'No pull request matches.' : 'Nothing to review.'} />
 			{:else}
 				{#each groups as group (group.id)}
 					<section class="group">

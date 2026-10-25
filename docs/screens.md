@@ -951,7 +951,7 @@ Reads stay event-driven, with one five-second screen clock while a run is live.
 
 **Setup** puts crew, goal and rules in one scrolling column. Agent detection,
 custom CLIs, capability chips, autonomy, checks, slots, tries, permissions,
-CodeRabbit, AGENTS.md and leftovers use existing backend commands. Plan it
+AGENTS.md and leftovers use existing backend commands. Plan it
 creates the farm, configures it, then asks the first eligible planner.
 **Planning** shows the planner's live output and can stop just that run. A
 finished plan is grouped into dependency waves; missing or cyclic

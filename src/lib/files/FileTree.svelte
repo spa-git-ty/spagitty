@@ -3,6 +3,7 @@
 	import * as api from '$lib/api';
 	import { mod } from '$lib/platform';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { speedSearch } from '$lib/ui/speedsearch.svelte';
 	import FileGlyph from './FileGlyph.svelte';
 	import Loader from '$lib/ui/Loader.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
@@ -148,7 +149,13 @@
 	});
 </script>
 
-<aside class="tree" class:wide={files.lookFor !== 'names'} aria-label="Files at {files.rev}">
+<!-- Typing anywhere on the screen types into the find field (FEAT-158). -->
+<aside
+	class="tree"
+	class:wide={files.lookFor !== 'names'}
+	aria-label="Files at {files.rev}"
+	use:speedSearch={{ field: () => document.querySelector<HTMLInputElement>('.tree .find input') }}
+>
 	<div class="look" role="group" aria-label="Look for">
 		<button
 			type="button"

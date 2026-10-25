@@ -28,7 +28,7 @@
 <div class="runs">
 	<aside class="left" aria-label="Hook run steps">
 		{#if legacy}
-			{#each legacy.names as name}<div class="step"><span class="mark running">{legacy.status === 'running' ? '●' : legacy.status === 'passed' ? '✓' : '×'}</span><span>{name}</span></div>{/each}
+			{#each legacy.names as name}<div class="step legacy"><span class="mark running">{legacy.status === 'running' ? '●' : legacy.status === 'passed' ? '✓' : '×'}</span><span>{name}</span></div>{/each}
 		{:else if run}
 			<div class="run-label"><span class="mono">{run.stage}</span><span class:failed={run.exit !== null && run.exit !== 0}>{run.exit === null ? 'Running' : run.exit === 0 ? 'Passed' : 'Blocked'}</span></div>
 			{#each rows as row (row.id)}
@@ -61,6 +61,8 @@
 	.left { width: 260px; min-width: 200px; flex: none; padding: 14px; display: flex; flex-direction: column; gap: 7px; overflow: auto; }
 	.run-label { display: flex; justify-content: space-between; gap: 10px; font-size: var(--fs-secondary); padding: 3px 2px 10px; }
 	.step { display: flex; align-items: center; gap: 10px; padding: 10px; min-width: 0; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: var(--r-button); background: var(--surface-2); }
+	/* A manager's hooks run as one: there is no step to pick, so they are not drawn as cards (BUG-099). */
+	.step.legacy { border-color: transparent; background: none; padding: 6px 10px; }
 	.step.chosen { outline: 2px solid var(--lane-5); outline-offset: 2px; }
 	.step.skipped { opacity: 0.55; border-style: dashed; }
 	.step-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; overflow-wrap: anywhere; }
