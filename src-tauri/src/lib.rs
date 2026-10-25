@@ -34,7 +34,6 @@ mod releases;
 mod review_state;
 mod search_worker;
 mod settings;
-mod supplemental;
 mod terminal;
 #[cfg(test)]
 mod testing;
@@ -365,7 +364,6 @@ pub fn run() {
             farm::farm_merge_task,
             farm::farm_merge_check,
             farm::farm_task_merged,
-            farm::farm_review_supplemental,
             farm::farm_review_task,
             farm::farm_verify_task,
             farm::farm_plan,

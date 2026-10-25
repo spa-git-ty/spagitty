@@ -2,7 +2,7 @@
 
 # FEAT-097 — CodeRabbit reviews local changes
 
-**Status:** Done — merged into `main` on 2026-10-06. Bundling its worker into the installed app is TASK-055; the manual sweep is still owed.
+**Status:** Dropped — built and shipped (3.3.0), then removed at the author's request on 2026-10-25 ("drop code rabbit remove it"), in TASK-075. The extension host it was built on (FEAT-096) stays.
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes`
 **Screens:** Working copy (1C), Settings (1K), the command palette.
 **Raised by:** the author, through

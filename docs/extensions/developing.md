@@ -164,4 +164,4 @@ nullable resolution and per-list completeness. PR comment callbacks return
 `status: posted | uncertain`, never a review approval. Pass your operation ID
 to `commentOnPullRequest` so cancellation also covers the host confirmation.
 Store uncertainty before sending, including crash recovery, and never retry an
-ambiguous write automatically. The CodeRabbit worker demonstrates this path.
+ambiguous write automatically.

@@ -415,7 +415,6 @@ export const FARM_COPY = {
 	checksHint: 'One command per line',
 	permission: 'Permissions',
 	leftovers: 'Leftover worktrees',
-	supplemental: 'CodeRabbit',
 	quiet: 'quiet',
 	cancelled: 'Show cancelled',
 	givenBrief: 'The brief it was given',

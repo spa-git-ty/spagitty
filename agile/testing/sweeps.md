@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1936 tickets in 299 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1698 not run, 2 with a note only.
+**1946 tickets in 302 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1708 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -105,9 +105,9 @@ not committed.
 | FEAT-094 | Review reads like code | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-094-sweep.md](FEAT-094-sweep.md) |
 | FEAT-095 | Check out a pull request | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-095-sweep.md](FEAT-095-sweep.md) |
 | FEAT-096 | An extension host anyone can build for | Done | 12 | 0 | 0 | 0 | 0 | 12 | [FEAT-096-sweep.md](FEAT-096-sweep.md) |
-| FEAT-097 | CodeRabbit reviews local changes | Done | 12 | 0 | 0 | 0 | 0 | 12 | [FEAT-097-sweep.md](FEAT-097-sweep.md) |
-| FEAT-098 | CodeRabbit as a farm review gate | Done | 1 | 0 | 0 | 0 | 0 | 1 | [FEAT-098-sweep.md](FEAT-098-sweep.md) |
-| FEAT-099 | CodeRabbit on GitHub pull requests | Done | 1 | 0 | 0 | 0 | 0 | 1 | [FEAT-099-sweep.md](FEAT-099-sweep.md) |
+| FEAT-097 | CodeRabbit reviews local changes | Dropped | 12 | 0 | 0 | 0 | 0 | 12 | [FEAT-097-sweep.md](FEAT-097-sweep.md) |
+| FEAT-098 | CodeRabbit as a farm review gate | Dropped | 1 | 0 | 0 | 0 | 0 | 1 | [FEAT-098-sweep.md](FEAT-098-sweep.md) |
+| FEAT-099 | CodeRabbit on GitHub pull requests | Dropped | 1 | 0 | 0 | 0 | 0 | 1 | [FEAT-099-sweep.md](FEAT-099-sweep.md) |
 | FEAT-100 | A merger that shows the result first | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-100-sweep.md](FEAT-100-sweep.md) |
 | FEAT-101 | Merge without conflicts | Done | 8 | 0 | 0 | 0 | 0 | 8 | [FEAT-101-sweep.md](FEAT-101-sweep.md) |
 | FEAT-102 | Resolve every conflict, every way | Done | 13 | 0 | 0 | 0 | 0 | 13 | [FEAT-102-sweep.md](FEAT-102-sweep.md) |
@@ -162,6 +162,7 @@ not committed.
 | FEAT-156 | Calmer light and dark palettes, and an accent of your own | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-156-sweep.md](FEAT-156-sweep.md) |
 | FEAT-157 | Close a terminal session, and give tmux Spagitty's colours | Done | 5 | 0 | 0 | 0 | 0 | 5 | [FEAT-157-sweep.md](FEAT-157-sweep.md) |
 | FEAT-158 | Type to search any list | Done | 9 | 0 | 0 | 0 | 0 | 9 | [FEAT-158-sweep.md](FEAT-158-sweep.md) |
+| FEAT-159 | Clear all notifications | Done | 3 | 0 | 0 | 0 | 0 | 3 | [FEAT-159-sweep.md](FEAT-159-sweep.md) |
 | TASK-001 | Records baseline | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-001-sweep.md](TASK-001-sweep.md) |
 | TASK-002 | Test and CI baseline | Done | 10 | 0 | 0 | 0 | 0 | 10 | [TASK-002-sweep.md](TASK-002-sweep.md) |
 | TASK-003 | Make the Tauri layer generic over `Runtime` | Done | 6 | 0 | 0 | 0 | 0 | 6 | [TASK-003-sweep.md](TASK-003-sweep.md) |
@@ -211,7 +212,7 @@ not committed.
 | TASK-051 | One theme | Done | 3 | 2 | 0 | 0 | 0 | 1 | [TASK-051-sweep.md](TASK-051-sweep.md) |
 | TASK-053 | The review room after first use | Done | 7 | 0 | 0 | 0 | 0 | 7 | [TASK-053-sweep.md](TASK-053-sweep.md) |
 | TASK-054 | Build macOS on a Mac | Done | 4 | 0 | 0 | 0 | 0 | 4 | [TASK-054-sweep.md](TASK-054-sweep.md) |
-| TASK-055 | Extensions ship in the release | Done | 1 | 0 | 0 | 0 | 0 | 1 | [TASK-055-sweep.md](TASK-055-sweep.md) |
+| TASK-055 | Extensions ship in the release | Dropped | 1 | 0 | 0 | 0 | 0 | 1 | [TASK-055-sweep.md](TASK-055-sweep.md) |
 | TASK-056 | The rail as the author chose it | Done | 5 | 0 | 0 | 0 | 0 | 5 | [TASK-056-sweep.md](TASK-056-sweep.md) |
 | TASK-057 | The Log screen in the house style | Done | 3 | 0 | 0 | 0 | 0 | 3 | [TASK-057-sweep.md](TASK-057-sweep.md) |
 | TASK-058 | Restore the patch release after the bug-fix merges | Done | 1 | 0 | 0 | 0 | 0 | 1 | [TASK-058-sweep.md](TASK-058-sweep.md) |
@@ -230,6 +231,7 @@ not committed.
 | TASK-072 | The declared minimum Rust is older than a dependency needs | Done | 2 | 0 | 0 | 0 | 0 | 2 | [TASK-072-sweep.md](TASK-072-sweep.md) |
 | TASK-073 | The sweeps, refreshed and run from a portal | Done | 8 | 0 | 0 | 0 | 0 | 8 | [TASK-073-sweep.md](TASK-073-sweep.md) |
 | TASK-074 | Pull requests no longer list gates 5 and 6 | Done | 2 | 0 | 0 | 0 | 0 | 2 | [TASK-074-sweep.md](TASK-074-sweep.md) |
+| TASK-075 | Remove CodeRabbit | Done | 4 | 0 | 0 | 0 | 0 | 4 | [TASK-075-sweep.md](TASK-075-sweep.md) |
 | BUG-002 | The primary button has no fill | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-002-sweep.md](BUG-002-sweep.md) |
 | BUG-003 | The lane canvas paints over the messages | Fixed | 6 | 0 | 0 | 0 | 0 | 6 | [BUG-003-sweep.md](BUG-003-sweep.md) |
 | BUG-004 | The packaged Linux app opens a blank window | Fixed | 7 | 0 | 0 | 0 | 0 | 7 | [BUG-004-sweep.md](BUG-004-sweep.md) |
@@ -315,3 +317,4 @@ not committed.
 | BUG-096 | The working copy's hunks are not coloured | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-096-sweep.md](BUG-096-sweep.md) |
 | BUG-097 | A push opens the credential helper's sign-in window instead of using the connected account | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-097-sweep.md](BUG-097-sweep.md) |
 | BUG-098 | Pull requests says only "500 Internal Server Error" on the author's GitLab | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-098-sweep.md](BUG-098-sweep.md) |
+| BUG-099 | The Hooks screen's side panel cards do nothing when clicked | Fixed | 3 | 0 | 0 | 0 | 0 | 3 | [BUG-099-sweep.md](BUG-099-sweep.md) |

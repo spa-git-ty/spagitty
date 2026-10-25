@@ -420,10 +420,7 @@ parallel waits and version detection. Absolute deadlines and cancellation still
 apply. Completion also checks the deadline to close a race with supervisor ticks.
 UTF-8 frame sizes are measured in bytes in both implementations.
 
-Tauri build hooks stage a target-specific CodeRabbit worker and manifest before
-bundling. Windows/Linux workers live in resources/extensions; macOS uses a Tauri
-sidecar so its temporary signing keychain signs the worker with the app. Only
-bundled provenance can use the existing executable-directory fallback. The CLI
-is not redistributed. Production gate 5 currently releases Linux and Windows;
-macOS builds are in the draft/alpha lanes and require their existing signing
-policy. Other-platform signing still needs a platform runner to verify it.
+Spagitty ships no extension of its own since the CodeRabbit extension was
+removed (TASK-075). The host still reads bundled packages from
+resources/extensions, and only bundled provenance can use the
+executable-directory fallback, but the release puts nothing there.

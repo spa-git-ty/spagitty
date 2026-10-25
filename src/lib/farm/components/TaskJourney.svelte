@@ -416,15 +416,6 @@
 						>
 							Ask for a review
 						</Btn>
-						{#if farm?.supplemental && farm.supplemental.mode !== 'off'}
-							<Btn
-								disabled={busy}
-								onclick={() =>
-									act('Could not run CodeRabbit', () => api.reviewSupplemental(task.id))}
-							>
-								CodeRabbit
-							</Btn>
-						{/if}
 					</div>
 				</div>
 			{:else}

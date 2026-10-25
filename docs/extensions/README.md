@@ -28,6 +28,6 @@ comment you approved. **Neither is a sandbox.** An extension can read any file
 you can and open its own network connections. Install only extensions you
 would be willing to run from a terminal.
 
-The official CodeRabbit extension is trusted because it ships inside
-Spagitty's own release, not because of anything its manifest says; an
-extension installed from a file never gets the Official badge.
+An extension is official only when it ships inside Spagitty's own release,
+not because of anything its manifest says; an extension installed from a file
+never gets the Official badge. No release ships one at present.

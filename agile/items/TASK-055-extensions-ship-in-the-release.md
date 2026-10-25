@@ -2,7 +2,7 @@
 
 # TASK-055 — Extensions ship in the release
 
-**Status:** Done — merged into `main` on 2026-10-06 in `e819aeb`, whose message called it work in progress. Released since: the 3.3.0 `.deb` carries the worker at `usr/lib/Spagitty/extensions/spagitty.coderabbit/bin/x86_64-unknown-linux-gnu/` (checked 2026-10-19). Installing and running it on each system, and the macOS signature, are owed to the sweep.
+**Status:** Dropped — done and shipped, then undone on 2026-10-25 by TASK-075: with CodeRabbit removed, the release bundles no extension, and the staging script and the macOS sidecar went with it.
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** none.
 **Raised by:** the author, through

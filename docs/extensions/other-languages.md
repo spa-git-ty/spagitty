@@ -2,9 +2,9 @@
 
 # Writing an extension in any language
 
-The protocol, not the TypeScript SDK, is the standard. The official CodeRabbit
-worker (`extensions/coderabbit/worker`) is a Rust program that implements it
-with `serde_json` alone and links nothing of Spagitty's.
+The protocol, not the TypeScript SDK, is the standard. A worker can be a
+program in any language that reads and writes the frames below; nothing of
+Spagitty's has to be linked into it.
 
 What a worker must do:
 

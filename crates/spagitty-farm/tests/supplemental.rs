@@ -203,7 +203,7 @@ fn unavailable_provider_blocks_even_with_a_previous_pass() {
     assert_eq!(r.task().status, TaskStatus::Review);
 }
 #[test]
-fn evidence_survives_restart_but_requires_a_live_provider() {
+fn evidence_survives_restart_and_is_checked_again_by_the_provider() {
     let r = Rig::new();
     r.review();
     let reopened = FarmService::open(r.repo.path(), Arc::new(Recorder::default()));
@@ -212,12 +212,24 @@ fn evidence_survives_restart_but_requires_a_live_provider() {
         .unwrap()
         .supplemental_evidence
         .contains_key(&r.id));
-    assert!(reopened
-        .merge(&r.id)
-        .unwrap_err()
-        .to_string()
-        .contains("unavailable"));
     reopened.set_supplemental_provider(r.provider.clone());
+    r.provider.unavailable.store(true, Ordering::SeqCst);
+    assert!(reopened.merge(&r.id).is_err());
+    r.provider.unavailable.store(false, Ordering::SeqCst);
+    reopened.merge(&r.id).unwrap();
+}
+/// TASK-075: with no reviewer set — the application sets none since
+/// CodeRabbit was removed — a farm saved with the review required is not
+/// left waiting for one that cannot come.
+#[test]
+fn without_a_provider_a_required_review_does_not_hold_the_merge() {
+    let r = Rig::new();
+    r.review();
+    let reopened = FarmService::open(r.repo.path(), Arc::new(Recorder::default()));
+    assert_eq!(
+        reopened.farm().unwrap().supplemental.mode,
+        supplemental::Mode::Required
+    );
     reopened.merge(&r.id).unwrap();
 }
 #[test]

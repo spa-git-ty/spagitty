@@ -2,7 +2,7 @@
 
 # FEAT-099 — CodeRabbit on GitHub pull requests
 
-**Status:** Done — merged into `main` on 2026-10-06 in `e819aeb`, whose message called it work in progress. On 2026-10-19 the author chose to drop it, on the understanding that it was not built; it was, so it stays until the author decides whether to remove it. An authenticated GitHub pull request is owed to the sweep.
+**Status:** Dropped — built and shipped (3.3.0); on 2026-10-25 the author confirmed dropping it ("drop code rabbit remove it") and it was removed in TASK-075. The pull request snapshot and comment operations stay in the extension SDK for other extensions.
 **Branch:** `feature/FEAT-097-coderabbit-reviews-local-changes` (continuation).
 **Screens:** Pull requests (1H).
 **Raised by:** the author, through

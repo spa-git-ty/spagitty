@@ -7,7 +7,6 @@ members = [
     "crates/spagitty-farm",
     "crates/spagitty-process",
     "crates/spagitty-extensions",
-    "extensions/coderabbit/worker",
     "src-tauri",
 ]
 

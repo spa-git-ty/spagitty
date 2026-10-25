@@ -37,7 +37,7 @@ impl Default for Policy {
     fn default() -> Self {
         Self {
             mode: Mode::Off,
-            provider: "spagitty.coderabbit/review".into(),
+            provider: String::new(),
             threshold: Threshold::Medium,
             max_repairs: 2,
             revision: 1,

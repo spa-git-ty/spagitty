@@ -1609,13 +1609,14 @@ impl FarmService {
             return self.after_rejection(id, verification.summary());
         }
         let farm = self.farm().ok_or(Error::NoFarm)?;
-        if farm.supplemental.mode != crate::supplemental::Mode::Off
+        let mode = self.supplemental_mode(farm.supplemental.mode);
+        if mode != crate::supplemental::Mode::Off
             && farm.autonomy.reviews()
             && verification.passed
             && !verification.unverified
         {
             let extra = self.review_supplemental(id)?;
-            if farm.supplemental.mode == crate::supplemental::Mode::Required
+            if mode == crate::supplemental::Mode::Required
                 && extra.outcome != crate::supplemental::Outcome::Pass
             {
                 return self.reject_supplemental(id, &extra);
@@ -1657,6 +1658,23 @@ impl FarmService {
 
     pub fn set_supplemental_provider(&self, provider: Arc<dyn crate::supplemental::Provider>) {
         *self.supplemental.lock().expect("supplemental provider") = Some(provider);
+    }
+
+    /// The extra review's mode as it applies: off while no reviewer is set.
+    /// The application sets none since CodeRabbit, the only one, was removed
+    /// (TASK-075), and a farm saved with the review on must not wait for one
+    /// that cannot come.
+    fn supplemental_mode(&self, saved: crate::supplemental::Mode) -> crate::supplemental::Mode {
+        if self
+            .supplemental
+            .lock()
+            .expect("supplemental provider")
+            .is_some()
+        {
+            saved
+        } else {
+            crate::supplemental::Mode::Off
+        }
     }
 
     fn supplemental_input(&self, task: &Task) -> Result<crate::supplemental::Input> {
@@ -1888,7 +1906,7 @@ impl FarmService {
 
     fn check_supplemental(&self, task: &Task) -> Result<()> {
         let farm = self.farm().ok_or(Error::NoFarm)?;
-        if farm.supplemental.mode != crate::supplemental::Mode::Required {
+        if self.supplemental_mode(farm.supplemental.mode) != crate::supplemental::Mode::Required {
             return Ok(());
         }
         if self

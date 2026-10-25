@@ -264,15 +264,10 @@ development request order, and this headless test does not replace a visual swee
 
 ## Extension continuation checks
 
-Deterministic CodeRabbit fixtures are documentation-derived, not captured live
-CLI output. The opt-in smoke body self-skips unless `CODERABBIT_SMOKE=1`; an
-empty default smoke run is not evidence of a live review. Require signed-in CLI
-and disposable review scope for live testing.
-
 Run `cargo test -p spagitty-farm --test supplemental` for durable farm authority,
-policy invalidation, budget, selected repair, cancellation and restart cases.
-The CodeRabbit process suite covers local reviews plus PR request/refresh states,
-missing write grants and uncertain delivery without a live account. Core snapshot
+policy invalidation, budget, selected repair, cancellation and restart cases,
+and for a saved required review not holding a merge once no reviewer is set
+(TASK-075). Core snapshot
 tests check discussion vs inline routes, pagination bounds, partial reads, unknown
 resolution, cancellation before POST and single-attempt ambiguous writes.
 
