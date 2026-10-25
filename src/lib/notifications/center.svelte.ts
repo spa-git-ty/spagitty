@@ -87,12 +87,22 @@ export const center = {
 		if (inTauri()) await invoke('inbox_read_all', { repository }).catch(() => {});
 	},
 
-	/** Forget what was said before `beforeMs`. Resolves with how many went. */
-	async clear(beforeMs: number): Promise<number> {
+	/**
+	 * Forget what was said before `beforeMs`, about one repository or every
+	 * one. Resolves with how many went.
+	 */
+	async clear(beforeMs: number, repository: string | null = null): Promise<number> {
 		const was = entries.length;
-		entries = entries.filter((entry) => entry.createdMs >= beforeMs);
+		entries = entries.filter(
+			(entry) => entry.createdMs >= beforeMs || (repository !== null && entry.repository !== repository)
+		);
 		if (!inTauri()) return was - entries.length;
-		return invoke<number>('inbox_clear', { beforeMs }).catch(() => was - entries.length);
+		return invoke<number>('inbox_clear', { beforeMs, repository }).catch(() => was - entries.length);
+	},
+
+	/** Forget everything said so far (FEAT-159), about one repository or every one. */
+	clearAll(repository: string | null = null): Promise<number> {
+		return center.clear(Date.now() + 1, repository);
 	},
 
 	show(): void {

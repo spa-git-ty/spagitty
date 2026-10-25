@@ -5,6 +5,7 @@
 	import { repo } from '$lib/repo.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { dialog } from '$lib/ui/dialog.svelte';
 	import { speedSearch } from '$lib/ui/speedsearch.svelte';
 	import { act, follow } from './act';
 	import { center } from './center.svelte';
@@ -76,6 +77,27 @@
 		await act(entry.kind, entry.target);
 	}
 
+	/**
+	 * Clear all (FEAT-159): every notification in the scope the drawer is
+	 * showing — this repository's, or every repository's — read or not.
+	 * Asked first, since nothing brings them back.
+	 */
+	async function clearAll() {
+		const scope = onlyHere ? here : null;
+		const count = scope === null ? center.entries.length : center.entries.filter((entry) => entry.repository === scope).length;
+		if (count === 0) return;
+		const agreed = await dialog.confirm({
+			title: 'Clear all notifications',
+			body:
+				scope === null
+					? `All ${count === 1 ? '1 notification' : `${count} notifications`}, from every repository, are deleted. This cannot be undone.`
+					: `All ${count === 1 ? '1 notification' : `${count} notifications`} about this repository are deleted. This cannot be undone.`,
+			confirmLabel: 'Clear all',
+			danger: true
+		});
+		if (agreed) await center.clearAll(scope);
+	}
+
 	function settings() {
 		center.hide();
 		void goto('/settings#notifications');
@@ -106,6 +128,11 @@
 						class="text-button"
 						disabled={fresh === 0}
 						onclick={() => center.readAll(onlyHere ? here : null)}>Mark all read</button
+					>
+					<button
+						class="text-button"
+						disabled={(onlyHere ? center.entries.filter((entry) => entry.repository === here) : center.entries).length === 0}
+						onclick={clearAll}>Clear all</button
 					>
 					<button class="round" aria-label="Notification settings" title="Notification settings" onclick={settings}>
 						<Icon name="settings" size="1.05em" />
