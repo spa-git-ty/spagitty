@@ -22,7 +22,8 @@ import type {
 	Loaded,
 	PersonState,
 	Private,
-	Shared
+	Shared,
+	WsdlView
 } from './types';
 
 /** A piece of an event stream, as it arrived. */
@@ -86,6 +87,29 @@ export function defaultSettings(): Promise<CallsSettings> {
 /** The keys the open repository's `settings.json` overrides. */
 export function overridden(): Promise<string[]> {
 	return invoke('calls_overridden');
+}
+
+// --- SOAP (FEAT-163) ---
+
+/** A WSDL in the repository, by its path from the working tree. */
+export function wsdl(path: string): Promise<WsdlView> {
+	return invoke('calls_wsdl', { path });
+}
+
+/** An operation's envelope made again from the WSDL, keeping typed values; and its action. */
+export function rebuild(ask: {
+	wsdl: string;
+	service: string;
+	port: string | null;
+	operation: string;
+	version: string | null;
+	envelope: string | null;
+}): Promise<[string, string]> {
+	return invoke('calls_rebuild', { ask });
+}
+
+export function importWsdlUrl(url: string): Promise<Found> {
+	return invoke('calls_import_wsdl_url', { url });
 }
 
 // --- Environments, secrets and kept values (FEAT-161) ---

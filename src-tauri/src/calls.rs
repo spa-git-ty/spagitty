@@ -36,11 +36,15 @@ use spagitty_core::calls::body::{self, Shape, Utf8Stream};
 use spagitty_core::calls::build::{self, Shown};
 use spagitty_core::calls::history::{Entry, History};
 use spagitty_core::calls::import::scan::{self, Options as ScanOptions};
+use spagitty_core::calls::import::wsdl_source::SoapChoices;
 use spagitty_core::calls::import::{self, Brought, Choices, Found};
 use spagitty_core::calls::keep::{self, Kept, KeptLog};
 use spagitty_core::calls::model::{new_id, Call, Collection, Environment, Shared, Variable};
+use spagitty_core::calls::model::{random_u64, Kind, WsMode};
 use spagitty_core::calls::send::{self, ClientCert, Failure};
 use spagitty_core::calls::settings::{effective, host_of, CallsSettings};
+use spagitty_core::calls::soap::security::{self, Password};
+use spagitty_core::calls::soap::{self, wsdl as soap_wsdl, Version};
 use spagitty_core::calls::store::{Folder, Stored};
 use spagitty_core::calls::vars::scope_of;
 use spagitty_core::calls::vault::{self, Keychain};
@@ -255,6 +259,9 @@ pub struct ResponseView {
     /// Over [`body::COLOUR_LIMIT`]: shown without colour.
     pub plain: bool,
     pub url: String,
+    /// A SOAP call's fault, when Settings says to show one as an error
+    /// (FEAT-163). An answer of 200 can carry one.
+    pub fault: Option<soap::Fault>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -297,6 +304,49 @@ fn private_values(
     vault::values(&Keychain, &repo_key(repo), environment)
         .map(|values| values.into_iter().collect())
         .map_err(|e| format!("the keychain could not be read: {e}"))
+}
+
+/// A SOAP call's envelope with its WS-Security header, or `None` when it
+/// needs none (FEAT-163). A text password goes in as the call has it, so
+/// it is resolved when sent and stays a name in history; a digest is
+/// resolved here to be hashed.
+fn secured(call: &Call, scope: &spagitty_core::calls::vars::Scope) -> Result<Option<String>> {
+    let Some(ws) = call
+        .ws_security
+        .as_ref()
+        .filter(|_| call.kind == Kind::Soap)
+    else {
+        return Ok(None);
+    };
+    match ws.mode {
+        WsMode::None => Ok(None),
+        WsMode::Signed => Err(
+            "Signed WS-Security is not built yet (FEAT-167): choose None or Username token".into(),
+        ),
+        WsMode::Username => {
+            let text = call.envelope.clone().unwrap_or_default();
+            let raw = ws.password.clone().unwrap_or_default();
+            let mut nonce = Vec::with_capacity(16);
+            nonce.extend_from_slice(&random_u64().to_be_bytes());
+            nonce.extend_from_slice(&random_u64().to_be_bytes());
+            let created = spagitty_core::calls::vars::iso(now_millis());
+            let resolved;
+            let password = if ws.digest {
+                resolved = scope.resolve(&raw).map_err(|e| e.to_string())?;
+                Password::Digest(&resolved)
+            } else {
+                Password::Text(&raw)
+            };
+            Ok(Some(security::with_username(
+                &text,
+                Version::from_text(call.version.as_deref()),
+                ws.user.as_deref().unwrap_or(""),
+                password,
+                &nonce,
+                &created,
+            )))
+        }
+    }
 }
 
 /// Build the call and start sending it. A variable with no value is an
@@ -353,14 +403,16 @@ pub fn calls_send<R: Runtime>(
     );
 
     let version = app.package_info().version.to_string();
+    let envelope = secured(&ask.call, &scope)?;
     let built = build::build(
         &ask.call,
         &scope,
         &settings.every_headers(&version),
         &repo,
-        None,
+        envelope.as_deref(),
     )
     .map_err(|e| e.to_string())?;
+    let read_faults = ask.call.kind == Kind::Soap && settings.fault_as_error;
 
     let mut options = settings.options(
         environment
@@ -485,6 +537,11 @@ pub fn calls_send<R: Runtime>(
                 entry.size = incoming.body.len() as u64;
                 entry.headers = incoming.headers.clone();
                 let kept = history.add(entry, &incoming.body, cap, &private).ok();
+                let fault = if read_faults {
+                    text.as_deref().and_then(soap::fault)
+                } else {
+                    None
+                };
                 let bytes = Arc::new(incoming.body);
                 if let Ok(mut held) = calls.bodies.lock() {
                     held.push((ask.send_id.clone(), bytes.clone()));
@@ -506,6 +563,7 @@ pub fn calls_send<R: Runtime>(
                         plain: bytes.len() > body::COLOUR_LIMIT,
                         text,
                         url: incoming.url,
+                        fault,
                     }),
                     error: None,
                     cancelled: false,
@@ -1068,12 +1126,22 @@ pub struct ScanDone {
     pub cancelled: bool,
 }
 
+/// What a new SOAP call starts with, from Settings › Calls (FEAT-163).
+fn soap_choices(settings: &CallsSettings) -> SoapChoices {
+    SoapChoices {
+        version: Version::from_text(Some(&settings.soap_version)),
+        envelope_from_wsdl: settings.envelope_from_wsdl,
+        ws_security: settings.ws_security.clone(),
+    }
+}
+
 fn import_options(settings: &CallsSettings, folder: &Folder) -> ScanOptions {
     ScanOptions {
         frameworks: settings.frameworks.clone(),
         look_for: settings.look_for.clone(),
         skip: settings.skip_paths.clone(),
         calls_folder: folder.relative.clone(),
+        soap: soap_choices(settings),
     }
 }
 
@@ -1266,7 +1334,8 @@ pub fn calls_import_file<R: Runtime>(
         bring_environments(&folder, &repo, &[environment], &[(String::new(), secrets)])?;
         return add_found(&app, &repo, found);
     }
-    let found = scan::read_file(&path).map_err(|e| e.to_string())?;
+    let (_, settings, _) = place(&app, &repo)?;
+    let found = scan::read_file(&path, &soap_choices(&settings)).map_err(|e| e.to_string())?;
     add_found(&app, &repo, found)
 }
 
@@ -1418,4 +1487,179 @@ pub fn calls_bring_in<R: Runtime>(
         brought,
         environments,
     })
+}
+
+// --- SOAP (FEAT-163) ---------------------------------------------------------
+
+/// A WSDL's operations, for the request's operation picker.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WsdlView {
+    pub services: Vec<ServiceView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServiceView {
+    pub name: String,
+    pub ports: Vec<PortView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortView {
+    pub name: String,
+    pub version: Version,
+    pub address: String,
+    pub operations: Vec<OperationView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationView {
+    pub name: String,
+    pub action: String,
+    pub rpc: bool,
+}
+
+/// Read a WSDL in the repository, by its path from the working tree.
+fn wsdl_in(repo: &Path, path: &str) -> Result<soap_wsdl::Wsdl> {
+    let path = path.trim_start_matches("./").replace('\\', "/");
+    if path.split('/').any(|part| part == "..") {
+        return Err(format!("{path} is not inside the repository"));
+    }
+    let text = std::fs::read_to_string(repo.join(&path))
+        .map_err(|e| format!("{path} could not be read: {e}"))?;
+    let load = |file: &str| std::fs::read_to_string(repo.join(file)).ok();
+    soap_wsdl::parse(&text, &path, &load)
+}
+
+#[tauri::command(async)]
+pub fn calls_wsdl(state: State<'_, AppState>, path: String) -> Result<WsdlView> {
+    let repo = state.open_path("calls_wsdl").map_err(|e| e.to_string())?;
+    let wsdl = wsdl_in(&repo, &path)?;
+    Ok(WsdlView {
+        services: wsdl
+            .services
+            .iter()
+            .map(|service| ServiceView {
+                name: service.name.clone(),
+                ports: service
+                    .ports
+                    .iter()
+                    .map(|port| PortView {
+                        name: port.name.clone(),
+                        version: port.version,
+                        address: port.address.clone(),
+                        operations: port
+                            .operations
+                            .iter()
+                            .map(|op| OperationView {
+                                name: op.name.clone(),
+                                action: op.action.clone(),
+                                rpc: op.rpc,
+                            })
+                            .collect(),
+                    })
+                    .collect(),
+            })
+            .collect(),
+    })
+}
+
+/// *Rebuild from WSDL* asked for one operation.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RebuildAsk {
+    pub wsdl: String,
+    pub service: String,
+    pub port: Option<String>,
+    pub operation: String,
+    pub version: Option<String>,
+    /// The envelope as it is now: its typed values are kept.
+    pub envelope: Option<String>,
+}
+
+/// The operation's envelope made again from the WSDL, keeping the values
+/// typed into `envelope` where their element still exists; and its action.
+#[tauri::command(async)]
+pub fn calls_rebuild(state: State<'_, AppState>, ask: RebuildAsk) -> Result<(String, String)> {
+    let repo = state
+        .open_path("calls_rebuild")
+        .map_err(|e| e.to_string())?;
+    let wsdl = wsdl_in(&repo, &ask.wsdl)?;
+    let (port, operation) = wsdl
+        .find(&ask.service, ask.port.as_deref(), &ask.operation)
+        .ok_or_else(|| {
+            format!(
+                "{} has no operation {} in {}",
+                ask.wsdl, ask.operation, ask.service
+            )
+        })?;
+    let version = match ask.version.as_deref() {
+        Some(text) => Version::from_text(Some(text)),
+        None => port.version,
+    };
+    let typed = ask
+        .envelope
+        .as_deref()
+        .map(soap::xsd::typed_values)
+        .unwrap_or_default();
+    Ok((
+        wsdl.envelope(operation, version, typed),
+        operation.action.clone(),
+    ))
+}
+
+/// A WSDL from a URL the person typed. It is fetched as a call is, through
+/// `calls/send.rs`; schemas it imports by URL are not fetched.
+#[tauri::command(async)]
+pub fn calls_import_wsdl_url<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    url: String,
+) -> Result<Found> {
+    let repo = state
+        .open_path("calls_import_wsdl_url")
+        .map_err(|e| e.to_string())?;
+    let (_, settings, _) = place(&app, &repo)?;
+    let url = url.trim().to_string();
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("a WSDL's address starts with http:// or https://".into());
+    }
+    let out = send::Outgoing {
+        method: "GET".into(),
+        url: url.clone(),
+        headers: vec![("Accept".into(), "text/xml, application/xml".into())],
+        body: None,
+    };
+    let incoming = send::send(
+        &out,
+        &settings.options(true),
+        &AtomicBool::new(false),
+        |_, _| {},
+    )
+    .map_err(|e| e.to_string())?;
+    if incoming.status >= 400 {
+        return Err(format!(
+            "{url} answered {} {}",
+            incoming.status, incoming.reason
+        ));
+    }
+    let text = String::from_utf8_lossy(&incoming.body).into_owned();
+    let (endpoints, server) =
+        import::wsdl_source::read(&url, &text, &|_| None, &soap_choices(&settings))?;
+    let mut found = Found::default();
+    found.sources.push(import::Source {
+        id: format!("file:{url}"),
+        kind: import::SourceKind::Wsdl,
+        label: url.rsplit('/').next().unwrap_or(&url).to_string(),
+        file: Some(url.clone()),
+        count: endpoints.len(),
+        error: None,
+        in_repository: false,
+    });
+    found.endpoints = endpoints;
+    found.base_url = server;
+    add_found(&app, &repo, found)
 }

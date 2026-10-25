@@ -32,6 +32,7 @@ pub mod nest;
 pub mod openapi;
 pub mod postman;
 pub mod scan;
+pub mod wsdl_source;
 
 use serde::{Deserialize, Serialize};
 
@@ -48,6 +49,12 @@ pub enum SourceKind {
     JaxRs,
     /// NestJS controllers (the author's request, 2026-10-26).
     Nest,
+    /// JAX-WS `@WebService` classes (FEAT-163).
+    JaxWs,
+    /// Spring-WS `@Endpoint` classes (FEAT-163).
+    SpringWs,
+    /// A WSDL file (FEAT-163).
+    Wsdl,
     OpenApi,
     Postman,
     Insomnia,
@@ -63,7 +70,13 @@ impl SourceKind {
     pub fn is_code(self) -> bool {
         matches!(
             self,
-            SourceKind::Spring | SourceKind::JaxRs | SourceKind::Nest | SourceKind::OpenApi
+            SourceKind::Spring
+                | SourceKind::JaxRs
+                | SourceKind::Nest
+                | SourceKind::OpenApi
+                | SourceKind::JaxWs
+                | SourceKind::SpringWs
+                | SourceKind::Wsdl
         )
     }
 }
@@ -667,6 +680,20 @@ pub fn bring_in(
     choices: Choices,
 ) -> Brought {
     let mut brought = Brought::default();
+    // A SOAP collection keeps the WSDL in the repository it was made from,
+    // for *Rebuild from WSDL* (FEAT-163).
+    if collection.wsdl.is_none() {
+        collection.wsdl = endpoints
+            .iter()
+            .filter(|e| e.call.kind == Kind::Soap)
+            .filter_map(|e| e.file.clone())
+            .find(|file| {
+                file.ends_with(".wsdl")
+                    && !file.contains("://")
+                    && !file.starts_with('/')
+                    && !file.contains(':')
+            });
+    }
     for endpoint in endpoints {
         let fresh = match &endpoint.declared {
             Some(declared) => build(declared, &endpoint.call.name, choices),

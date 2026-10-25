@@ -18,10 +18,11 @@ use serde_json::Value;
 
 use super::super::model::{Collection, Environment, Variable};
 use super::{
-    bruno, curl, har, http_file, insomnia, java, key_of, nest, openapi, path_of, postman, Endpoint,
-    Found, Source, SourceKind, Status,
+    bruno, curl, har, http_file, insomnia, java, key_of, nest, openapi, path_of, postman,
+    wsdl_source, Endpoint, Found, Source, SourceKind, Status,
 };
 use crate::{shell, Error, Result};
+use wsdl_source::SoapChoices;
 
 /// The most files one scan reads.
 pub const CAP: usize = 20_000;
@@ -40,6 +41,8 @@ pub struct Options {
     /// The calls folder, from the working tree: its collections are not
     /// sources.
     pub calls_folder: String,
+    /// What a SOAP call starts with (FEAT-163).
+    pub soap: SoapChoices,
 }
 
 /// `**/test/**`, `*.json`, `build/` as a test for a path with `/`.
@@ -101,6 +104,7 @@ enum Kind {
     Yaml,
     Http,
     Har,
+    Wsdl,
     Bru,
     BrunoRoot,
 }
@@ -134,6 +138,9 @@ fn kind_of(path: &str) -> Option<Kind> {
     }
     if name.ends_with(".har") {
         return Some(Kind::Har);
+    }
+    if name.ends_with(".wsdl") {
+        return Some(Kind::Wsdl);
     }
     if name.ends_with(".json")
         && !matches!(
@@ -303,6 +310,35 @@ pub fn scan(
                     found.endpoints.extend(endpoints);
                 }
             }
+            Kind::Wsdl if options.look_for.iter().any(|l| l == "wsdl") => {
+                let load = |file: &str| std::fs::read_to_string(repo.join(file)).ok();
+                match wsdl_source::read(path, &text, &load, &options.soap) {
+                    Ok((endpoints, server)) => {
+                        if found.base_url.is_none() {
+                            found.base_url = server;
+                        }
+                        found.sources.push(Source {
+                            id: format!("file:{path}"),
+                            kind: SourceKind::Wsdl,
+                            label: path.rsplit('/').next().unwrap_or(path).to_string(),
+                            file: Some(path.to_string()),
+                            count: endpoints.len(),
+                            error: None,
+                            in_repository: true,
+                        });
+                        found.endpoints.extend(endpoints);
+                    }
+                    Err(error) => found.sources.push(Source {
+                        id: format!("file:{path}"),
+                        kind: SourceKind::Wsdl,
+                        label: path.rsplit('/').next().unwrap_or(path).to_string(),
+                        file: Some(path.to_string()),
+                        count: 0,
+                        error: Some(error),
+                        in_repository: true,
+                    }),
+                }
+            }
             Kind::Json | Kind::Har | Kind::Yaml => {
                 // Only the start is looked at before a JSON file is parsed:
                 // most JSON in a repository is not a collection.
@@ -322,7 +358,7 @@ pub fn scan(
     }
 
     if !java_files.is_empty() {
-        let (endpoints, sources) = java::read(&java_files, &options.frameworks);
+        let (endpoints, sources) = java::read(&java_files, &options.frameworks, &options.soap);
         if !endpoints.is_empty() {
             found.base_url = java::base_url(&config).or(found.base_url.take());
         }
@@ -370,8 +406,43 @@ pub fn scan(
         });
         found.endpoints.extend(endpoints);
     }
+    prefer_wsdl(&mut found);
     progress(paths.len());
     Ok(found)
+}
+
+/// An operation a WSDL in the repository has is taken from the WSDL, not
+/// from the code that implements it (§8.2): the WSDL is what clients see.
+fn prefer_wsdl(found: &mut Found) {
+    let from_wsdl: std::collections::HashSet<String> = found
+        .endpoints
+        .iter()
+        .filter(|e| e.method == "SOAP" && !e.source.starts_with("code:"))
+        .filter_map(|e| e.call.operation.clone())
+        .collect();
+    if from_wsdl.is_empty() {
+        return;
+    }
+    found.endpoints.retain(|e| {
+        !(e.source.starts_with("code:")
+            && e.method == "SOAP"
+            && e.call
+                .operation
+                .as_ref()
+                .is_some_and(|op| from_wsdl.contains(op)))
+    });
+    for source in &mut found.sources {
+        if source.id.starts_with("code:") {
+            source.count = found
+                .endpoints
+                .iter()
+                .filter(|e| e.source == source.id)
+                .count();
+        }
+    }
+    found
+        .sources
+        .retain(|s| s.count > 0 || s.error.is_some() || !s.id.starts_with("code:"));
 }
 
 /// A Spagitty collection, as Share writes one to a single file.
@@ -418,7 +489,7 @@ fn spagitty(path: &str, value: &Value, found: &mut Found) -> bool {
 }
 
 /// One file chosen from outside the repository, whatever it is.
-pub fn read_file(path: &Path) -> Result<Found> {
+pub fn read_file(path: &Path, soap: &SoapChoices) -> Result<Found> {
     let name = path.to_string_lossy().replace('\\', "/");
     let text = std::fs::read_to_string(path)
         .map_err(|e| Error::Calls(format!("{name} could not be read: {e}")))?;
@@ -436,6 +507,23 @@ pub fn read_file(path: &Path) -> Result<Found> {
             in_repository: false,
         });
         found.endpoints = endpoints;
+        return Ok(found);
+    }
+    if lower.ends_with(".wsdl") {
+        let load = |file: &str| std::fs::read_to_string(file).ok();
+        let (endpoints, server) =
+            wsdl_source::read(&name, &text, &load, soap).map_err(Error::Calls)?;
+        found.sources.push(Source {
+            id: format!("file:{name}"),
+            kind: SourceKind::Wsdl,
+            label: name.rsplit('/').next().unwrap_or(&name).to_string(),
+            file: Some(name.clone()),
+            count: endpoints.len(),
+            error: None,
+            in_repository: false,
+        });
+        found.endpoints = endpoints;
+        found.base_url = server;
         return Ok(found);
     }
     if lower.ends_with(".bru") {
@@ -554,6 +642,7 @@ mod tests {
                 .to_vec(),
             skip: "**/test/**".into(),
             calls_folder: ".spagitty/calls".into(),
+            soap: SoapChoices::default(),
         }
     }
 
@@ -605,6 +694,50 @@ mod tests {
     }
 
     #[test]
+    fn a_wsdl_in_the_repository_is_preferred_to_the_code_behind_it() {
+        use crate::calls::soap::wsdl::tests::{COMMON, INVOICES};
+        let fixture = Fixture::empty();
+        fixture.write("wsdl/invoices.wsdl", INVOICES);
+        fixture.write("wsdl/common.xsd", COMMON);
+        fixture.write(
+            "src/Invoices.java",
+            "@WebService(serviceName = \"BillingService\") public class Invoices { public Invoice GetInvoice(String id) { return null; } public void Other() {} }",
+        );
+        let mut opts = options();
+        opts.frameworks.push("jaxWs".into());
+        opts.look_for.push("wsdl".into());
+        let found = scan(fixture.path(), &opts, &AtomicBool::new(false), |_| {}).unwrap();
+        let mut keys: Vec<(&str, &str)> = found
+            .endpoints
+            .iter()
+            .map(|e| (e.key.as_str(), e.source.as_str()))
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                ("SOAP BillingService#GetInvoice", "file:wsdl/invoices.wsdl"),
+                ("SOAP BillingService#Other", "code:src/Invoices.java"),
+            ]
+        );
+        // The schema it includes was read: the line element has its fields.
+        let envelope = found
+            .endpoints
+            .iter()
+            .find(|e| e.source.starts_with("file:"))
+            .unwrap()
+            .call
+            .envelope
+            .clone()
+            .unwrap();
+        assert!(envelope.contains("<inv:sku>sku</inv:sku>"));
+        assert_eq!(
+            found.base_url.as_deref(),
+            Some("https://billing.example.com")
+        );
+    }
+
+    #[test]
     fn a_file_from_outside_is_read_by_what_it_is() {
         let dir = tempfile::tempdir().unwrap();
         let write = |name: &str, text: &str| {
@@ -616,15 +749,18 @@ mod tests {
             "shared.json",
             r#"{"v":1,"name":"orders-api","items":[{"folder":"Auth","items":[{"id":"c_1","name":"Log in","kind":"rest","method":"POST","url":"{{baseUrl}}/auth/login"}]}]}"#,
         );
-        let found = read_file(&collection).unwrap();
+        let found = read_file(&collection, &SoapChoices::default()).unwrap();
         assert_eq!(found.sources[0].kind, SourceKind::Spagitty);
         assert_eq!(found.endpoints[0].folder.as_deref(), Some("Auth"));
 
         let curl = write("call.txt", "curl https://h/x -d '{\"a\":1}'");
-        assert_eq!(read_file(&curl).unwrap().endpoints[0].method, "POST");
+        assert_eq!(
+            read_file(&curl, &SoapChoices::default()).unwrap().endpoints[0].method,
+            "POST"
+        );
 
         let junk = write("notes.txt", "hello");
-        assert!(read_file(&junk).is_err());
+        assert!(read_file(&junk, &SoapChoices::default()).is_err());
         assert!(read_text("not curl").is_err());
     }
 }

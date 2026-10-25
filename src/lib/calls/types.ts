@@ -195,6 +195,27 @@ export interface ResponseView {
 	text: string | null;
 	plain: boolean;
 	url: string;
+	/** A SOAP call's fault, when Settings says to show one as an error (FEAT-163). */
+	fault?: Fault | null;
+}
+
+export interface Fault {
+	code: string;
+	reason: string;
+	detail: string | null;
+}
+
+/** A WSDL's operations, for the operation picker (FEAT-163). */
+export interface WsdlView {
+	services: {
+		name: string;
+		ports: {
+			name: string;
+			version: '1.1' | '1.2';
+			address: string;
+			operations: { name: string; action: string; rpc: boolean }[];
+		}[];
+	}[];
 }
 
 export interface Done {
@@ -271,6 +292,9 @@ export type SourceKind =
 	| 'spring'
 	| 'jaxRs'
 	| 'nest'
+	| 'jaxWs'
+	| 'springWs'
+	| 'wsdl'
 	| 'openApi'
 	| 'postman'
 	| 'insomnia'

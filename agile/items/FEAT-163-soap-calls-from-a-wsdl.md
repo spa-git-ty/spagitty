@@ -2,7 +2,8 @@
 
 # FEAT-163 — SOAP calls from a WSDL
 
-**Status:** Backlog — after FEAT-162.
+**Status:** Open — built on `feature/FEAT-163-soap`, stacked on FEAT-162, for release 4.0.0. Covered by Rust tests in `calls/soap/` (document/literal and rpc/literal WSDLs, SOAP 1.1 and 1.2 ports, an included XSD, envelopes and rebuilding, both password kinds of the username token with SHA-1 checked against the standard vectors, faults in both versions), `calls/xml.rs`, `calls/import/wsdl_source.rs` and the JAX-WS and Spring-WS cases in `calls/import/java.rs` and `scan.rs`, and by `SoapEditor.test.ts`. *Signed* is drawn and not offered, as the author decided on 2026-10-25: it is FEAT-167. Export to Postman is FEAT-164's. Not yet looked at in the running application.
+**Branch:** `feature/FEAT-163-soap`.
 **Screens:** 2C (Calls, with a SOAP call open; Import's SOAP sources).
 **Raised by:** the author, 2026-10-25: Calls supports REST and SOAP.
 **Proposal:** [`docs/proposals/calls.md`](../../docs/proposals/calls.md) §7. **Designs:** [`design_handoff_calls/`](../../design_handoff_calls/) — `SoapCall.dc.html`, `Scan.dc.html`.

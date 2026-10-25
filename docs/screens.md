@@ -1386,6 +1386,20 @@ in place, never rewritten; a dashed card there counts endpoints the code
 declares that no collection has, or, when Settings says *Ask*, offers to
 scan.
 
+**A SOAP call** (FEAT-163) has the version (SOAP 1.1 or 1.2), the operation
+picker (*Service › Operation*, from the collection's WSDL), the endpoint URL
+and *Send*; then *Envelope*, *Headers* (with the `SOAPAction`, or 1.2's
+`action` parameter, shown), *WS-Security* (*None* or *Username token*, the
+password as text or a digest, with a nonce and the time; *Signed* is drawn
+and not offered, FEAT-167) and *Keep*. *Rebuild from WSDL* makes the
+envelope again, keeping what was typed where its element still exists. An
+envelope made from a WSDL has every element, a sample, and a comment with its
+type and whether it is required. A fault is shown as an error with its code,
+reason and detail even on a 200; the bar says *no fault* otherwise. Import
+reads WSDL 1.1 files in the repository (following the XSDs they include),
+a WSDL from a URL, and JAX-WS and Spring-WS services in the code; a WSDL's
+operation is preferred to the code behind it.
+
 **Secrets and kept values** are in the OS keychain, one entry per
 repository and environment, through `forge/keychain.rs`; the files hold only
 their names. Where each kept value came from, and whether it is stale, is in

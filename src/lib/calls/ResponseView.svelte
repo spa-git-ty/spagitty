@@ -35,6 +35,8 @@
 			ns?: Record<string, string>;
 		}) => Promise<boolean>;
 		onforget?: (name: string) => void;
+		/** A SOAP call: the bar says whether there was a fault (FEAT-163). */
+		soap?: boolean;
 	}
 
 	let {
@@ -49,7 +51,8 @@
 		keepEvery = true,
 		suggest = true,
 		onkeep,
-		onforget
+		onforget,
+		soap = false
 	}: Props = $props();
 
 	type Tab = 'body' | 'headers' | 'cookies';
@@ -90,6 +93,11 @@
 				><span class="dot" aria-hidden="true"></span><span class="mono">{response.status} {response.reason}</span></span
 			>
 			<span class="meta mono">{formatMillis(response.millis)} · {formatSize(response.size)}</span>
+			{#if response.fault}
+				<span class="fault-tag" title={response.fault.reason}>Fault · {response.fault.code}</span>
+			{:else if soap && response.shape === 'xml'}
+				<span class="meta">no fault</span>
+			{/if}
 			<span class="sep" aria-hidden="true"></span>
 			<div class="tabs" role="tablist" aria-label="Parts of the response">
 				<button type="button" role="tab" class="tab" class:on={tab === 'body'} aria-selected={tab === 'body'} onclick={() => (tab = 'body')}
@@ -169,6 +177,12 @@
 					<button type="button" class="act" onclick={saveAs}>Save as…</button>
 				</div>
 			{:else}
+				{#if response.fault}
+					<div class="fault" role="alert">
+						<p><strong>{response.fault.code}</strong> {response.fault.reason}</p>
+						{#if response.fault.detail}<pre class="mono">{response.fault.detail}</pre>{/if}
+					</div>
+				{/if}
 				{#if response.truncated || response.plain}
 					<p class="cut">
 						{response.truncated ? 'Cut at 50 MB: the rest was not read.' : ''}
@@ -365,6 +379,38 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
+	}
+
+	.fault-tag {
+		padding: 1px 8px;
+		border-radius: var(--r-pill);
+		background: color-mix(in srgb, var(--danger) 15%, transparent);
+		color: var(--danger);
+		font-size: var(--fs-secondary);
+		font-weight: 600;
+	}
+
+	.fault {
+		margin: 0 12px 8px;
+		padding: 8px 12px;
+		border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+		border-radius: var(--r-field);
+		background: color-mix(in srgb, var(--danger) 8%, transparent);
+	}
+
+	.fault p {
+		margin: 0;
+	}
+
+	.fault strong {
+		color: var(--danger);
+	}
+
+	.fault pre {
+		margin: 6px 0 0;
+		font-size: var(--fs-mono);
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 	}
 
 	.cut,

@@ -18,7 +18,11 @@ use std::collections::HashMap;
 
 use tree_sitter::{Node, Parser};
 
+use super::super::model::{new_id, Call, Kind, WsMode, WsSecurity};
+use super::super::soap::envelope;
+use super::super::xml::escape;
 use super::json::J;
+use super::wsdl_source::SoapChoices;
 use super::{
     build, key_of, words_of, Choices, Declared, Endpoint, Param, Source, SourceKind, Status,
 };
@@ -581,6 +585,7 @@ fn spring_mapping(anns: &[Ann]) -> Option<(String, Vec<String>, &Ann)> {
 struct Endpoints<'a> {
     world: &'a World,
     frameworks: &'a [String],
+    soap: &'a SoapChoices,
     out: Vec<Endpoint>,
     sources: Vec<Source>,
 }
@@ -688,6 +693,13 @@ impl Endpoints<'_> {
                         true,
                     );
                 }
+            } else if has(&anns, "WebService") && wanted("jaxWs") {
+                kind = SourceKind::JaxWs;
+                let interface = decl.kind() == "interface_declaration";
+                self.jaxws(file, &class, &anns, &methods, &method_anns, interface);
+            } else if has(&anns, "Endpoint") && wanted("springWs") {
+                kind = SourceKind::SpringWs;
+                self.spring_ws(file, &class, &methods, &method_anns);
             }
         }
         let count = self.out.len() - start;
@@ -855,10 +867,238 @@ impl Endpoints<'_> {
     }
 }
 
+/// A sample value as XML: an object's fields as child elements, a list as
+/// its first item, `prefix` on every element (empty for unqualified ones).
+fn xml_of(name: &str, value: &J, prefix: &str, depth: usize, out: &mut String) {
+    let pad = "  ".repeat(depth);
+    let tag = if prefix.is_empty() {
+        name.to_string()
+    } else {
+        format!("{prefix}:{name}")
+    };
+    match value {
+        J::Obj(entries) if !entries.is_empty() => {
+            out.push_str(&format!("{pad}<{tag}>\n"));
+            for (key, item) in entries {
+                xml_of(key, item, prefix, depth + 1, out);
+            }
+            out.push_str(&format!("{pad}</{tag}>\n"));
+        }
+        J::Arr(items) if !items.is_empty() => xml_of(name, &items[0], prefix, depth, out),
+        J::Obj(_) | J::Arr(_) | J::Null => out.push_str(&format!("{pad}<{tag}/>\n")),
+        other => out.push_str(&format!(
+            "{pad}<{tag}>{}</{tag}>\n",
+            escape(&other.text().unwrap_or_default())
+        )),
+    }
+}
+
+/// A package as JAX-WS's default namespace: `shop.billing` is
+/// `http://billing.shop/`.
+fn namespace_of(source: &str) -> String {
+    let package = source
+        .lines()
+        .map(str::trim)
+        .find_map(|line| line.strip_prefix("package "))
+        .map(|p| p.trim_end_matches(';').trim())
+        .unwrap_or("");
+    let mut parts: Vec<&str> = package.split('.').filter(|p| !p.is_empty()).collect();
+    parts.reverse();
+    format!("http://{}/", parts.join("."))
+}
+
+impl Endpoints<'_> {
+    fn soap_call(
+        &self,
+        service: &str,
+        operation: &str,
+        action: &str,
+        url: &str,
+        body: &str,
+        ns: &str,
+    ) -> Call {
+        let ws_security = (self.soap.ws_security == "username").then(|| WsSecurity {
+            mode: WsMode::Username,
+            user: Some("{{user}}".into()),
+            password: Some("{{password}}".into()),
+            digest: false,
+        });
+        Call {
+            id: new_id(),
+            name: operation.to_string(),
+            kind: Kind::Soap,
+            url: url.to_string(),
+            service: Some(service.to_string()),
+            operation: Some(operation.to_string()),
+            version: Some(self.soap.version.as_str().into()),
+            action: (!action.is_empty()).then(|| action.to_string()),
+            envelope: Some(envelope(
+                self.soap.version,
+                body,
+                &[(ns.to_string(), "tns".to_string())],
+            )),
+            ws_security,
+            ..Call::default()
+        }
+    }
+
+    fn push_soap(&mut self, file: &Parsed, service: &str, call: Call, line: u32, hint: &str) {
+        let operation = call.operation.clone().unwrap_or_default();
+        self.out.push(Endpoint {
+            id: format!("{}#{}", file.path, self.out.len()),
+            key: key_of(&call),
+            source: format!("code:{}", file.path),
+            group: service.to_string(),
+            file: Some(file.path.clone()),
+            line: Some(line),
+            method: "SOAP".into(),
+            path: format!("{service} › {operation}"),
+            hint: hint.to_string(),
+            call,
+            status: Status::New,
+            declared: None,
+            folder: None,
+        });
+    }
+
+    /// JAX-WS: a `@WebService` class's public methods, or an interface's,
+    /// as document/literal wrapped operations.
+    fn jaxws(
+        &mut self,
+        file: &Parsed,
+        class: &str,
+        anns: &[Ann],
+        methods: &[Node],
+        method_anns: &[Vec<Ann>],
+        interface: bool,
+    ) {
+        let source = &file.text;
+        let web = find(anns, "WebService").cloned().unwrap_or_default();
+        let service = web
+            .first(&["serviceName"])
+            .unwrap_or_else(|| format!("{class}Service"));
+        let ns = web
+            .first(&["targetNamespace"])
+            .unwrap_or_else(|| namespace_of(source));
+        for (method, anns) in methods.iter().zip(method_anns) {
+            let public = interface
+                || children(*method).into_iter().any(|c| {
+                    c.kind() == "modifiers"
+                        && text(c, source).split_whitespace().any(|w| w == "public")
+                });
+            let marked = find(anns, "WebMethod");
+            if !public || marked.and_then(|m| m.first(&["exclude"])).as_deref() == Some("true") {
+                continue;
+            }
+            let name = method
+                .child_by_field_name("name")
+                .map(|n| text(n, source).to_string())
+                .unwrap_or_default();
+            let operation = marked
+                .and_then(|m| m.first(&["operationName"]))
+                .unwrap_or(name);
+            let action = marked
+                .and_then(|m| m.first(&["action"]))
+                .unwrap_or_default();
+            let mut body = format!("    <tns:{operation}>\n");
+            let params = method
+                .child_by_field_name("parameters")
+                .map(children)
+                .unwrap_or_default();
+            for (i, param) in params
+                .into_iter()
+                .filter(|p| p.kind() == "formal_parameter")
+                .enumerate()
+            {
+                let pann = annotations(param, source, self.world, class);
+                let pname = find(&pann, "WebParam")
+                    .and_then(|w| w.first(&["name"]))
+                    .unwrap_or_else(|| format!("arg{i}"));
+                let ty = param
+                    .child_by_field_name("type")
+                    .map(|t| text(t, source))
+                    .unwrap_or("String");
+                let value = sample(ty, &pname, &[], self.world, 0, &mut Vec::new());
+                xml_of(&pname, &value, "", 3, &mut body);
+            }
+            body.push_str(&format!("    </tns:{operation}>\n"));
+            let url = format!("{{{{baseUrl}}}}/{service}");
+            let call = self.soap_call(&service, &operation, &action, &url, &body, &ns);
+            self.push_soap(
+                file,
+                &service,
+                call,
+                method.start_position().row as u32 + 1,
+                "JAX-WS",
+            );
+        }
+    }
+
+    /// Spring-WS: each `@PayloadRoot` method of an `@Endpoint`, its
+    /// `@RequestPayload` class as the payload.
+    fn spring_ws(
+        &mut self,
+        file: &Parsed,
+        class: &str,
+        methods: &[Node],
+        method_anns: &[Vec<Ann>],
+    ) {
+        let source = &file.text;
+        for (method, anns) in methods.iter().zip(method_anns) {
+            let Some(root) = find(anns, "PayloadRoot") else {
+                continue;
+            };
+            let ns = root.first(&["namespace"]).unwrap_or_default();
+            let Some(local) = root.first(&["localPart"]) else {
+                continue;
+            };
+            let mut value = J::Obj(Vec::new());
+            for param in method
+                .child_by_field_name("parameters")
+                .map(children)
+                .unwrap_or_default()
+            {
+                if param.kind() == "formal_parameter"
+                    && has(
+                        &annotations(param, source, self.world, class),
+                        "RequestPayload",
+                    )
+                {
+                    let ty = param
+                        .child_by_field_name("type")
+                        .map(|t| text(t, source))
+                        .unwrap_or("Object");
+                    value = sample(ty, "", &[], self.world, 0, &mut Vec::new());
+                }
+            }
+            let mut body = String::new();
+            xml_of(&local, &value, "tns", 2, &mut body);
+            let service = class.trim_end_matches("Endpoint").to_string();
+            let service = if service.is_empty() {
+                class.to_string()
+            } else {
+                service
+            };
+            let call = self.soap_call(&service, &local, "", "{{baseUrl}}/ws", &body, &ns);
+            self.push_soap(
+                file,
+                &service,
+                call,
+                method.start_position().row as u32 + 1,
+                "Spring-WS",
+            );
+        }
+    }
+}
+
 /// Every endpoint the Java files declare, for the frameworks named
-/// (`springMvc`, `springWebflux`, `jaxRs`), with a source for each file
-/// that has any.
-pub fn read(files: &[(String, String)], frameworks: &[String]) -> (Vec<Endpoint>, Vec<Source>) {
+/// (`springMvc`, `springWebflux`, `jaxRs`, `jaxWs`, `springWs`), with a
+/// source for each file that has any.
+pub fn read(
+    files: &[(String, String)],
+    frameworks: &[String],
+    soap: &SoapChoices,
+) -> (Vec<Endpoint>, Vec<Source>) {
     let mut parser = Parser::new();
     if parser
         .set_language(&tree_sitter_java::LANGUAGE.into())
@@ -880,6 +1120,7 @@ pub fn read(files: &[(String, String)], frameworks: &[String]) -> (Vec<Endpoint>
     let mut endpoints = Endpoints {
         world: &world,
         frameworks,
+        soap,
         out: Vec::new(),
         sources: Vec::new(),
     };
@@ -1078,6 +1319,7 @@ public enum Status { NEW, PAID }
                 ("src/Model.java", MODEL),
             ]),
             &all(),
+            &SoapChoices::default(),
         );
         let got: Vec<(String, String, String)> = endpoints
             .iter()
@@ -1135,6 +1377,7 @@ public enum Status { NEW, PAID }
                 ("src/Model.java", MODEL),
             ]),
             &all(),
+            &SoapChoices::default(),
         );
         let body = endpoints[2]
             .call
@@ -1201,7 +1444,7 @@ public interface InvoiceResource {
 record Invoice(String number) {}
 "#;
         let list = files(&[("a/UserHandler.java", flux), ("b/Invoices.java", jaxrs)]);
-        let (endpoints, sources) = read(&list, &all());
+        let (endpoints, sources) = read(&list, &all(), &SoapChoices::default());
         let got: Vec<String> = endpoints
             .iter()
             .map(|e| format!("{} {}", e.method, e.call.url))
@@ -1225,8 +1468,91 @@ record Invoice(String number) {}
             [SourceKind::Spring, SourceKind::JaxRs]
         );
 
-        let (only_mvc, _) = read(&list, &["springMvc".to_string()]);
+        let (only_mvc, _) = read(&list, &["springMvc".to_string()], &SoapChoices::default());
         assert!(only_mvc.is_empty());
+    }
+
+    #[test]
+    fn jaxws_and_spring_ws_endpoints_are_soap_calls_with_envelopes() {
+        let jaxws = r#"
+package shop.billing;
+
+@WebService(serviceName = "InvoiceService")
+public class InvoiceEndpoint {
+    @WebMethod(operationName = "GetInvoice", action = "urn:GetInvoice")
+    public Invoice get(@WebParam(name = "invoiceId") String id, @WebParam(name = "query") Query q) { return null; }
+
+    public void ping(int times) {}
+
+    @WebMethod(exclude = true)
+    public void hidden() {}
+
+    private void helper() {}
+}
+record Query(String lang, int page) {}
+"#;
+        let spring_ws = r#"
+@Endpoint
+public class CountryEndpoint {
+    private static final String NS = "http://spring.io/guides/gs-producing-web-service";
+
+    @PayloadRoot(namespace = NS, localPart = "getCountryRequest")
+    @ResponsePayload
+    public GetCountryResponse getCountry(@RequestPayload GetCountryRequest request) { return null; }
+}
+class GetCountryRequest { private String name; }
+"#;
+        let frameworks = vec!["jaxWs".to_string(), "springWs".to_string()];
+        let (endpoints, sources) = read(
+            &files(&[
+                ("src/InvoiceEndpoint.java", jaxws),
+                ("src/CountryEndpoint.java", spring_ws),
+            ]),
+            &frameworks,
+            &SoapChoices::default(),
+        );
+        let got: Vec<(String, String, String)> = endpoints
+            .iter()
+            .map(|e| (e.key.clone(), e.call.url.clone(), e.hint.clone()))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                (
+                    "SOAP InvoiceService#GetInvoice".into(),
+                    "{{baseUrl}}/InvoiceService".into(),
+                    "JAX-WS".into()
+                ),
+                (
+                    "SOAP InvoiceService#ping".into(),
+                    "{{baseUrl}}/InvoiceService".into(),
+                    "JAX-WS".into()
+                ),
+                (
+                    "SOAP Country#getCountryRequest".into(),
+                    "{{baseUrl}}/ws".into(),
+                    "Spring-WS".into()
+                ),
+            ]
+        );
+        let get = &endpoints[0].call;
+        assert_eq!(get.action.as_deref(), Some("urn:GetInvoice"));
+        let envelope = get.envelope.as_deref().unwrap();
+        assert!(envelope.contains("xmlns:tns=\"http://billing.shop/\""));
+        assert!(envelope.contains("    <tns:GetInvoice>\n      <invoiceId>invoiceId</invoiceId>\n      <query>\n        <lang>lang</lang>\n        <page>0</page>\n      </query>\n    </tns:GetInvoice>"));
+        assert!(endpoints[1]
+            .call
+            .envelope
+            .as_deref()
+            .unwrap()
+            .contains("<arg0>0</arg0>"));
+        let country = endpoints[2].call.envelope.as_deref().unwrap();
+        assert!(country.contains("xmlns:tns=\"http://spring.io/guides/gs-producing-web-service\""));
+        assert!(country.contains("    <tns:getCountryRequest>\n      <tns:name>name</tns:name>\n    </tns:getCountryRequest>"));
+        assert_eq!(
+            sources.iter().map(|s| s.kind).collect::<Vec<_>>(),
+            [SourceKind::JaxWs, SourceKind::SpringWs]
+        );
     }
 
     #[test]

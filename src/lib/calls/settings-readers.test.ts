@@ -40,10 +40,10 @@ const READERS: Record<string, Reader> = {
 	clientCerts: { file: CORE, reads: /self\s*\.client_certs/ },
 	beautify: { file: SCREEN, reads: /settings\?\.beautify/ },
 	everyHeader: { file: CORE, reads: /\.every_header\b/ },
-	soapVersion: { pending: 'FEAT-163' },
-	envelopeFromWsdl: { pending: 'FEAT-163' },
-	wsSecurity: { pending: 'FEAT-163' },
-	faultAsError: { pending: 'FEAT-163' },
+	soapVersion: { file: APP, reads: /settings\.soap_version/ },
+	envelopeFromWsdl: { file: APP, reads: /settings\.envelope_from_wsdl/ },
+	wsSecurity: { file: APP, reads: /settings\.ws_security/ },
+	faultAsError: { file: APP, reads: /settings\.fault_as_error/ },
 	history: { file: APP, reads: /settings\.history/ },
 	shareAs: { pending: 'FEAT-164' }
 };

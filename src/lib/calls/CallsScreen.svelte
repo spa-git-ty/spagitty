@@ -13,6 +13,7 @@
 	import { importer } from './import.svelte';
 	import { envColour, findCall, lookup, methodColour, methodOf } from './model';
 	import RequestEditor from './RequestEditor.svelte';
+	import SoapEditor from './SoapEditor.svelte';
 	import ResponseView from './ResponseView.svelte';
 	import { calls, keyOf } from './store.svelte';
 	import type { HistoryEntry, Opened } from './types';
@@ -269,17 +270,32 @@
 								calls.edit(opened, (call) => ({ ...call, name }));
 							}}
 						/>
-						<RequestEditor
-							call={current.call}
-							onchange={(change) => calls.edit(opened, change)}
-							{find}
-							{names}
-							sending={calls.sendingFor(opened)}
-							refusal={calls.refusalFor(opened)}
-							onsend={() => calls.send()}
-							oncancel={() => calls.cancel(opened)}
-							bind:url
-						/>
+						{#if current.call.kind === 'soap'}
+							<SoapEditor
+								call={current.call}
+								wsdl={current.collection.wsdl ?? null}
+								onchange={(change) => calls.edit(opened, change)}
+								{find}
+								{names}
+								sending={calls.sendingFor(opened)}
+								refusal={calls.refusalFor(opened)}
+								onsend={() => calls.send()}
+								oncancel={() => calls.cancel(opened)}
+								bind:url
+							/>
+						{:else}
+							<RequestEditor
+								call={current.call}
+								onchange={(change) => calls.edit(opened, change)}
+								{find}
+								{names}
+								sending={calls.sendingFor(opened)}
+								refusal={calls.refusalFor(opened)}
+								onsend={() => calls.send()}
+								oncancel={() => calls.cancel(opened)}
+								bind:url
+							/>
+						{/if}
 						{#if environment && calls.asking === keyOf(opened)}
 							<div class="ask" role="alertdialog" aria-label="Ask before sending" style:--env={envColour(environment.color)}>
 								<span class="dot" aria-hidden="true"></span>
@@ -304,6 +320,7 @@
 							suggest={calls.settings?.suggestNames ?? true}
 							onkeep={calls.settings?.clickToKeep === false ? undefined : (ask) => calls.keep(opened, ask)}
 							onforget={(name) => calls.forget(opened, name)}
+							soap={current.call.kind === 'soap'}
 						/>
 					</div>
 				{:else if calls.loaded}

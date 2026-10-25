@@ -21,7 +21,7 @@ import type { BroughtIn, Endpoint, Found, ScanDone, ScanProgress, SourceKind } f
 export type Filter = 'all' | 'new' | 'changed' | 'in';
 
 /** Sources whose endpoints are declared by code rather than held in a file. */
-export const CODE_KINDS: SourceKind[] = ['spring', 'jaxRs', 'nest', 'openApi'];
+export const CODE_KINDS: SourceKind[] = ['spring', 'jaxRs', 'nest', 'jaxWs', 'springWs', 'wsdl', 'openApi'];
 
 export interface BringChoices {
 	/** Into an existing collection, or a new one. */
@@ -224,6 +224,20 @@ export const importer = {
 			return true;
 		} catch (cause) {
 			notice.failed('Could not read that file', cause);
+			return false;
+		}
+	},
+
+	/** A WSDL from a URL the person typed (FEAT-163). */
+	async importWsdlUrl(url: string): Promise<boolean> {
+		try {
+			const next = await api.importWsdlUrl(url);
+			const added = next.sources.at(-1)?.id ?? null;
+			take(next, added);
+			source = added;
+			return true;
+		} catch (cause) {
+			notice.failed('Could not read that WSDL', cause);
 			return false;
 		}
 	},

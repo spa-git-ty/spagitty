@@ -26,6 +26,9 @@
 		spring: 'Spring',
 		jaxRs: 'JAX-RS',
 		nest: 'NestJS',
+		jaxWs: 'JAX-WS',
+		springWs: 'Spring-WS',
+		wsdl: 'WSDL',
 		openApi: 'OpenAPI',
 		postman: 'Postman',
 		insomnia: 'Insomnia',
@@ -55,6 +58,11 @@
 
 	let pasting = $state(false);
 	let pasted = $state('');
+	let wsdlUrl = $state<string | null>(null);
+
+	async function readWsdlUrl() {
+		if (wsdlUrl && (await importer.importWsdlUrl(wsdlUrl))) wsdlUrl = null;
+	}
 
 	$effect(() => {
 		const path = info?.path ?? null;
@@ -170,7 +178,9 @@
 					{@render sourceRow(source)}
 				{:else}
 					<p class="hint">
-						{found ? 'No Spring, JAX-RS, NestJS or OpenAPI endpoints found.' : 'Reads Spring, JAX-RS and NestJS controllers and OpenAPI files. Nothing is built or run.'}
+						{found
+							? 'No Spring, JAX-RS, NestJS, SOAP or OpenAPI endpoints found.'
+							: 'Reads Spring, JAX-RS and NestJS controllers, JAX-WS and Spring-WS services, WSDL and OpenAPI files. Nothing is built or run.'}
 					</p>
 				{/each}
 
@@ -201,6 +211,28 @@
 					</span>
 				{:else}
 					<button type="button" class="add" onclick={() => (pasting = true)}>Paste cURL</button>
+				{/if}
+				{#if wsdlUrl !== null}
+					<input
+						class="mono"
+						type="url"
+						aria-label="A WSDL's address"
+						placeholder="https://…/service?wsdl"
+						spellcheck="false"
+						bind:value={wsdlUrl}
+						onkeydown={(event) => event.key === 'Enter' && readWsdlUrl()}
+					/>
+					<span class="row">
+						<button type="button" class="act" onclick={() => (wsdlUrl = null)}>Cancel</button>
+						<button type="button" class="act primary" disabled={!wsdlUrl?.trim()} onclick={readWsdlUrl}>Read it</button>
+					</span>
+				{:else}
+					<button
+						type="button"
+						class="add"
+						title="Fetched once, as a call is; schemas it imports by address are not fetched"
+						onclick={() => (wsdlUrl = '')}>WSDL from a URL…</button
+					>
 				{/if}
 			</aside>
 

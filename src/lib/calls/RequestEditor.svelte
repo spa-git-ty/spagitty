@@ -4,6 +4,7 @@
 	import type { MenuItem } from '$lib/ui/menu';
 	import { isMac } from '$lib/platform';
 	import { METHODS, methodColour, methodOf, paramsOf, tabCounts, withParams, type Found } from './model';
+	import KeepRules from './KeepRules.svelte';
 	import PairsTable from './PairsTable.svelte';
 	import type { Auth, AuthType, Body, BodyType, Call, KeepRule, Pair } from './types';
 	import VarField from './VarField.svelte';
@@ -355,59 +356,7 @@
 				<p class="hint">Write a secret as a variable, such as <code>{'{{password}}'}</code>, so it stays out of the file.</p>
 			{/if}
 		{:else}
-			{#each call.keep ?? [] as rule, index (index)}
-				<div class="rule">
-					<input
-						class="mono name"
-						type="text"
-						aria-label="Variable"
-						placeholder="name"
-						spellcheck="false"
-						value={rule.var}
-						oninput={(event) =>
-							setKeep((call.keep ?? []).map((other, at) => (at === index ? { ...other, var: event.currentTarget.value } : other)))}
-					/>
-					<span class="from">from</span>
-					<input
-						class="mono path"
-						type="text"
-						aria-label="Path in the response"
-						placeholder="$.data.token"
-						spellcheck="false"
-						value={rule.from}
-						oninput={(event) =>
-							setKeep((call.keep ?? []).map((other, at) => (at === index ? { ...other, from: event.currentTarget.value } : other)))}
-					/>
-					<label class="every" title="Read again after every send; off keeps the first value">
-						<input
-							type="checkbox"
-							checked={rule.every !== false}
-							onchange={(event) =>
-								setKeep(
-									(call.keep ?? []).map((other, at) =>
-										at === index ? { ...other, every: event.currentTarget.checked } : other
-									)
-								)}
-						/>
-						every call
-					</label>
-					<button
-						type="button"
-						class="remove"
-						aria-label="Remove this rule"
-						title="Remove this rule"
-						onclick={() => setKeep((call.keep ?? []).filter((_, at) => at !== index))}>✕</button
-					>
-				</div>
-			{/each}
-			<button
-				type="button"
-				class="add"
-				onclick={() => setKeep([...(call.keep ?? []), { var: '', from: '$.', every: true }])}>+ Keep a value</button
-			>
-			<p class="hint">
-				A rule reads a JSONPath or XPath from the response into a variable, so a later call can use it.
-			</p>
+			<KeepRules rules={call.keep ?? []} onchange={setKeep} />
 		{/if}
 	</div>
 </section>
@@ -596,62 +545,6 @@
 	.choice.on {
 		border-color: color-mix(in srgb, var(--accent) 60%, transparent);
 		color: var(--accent);
-	}
-
-	.rule {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.rule .name {
-		width: 140px;
-		padding: 5px 8px;
-		color: var(--ok);
-		font-size: var(--fs-mono);
-	}
-
-	.rule .path {
-		flex: 1;
-		padding: 5px 8px;
-		font-size: var(--fs-mono);
-	}
-
-	.from,
-	.every {
-		color: var(--muted);
-		font-size: var(--fs-secondary);
-		white-space: nowrap;
-	}
-
-	.every {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.remove {
-		padding: 2px 6px;
-		border-radius: var(--r-button);
-		color: var(--muted);
-	}
-
-	.remove:hover {
-		background: var(--hover);
-		color: var(--ink);
-	}
-
-	.add {
-		align-self: flex-start;
-		padding: 3px 10px;
-		border: 1px dashed var(--soft);
-		border-radius: var(--r-button);
-		color: var(--muted);
-		font-size: var(--fs-secondary);
-	}
-
-	.add:hover {
-		color: var(--ink);
 	}
 
 	code {

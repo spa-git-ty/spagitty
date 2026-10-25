@@ -17,8 +17,6 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use quick_xml::events::Event;
-use quick_xml::Reader;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
@@ -102,130 +100,7 @@ pub fn json_path(body: &str, path: &str) -> Option<String> {
     })
 }
 
-/// An element as the XPath reader needs it.
-#[derive(Debug, Default)]
-struct Element {
-    /// As written, with its prefix.
-    name: String,
-    /// The namespace its prefix, or the default, stands for here.
-    uri: Option<String>,
-    attrs: Vec<(String, String)>,
-    children: Vec<Element>,
-    text: String,
-}
-
-fn local(name: &str) -> &str {
-    name.rsplit(':').next().unwrap_or(name)
-}
-
-fn prefix(name: &str) -> Option<&str> {
-    name.split_once(':').map(|(prefix, _)| prefix)
-}
-
-const PREDEFINED: [(&str, &str); 5] = [
-    ("amp", "&"),
-    ("lt", "<"),
-    ("gt", ">"),
-    ("quot", "\""),
-    ("apos", "'"),
-];
-
-fn parse_xml(body: &str) -> Option<Element> {
-    let mut reader = Reader::from_str(body);
-    // Each open element, with the prefixes it declared.
-    let mut stack: Vec<(Element, BTreeMap<String, String>)> = Vec::new();
-    let mut root: Option<Element> = None;
-    let lookup =
-        |stack: &[(Element, BTreeMap<String, String>)], own: &BTreeMap<String, String>, p: &str| {
-            own.get(p).cloned().or_else(|| {
-                stack
-                    .iter()
-                    .rev()
-                    .find_map(|(_, declared)| declared.get(p).cloned())
-            })
-        };
-    let open = |start: &quick_xml::events::BytesStart,
-                stack: &[(Element, BTreeMap<String, String>)]| {
-        let name = String::from_utf8_lossy(start.name().as_ref()).into_owned();
-        let mut declared = BTreeMap::new();
-        let mut attrs = Vec::new();
-        for attr in start.attributes().flatten() {
-            let key = String::from_utf8_lossy(attr.key.as_ref()).into_owned();
-            let raw = String::from_utf8_lossy(&attr.value).into_owned();
-            let value = quick_xml::escape::unescape(&raw)
-                .map(|v| v.into_owned())
-                .unwrap_or(raw);
-            if key == "xmlns" {
-                declared.insert(String::new(), value);
-            } else if let Some(p) = key.strip_prefix("xmlns:") {
-                declared.insert(p.to_string(), value);
-            } else {
-                attrs.push((key, value));
-            }
-        }
-        let uri = lookup(stack, &declared, prefix(&name).unwrap_or(""));
-        (
-            Element {
-                name,
-                uri,
-                attrs,
-                ..Element::default()
-            },
-            declared,
-        )
-    };
-    let close = |element: Element,
-                 stack: &mut Vec<(Element, BTreeMap<String, String>)>,
-                 root: &mut Option<Element>| {
-        match stack.last_mut() {
-            Some((parent, _)) => parent.children.push(element),
-            None => *root = Some(element),
-        }
-    };
-    loop {
-        match reader.read_event().ok()? {
-            Event::Start(start) => {
-                let opened = open(&start, &stack);
-                stack.push(opened);
-            }
-            Event::Empty(start) => {
-                let (element, _) = open(&start, &stack);
-                close(element, &mut stack, &mut root);
-            }
-            Event::End(_) => {
-                let (element, _) = stack.pop()?;
-                close(element, &mut stack, &mut root);
-            }
-            Event::Text(text) => {
-                if let Some((element, _)) = stack.last_mut() {
-                    element.text.push_str(&text.decode().ok()?);
-                }
-            }
-            Event::CData(data) => {
-                if let Some((element, _)) = stack.last_mut() {
-                    element.text.push_str(&data.decode().ok()?);
-                }
-            }
-            Event::GeneralRef(reference) => {
-                if let Some((element, _)) = stack.last_mut() {
-                    if let Ok(Some(c)) = reference.resolve_char_ref() {
-                        element.text.push(c);
-                    } else {
-                        let name = reference.decode().ok()?;
-                        let found = PREDEFINED.iter().find(|(entity, _)| *entity == name)?;
-                        element.text.push_str(found.1);
-                    }
-                }
-            }
-            Event::Eof => break,
-            _ => {}
-        }
-    }
-    if !stack.is_empty() {
-        return None;
-    }
-    root
-}
+use super::xml::{local, parse as parse_xml, prefix, Element};
 
 #[derive(Debug)]
 struct XStep {
