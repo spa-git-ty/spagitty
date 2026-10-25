@@ -69,7 +69,7 @@ Once per Mac:
 ```bash
 xcode-select --install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.4"
 ```
 
 Open a new terminal so `cargo` and `bun` are on the `PATH`, then:

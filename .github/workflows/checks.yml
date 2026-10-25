@@ -114,6 +114,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The runner image's Node is whatever the image shipped. The scripts in
+      # this workflow run on 22.23.4, past HTTP2Shell (CVE-2026-111497).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.4
+
       # AGENTS.md forbids agent, tool and session attribution. The pull
       # request's own commits and its description are read; history before it
       # is left as it is. The description goes in through the environment, never
@@ -148,7 +154,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.4
 
       - run: bun install --frozen-lockfile
 
@@ -178,12 +184,15 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.4
       - run: bun install --frozen-lockfile
 
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # Clippy reads the workspace's rust-version, and cargo never checks it
       # against the dependencies' (TASK-072).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.4
       - name: No dependency needs a newer Rust than Cargo.toml says
         run: node tools/rust-version.mjs
       - run: bun run check
@@ -220,7 +229,7 @@ jobs:
       # coverage run.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.4
       - run: bun install --frozen-lockfile
 
       - name: Rust tests and coverage
@@ -284,7 +293,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.4
       - run: bun install --frozen-lockfile
       - name: JS advisories
         run: bun audit --audit-level=high
