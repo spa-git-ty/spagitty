@@ -28,6 +28,19 @@
 		if (from >= 0 && to >= 0) for (let i = 0; i < Math.abs(to - from); i++) builder.move(moving, to > from ? 1 : -1);
 	}
 	const sorting = $derived({ disabled: builder.readonly, onmove: dropped, onstate: (state: SortState) => { dragging = state.dragging; over = state.over; } });
+	/**
+	 * A catalogue card always answers (BUG-099). While a manager owns the
+	 * hooks the builder is read-only, and the cards used to be disabled with
+	 * nothing to show it, so a click did nothing at all. Now a click offers
+	 * the import that makes the builder editable, then adds the block.
+	 */
+	async function addBlock(kind: (typeof CATALOGUE)[number]['kind']) {
+		if (builder.readonly) {
+			await builder.importManager();
+			if (builder.readonly) return;
+		}
+		builder.add(kind, builder.block?.stage ?? 'pre-commit');
+	}
 	async function dryRun() {
 		await builder.dryRun(dryStage, () => { void goto('/hooks/runs'); });
 	}
@@ -76,7 +89,7 @@
 					<span class="grow"></span><p class="note hint">Order runs top to bottom · drag to reorder</p>
 				</aside>
 				<BlockEditor />
-				<aside class="catalogue" aria-label="Hook block catalogue"><span class="label">Add</span>{#each CATALOGUE as item (item.kind)}<button class="catalogue-block" disabled={builder.readonly || draft.blocks.length >= 100} title={item.detail} onclick={() => builder.add(item.kind, builder.block?.stage ?? 'pre-commit')}><span class="catalogue-title"><span class="square" style:--tone={item.tone}></span><strong>{item.label}</strong></span><span class="note">{item.detail}</span></button>{/each}<span class="grow"></span>{#if data.info.config}<Btn onclick={() => builder.importManager()}>Import {data.info.config.path}</Btn>{/if}</aside>
+				<aside class="catalogue" aria-label="Hook block catalogue"><span class="label">Add</span>{#each CATALOGUE as item (item.kind)}<button class="catalogue-block" disabled={builder.saving || draft.blocks.length >= 100} title={builder.readonly ? `Import the current hooks to add “${item.label}”` : item.detail} onclick={() => addBlock(item.kind)}><span class="catalogue-title"><span class="square" style:--tone={item.tone}></span><strong>{item.label}</strong></span><span class="note">{item.detail}</span></button>{/each}<span class="grow"></span>{#if data.info.config}<Btn onclick={() => builder.importManager()}>Import {data.info.config.path}</Btn>{/if}</aside>
 			{/if}
 		</div>
 	{/if}
@@ -117,7 +130,8 @@
 	.hint { margin: 5px 0 0; }
 	.label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--fs-secondary); }
 	.catalogue-block { display: flex; flex-direction: column; gap: 6px; padding: 12px; text-align: left; border: 1px solid var(--line); border-radius: var(--r-button); background: var(--surface-2); }
-	.catalogue-block:hover { background: var(--hover); }
+	.catalogue-block:hover:not(:disabled) { background: var(--hover); }
+	.catalogue-block:disabled { opacity: 0.5; cursor: default; }
 	.catalogue-title { display: flex; align-items: center; gap: 8px; font-size: var(--fs-secondary); }
 	.error { color: var(--danger); margin: 0; padding: 0 16px 8px; }
 	@media (max-width: 1100px) { .catalogue { width: 216px; padding: 10px; } .stack { width: 230px; padding: 10px; } .storage { display: none; } }

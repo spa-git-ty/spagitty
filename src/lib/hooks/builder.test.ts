@@ -93,6 +93,19 @@ describe('the mounted Hooks screens', () => {
 		click(view.all('button').find((button) => button.textContent?.trim() === 'Remove')!);
 		expect(builder.draft?.blocks).toHaveLength(6); view.destroy();
 	});
+	it('offers the import when a card is clicked while a manager owns the hooks (BUG-099)', async () => {
+		const managed = definition(); managed.info.manager = 'husky'; vi.mocked(api.load).mockResolvedValue(managed);
+		vi.mocked(api.importManager).mockResolvedValue({ ...managed.definition, blocks: [] });
+		await builder.load('/repo'); const view = render(HooksScreen, { mode: 'edit' });
+		const card = view.all('.catalogue-block')[0] as HTMLButtonElement;
+		expect(card.disabled).toBe(false);
+		click(card); await Promise.resolve();
+		expect(dialog.question?.title).toBe('Import the current hooks?');
+		dialog.accept(); await new Promise((resolve) => setTimeout(resolve, 0)); flushSync();
+		expect(builder.readonly).toBe(false);
+		expect(builder.draft?.blocks.map((block) => block.action.kind)).toEqual(['tests']);
+		view.destroy();
+	});
 	it('tries a message with the generated-script command instead of a frontend regex', async () => {
 		await builder.load('/repo'); builder.add('message'); const view = render(HooksScreen, { mode: 'edit' });
 		const field = view.get('[aria-label="Try a message"]') as HTMLTextAreaElement; field.value = 'wrong'; fire(field, 'input');
