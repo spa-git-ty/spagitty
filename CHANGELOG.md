@@ -14,6 +14,10 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-26
+
+Calls: REST and SOAP requests beside the code, on the rail as 2C after Recipes. MAJOR because a new part of Spagitty reaches the network, as the author decided for this release.
+
 ### Added
 
 - **Calls (2C)**, a new screen after Recipes: send a REST request to the service you are working on and keep it, in a collection, in the repository under `.spagitty/calls/`. Requests are made by Spagitty itself, never by the window. Open calls are chips; `{{variables}}` are pills that say what they hold, and an unknown one stops *Send* and says which. JSON and XML responses are formatted, an event stream is shown as it arrives, and each send is kept in a history on this computer (FEAT-160).
@@ -23,6 +27,22 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 - **SOAP calls** in Calls, from a WSDL in the repository or at a URL, or from JAX-WS and Spring-WS services in the code. The envelope is made for you with a sample and the type of every element, the `SOAPAction` is set from the WSDL, WS-Security's username token is added (text or digest), and a SOAP fault is shown as an error even when the server answered 200. *Rebuild from WSDL* keeps what you typed (FEAT-163).
 - **Share a collection** from Calls: as one Spagitty or Postman 2.1 file, as a zip with its environments, example responses and a README of what to fill in, or as a commit on the current branch. Secrets and kept values go in empty in every format, and Import reads the zip back (FEAT-164).
 - **Copy a call as cURL, and paste one in**, from the request bar. A copy is resolved in the active environment and quoted for your shell; secrets stay as their names unless you tick *Fill in secrets*. A paste says which flags it read, and replaces the request or adds a new call (FEAT-166).
+
+### Changed
+
+- **Calls is the third part of Spagitty that reaches the network**, after pull requests and model providers. It sends only what you send, follows redirects and allows plain `http`, because the service you work on is often on `localhost`. The window itself still makes no request and holds no secret.
+- **In the command palette, `gtc` finds *Go to Calls***: the shorter title wins a tie. `gtch` finds *Go to Changes*.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.10.1, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
 
 ## [3.10.1] - 2026-10-25
 
