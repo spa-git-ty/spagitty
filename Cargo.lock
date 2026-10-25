@@ -4997,7 +4997,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty"
-version = "3.10.0"
+version = "3.10.1"
 dependencies = [
  "notify",
  "serde",
@@ -5015,7 +5015,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-core"
-version = "3.10.0"
+version = "3.10.1"
 dependencies = [
  "gix",
  "jsonschema",
@@ -5052,7 +5052,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-extensions"
-version = "3.10.0"
+version = "3.10.1"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -5068,7 +5068,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-farm"
-version = "3.10.0"
+version = "3.10.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -5080,7 +5080,7 @@ dependencies = [
 
 [[package]]
 name = "spagitty-process"
-version = "3.10.0"
+version = "3.10.1"
 dependencies = [
  "libc",
  "portable-pty",

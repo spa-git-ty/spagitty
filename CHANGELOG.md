@@ -14,6 +14,23 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [3.10.1] - 2026-10-25
+
+### Security
+
+- **Built with Bun 1.4.4, past HTTP2Shell** (CVE-2026-111497, a flaw in the Brotli decompressor that Node.js and Bun bundle). Spagitty never unpacks Brotli data from the network, so the app was not exposed; this updates the tools its releases are built and checked with. The checks' own Node.js scripts now run on Node.js 22.23.4.
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 3.10.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [3.10.0] - 2026-10-25
 
 ### Added
