@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Calls › Import</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#f2715a}a:hover{color:#ff8f7a}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel);--a-y:#8a5a00;--a-b:#1f5fae;--a-m:#7a3fae}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000);--a-y:#f0b54a;--a-b:#6aa7e0;--a-m:#c6a0f6}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:var(--fs-mono);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink);text-decoration:none}
+a.btn:hover{color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:650}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool.l{border-radius:999px 0 0 999px;padding-right:6px}
+.caret{height:32px;padding:0 10px 0 5px;border-radius:0 999px 999px 0;color:var(--muted);font-size:var(--fs-mono)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink);position:relative}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.seg{height:26px;padding:0 10px;border-radius:999px;font-size:12px;display:inline-flex;align-items:center;gap:5px}
+.seg.on{background:var(--surface-2);box-shadow:var(--shadow-1);font-weight:600}
+.segs{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--sunken);border:1px solid var(--pane-edge)}
+.sw{width:34px;height:20px;border-radius:999px;position:relative;flex:none;border:1px solid var(--pane-edge)}
+.sw span{position:absolute;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.m{font-family:var(--font-mono);font-size:10.5px;font-weight:700;width:50px;flex:none;letter-spacing:.02em}
+.m-GET{color:var(--ok)}.m-POST{color:var(--a-b)}.m-PUT{color:var(--warn)}.m-PATCH{color:var(--a-m)}.m-DELETE{color:var(--danger)}
+.src{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;width:100%;box-sizing:border-box;text-align:left}
+.src:hover{background:var(--hover)}
+.src.on{background:var(--surface-2);box-shadow:var(--shadow-1)}
+.ep{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:9px;width:100%;box-sizing:border-box;text-align:left}
+.ep:hover{background:var(--hover)}
+.ep.off{opacity:.6}
+.box{width:16px;height:16px;flex:none;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;box-sizing:border-box}
+.box.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tag{font-size:11px;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.tag-new{color:var(--agent);border:1px solid color-mix(in srgb,var(--agent) 45%,transparent)}
+.tag-chg{color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
+.tag-has{color:var(--muted);border:1px solid var(--soft)}
+.opt{display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-size:var(--fs-secondary)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">orders-service<button aria-label="Close orders-service" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">spagitty</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="14">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 10px">
+<a href="Main.dc.html" style="font-size: 22px; color: var(--muted); text-decoration: none">Calls</a>
+<span style="font-size: 22px; color: var(--muted)">›</span>
+<span style="font-size: 22px; margin-right: 6px">Import</span>
+<span style="flex: 1"></span>
+<a class="btn" href="Main.dc.html">Close</a>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; gap: 10px; padding: 0 12px 12px">
+
+<aside aria-label="Sources" style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 2px; padding: 10px; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: hidden">
+<span class="note" style="font-size: 12px; padding: 2px 8px 6px">Scan the code</span>
+<sc-for list="{{scan}}" as="s" hint-placeholder-count="2">
+<button class="src {{s.cls}}" onClick="{{s.pick}}">
+<span aria-hidden="true" style="width: 28px; height: 28px; flex: none; border-radius: 8px; display: grid; place-items: center; background: var(--sunken); color: var(--agent); font-family: var(--font-mono); font-size: 11px; font-weight: 700">{{s.glyph}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: var(--fs-secondary); font-weight: 600">{{s.name}}</span>
+<span style="font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sub}}</span>
+</span>
+</button>
+</sc-for>
+<span class="note" style="font-size: 12px; padding: 12px 8px 6px">Collection files in this repository</span>
+<sc-for list="{{found}}" as="s" hint-placeholder-count="2">
+<button class="src {{s.cls}}" onClick="{{s.pick}}">
+<span aria-hidden="true" style="width: 28px; height: 28px; flex: none; border-radius: 8px; display: grid; place-items: center; background: var(--sunken); color: var(--muted); font-family: var(--font-mono); font-size: 11px; font-weight: 700">{{s.glyph}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: var(--fs-secondary); font-weight: 600">{{s.name}}</span>
+<span style="font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sub}}</span>
+</span>
+</button>
+</sc-for>
+<span class="note" style="font-size: 12px; padding: 12px 8px 6px">From outside</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px">
+<button class="btn">Choose a file…</button>
+<button class="btn">Paste cURL</button>
+</div>
+<span class="note" style="font-size: 11.5px; padding: 8px 8px 0">Postman, Insomnia, Bruno, OpenAPI, WSDL, .http, HAR, or a Spagitty zip.</span>
+</aside>
+
+<section aria-label="Endpoints" style="flex: 999 1 520px; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px; overflow: hidden">
+<div style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px 10px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px">Spring controllers</span>
+<span class="note" style="font-size: 12px">src/main/java · @RestController, @RequestMapping · at <span style="font-family: var(--font-mono)">a3f9c1e</span></span>
+</div>
+<span style="flex: 1"></span>
+<div class="segs" role="radiogroup" aria-label="Show">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="4"><button role="radio" aria-checked="{{f.on}}" class="seg {{f.cls}}" onClick="{{f.pick}}">{{f.label}}<span class="note" style="font-size: 11px">{{f.n}}</span></button></sc-for>
+</div>
+<button class="btn" aria-label="Scan again">Scan again</button>
+</div>
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 0 8px 10px">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 1px; padding-bottom: 8px">
+<div style="display: flex; align-items: baseline; gap: 8px; padding: 8px 10px 4px">
+<span style="font-family: var(--font-mono); font-size: 12.5px; font-weight: 600">{{g.name}}</span>
+<span class="note" style="font-size: 11.5px; font-family: var(--font-mono)">{{g.file}}</span>
+</div>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+<button class="ep {{r.rowCls}}" role="checkbox" aria-checked="{{r.on}}" onClick="{{r.toggle}}">
+<span class="box {{r.boxCls}}" aria-hidden="true"><sc-if value="{{r.checked}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>
+<span class="m m-{{r.m}}">{{r.m}}</span>
+<span style="font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap">{{r.path}}</span>
+<span class="note" style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1">{{r.hint}}</span>
+<span class="tag {{r.tagCls}}">{{r.tag}}</span>
+</button>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</section>
+
+<aside aria-label="Bring in" style="flex: 1 1 260px; max-width: 300px; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--pane-edge); border-radius: 14px">
+<span style="font-size: 17px">Bring in {{count}}</span>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="note" style="font-size: 12px">As</span>
+<div class="segs" role="radiogroup" aria-label="As" style="align-self: flex-start">
+<button role="radio" aria-checked="{{asCalls}}" class="seg {{asCallsCls}}" onClick="{{pickCalls}}">Calls in a collection</button>
+<button role="radio" aria-checked="{{asNew}}" class="seg {{asNewCls}}" onClick="{{pickNew}}">New collection</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="note" style="font-size: 12px">{{whereLabel}}</span>
+<span style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--sunken); border: 1px solid var(--pane-edge); font-size: var(--fs-secondary)">{{whereValue}}<span style="flex: 1"></span><span class="note">▾</span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="note" style="font-size: 12px">Folders</span>
+<div class="segs" role="radiogroup" aria-label="Folders" style="align-self: flex-start">
+<button role="radio" aria-checked="true" class="seg on">One per controller</button>
+<button role="radio" aria-checked="false" class="seg">By path</button>
+</div>
+</div>
+<div style="height: 1px; background: var(--soft)"></div>
+<div class="opt"><button class="sw" role="switch" aria-checked="true" aria-label="Example bodies from request classes" style="background: var(--ok)"><span style="left: 16px"></span></button><span>Example bodies from request classes<br><span class="note" style="font-size: 12px">CreateOrderRequest → JSON with field types</span></span></div>
+<div class="opt"><button class="sw" role="switch" aria-checked="true" aria-label="Path variables become variables" style="background: var(--ok)"><span style="left: 16px"></span></button><span>Path variables become variables<br><span class="note" style="font-size: 12px; font-family: var(--font-mono)">/orders/{id} → /orders/{{idVar}}</span></span></div>
+<div class="opt"><button class="sw" role="switch" aria-checked="true" aria-label="Server address from application.yml" style="background: var(--ok)"><span style="left: 16px"></span></button><span>Server address from application.yml<br><span class="note" style="font-size: 12px; font-family: var(--font-mono)">localhost:8080/api → {{baseVar}}</span></span></div>
+<span style="flex: 1"></span>
+<span class="note" style="font-size: 12px">Changed calls keep your values. Only the new fields are added.</span>
+<a class="btn primary" href="Main.dc.html" style="justify-content: center; height: 38px; box-sizing: border-box">{{cta}}</a>
+</aside>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · 1 changed file · fetched 2 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<div style="display: flex; align-items: center; gap: 2px">
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button><button class="caret" aria-label="How to pull" aria-haspopup="menu">▾</button></span>
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button><button class="caret" aria-label="What to fetch" aria-haspopup="menu">▾</button></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+<span class="vr" style="margin: 0 6px"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"></path><path d="M7 4.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 8.5a2.5 2.5 0 1 0 0-.02"></path></svg>Branch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 8l2-4h14l2 4"></path><path d="M9.5 13h5"></path></svg>Stash</button>
+</div>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">412 commits · Tags 6 · Submodules 0<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v3.1.0</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z'],
+ calls: ['M4 7.5h12','M12.5 4l3.5 3.5-3.5 3.5','M20 16.5H8','M11.5 13 8 16.5l3.5 3.5'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ more: ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','calls','|','investigate','search','more','|','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', calls:'Calls', investigate:'Investigate', search:'Log', settings:'Settings', more:'More'};
+function railList() {
+ return RAIL.map(function (k) {
+  if (k === '|') return { sep: true, btn: false, paths: [] };
+  return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'calls' ? 'on' : '' };
+ });
+}
+var GROUPS = [
+ { name: 'AuthController', file: 'auth/AuthController.java', rows: [
+  { id: 'a1', m: 'POST', path: '/auth/login', hint: 'LoginRequest', st: 'has' },
+  { id: 'a2', m: 'POST', path: '/auth/refresh', hint: 'RefreshRequest', st: 'has' } ] },
+ { name: 'UserController', file: 'user/UserController.java', rows: [
+  { id: 'u1', m: 'GET', path: '/users', hint: '?page, ?size, ?role', st: 'new' },
+  { id: 'u2', m: 'GET', path: '/users/{id}', hint: '', st: 'has' },
+  { id: 'u3', m: 'PATCH', path: '/users/{id}', hint: 'UpdateUserRequest', st: 'has' },
+  { id: 'u4', m: 'DELETE', path: '/users/{id}', hint: '@PreAuthorize admin', st: 'new' } ] },
+ { name: 'OrderController', file: 'order/OrderController.java', rows: [
+  { id: 'o1', m: 'GET', path: '/orders', hint: '?status, ?from, ?to', st: 'has' },
+  { id: 'o2', m: 'POST', path: '/orders', hint: 'CreateOrderRequest gained couponCode', st: 'chg' },
+  { id: 'o3', m: 'PUT', path: '/orders/{id}/items', hint: 'List<OrderItemDto>', st: 'has' },
+  { id: 'o4', m: 'DELETE', path: '/orders/{id}', hint: '', st: 'has' },
+  { id: 'o5', m: 'POST', path: '/orders/{id}/pay', hint: 'PaymentRequest', st: 'new' },
+  { id: 'o6', m: 'GET', path: '/orders/{id}/invoice', hint: 'application/pdf', st: 'new' },
+  { id: 'o7', m: 'GET', path: '/orders/{id}/events', hint: 'text/event-stream', st: 'new' } ] },
+ { name: 'PaymentWebhookController', file: 'payment/PaymentWebhookController.java', rows: [
+  { id: 'p1', m: 'POST', path: '/webhooks/stripe', hint: 'raw body · Stripe-Signature header', st: 'new' } ] }
+];
+var TAG = { has: ['In orders-api', 'tag-has'], 'new': ['New', 'tag-new'], chg: ['Changed', 'tag-chg'] };
+function b(n) { return '{' + '{' + n + '}' + '}'; }
+class Component extends DCLogic {
+ constructor(props) {
+  super(props);
+  var on = {};
+  GROUPS.forEach(function (g) { g.rows.forEach(function (r) { on[r.id] = r.st !== 'has'; }); });
+  this.state = { on: on, filter: 'all', src: 'spring', as: 'calls' };
+ }
+ renderVals() {
+  var self = this, st = this.state;
+  var counts = { all: 0, 'new': 0, chg: 0, has: 0 }, count = 0;
+  GROUPS.forEach(function (g) { g.rows.forEach(function (r) { counts.all++; counts[r.st]++; if (st.on[r.id]) count++; }); });
+  var groups = GROUPS.map(function (g) {
+   var rows = g.rows.filter(function (r) { return st.filter === 'all' || st.filter === r.st; }).map(function (r) {
+    var on = !!st.on[r.id];
+    return { m: r.m, path: r.path, hint: r.hint, tag: TAG[r.st][0], tagCls: TAG[r.st][1], checked: on, on: on ? 'true' : 'false', boxCls: on ? 'on' : '', rowCls: on ? '' : 'off',
+     toggle: function () { var n = Object.assign({}, self.state.on); n[r.id] = !n[r.id]; self.setState({ on: n }); } };
+   });
+   return { name: g.name, file: g.file, rows: rows };
+  }).filter(function (g) { return g.rows.length; });
+  var F = [['all', 'All'], ['new', 'New'], ['chg', 'Changed'], ['has', 'Already in']];
+  function src(list) { return list.map(function (s) { return { glyph: s.glyph, name: s.name, sub: s.sub, cls: st.src === s.id ? 'on' : '', pick: function () { self.setState({ src: s.id }); } }; }); }
+  var isNew = st.as === 'new';
+  return {
+   theme: this.props.theme || 'dark', rail: railList(), groups: groups, count: count + (count === 1 ? ' endpoint' : ' endpoints'),
+   filters: F.map(function (f) { return { label: f[1], n: counts[f[0]], cls: st.filter === f[0] ? 'on' : '', on: st.filter === f[0] ? 'true' : 'false', pick: function () { self.setState({ filter: f[0] }); } }; }),
+   scan: src([
+    { id: 'spring', glyph: 'J', name: 'Spring controllers', sub: '14 endpoints · 6 new · 1 changed' },
+    { id: 'jaxws', glyph: 'WS', name: 'SOAP services', sub: '@WebService · InvoiceClient, 4 operations' },
+    { id: 'openapi', glyph: '{ }', name: 'openapi.yaml', sub: '14 operations · generated by springdoc' }
+   ]),
+   found: src([
+    { id: 'postman', glyph: 'PM', name: 'Postman collection', sub: 'docs/orders.postman_collection.json' },
+    { id: 'http', glyph: '.http', name: 'HTTP client file', sub: 'http/smoke.http · 4 calls' },
+    { id: 'wsdl', glyph: 'WSDL', name: 'WSDL', sub: 'billing/invoice.wsdl · already billing-ws' }
+   ]),
+   asCalls: isNew ? 'false' : 'true', asCallsCls: isNew ? '' : 'on', asNew: isNew ? 'true' : 'false', asNewCls: isNew ? 'on' : '',
+   pickCalls: function () { self.setState({ as: 'calls' }); }, pickNew: function () { self.setState({ as: 'new' }); },
+   whereLabel: isNew ? 'Name' : 'Into', whereValue: isNew ? 'orders-service endpoints' : 'orders-api',
+   cta: count ? (isNew ? 'Create collection with ' + count : 'Add ' + count + ' to orders-api') : 'Pick at least one',
+   idVar: b('orderId'), baseVar: b('baseUrl')
+  };
+ }
+}
+</script>
+</body>
+</html>

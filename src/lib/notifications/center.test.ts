@@ -214,7 +214,9 @@ describe('the drawer', () => {
 		flushSync();
 		expect(center.open).toBe(false);
 		expect(container.querySelector('[role="dialog"]')).toBeNull();
-	});
+		// The first test to import the drawer compiles it, which takes seconds
+		// while the rest of the suite runs beside it: past the 5 s default.
+	}, 15_000);
 
 	it('says so when there is nothing under a chip', async () => {
 		const { center } = await import('./center.svelte');

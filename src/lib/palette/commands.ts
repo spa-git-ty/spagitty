@@ -67,6 +67,7 @@ const SCREENS: { id: string; title: string; path: string; keywords: string[] }[]
 	{ id: 'go.merge', title: 'Go to Merger', path: '/merge', keywords: ['merge', 'branches', 'combine'] },
 	{ id: 'go.review', title: 'Go to Review', path: '/review', keywords: ['pr', 'pull request', 'read'] },
 	{ id: 'go.recipes', title: 'Go to Recipes', path: '/recipes', keywords: ['blocks', 'steps', 'script', 'automate', 'workflow'] },
+	{ id: 'go.calls', title: 'Go to Calls', path: '/calls', keywords: ['rest', 'soap', 'http', 'request', 'api', 'postman', 'endpoint'] },
 	{ id: 'go.hooks', title: 'Go to Hooks', path: '/hooks', keywords: ['pre-commit', 'checks', 'lint', 'scripts', 'commit message'] },
 	{ id: 'go.issues', title: 'Go to Issues', path: '/issues', keywords: ['bugs', 'tracker', 'tickets', 'discussion'] },
 	{ id: 'go.releases', title: 'Go to Releases', path: '/releases', keywords: ['publish', 'version', 'draft', 'assets'] },

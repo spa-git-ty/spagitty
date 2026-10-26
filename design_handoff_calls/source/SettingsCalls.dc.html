@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spagitty — Settings › Calls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#f2715a}a:hover{color:#ff8f7a}
+.t-light{--bg:#fbf7f1;--panel:#f3ece2;--ink:#2a1f1a;--muted:rgba(42,31,26,.7);--line:rgba(42,31,26,.24);--soft:rgba(42,31,26,.1);--accent:#b8321f;--on-accent:#fff;--danger:#b3124a;--warn:#9a5b00;--ok:#2f7d45;--lane-1:#c23b22;--agent:#075c52;--surface:color-mix(in srgb,var(--panel) 34%,#fff);--surface-2:color-mix(in srgb,var(--panel) 12%,#fff);--sunken:color-mix(in srgb,var(--panel) 76%,var(--ink) 4%);--umbra:color-mix(in srgb,var(--ink) 72%,#000);--glass-thick:color-mix(in srgb,var(--surface-2) 68%,transparent);--glass-edge:color-mix(in srgb,#fff 52%,transparent);--pane-edge:color-mix(in srgb,var(--line) 55%,transparent);--shadow-1:0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--pane-shadow:0 18px 40px color-mix(in srgb,var(--umbra) 12%,transparent),0 2px 6px color-mix(in srgb,var(--umbra) 8%,transparent);--ornament-shadow:0 10px 28px color-mix(in srgb,var(--umbra) 16%,transparent),0 1px 3px color-mix(in srgb,var(--umbra) 10%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 14%,transparent),transparent 62%),var(--panel)}
+.t-dark{--bg:#1c1613;--panel:#161110;--ink:#f3e9dd;--muted:rgba(243,233,221,.62);--line:rgba(243,233,221,.22);--soft:rgba(243,233,221,.1);--accent:#f2715a;--on-accent:#2a0e07;--danger:#ff5c7c;--warn:#f0b54a;--ok:#7cc68d;--lane-1:#f2715a;--agent:#86e3d2;--surface:color-mix(in srgb,var(--panel) 92%,var(--ink) 10%);--surface-2:color-mix(in srgb,var(--panel) 86%,var(--ink) 16%);--sunken:color-mix(in srgb,var(--panel) 84%,#000);--umbra:#000;--glass-thick:color-mix(in srgb,var(--surface-2) 72%,transparent);--glass-edge:color-mix(in srgb,#fff 16%,transparent);--pane-edge:color-mix(in srgb,#fff 9%,transparent);--shadow-1:0 1px 4px color-mix(in srgb,#000 22%,transparent);--pane-shadow:0 18px 44px color-mix(in srgb,#000 42%,transparent),0 2px 6px color-mix(in srgb,#000 30%,transparent);--ornament-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent),0 1px 3px color-mix(in srgb,#000 30%,transparent);--environment:radial-gradient(120% 90% at 8% -10%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 60%),radial-gradient(90% 80% at 100% 110%,color-mix(in srgb,var(--lane-1) 30%,transparent),transparent 62%),color-mix(in srgb,var(--panel) 80%,#000)}
+.app{--hover:color-mix(in srgb,var(--ink) 7%,transparent);--surface-veil:color-mix(in srgb,var(--surface) 90%,transparent);--font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'Atkinson Hyperlegible Mono',ui-monospace,Menlo,Consolas,monospace;--fs-ui:15.6px;--fs-secondary:13.2px;--fs-mono:12px}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+.ornament{background-color:var(--glass-thick);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);border:1px solid var(--pane-edge);border-top-color:var(--glass-edge);box-shadow:var(--ornament-shadow)}
+.chip{border:1px solid var(--soft);border-radius:999px;padding:3px 12px;font-size:var(--fs-secondary);background-color:var(--surface-veil);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:color-mix(in srgb,var(--accent) 62%,transparent);color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.btn{border-radius:9px;padding:5px 12px;font-size:var(--fs-secondary);font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background-color:var(--surface-veil);box-shadow:var(--shadow-1);color:var(--ink)}
+.tool{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:var(--fs-secondary);white-space:nowrap}
+.tool.l{border-radius:999px 0 0 999px;padding-right:6px}
+.caret{height:32px;padding:0 10px 0 5px;border-radius:0 999px 999px 0;color:var(--muted);font-size:var(--fs-mono)}
+.vr{width:1px;height:22px;background:var(--soft);flex:none}
+.note{font-size:var(--fs-secondary);color:var(--muted)}
+.rail-item{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--ink)}
+.rail-item.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.seg{height:26px;padding:0 10px;border-radius:999px;font-size:12px;display:inline-flex;align-items:center}
+.seg.on{background:var(--surface-2);box-shadow:var(--shadow-1);font-weight:600}
+.segs{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--sunken);border:1px solid var(--pane-edge);flex:none}
+.sw{width:38px;height:22px;border-radius:999px;position:relative;flex:none;border:1px solid var(--pane-edge)}
+.sw span{position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.sw.on{background:var(--ok)}.sw.on span{left:18px}
+.sw.off{background:var(--soft)}.sw.off span{left:2px}
+.card{display:flex;flex-direction:column;gap:2px;padding:14px 16px 10px;background:var(--surface);border:1px solid var(--pane-edge);border-radius:14px}
+.srow{display:flex;align-items:center;gap:14px;min-height:46px;padding:4px 0;border-top:1px solid var(--soft)}
+.srow:first-of-type{border-top:none}
+.lbl{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;font-size:14px}
+.lbl span{font-size:12px;color:var(--muted)}
+.fld{height:30px;box-sizing:border-box;display:inline-flex;align-items:center;padding:0 10px;border-radius:8px;background:var(--sunken);border:1px solid var(--pane-edge);font-family:var(--font-mono);font-size:12px;white-space:nowrap}
+.tag{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--soft);white-space:nowrap}
+.tag.on{border-color:color-mix(in srgb,var(--accent) 55%,transparent);color:var(--ink);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.new{font-size:10.5px;padding:0 6px;border-radius:999px;color:var(--agent);border:1px solid color-mix(in srgb,var(--agent) 45%,transparent)}
+</style>
+</helmet>
+<div class="app t-{{theme}}" style="height: 100vh; min-height: 900px; display: flex; flex-direction: column; background: var(--environment); color: var(--ink); font-family: var(--font-ui); font-size: var(--fs-ui); line-height: 1.35; overflow: hidden">
+
+<div style="height: 44px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 20px; font-size: var(--fs-secondary)">
+<div role="tablist" aria-label="Open repositories" style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<span role="tab" aria-selected="true" style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); font-weight: 550">orders-service<button aria-label="Close orders-service" style="width: 16px; height: 16px; display: grid; place-items: center; color: var(--muted); font-size: 11px">✕</button></span>
+<span role="tab" aria-selected="false" style="height: 28px; display: flex; align-items: center; padding: 0 12px; border-radius: 999px; color: var(--muted)">spagitty</span>
+<button aria-label="Open a repository" style="width: 28px; height: 28px; border-radius: 999px; color: var(--muted); font-size: 16px">+</button>
+</div>
+<span style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px"><span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></span>spagitty</span>
+<div aria-hidden="true" style="display: flex; justify-content: flex-end; gap: 22px; padding-right: 8px; color: var(--muted); font-size: 12px"><span>—</span><span>▢</span><span>✕</span></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-wrap: nowrap; gap: 12px; padding: 4px 14px 0 12px">
+<div style="width: 52px; flex: none">
+<nav class="ornament" aria-label="Screens" style="width: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border-radius: 26px">
+<sc-for list="{{rail}}" as="it" hint-placeholder-count="14">
+<div style="display: contents">
+<sc-if value="{{it.sep}}" hint-placeholder-val="{{false}}"><div style="height: 1px; width: 28px; background: var(--soft); margin: 3px auto"></div></sc-if>
+<sc-if value="{{it.btn}}" hint-placeholder-val="{{true}}"><button class="rail-item {{it.cls}}" aria-label="{{it.label}}" title="{{it.label}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.paths}}" as="p" hint-placeholder-count="2"><path d="{{p}}"></path></sc-for></svg></button></sc-if>
+</div>
+</sc-for>
+</nav>
+</div>
+
+<main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border: 1px solid var(--pane-edge); border-top-color: var(--glass-edge); border-radius: 18px; box-shadow: var(--pane-shadow)">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 12px; border-bottom: 1px solid var(--soft)">
+<span style="font-size: 22px; margin-right: 10px">Settings</span>
+<div role="tablist" aria-label="Settings sections" style="display: flex; flex-wrap: wrap; gap: 6px">
+<button role="tab" aria-selected="false" class="chip">You</button>
+<button role="tab" aria-selected="false" class="chip">Agents</button>
+<button role="tab" aria-selected="false" class="chip">Remotes</button>
+<button role="tab" aria-selected="false" class="chip">Hooks</button>
+<button role="tab" aria-selected="false" class="chip">External Tools</button>
+<button role="tab" aria-selected="false" class="chip">Extensions</button>
+<button role="tab" aria-selected="false" class="chip">Behaviour</button>
+<button role="tab" aria-selected="true" class="chip on">Calls</button>
+<button role="tab" aria-selected="false" class="chip">Notifications</button>
+<button role="tab" aria-selected="false" class="chip">Appearance</button>
+<button role="tab" aria-selected="false" class="chip">Rail</button>
+<button role="tab" aria-selected="false" class="chip">Reading</button>
+<button role="tab" aria-selected="false" class="chip">License</button>
+</div>
+</header>
+
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 18px">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px">
+<span style="font-size: 17px">Calls</span>
+<span class="note" style="font-size: 12px">For every repository · a repository can override any of these in <span style="font-family: var(--font-mono)">.spagitty/calls/settings.json</span></span>
+<span style="flex: 1"></span>
+<button class="btn">Reset</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start">
+
+<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<section class="card" aria-label="Where calls live">
+<span class="note" style="font-size: 12px; padding-bottom: 4px">Where calls live</span>
+<div class="srow"><div class="lbl">Folder in the repository<span>Collections and shared environments, as plain JSON you can review.</span></div><span class="fld">.spagitty/calls/</span><button class="btn">Change</button></div>
+<div class="srow"><div class="lbl">Open collection files found in the repository<span>Shown under Found in this repository. Never moved or rewritten.</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Open collection files found in the repository"><span></span></button></div>
+<div class="srow" style="flex-wrap: wrap; padding: 10px 0"><div class="lbl" style="flex-basis: 100%">Look for</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="tag on">Postman</span><span class="tag on">Insomnia</span><span class="tag on">Bruno</span><span class="tag on">OpenAPI</span><span class="tag on">.http</span><span class="tag on">WSDL</span><span class="tag">HAR</span></div></div>
+</section>
+
+<section class="card" aria-label="Scanning code">
+<span class="note" style="font-size: 12px; padding-bottom: 4px">Scanning code</span>
+<div class="srow"><div class="lbl">Scan when a repository opens<span>Reads source files only. Nothing is built or run.</span></div><div class="segs" role="radiogroup" aria-label="Scan when a repository opens"><button role="radio" aria-checked="true" class="seg on">Ask</button><button role="radio" aria-checked="false" class="seg">Always</button><button role="radio" aria-checked="false" class="seg">Never</button></div></div>
+<div class="srow" style="flex-wrap: wrap; padding: 10px 0"><div class="lbl" style="flex-basis: 100%">Frameworks<span>REST and SOAP endpoints these declare become calls.</span></div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="tag on">Spring MVC</span><span class="tag on">Spring WebFlux</span><span class="tag on">JAX-RS</span><span class="tag on">JAX-WS · SOAP</span><span class="tag on">Spring-WS · SOAP</span><span class="tag">Micronaut</span><span class="tag">Quarkus</span><span class="tag">Express</span><span class="tag">FastAPI</span></div></div>
+<div class="srow"><div class="lbl">Skip paths</div><span class="fld">**/test/**, **/generated/**</span></div>
+</section>
+
+<section class="card" aria-label="Kept values">
+<span class="note" style="font-size: 12px; padding-bottom: 4px">Kept values</span>
+<div class="srow"><div class="lbl">Click a response value to keep it<span>JSONPath for JSON, XPath for XML and SOAP.</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Click a response value to keep it"><span></span></button></div>
+<div class="srow"><div class="lbl">A new kept value updates</div><div class="segs" role="radiogroup" aria-label="A new kept value updates"><button role="radio" aria-checked="true" class="seg on">On every call</button><button role="radio" aria-checked="false" class="seg">Once</button></div></div>
+<div class="srow"><div class="lbl">Suggest names<span>accessToken → token, user.id → userId</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Suggest names"><span></span></button></div>
+</section>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<section class="card" aria-label="Sending">
+<span class="note" style="font-size: 12px; padding-bottom: 4px">Sending</span>
+<div class="srow"><div class="lbl">Time out after</div><span class="fld">30 s</span></div>
+<div class="srow"><div class="lbl">Follow redirects</div><button class="sw on" role="switch" aria-checked="true" aria-label="Follow redirects"><span></span></button></div>
+<div class="srow"><div class="lbl">Check TLS certificates<span>Turn off per environment, not here, for a self-signed local server.</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Check TLS certificates"><span></span></button></div>
+<div class="srow"><div class="lbl">Proxy</div><div class="segs" role="radiogroup" aria-label="Proxy"><button role="radio" aria-checked="true" class="seg on">System</button><button role="radio" aria-checked="false" class="seg">None</button><button role="radio" aria-checked="false" class="seg">Custom</button></div></div>
+<div class="srow"><div class="lbl">Client certificates<span>For mutual TLS, by host.</span></div><button class="btn">Add…</button></div>
+<div class="srow"><div class="lbl">Beautify responses<span>JSON and XML that arrive minified are shown formatted. The Beautify button still switches one back.</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Beautify responses"><span></span></button></div>
+<div class="srow"><div class="lbl">Header on every call</div><span class="fld">User-Agent: Spagitty/3.1</span></div>
+</section>
+
+<section class="card" aria-label="SOAP">
+<span class="note" style="font-size: 12px; padding-bottom: 4px; display: flex; align-items: center; gap: 6px">SOAP<span class="new">new</span></span>
+<div class="srow"><div class="lbl">Default version<span>A WSDL that names one wins.</span></div><div class="segs" role="radiogroup" aria-label="Default SOAP version"><button role="radio" aria-checked="true" class="seg on">1.1</button><button role="radio" aria-checked="false" class="seg">1.2</button></div></div>
+<div class="srow"><div class="lbl">Build the envelope from the WSDL<span>Fills every element with a sample value and a comment with its type.</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Build the envelope from the WSDL"><span></span></button></div>
+<div class="srow"><div class="lbl">WS-Security</div><div class="segs" role="radiogroup" aria-label="WS-Security"><button role="radio" aria-checked="false" class="seg">None</button><button role="radio" aria-checked="true" class="seg on">Username token</button><button role="radio" aria-checked="false" class="seg">Signed</button></div></div>
+<div class="srow"><div class="lbl">Show a SOAP fault as an error<span>Even when the server answers 200.</span></div><button class="sw on" role="switch" aria-checked="true" aria-label="Show a SOAP fault as an error"><span></span></button></div>
+</section>
+
+<section class="card" aria-label="Safety and sharing">
+<span class="note" style="font-size: 12px; padding-bottom: 4px">Safety and sharing</span>
+<div class="srow"><div class="lbl">Secrets and kept values go in</div><div class="segs" role="radiogroup" aria-label="Secrets go in"><button role="radio" aria-checked="true" class="seg on">System keychain</button><button role="radio" aria-checked="false" class="seg">Encrypted file</button></div></div>
+<div class="srow"><div class="lbl">Keep history</div><div class="segs" role="radiogroup" aria-label="Keep history"><button role="radio" aria-checked="false" class="seg">100</button><button role="radio" aria-checked="true" class="seg on">500</button><button role="radio" aria-checked="false" class="seg">2,000 calls</button></div></div>
+<div class="srow"><div class="lbl">Share as</div><div class="segs" role="radiogroup" aria-label="Share as"><button role="radio" aria-checked="true" class="seg on">Zip</button><button role="radio" aria-checked="false" class="seg">One file</button><button role="radio" aria-checked="false" class="seg">Commit</button></div></div>
+<div class="srow"><div class="lbl">Leave secrets out when sharing</div><span class="note" style="font-size: 12px; display: flex; align-items: center; gap: 5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 11h11v9h-11z"></path><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>Always</span></div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<div style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 16px 10px 14px">
+<span class="note" style="display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>Repository ready · 1 changed file · fetched 2 min ago</span>
+<div class="ornament" role="toolbar" aria-label="Repository actions" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 7px; border-radius: 999px">
+<span style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--pane-edge); border-radius: 999px; background: color-mix(in srgb, var(--sunken) 70%, transparent); font-size: var(--fs-secondary); font-weight: 600">main<span class="note">▾</span></span>
+<span class="vr"></span>
+<div style="display: flex; align-items: center; gap: 2px">
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>Pull</button><button class="caret" aria-label="How to pull" aria-haspopup="menu">▾</button></span>
+<span style="display: flex"><button class="tool l"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"></path><path d="M8.5 8.5 12 12l3.5-3.5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Fetch</button><button class="caret" aria-label="What to fetch" aria-haspopup="menu">▾</button></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"></path><path d="M7.5 13.5 12 9l4.5 4.5"></path><path d="M4 4h16"></path></svg>Push</button>
+<span class="vr" style="margin: 0 6px"></span>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"></path><path d="M7 4.5a2.5 2.5 0 1 0 0-.02"></path><path d="M17 8.5a2.5 2.5 0 1 0 0-.02"></path></svg>Branch</button>
+<button class="tool"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 8l2-4h14l2 4"></path><path d="M9.5 13h5"></path></svg>Stash</button>
+</div>
+</div>
+<span class="note" style="text-align: right; white-space: nowrap; overflow: hidden">412 commits · Tags 6 · Submodules 0<span style="font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--ink); margin-left: 10px">v3.1.0</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+var ICONS = {
+ farm: ['M12 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 7.5v3.5','M5 11h14','M5 11v3','M12 11v3','M19 11v3','M5 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M12 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z','M19 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
+ graph: ['M8 6v12','M8 8.5a2.5 2.5 0 1 0 0-.02','M8 18.5a2.5 2.5 0 1 0 0-.02','M16 13.5a2.5 2.5 0 1 0 0-.02','M16 11V9a3 3 0 0 0-3-3H9'],
+ edit: ['M4 20h4l10.5-10.5a2.83 2.83 0 0 0-4-4L4 16z','M14 6l4 4'],
+ terminal: ['M3.5 5h17v14h-17z','M7 9.5l3 2.5-3 2.5','M12.5 15h4.5'],
+ files: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z','M14 3v5h5','M10 12.5l-2 2 2 2','M14 12.5l2 2-2 2'],
+ merge: ['M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3','M12 12v9','M9 18l3 3 3-3'],
+ branch: ['M7 4v10a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9','M7 4.5a2.5 2.5 0 1 0 0-.02','M17 8.5a2.5 2.5 0 1 0 0-.02','M7 20.5a2.5 2.5 0 1 0 0-.02'],
+ request: ['M7 5v14','M7 5.5a2.5 2.5 0 1 0 0-.02','M7 19.5a2.5 2.5 0 1 0 0-.02','M17 19V9a3 3 0 0 0-3-3h-3','M14 3l-3 3 3 3'],
+ review: ['M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z','M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+ recipes: ['M4 4h10v5H4z','M4 9.5h14v5H4z','M4 15h8v5H4z'],
+ calls: ['M4 7.5h12','M12.5 4l3.5 3.5-3.5 3.5','M20 16.5H8','M11.5 13 8 16.5l3.5 3.5'],
+ investigate: ['M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z','M15.5 15.5 21 21','M10.5 7.5v3l2 1.5'],
+ search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z','M16.5 16.5 21 21'],
+ more: ['M5.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z','M18.5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'],
+ settings: ['M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z','M12 2.5v3','M12 18.5v3','M2.5 12h3','M18.5 12h3','M5.3 5.3l2.1 2.1','M16.6 16.6l2.1 2.1','M5.3 18.7l2.1-2.1','M16.6 7.4l2.1-2.1']
+};
+var RAIL = ['farm','|','graph','edit','terminal','files','merge','branch','request','review','recipes','calls','|','investigate','search','more','|','settings'];
+var LABELS = {farm:'Farm', graph:'Graph', edit:'Working copy', terminal:'Terminal', files:'Files', merge:'Merger', branch:'Branches', request:'Pull requests', review:'Review', recipes:'Recipes', calls:'Calls', investigate:'Investigate', search:'Log', settings:'Settings', more:'More'};
+class Component extends DCLogic {
+ renderVals() {
+  return {
+   theme: this.props.theme || 'dark',
+   rail: RAIL.map(function (k) {
+    if (k === '|') return { sep: true, btn: false, paths: [] };
+    return { sep: false, btn: true, label: LABELS[k], paths: ICONS[k], cls: k === 'settings' ? 'on' : '' };
+   })
+  };
+ }
+}
+</script>
+</body>
+</html>

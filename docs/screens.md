@@ -39,6 +39,7 @@ defect.
 | 1X | Hooks | `/hooks/runs`, `/hooks/edit` | yes | Built | FEAT-137 |
 | 1Y | Pipelines | `/pipelines/preview`, `/pipelines/live` | yes | Built | FEAT-138 |
 | 1Z | Releases | `/releases` | yes | Built | FEAT-139 |
+| 2C | Calls | `/calls` | yes | Built | FEAT-160 |
 
 **Every screen in the handoff is built**, and 1A–1L is the whole of it. 1M and
 1N were not in the handoff at all: the Reflog and Tags came out of the GitKraken
@@ -673,7 +674,7 @@ and never the directory.
 **Built.** `src/routes/settings/+page.svelte`, `src/lib/settings/`.
 
 Sections behind a chip index — You, Remotes, External Tools, Behaviour,
-Personality, God mode, Appearance, Rail, License — because these are read rarely and
+Calls, Personality, God mode, Appearance, Rail, License — because these are read rarely and
 changed rarely, and one route that says which part of itself is showing is
 easier to link to than eight rail entries. The section is in the URL fragment,
 so `/settings#accounts` lands where the Pull requests screen points.
@@ -693,6 +694,16 @@ the version, the build, the project's licence and its dependencies' licences, so
 the name described nothing it contained. `#advanced` is still accepted as a
 fragment and selects the renamed section, because a link written before the
 rename doing nothing at all is worse than one that is merely out of date.
+
+**Calls** (FEAT-165) holds every setting Calls (2C) reads, in six groups:
+where calls live, scanning code, kept values, sending, SOAP, and safety and
+sharing. A repository overrides any of them in its calls folder's
+`settings.json`, and a setting the open repository overrides says so.
+*Reset* puts the section back to what a new install has, which the backend
+answers (`calls_default_settings`). Frameworks no reader exists for are not
+shown, and *Leave secrets out when sharing* is drawn as *Always*, locked.
+`calls/settings-readers.test.ts` fails if a setting is not read by the code
+it names, or is still unread once the item it waits on is Done.
 
 **Rail** (FEAT-134) chooses what is on the nav rail. Every screen has a row, in
 its group, and is pinned or hidden; hidden screens go under the rail's More
@@ -1298,6 +1309,129 @@ record. Nothing is written under `.spagitty/` in the repository.
 **Keys** are in `keys.ts`: a block's letter adds it, `j` `k` walk the stack,
 Alt with the arrows reorders, Delete removes, Ctrl+Enter runs, Ctrl+Z takes
 an edit back. None fires while a field has the focus.
+
+## 2C — Calls
+
+**Built.** `src/routes/calls/+page.svelte`, `src/lib/calls/`,
+`src-tauri/src/calls.rs`, `crates/spagitty-core/src/calls/` (FEAT-160). The
+proposal is `docs/proposals/calls.md`; the designs are `design_handoff_calls/`.
+
+REST requests saved beside the code they exercise. On the rail after
+Recipes.
+
+**The layout**: the header has a chip for each open call (method and name,
+✕; a middle-click or Ctrl+W closes one too), `+` for a new call, and the
+environment picker. Collections are on the left with a filter (Ctrl+K) and
+*History* at the foot; the request is above its response in the middle; the
+variables are on the right.
+
+**The request**: method, URL and *Send* (Ctrl+Enter, or Enter in the URL),
+which reads *Cancel* while it waits. Tabs *Params* (the URL's query as
+rows), *Headers*, *Body* (JSON, XML, form, multipart, raw or none), *Auth*
+(none, bearer, basic, API key) and *Keep*. A tab shows a count when it holds
+something. The call's name is edited above the URL.
+
+**Variables**: `{{name}}` is drawn as a pill in every field, in `--danger`
+when nothing defines it, and hovering says what it holds (dots for a
+secret). Typing `{{` offers the names. A name is looked up in the active
+environment, then the variables every environment shares, then the
+collection's own. The built-ins are `$timestamp`, `$isoNow`, `$uuid` and
+`$randomInt`. *Send* with an unknown name sends nothing and says which.
+
+**The response**: status with a dot, time and size; *Body*, *Headers* and
+*Cookies* (shown when there are any); *Copy* and *Save as…*, which give the
+bytes that arrived; *Beautify* for JSON and XML, on by default, display
+only. Over 2 MB a body is shown without colour; it is cut at 50 MB. A binary
+body shows its type and size. An event stream is shown as it arrives.
+
+**Ask before sending**: an environment with it on holds each send in a bar
+in the environment's colour until the person says yes.
+
+**Keeping a value** (FEAT-161): in a formatted JSON or XML response, a
+value is a button. Clicking it opens the keep card inline under its line:
+the JSONPath or XPath, *as* (a name from the path: `$.data.accessToken` is
+`token`, `$.data.user.id` is `userId`), *in* (the active environment),
+*Update on every call*, *Cancel* and *Keep*. *Keep* puts the rule on the
+call and the value in the keychain; the value is then underlined in `--ok`
+with `→ name`, and clicking it again offers *Forget*. After every send, each
+*every call* rule is read again; a path that finds nothing keeps the old
+value and marks it stale. As received, values cannot be clicked, and the bar
+says so.
+
+**Environments** (`/calls/environments`, from *Manage* in the variables
+panel): the list with each environment's host and *in use*; one environment
+with its name, five colours, *Ask before sending*, *Duplicate* and *Delete*;
+its variables and the shared ones as tables of name, value, kind (Plain,
+Secret, Kept) and where each is kept; and *Kept from responses*, a card per
+kept value with a switch that freezes it. A secret is typed in as dots and
+shown only while the eye is held. A new environment named `production`, or
+red, asks before sending. Ctrl+E opens the picker from anywhere in Calls.
+
+**Import** (FEAT-162, `/calls/import`, from *Import* in the header): sources
+on the left (the code; collection files in the repository; *Choose a file…*
+and *Paste cURL* from outside), endpoints in the middle by controller or
+folder, each *New*, *Changed* (with what changed) or *In* a collection, and
+*Bring in* on the right: into a collection or a new one, folders per
+controller or by path, example bodies, path variables as variables, and a
+`local` environment from `application.yml`. *New* and *Changed* are ticked.
+The scan reads the files git sees, less Settings' skip globs, up to 20,000,
+in the background; nothing is built or run. It reads Spring MVC and WebFlux,
+JAX-RS and NestJS controllers, OpenAPI 3 and Swagger 2, Postman 2.0 and 2.1,
+Insomnia, Bruno, `.http`, HAR, cURL and Spagitty collections. Postman lines
+that copy a response value become keep rules; other script lines go into the
+call's notes. Endpoints match by method and normalised path; bringing a
+changed one in adds its new fields, drops the gone ones and keeps your
+values. The tree's *Found in this repository* lists collection files opened
+in place, never rewritten; a dashed card there counts endpoints the code
+declares that no collection has, or, when Settings says *Ask*, offers to
+scan.
+
+**A SOAP call** (FEAT-163) has the version (SOAP 1.1 or 1.2), the operation
+picker (*Service › Operation*, from the collection's WSDL), the endpoint URL
+and *Send*; then *Envelope*, *Headers* (with the `SOAPAction`, or 1.2's
+`action` parameter, shown), *WS-Security* (*None* or *Username token*, the
+password as text or a digest, with a nonce and the time; *Signed* is drawn
+and not offered, FEAT-167) and *Keep*. *Rebuild from WSDL* makes the
+envelope again, keeping what was typed where its element still exists. An
+envelope made from a WSDL has every element, a sample, and a comment with its
+type and whether it is required. A fault is shown as an error with its code,
+reason and detail even on a 200; the bar says *no fault* otherwise. Import
+reads WSDL 1.1 files in the repository (following the XSDs they include),
+a WSDL from a URL, and JAX-WS and Spring-WS services in the code; a WSDL's
+operation is preferred to the code behind it.
+
+**Share** (FEAT-164, from the header): one collection as *One file*
+(Spagitty, or Postman 2.1 with keep rules as `pm.environment.set` lines and
+SOAP calls as raw POSTs), a *Zip bundle* (`collection.json`, `env/`,
+`examples/` from the last response of each call, `history.json` if chosen,
+and a `README.md` listing what to fill in), or *Commit to the repository*
+(only the files listed, on the current branch, as *Calls: update <name>*;
+never pushed, and refused while something else is staged). The preview
+lists every file and its size; secrets and kept values go in empty in every
+format. The way it starts with is Settings' *Share as*. Import reads the zip
+back.
+
+**cURL** (FEAT-166, the *cURL* button on the request bar): *Copy* gives the
+open call as one `curl` command, resolved in the active environment, with
+secrets and kept values as `{{name}}` unless *Fill in secrets* is ticked (off
+every time the window opens). It is quoted for Linux and macOS or for
+Windows `cmd`, and writes the method only when it is not implied, the
+headers, the body (`--data-raw`, `--data-urlencode` or `--form`), `-u` for
+basic auth, `-L`, `-k` when TLS is not checked, and `--compressed`. A SOAP
+call copies as a POST of its envelope with its SOAP headers. *Paste* reads a
+command, says which flags it read and which it did not, and replaces the
+open call's request or adds a new call in a collection and folder.
+
+**Secrets and kept values** are in the OS keychain, one entry per
+repository and environment, through `forge/keychain.rs`; the files hold only
+their names. Where each kept value came from, and whether it is stale, is in
+the data directory (`kept.json`).
+
+**Kept** in the repository, under `.spagitty/calls/`: collections as
+`<name>.json`, environments' plain values under `env/`, `shared.json`. In
+the data directory, per repository: the active environment, the open calls,
+what is collapsed, the filter, and the history (the request as resolved,
+with secrets as their names, and the response up to 1 MB).
 
 ## 1Y — Pipelines
 

@@ -58,7 +58,8 @@ compiles and is tested without a GUI, and its examples
 | `tags.rs` | Tags in one place: annotated and lightweight told apart, because the difference decides whether a message can exist |
 | `record.rs` | What Spagitty actually ran — the buffer behind "Show the git command behind each action", written by `shell.rs` |
 | `update.rs` | Whether there is a newer Spagitty than this one |
-| `forge/` | The only part of the workspace that reaches a network. See below |
+| `forge/` | Pull requests and their hosts, over the network. See below |
+| `calls/` | Calls (FEAT-160): the collection format, variables, building and sending a request the person saved, history. See below |
 | `error.rs` | `Error`, whose `Display` text is user-facing |
 | `fixture.rs` | Real repositories for tests, published behind the `fixture` feature so the Tauri layer can walk one too (TASK-003). Excluded from coverage |
 
@@ -66,13 +67,25 @@ compiles and is tested without a GUI, and its examples
 Reading pull requests could not survive the older promise that no HTTP client
 was linked in either language, so the promise became a narrower one that is
 still worth having and is still tested: exactly one client, `ureq`, declared
-only in this crate, and reachable from exactly one file.
+only in this crate, and reachable from a named list of files. 2.0 added the
+model providers' `models/http.rs`; 4.0 added `calls/send.rs`, for the
+requests a person sends from Calls, which the author accepted on 2026-10-25.
+`src/lib/requests/requests.test.ts` names all three, and a fourth would have
+to be added there.
 
 | File | Holds |
 | --- | --- |
 | `forge/http.rs` | The only file that may construct or use the HTTP client |
 | `forge/github.rs` | One GraphQL request per refresh — REST would need 1 + 3N calls for the same rows |
 | `forge/keychain.rs` | The personal access token, in the OS keychain and never in a configuration file |
+| `calls/send.rs` | A Calls request: one agent per send, with the timeout, redirects, TLS check, proxy and client certificate it was given; the body read in chunks so it can be cancelled, capped at 50 MB |
+
+Calls follows redirects and allows plain `http` to any host, because the
+service being worked on is often on `localhost`. The request is built and
+sent in Rust
+(`src-tauri/src/calls.rs` runs it on a thread of its own); the screen gets
+the response as data, in a `calls-done` event, and an event stream piece by
+piece in `calls-chunk`.
 
 The webview links no HTTP client, makes no request, and never holds a token.
 

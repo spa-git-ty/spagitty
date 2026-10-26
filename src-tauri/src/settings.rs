@@ -27,6 +27,7 @@ use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
+use spagitty_core::calls::settings::CallsSettings;
 use tauri::{AppHandle, Manager, Runtime};
 
 const FILE: &str = "settings.json";
@@ -214,6 +215,10 @@ pub struct Settings {
     /// (FEAT-157). On, so the terminal matches the window around it. Off
     /// leaves the colours of the person's own tmux or psmux config.
     pub terminal_colours: bool,
+    /// Settings › Calls (FEAT-165). A repository may override any of them
+    /// in its calls folder's `settings.json`.
+    #[serde(deserialize_with = "lenient")]
+    pub calls: CallsSettings,
 }
 
 /// How often the screen offers to look, in minutes. The first is the floor:
@@ -280,6 +285,7 @@ impl Default for Settings {
             terminal_shell: String::new(),
             terminal_multiplexer: true,
             terminal_colours: true,
+            calls: CallsSettings::default(),
         }
     }
 }
@@ -447,6 +453,11 @@ mod tests {
             terminal_shell: "/usr/bin/fish".to_string(),
             terminal_multiplexer: false,
             terminal_colours: false,
+            calls: CallsSettings {
+                timeout_seconds: 5,
+                follow_redirects: false,
+                ..CallsSettings::default()
+            },
         };
         let text = serde_json::to_string_pretty(&written).expect("serialising");
 

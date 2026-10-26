@@ -9,6 +9,7 @@
 mod about;
 mod accounts;
 mod agents;
+mod calls;
 mod clone_worker;
 mod command_log;
 mod commands;
@@ -173,6 +174,41 @@ pub fn run() {
             terminal::terminal_windows,
             terminal::terminal_act,
             terminal::terminal_style,
+            calls::calls_load,
+            calls::calls_save_collection,
+            calls::calls_delete_collection,
+            calls::calls_save_state,
+            calls::calls_send,
+            calls::calls_cancel,
+            calls::calls_save_body,
+            calls::calls_history,
+            calls::calls_history_body,
+            calls::calls_history_clear,
+            calls::calls_environments,
+            calls::calls_save_environment,
+            calls::calls_delete_environment,
+            calls::calls_save_shared,
+            calls::calls_private,
+            calls::calls_reveal,
+            calls::calls_set_private,
+            calls::calls_keep,
+            calls::calls_forget_kept,
+            calls::calls_default_settings,
+            calls::calls_overridden,
+            calls::calls_scan,
+            calls::calls_scan_cancel,
+            calls::calls_found,
+            calls::calls_found_files,
+            calls::calls_import_file,
+            calls::calls_import_text,
+            calls::calls_bring_in,
+            calls::calls_wsdl,
+            calls::calls_rebuild,
+            calls::calls_import_wsdl_url,
+            calls::calls_share_plan,
+            calls::calls_share,
+            calls::calls_curl,
+            calls::calls_curl_parse,
             recipes::recipes_list,
             recipes::recipes_save,
             recipes::recipes_delete,
@@ -428,6 +464,7 @@ pub fn run() {
 
             // Recipes' runs. Nothing runs until one is run.
             recipes::manage(app.handle());
+            calls::manage(app.handle());
             Ok(())
         })
         .build(tauri::generate_context!())

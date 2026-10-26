@@ -1,0 +1,5 @@
+# Test fixtures and design mock data, not secrets. Fingerprints are pinned to
+# their commits, so they hold as long as these commits keep their SHAs.
+2af1645ce702aafd3a7af58364eec3107c35b796:src/lib/calls/CurlWindow.test.ts:curl-auth-user:16
+526742040ff066a87ef58019b5ffeb21c64d477e:design_handoff_calls/source/Main.dc.html:generic-api-key:291
+526742040ff066a87ef58019b5ffeb21c64d477e:design_handoff_calls/source/Main.dc.html:generic-api-key:334

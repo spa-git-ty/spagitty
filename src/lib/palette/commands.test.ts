@@ -146,8 +146,11 @@ describe('registerCommands', () => {
 	});
 
 	it('finds a command by its initials, which is the point of the palette', () => {
-		palette.setQuery('gtc');
+		palette.setQuery('gtch');
 		expect(palette.active?.id).toBe('go.changes');
+		// `gtc` alone is Calls (FEAT-160): the shorter title wins the tie below.
+		palette.setQuery('gtc');
+		expect(palette.active?.id).toBe('go.calls');
 
 		// Several commands share the same initials; the shorter title wins the
 		// tie, which is what makes the ranking predictable rather than
