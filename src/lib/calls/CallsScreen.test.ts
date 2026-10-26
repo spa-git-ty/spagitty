@@ -235,8 +235,10 @@ describe('Calls', () => {
 		expect(api.saveCollection).not.toHaveBeenCalled();
 		await new Promise((done) => setTimeout(done, SAVE_DELAY + 50));
 		expect(api.saveCollection).toHaveBeenCalledTimes(1);
-		const [written, stem] = vi.mocked(api.saveCollection).mock.calls[0];
+		const [written, stem, was] = vi.mocked(api.saveCollection).mock.calls[0];
 		expect(stem).toBe('orders-api');
+		// Written over its own file: without `was`, the store refuses, as the file exists (BUG-101).
+		expect(was).toBe('orders-api');
 		expect(JSON.stringify(written)).toContain('"name":"Sign in"');
 	});
 

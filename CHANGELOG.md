@@ -14,6 +14,24 @@ adds behaviour and PATCH fixes it, both backward-compatible.
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-10-26
+
+### Fixed
+
+- **Bruno collections in YAML import.** Bruno now saves a collection as `opencollection.yml` and one `.yml` file per request, and Import read only the older `.bru` files. Both formats now import, with folders, environments, and auth inherited from the folder or the collection. *Choose a Bruno folder…* on Import brings in a whole collection (BUG-100).
+- **Edits in Calls are saved.** Each save after the first said *Could not save … already exists* and kept nothing (BUG-101).
+
+### Downloads
+
+- **Linux, Windows and macOS** (Apple silicon `*-macos-arm64.dmg` and Intel
+  `*-macos-x86_64.dmg`), as in 4.0.0, each with its terminal multiplexer. The
+  Mac builds are signed ad hoc and are not notarized: on first open macOS says
+  the developer cannot be verified. Open the app once from the right-click
+  **Open** menu, or allow it under **System Settings › Privacy & Security ›
+  Open Anyway**, and macOS remembers the choice. If macOS says the app is
+  **damaged** instead, compare the download with `SHA256SUMS-*.txt`: download
+  it again if it differs, and open an issue if it matches.
+
 ## [4.0.0] - 2026-10-26
 
 Calls: REST and SOAP requests beside the code, on the rail as 2C after Recipes. MAJOR because a new part of Spagitty reaches the network, as the author decided for this release.

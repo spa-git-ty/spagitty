@@ -67,7 +67,7 @@ fn dedent(lines: &[String]) -> String {
 }
 
 /// `res.body.data.token` as `$.data.token`.
-fn res_path(expression: &str) -> Option<String> {
+pub(super) fn res_path(expression: &str) -> Option<String> {
     let rest = expression.trim().strip_prefix("res.body")?;
     if !rest.is_empty() && !rest.starts_with(['.', '[']) {
         return None;

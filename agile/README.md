@@ -326,6 +326,8 @@ rather than an audit.
 | [BUG-097](items/BUG-097-a-push-opens-the-credential-helpers-sign-in-window.md) | A push opens the credential helper's sign-in window instead of using the connected account | every push | Fixed |
 | [BUG-098](items/BUG-098-pull-requests-says-only-500-internal-server-error.md) | Pull requests says only "500 Internal Server Error" on the author's GitLab | 1H, 1R | Fixed |
 | [BUG-099](items/BUG-099-the-hooks-side-panel-cards-do-nothing.md) | The Hooks screen's side panel cards do nothing when clicked | 1X | Fixed |
+| [BUG-100](items/BUG-100-bruno-yaml-collections-do-not-import.md) | Bruno collections in YAML do not import | 2C | Fixed |
+| [BUG-101](items/BUG-101-every-edit-in-calls-says-could-not-save.md) | Every edit in Calls says "Could not save … already exists" | 2C | Fixed |
 
 `BUG-009b` carries a suffix rather than the next number because it is the same
 report, reopened on a corrected diagnosis, and BUG-009's own document keeps the

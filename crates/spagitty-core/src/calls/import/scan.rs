@@ -18,8 +18,8 @@ use serde_json::Value;
 
 use super::super::model::{Collection, Environment, Variable};
 use super::{
-    bruno, curl, har, http_file, insomnia, java, key_of, nest, openapi, path_of, postman,
-    wsdl_source, Endpoint, Found, Source, SourceKind, Status,
+    bruno, curl, har, http_file, insomnia, java, key_of, nest, openapi, opencollection, path_of,
+    postman, wsdl_source, Endpoint, Found, Source, SourceKind, Status,
 };
 use crate::{shell, Error, Result};
 use wsdl_source::SoapChoices;
@@ -107,6 +107,8 @@ enum Kind {
     Wsdl,
     Bru,
     BrunoRoot,
+    /// `opencollection.yml`: a Bruno collection in YAML.
+    OpenCollectionRoot,
 }
 
 fn kind_of(path: &str) -> Option<Kind> {
@@ -132,6 +134,9 @@ fn kind_of(path: &str) -> Option<Kind> {
     }
     if name.ends_with(".bru") {
         return Some(Kind::Bru);
+    }
+    if opencollection::is_root_file(&name) {
+        return Some(Kind::OpenCollectionRoot);
     }
     if name.ends_with(".http") || name.ends_with(".rest") {
         return Some(Kind::Http);
@@ -245,6 +250,8 @@ pub fn scan(
     let mut config = Vec::new();
     let mut bruno_roots: Vec<String> = Vec::new();
     let mut bru_files: Vec<String> = Vec::new();
+    let mut open_roots: Vec<String> = Vec::new();
+    let mut yaml_files: Vec<String> = Vec::new();
     for (count, path) in paths.iter().enumerate() {
         if cancel.load(Ordering::Relaxed) {
             return Err(Error::Calls("the scan was stopped".into()));
@@ -276,6 +283,18 @@ pub fn scan(
                 bru_files.push(path.to_string());
                 continue;
             }
+            Kind::OpenCollectionRoot => {
+                yaml_files.push(path.to_string());
+                if options.look_for.iter().any(|l| l == "bruno") {
+                    open_roots.push(
+                        path.rsplit_once('/')
+                            .map(|(d, _)| d.to_string())
+                            .unwrap_or_default(),
+                    );
+                }
+                continue;
+            }
+            Kind::Yaml => yaml_files.push(path.to_string()),
             _ => {}
         }
         let Ok(text) = std::fs::read_to_string(&full) else {
@@ -406,6 +425,28 @@ pub fn scan(
         });
         found.endpoints.extend(endpoints);
     }
+    for root in open_roots {
+        let prefix = if root.is_empty() {
+            String::new()
+        } else {
+            format!("{root}/")
+        };
+        let files: Vec<(String, String)> = yaml_files
+            .iter()
+            .filter(|f| f.starts_with(&prefix))
+            .filter_map(|f| {
+                std::fs::read_to_string(repo.join(f))
+                    .ok()
+                    .map(|text| (f[prefix.len()..].to_string(), text))
+            })
+            .collect();
+        let (endpoints, envs, name) = opencollection::read(&root, &files);
+        found.environments.extend(envs);
+        found
+            .sources
+            .push(open_source(&root, name, endpoints.len(), true));
+        found.endpoints.extend(endpoints);
+    }
     prefer_wsdl(&mut found);
     progress(paths.len());
     Ok(found)
@@ -488,9 +529,112 @@ fn spagitty(path: &str, value: &Value, found: &mut Found) -> bool {
     true
 }
 
-/// One file chosen from outside the repository, whatever it is.
+fn open_source(root: &str, name: String, count: usize, in_repository: bool) -> Source {
+    let file = if root.is_empty() {
+        "opencollection.yml".to_string()
+    } else {
+        format!("{root}/opencollection.yml")
+    };
+    Source {
+        id: format!("file:{file}"),
+        kind: SourceKind::Bruno,
+        label: name,
+        file: Some(file),
+        count,
+        error: None,
+        in_repository,
+    }
+}
+
+/// The files under `dir` whose names `wanted` takes, as text, by their path
+/// from it. Hidden folders and `node_modules` are not looked in.
+fn files_under(dir: &Path, wanted: &dyn Fn(&str) -> bool) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut waiting = vec![(dir.to_path_buf(), String::new())];
+    while let Some((at, relative)) = waiting.pop() {
+        let Ok(entries) = std::fs::read_dir(&at) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let path = if relative.is_empty() {
+                name.clone()
+            } else {
+                format!("{relative}/{name}")
+            };
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if kind.is_dir() {
+                if !name.starts_with('.') && name != "node_modules" {
+                    waiting.push((entry.path(), path));
+                }
+            } else if wanted(&name)
+                && out.len() < CAP
+                && entry.metadata().is_ok_and(|m| m.len() <= LARGEST)
+            {
+                if let Ok(text) = std::fs::read_to_string(entry.path()) {
+                    out.push((path, text));
+                }
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// A Bruno collection's folder chosen from outside: YAML or `.bru`.
+fn read_folder(dir: &Path) -> Result<Found> {
+    let shown = dir.to_string_lossy().replace('\\', "/");
+    let mut found = Found::default();
+    if dir.join("opencollection.yml").is_file() || dir.join("opencollection.yaml").is_file() {
+        let files = files_under(dir, &|name| {
+            let name = name.to_ascii_lowercase();
+            name.ends_with(".yml") || name.ends_with(".yaml")
+        });
+        let (endpoints, envs, name) = opencollection::read(&shown, &files);
+        found
+            .sources
+            .push(open_source(&shown, name, endpoints.len(), false));
+        found.endpoints = endpoints;
+        found.environments = envs;
+        return Ok(found);
+    }
+    if dir.join("bruno.json").is_file() {
+        let files = files_under(dir, &|name| name.to_ascii_lowercase().ends_with(".bru"));
+        let (endpoints, envs) = bruno::read(&shown, &files);
+        found.sources.push(Source {
+            id: format!("file:{shown}/bruno.json"),
+            kind: SourceKind::Bruno,
+            label: shown.rsplit('/').next().unwrap_or("bruno").to_string(),
+            file: Some(format!("{shown}/bruno.json")),
+            count: endpoints.len(),
+            error: None,
+            in_repository: false,
+        });
+        found.endpoints = endpoints;
+        found.environments = envs;
+        return Ok(found);
+    }
+    Err(Error::Calls(format!(
+        "{shown} is not a Bruno collection: it has no opencollection.yml or bruno.json"
+    )))
+}
+
+/// One file chosen from outside the repository, whatever it is, or a Bruno
+/// collection's folder.
 pub fn read_file(path: &Path, soap: &SoapChoices) -> Result<Found> {
+    if path.is_dir() {
+        return read_folder(path);
+    }
     let name = path.to_string_lossy().replace('\\', "/");
+    // A Bruno collection's own file stands for its whole folder.
+    let file_name = name.rsplit('/').next().unwrap_or(&name);
+    if opencollection::is_root_file(file_name) || file_name.eq_ignore_ascii_case("bruno.json") {
+        if let Some(dir) = path.parent() {
+            return read_folder(dir);
+        }
+    }
     // A zip is not text: it is read before anything else is.
     if name.to_ascii_lowercase().ends_with(".zip") {
         let bytes = std::fs::read(path)
@@ -541,6 +685,11 @@ pub fn read_file(path: &Path, soap: &SoapChoices) -> Result<Found> {
         let call = bruno::request(&text)
             .ok_or_else(|| Error::Calls(format!("{name} is not a Bruno request")))?;
         return Ok(single(&name, SourceKind::Bruno, call));
+    }
+    if lower.ends_with(".yml") || lower.ends_with(".yaml") {
+        if let Some(call) = opencollection::request(&text) {
+            return Ok(single(&name, SourceKind::Bruno, call));
+        }
     }
     if let Ok(value) = serde_json::from_str::<Value>(&text) {
         if spagitty(&name, &value, &mut found) {
@@ -788,5 +937,52 @@ mod tests {
         let junk = write("notes.txt", "hello");
         assert!(read_file(&junk, &SoapChoices::default()).is_err());
         assert!(read_text("not curl").is_err());
+    }
+
+    #[test]
+    fn a_bruno_yaml_collection_is_read_from_its_folder_or_its_root_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("DXP");
+        std::fs::create_dir_all(root.join("auth")).unwrap();
+        std::fs::create_dir_all(root.join("environments")).unwrap();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        let write = |name: &str, text: &str| std::fs::write(root.join(name), text).unwrap();
+        write(
+            "opencollection.yml",
+            "opencollection: 1.0.0\n\ninfo:\n  name: DXP\nrequest:\n  auth:\n    type: bearer\n    token: \"{{token}}\"\n",
+        );
+        write(
+            "auth/folder.yml",
+            "info:\n  name: auth\n  type: folder\n  seq: 1\n\nrequest:\n  auth: inherit\n",
+        );
+        write(
+            "auth/login.yml",
+            "info:\n  name: login\n  type: http\n  seq: 1\n\nhttp:\n  method: POST\n  url: \"{{baseUrl}}/auth/login\"\n  auth: inherit\n",
+        );
+        write(
+            "environments/Local.yml",
+            "name: Local\nvariables:\n  - name: baseUrl\n    value: http://localhost\n",
+        );
+        write(".git/config.yml", "info:\n  type: http\n");
+
+        for chosen in [root.clone(), root.join("opencollection.yml")] {
+            let found = read_file(&chosen, &SoapChoices::default()).unwrap();
+            assert_eq!(found.sources[0].kind, SourceKind::Bruno);
+            assert_eq!(found.sources[0].label, "DXP");
+            assert_eq!(found.endpoints.len(), 1);
+            assert_eq!(found.endpoints[0].folder.as_deref(), Some("auth"));
+            assert_eq!(
+                found.endpoints[0].call.auth.as_ref().unwrap().kind,
+                crate::calls::model::AuthType::Bearer
+            );
+            assert_eq!(found.environments[0].name, "local");
+        }
+
+        let one = read_file(&root.join("auth/login.yml"), &SoapChoices::default()).unwrap();
+        assert_eq!(one.endpoints[0].call.url, "{{baseUrl}}/auth/login");
+
+        let empty = dir.path().join("empty");
+        std::fs::create_dir_all(&empty).unwrap();
+        assert!(read_file(&empty, &SoapChoices::default()).is_err());
     }
 }

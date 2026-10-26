@@ -12,7 +12,7 @@ screen recording to attach. Results are written into the sweep documents
 themselves. Attached files are kept under `agile/testing/evidence/`, which is
 not committed.
 
-**1946 tickets in 302 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1708 not run, 2 with a note only.
+**1952 tickets in 304 sweeps:** 194 passed, 0 failed, 0 blocked, 0 partly passed, 42 obsolete, 1714 not run, 2 with a note only.
 
 | Item | Title | Status | Tickets | Passed | Failed | Blocked | Obsolete | Not run | Sweep |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -318,3 +318,5 @@ not committed.
 | BUG-097 | A push opens the credential helper's sign-in window instead of using the connected account | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-097-sweep.md](BUG-097-sweep.md) |
 | BUG-098 | Pull requests says only "500 Internal Server Error" on the author's GitLab | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-098-sweep.md](BUG-098-sweep.md) |
 | BUG-099 | The Hooks screen's side panel cards do nothing when clicked | Fixed | 3 | 0 | 0 | 0 | 0 | 3 | [BUG-099-sweep.md](BUG-099-sweep.md) |
+| BUG-100 | Bruno collections in YAML do not import | Fixed | 4 | 0 | 0 | 0 | 0 | 4 | [BUG-100-sweep.md](BUG-100-sweep.md) |
+| BUG-101 | Every edit in Calls says "Could not save … already exists" | Fixed | 2 | 0 | 0 | 0 | 0 | 2 | [BUG-101-sweep.md](BUG-101-sweep.md) |
