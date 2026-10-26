@@ -361,6 +361,19 @@ mod tests {
         assert!(folder
             .write_collection(&collection("orders api"), None, None)
             .is_err());
+        // An edit writes over its own file, as often as it is saved (BUG-101).
+        for _ in 0..2 {
+            folder
+                .write_collection(
+                    &collection("Orders API"),
+                    Some("orders-api"),
+                    Some("orders-api"),
+                )
+                .unwrap();
+        }
+        assert!(folder
+            .write_collection(&collection("Orders API"), Some("orders-api"), None)
+            .is_err());
     }
 
     #[test]

@@ -172,7 +172,8 @@ async function writeCollection(stem: string): Promise<void> {
 	const stored = storedOf(stem);
 	if (!stored?.value) return;
 	try {
-		await api.saveCollection(plain(stored.value), stem, null);
+		// `was` is the stem itself: the file is this collection's, to write over.
+		await api.saveCollection(plain(stored.value), stem, stem);
 	} catch (cause) {
 		notice.failed(`Could not save ${stored.file}`, cause);
 	}
