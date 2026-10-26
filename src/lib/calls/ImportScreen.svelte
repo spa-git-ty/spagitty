@@ -112,6 +112,12 @@
 		if (typeof path === 'string') await importer.importFile(path);
 	}
 
+	/** A Bruno collection is a folder: `opencollection.yml` or `bruno.json` and the requests under it. */
+	async function chooseFolder() {
+		const path = await openDialog({ multiple: false, directory: true }).catch(() => null);
+		if (typeof path === 'string') await importer.importFile(path);
+	}
+
 	async function readPasted() {
 		if (await importer.importText(pasted)) {
 			pasted = '';
@@ -196,6 +202,9 @@
 					{@render sourceRow(source)}
 				{/each}
 				<button type="button" class="add" onclick={chooseFile}>Choose a file…</button>
+				<button type="button" class="add" onclick={chooseFolder} title="A Bruno collection's folder"
+					>Choose a Bruno folder…</button
+				>
 				{#if pasting}
 					<textarea
 						class="mono"

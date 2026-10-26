@@ -46,6 +46,7 @@ vi.mock('./api', () => ({
 	bringIn: vi.fn()
 }));
 
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import * as api from './api';
 import ImportScreen from './ImportScreen.svelte';
 import { importer } from './import.svelte';
@@ -230,6 +231,13 @@ describe('Import', () => {
 		expect(api.importFile).toHaveBeenCalledWith('C:/Downloads/shop.postman_collection.json');
 		// Shown on its own, ticked.
 		expect(rows()).toEqual([{ text: '/ping', tag: 'New', ticked: true }]);
+
+		// A Bruno collection is chosen as its folder.
+		vi.mocked(openDialog).mockResolvedValueOnce('C:/Documents/collections/DXP');
+		click(button('Choose a Bruno folder…'));
+		await settle();
+		expect(openDialog).toHaveBeenLastCalledWith({ multiple: false, directory: true });
+		expect(api.importFile).toHaveBeenLastCalledWith('C:/Documents/collections/DXP');
 
 		vi.mocked(api.importText).mockRejectedValue('this is not a cURL command');
 		click(button('Paste cURL'));

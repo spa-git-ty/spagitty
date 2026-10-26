@@ -30,6 +30,7 @@ pub mod java;
 pub mod json;
 pub mod nest;
 pub mod openapi;
+pub mod opencollection;
 pub mod postman;
 pub mod scan;
 pub mod wsdl_source;
